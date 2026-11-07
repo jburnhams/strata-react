@@ -83,8 +83,8 @@ function KilnRoom() {
 | Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error |
 | Form | `Field`, `Input`, `Textarea`, `NativeSelect`, `ChoiceGroup` | `Field` wires label, hint, error, `aria-describedby`, `aria-invalid` |
 | Status and figures | `Status`, `Metric`, `MetricStrip` | A status is always a word; figures have no icons or sparklines |
-| Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; charts label values directly |
-| Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out |
+| Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `InfiniteList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; `InfiniteList` loads the next page on approach, with a skeleton for it, a Try again row when it fails and a Show more button for the keyboard; charts label values directly |
+| Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `useInfiniteLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out; `useInfiniteLoad` pages by a cursor after the last item held, merges pages by key and can `dismiss` an item at once |
 | Page and navigation | `AppShell`, `SideNav`, `Breadcrumb`, `Tabs`, `PageHeader` | React Router; tab and sort state in the URL |
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; `Done` is the one celebration, and it must say what happens next |
 | Helpers | `cn`, `format`, `createFormat` | `cn` knows `type-*`; all numbers and dates through `Intl` |

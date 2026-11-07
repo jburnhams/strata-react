@@ -83,3 +83,5 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit): Pro
   if (!res.ok) throw new HttpError(res.status, res.statusText, String(input));
   return (await res.json()) as T;
 }
+
+export { useInfiniteLoad, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";

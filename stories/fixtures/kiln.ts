@@ -149,3 +149,24 @@ export const heatScale = [
   { at: 1000, colour: "var(--heat-orange)" },
   { at: 1200, colour: "var(--heat-yellow)" },
 ];
+
+/** One past firing in the co-op's log, newest first. Ids rise with time, so "after f-0412" means
+ *  older than firing 412. */
+export type Firing = { id: string; kiln: KilnId; type: FiringType; pieces: number; peakC: number; endedMin: number };
+
+const firingTypeCycle: FiringType[] = ["glaze", "bisque", "glaze", "raku", "glaze", "bisque"];
+const peakFor: Record<FiringType, number> = { bisque: 1060, glaze: 1222, raku: 980 };
+
+/** The firing log: 137 firings since March, one every 1.6 days or so, newest first. */
+export const firings: Firing[] = Array.from({ length: 137 }, (_, i) => {
+  const type = firingTypeCycle[i % firingTypeCycle.length];
+  const kiln: KilnId = type === "raku" ? "3" : type === "bisque" ? "1" : i % 4 === 0 ? "1" : "2";
+  return {
+    id: `f-${String(412 - i).padStart(4, "0")}`,
+    kiln,
+    type,
+    pieces: ((i * 11) % 23) + 4,
+    peakC: peakFor[type] - ((i * 7) % 9),
+    endedMin: -i * 2310 - 685,
+  };
+});

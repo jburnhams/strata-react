@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import { bookings, readings, type Booking } from "../fixtures/kiln";
+import { bookings, firings, readings, type Booking, type Firing } from "../fixtures/kiln";
 
 // The fixture API, served by MSW in Storybook (service worker) and in the unit tests (Node). The
 // default handlers answer like a healthy server; the named sets below replace one route to put a
@@ -9,7 +9,24 @@ import { bookings, readings, type Booking } from "../fixtures/kiln";
 export const api = {
   bookings: "/api/bookings",
   readings: "/api/kilns/2/readings",
+  firings: "/api/firings",
 } as const;
+
+/** One page of the firing log. `after` is the id of the last firing the client holds, not an
+ *  offset: firings archived since the last page drop out of the list, and an offset would skip
+ *  the ones that moved up to fill the gap. */
+export type FiringPage = { firings: Firing[]; hasMore: boolean };
+
+/** Serves `GET /api/firings?after=<id>&limit=<n>` from a list, the way a cursor API does. */
+export function firingPage(url: string, list: Firing[] = firings): FiringPage {
+  const params = new URL(url).searchParams;
+  const after = params.get("after");
+  const limit = Number(params.get("limit") ?? 20);
+  // Ids sort with time, so "after" works even when that firing has itself been archived.
+  const start = after ? list.findIndex((f) => f.id < after) : 0;
+  const page = start < 0 ? [] : list.slice(start, start + limit);
+  return { firings: page, hasMore: start >= 0 && start + limit < list.length };
+}
 
 /** A larger table, for virtualisation: 480 bookings shaped like the co-op's. */
 export const manyBookings: Booking[] = Array.from({ length: 480 }, (_, i) => {
@@ -23,6 +40,7 @@ export const handlers = [
     return HttpResponse.json(size === "large" ? manyBookings : bookings);
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
+  http.get(api.firings, ({ request }) => HttpResponse.json(firingPage(request.url))),
 ];
 
 export const bookingsLoading = http.get(api.bookings, async () => {
@@ -34,4 +52,22 @@ export const bookingsEmpty = http.get(api.bookings, () => HttpResponse.json([]))
 
 export const bookingsServerError = http.get(api.bookings, () =>
   HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
+);
+
+export const firingsLoading = http.get(api.firings, async () => {
+  await delay("infinite");
+  return HttpResponse.json({ firings: [], hasMore: false });
+});
+
+export const firingsEmpty = http.get(api.firings, () => HttpResponse.json({ firings: [], hasMore: false } satisfies FiringPage));
+
+export const firingsServerError = http.get(api.firings, () =>
+  HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" }),
+);
+
+/** The first page loads; every later page fails, as when the log server drops mid-scroll. */
+export const firingsLaterPageError = http.get(api.firings, ({ request }) =>
+  new URL(request.url).searchParams.has("after")
+    ? HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" })
+    : HttpResponse.json(firingPage(request.url)),
 );
