@@ -132,6 +132,29 @@ describe("DataTable selection", () => {
     expect(screen.queryByRole("group")).toBeNull();
   });
 
+  it("forgets a chosen row that leaves, so it returns unchosen", async () => {
+    function Filtered() {
+      const [all, setAll] = React.useState(true);
+      const rows = all ? bookings : bookings.filter((b) => b.id !== "b-2051");
+      const selection = useSelection(rows, (b) => b.id);
+      return (
+        <>
+          <button onClick={() => setAll((a) => !a)}>Toggle filter</button>
+          <output data-testid="count">{selection.count}</output>
+          <DataTable caption="Work" columns={columns} rows={rows} rowKey={(b) => b.id} selection={{ ...selection, rowLabel: (b) => b.member }} />
+        </>
+      );
+    }
+    renderWithStrata(<Filtered />);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Dev Raman" }));
+    expect(screen.getByTestId("count")).toHaveTextContent("1");
+    await userEvent.click(screen.getByRole("button", { name: "Toggle filter" }));
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+    await userEvent.click(screen.getByRole("button", { name: "Toggle filter" }));
+    expect(screen.getByRole("checkbox", { name: "Select Dev Raman" })).not.toBeChecked();
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+  });
+
   it("clears the selection from the bar", async () => {
     renderWithStrata(<Harness />);
     await userEvent.click(selectAll());

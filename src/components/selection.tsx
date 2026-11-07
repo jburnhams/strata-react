@@ -27,6 +27,11 @@ export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, 
     // rowKey is usually an inline arrow, so it is left out of the dependencies: the rows change.
   }, [raw, rows]);
   const selectedRows = React.useMemo(() => rows.filter((r) => selected.has(rowKey(r))), [rows, selected]);
+  // Forget the dropped keys too, not only hide them: a row that comes back (a filter cleared, a
+  // removal undone) returns unchosen, so a later bulk action never picks it up unasked.
+  React.useEffect(() => {
+    if (selected.size !== raw.size) setRaw(selected);
+  }, [selected, raw]);
   const onChange = React.useCallback((next: Set<string>) => setRaw(next), []);
   const clear = React.useCallback(() => setRaw(new Set()), []);
   return { selected, selectedRows, count: selected.size, onChange, clear };
