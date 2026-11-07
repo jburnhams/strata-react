@@ -19,6 +19,7 @@ export type AsyncLabels = {
   error?: string;
 };
 
+/** One button through idle, pending, done and error, with the label changing in place and its width fixed by the longest label. The outcome is announced politely. */
 export function AsyncButton({
   phase,
   labels,

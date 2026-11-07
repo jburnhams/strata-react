@@ -4,6 +4,7 @@
 
 export const NBSP = " ";
 
+/** Intl formatters for one locale: integers, decimals, percent, times, days, units with a non-breaking space, and counted nouns. */
 export function createFormat(locale: string) {
   const integer = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
   const decimal = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
@@ -31,4 +32,5 @@ export function createFormat(locale: string) {
 
 export type Format = ReturnType<typeof createFormat>;
 
+/** The en-GB formatters. */
 export const format = createFormat("en-GB");

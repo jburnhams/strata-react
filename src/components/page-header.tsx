@@ -4,6 +4,7 @@ import * as React from "react";
 // screen's main action, and the finding. The finding is the one fact in today's data that most
 // needs attention; it sits where it is read first, beside the action it drives.
 
+/** The top of an Operate screen: a noun title, its scope, the main action, and the finding (the one fact in today's data that most needs attention). */
 export function PageHeader({
   title,
   scope,

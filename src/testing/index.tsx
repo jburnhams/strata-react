@@ -1,3 +1,9 @@
+/**
+ * Test helpers: render a component inside a router and a query client, as a Strata app runs it.
+ * Use with MSW for the network, never module mocks.
+ *
+ * @module strata-react/testing
+ */
 import * as React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { MemoryRouter } from "react-router";

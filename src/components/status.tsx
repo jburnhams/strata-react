@@ -16,6 +16,7 @@ const tones: Record<Tone, string> = {
   danger: "bg-danger-subtle text-danger",
 };
 
+/** A status as a word on a pale tint of its tone, with an optional icon. Never colour alone. */
 export function Status({
   tone,
   icon: Icon,

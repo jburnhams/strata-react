@@ -18,6 +18,7 @@ export type NavItem = {
   end?: boolean;
 };
 
+/** The app frame: product name, side nav on the page ground (a scrollable row on phones), optional top bar, and the main region. */
 export function AppShell({
   product,
   nav,
@@ -52,6 +53,7 @@ export function AppShell({
   );
 }
 
+/** Navigation links (React Router `NavLink`); the current route is a neutral pill with `aria-current`. */
 export function SideNav({ items, label, className }: { items: NavItem[]; label: string; className?: string }) {
   return (
     <nav aria-label={label} className={cn("min-w-0", className)}>
@@ -80,6 +82,7 @@ export function SideNav({ items, label, className }: { items: NavItem[]; label: 
 
 // Plain links with a "/" separator in muted ink. The last crumb is the current page: text, not a
 // link, with aria-current.
+/** Plain links separated by `/`; the last crumb is the current page. */
 export function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {
   return (
     <nav aria-label="Breadcrumb">

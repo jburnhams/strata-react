@@ -8,6 +8,7 @@ import { cn } from "../lib/utils";
 // scrolled from the keyboard, and keeps list semantics with aria-setsize/aria-posinset so screen
 // readers still hear "12 of 480". Under `virtualizeFrom` items it renders a plain list.
 
+/** A list that renders only its visible rows (TanStack Virtual) from `virtualizeFrom` items, keeping list semantics for screen readers. */
 export function VirtualList<T>({
   label,
   items,

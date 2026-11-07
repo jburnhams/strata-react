@@ -18,6 +18,7 @@ import type { Load } from "../components/data-view";
 // over minutes), and no refetch on window focus (a table that reorders itself while someone reads
 // it is worse than one that is 30 s old). Override per query when the data says otherwise.
 
+/** A QueryClient with Strata's defaults: one retry, 30 s stale time, no refetch on window focus. */
 export function createQueryClient(overrides?: ConstructorParameters<typeof QueryClient>[0]) {
   return new QueryClient({
     ...overrides,
@@ -28,6 +29,7 @@ export function createQueryClient(overrides?: ConstructorParameters<typeof Query
   });
 }
 
+/** Provides a query client (Strata's defaults unless one is passed) to the app. */
 export function StrataQueryProvider({ client, children }: { client?: QueryClient; children: React.ReactNode }) {
   const [fallback] = React.useState(() => client ?? createQueryClient());
   return <QueryClientProvider client={client ?? fallback}>{children}</QueryClientProvider>;
@@ -45,13 +47,14 @@ export const describeHttpError: DescribeError = (error) =>
       ? error.message
       : "The data could not be loaded. Nothing was changed.";
 
+/** Turns a TanStack query result into the `Load<T>` that `DataView` takes; errors are described for a person by `describe`. */
 export function toLoad<T>(query: UseQueryResult<T>, describe: DescribeError = describeHttpError): Load<T> {
   if (query.status === "success") return { status: "ready", data: query.data };
   if (query.status === "error") return { status: "error", message: describe(query.error), retry: () => void query.refetch() };
   return { status: "loading" };
 }
 
-/** useQuery, returned as a Load<T> for DataView. */
+/** `useQuery`, returned as a `Load<T>` for `DataView`. */
 export function useLoad<T, K extends QueryKey = QueryKey>(
   options: UseQueryOptions<T, Error, T, K> & { describeError?: DescribeError },
 ): Load<T> {

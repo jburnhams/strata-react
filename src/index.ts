@@ -1,6 +1,10 @@
-// strata-react: an opinionated React + Tailwind v4 framework for building product frontends.
-// Components ship structure, behaviour, states and accessibility; the look comes from the
-// product's own theme (see README.md and CLAUDE.md).
+/**
+ * strata-react: an opinionated React + Tailwind v4 framework for building product frontends.
+ * Components ship structure, behaviour, states and accessibility; the look comes from the
+ * product's own theme. Every component has a Storybook story for each of its states.
+ *
+ * @module strata-react
+ */
 
 export { cn, typeSteps } from "./lib/utils";
 export { createFormat, format, NBSP, type Format } from "./lib/format";
@@ -16,7 +20,7 @@ export { DataTable, TableSkeleton, parseSort, serialiseSort, type Column, type S
 export { VirtualList } from "./components/virtual-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
 export { PageHeader } from "./components/page-header";
-export { UndoBar, useUndoable } from "./components/undo";
+export { UndoBar, useUndoable, type PendingRemoval } from "./components/undo";
 export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";

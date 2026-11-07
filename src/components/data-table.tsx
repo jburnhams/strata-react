@@ -60,6 +60,7 @@ function useLocalSort(initial?: Sort): SortState {
   return [sort, setSort];
 }
 
+/** Reads a sort from its URL form (`pieces.desc`). */
 export function parseSort(value: string | null): Sort | undefined {
   if (!value) return undefined;
   const [key, dir] = value.split(".");
@@ -67,6 +68,7 @@ export function parseSort(value: string | null): Sort | undefined {
   return { key, dir: dir === "desc" ? "descending" : "ascending" };
 }
 
+/** Writes a sort in its URL form (`pieces.desc`). */
 export function serialiseSort(sort: Sort) {
   return `${sort.key}.${sort.dir === "descending" ? "desc" : "asc"}`;
 }
@@ -89,6 +91,7 @@ function useUrlSort(param: string, initial?: Sort): SortState {
   return [sort, set];
 }
 
+/** A table on TanStack Table: muted headers, row rules, right-aligned tabular numbers, sortable headers with `aria-sort`, virtualised from `virtualizeFrom` rows, sort optionally kept in the URL (`sortParam`). */
 export function DataTable<T>(props: DataTableProps<T>) {
   // Two thin wrappers so each calls its hooks unconditionally.
   return props.sortParam ? <UrlSortedTable {...props} sortParam={props.sortParam} /> : <LocalSortedTable {...props} />;
@@ -247,6 +250,7 @@ function Table<T>({
   );
 }
 
+/** The loading placeholder for a `DataTable`, shaped like its rows. */
 export function TableSkeleton({ rows = 4, columns = 5 }: { rows?: number; columns?: number }) {
   return (
     <div aria-hidden className="grid gap-0">

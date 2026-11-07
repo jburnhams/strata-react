@@ -38,6 +38,7 @@ export const buttonVariants = cva(
 export type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & { asChild?: boolean };
 
+/** A button with shadcn's variant names. The default variant is `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`. */
 export function Button({ className, variant, size, asChild = false, type = "button", ...props }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
   return <Comp type={asChild ? undefined : type} className={cn(buttonVariants({ variant, size }), className)} {...props} />;
@@ -51,6 +52,7 @@ export type IconButtonProps = Omit<ButtonProps, "size" | "children" | "aria-labe
   label: string;
 };
 
+/** An icon-only button. `label` is required and becomes the accessible name and tooltip. */
 export function IconButton({ icon: Icon, label, variant = "ghost", ...props }: IconButtonProps) {
   return (
     <Button size="icon" variant={variant} aria-label={label} title={label} {...props}>

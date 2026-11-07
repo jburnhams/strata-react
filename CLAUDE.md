@@ -47,7 +47,8 @@ First use: the live demos and examples in ux-research. Then other products.
 | Canvas | @napi-rs/canvas | Only for unit-testing code that draws to a `<canvas>` (jsdom has none). Charts here are SVG |
 | Component docs | Storybook 10 (`@storybook/react-vite`) | `stories/`; every component in every state; addon-docs, addon-a11y, msw-storybook-addon |
 | Visual regression | Playwright Chromium + pixelmatch (pngjs) | `scripts/visual.mjs` screenshots every story light and dark, compares with `tests/visual/baselines/` |
-| CI | GitHub Actions | `.github/workflows/ci.yml` (typecheck, unit + coverage, integration, visual); Storybook to Pages from main |
+| API docs | TypeDoc | `typedoc.json`; every export has a TSDoc comment; `validation.notExported` keeps the reference whole |
+| CI | GitHub Actions | `.github/workflows/ci.yml` (typecheck, unit + coverage, integration, visual); `pages.yml` publishes the site (`npm run site`) from main |
 
 ## Layout
 
@@ -87,7 +88,7 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
    controls, `enter-moment` once for a rare moment. Reduced motion is handled in the base layer.
 8. **Open the file with a comment saying why** it is shaped that way, citing the finding. Change
    the reason when you change the behaviour.
-9. **Done means**: exported from `src/index.ts`; stories for every state; unit tests for its
+9. **Done means**: exported from `src/index.ts` with a one-line TSDoc comment (`/** ... */`, it is the API reference's summary); stories for every state; unit tests for its
    behaviour and accessibility; baselines updated; README component table and changelog updated.
 
 ## Building an app on Strata
@@ -122,6 +123,8 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 | `npm run test:visual` | build Storybook, screenshot every story light and dark, compare with baselines |
 | `npm run test:visual:update` | the same, writing new baselines (removes obsolete ones) |
 | `node scripts/visual.mjs --filter data-table` | one group of stories (after `npm run build-storybook`) |
+| `npm run docs:api` | TypeDoc API reference into `site/api/` |
+| `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests: a story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "strata-react API",
+  "entryPoints": ["src/index.ts", "src/testing/index.tsx"],
+  "entryPointStrategy": "resolve",
+  "tsconfig": "tsconfig.json",
+  "out": "site/api",
+  "readme": "README.md",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "sort": ["kind", "alphabetical"],
+  "navigationLinks": {
+    "Storybook": "../",
+    "Visual baselines": "../visuals/",
+    "GitHub": "https://github.com/jburnhams/strata-react"
+  },
+  "validation": { "notExported": true, "invalidLink": true, "notDocumented": false }
+}

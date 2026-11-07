@@ -102,7 +102,15 @@ npm test                    # typecheck + unit tests
 npm run test:integration    # build, then check the package and its CSS as an app sees them
 npm run test:visual         # screenshot every story (light, dark) and compare with baselines
 npm run test:visual:update  # accept the current screenshots as baselines
+npm run site                # build the docs site into site/
 ```
+
+## Docs site
+
+GitHub Pages serves one site, built by `.github/workflows/pages.yml` on every push to main:
+Storybook at the root, the TypeDoc API reference at `/api/`, and a gallery of every visual
+baseline (light and dark, linked to its story) at `/visuals/`. One-time setup: Settings → Pages →
+Source: GitHub Actions.
 
 ## Licence
 
