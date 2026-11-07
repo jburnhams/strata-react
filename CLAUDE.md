@@ -58,7 +58,7 @@ src/
   components/           one file per component; each opens with the reasons it is shaped that way
   lib/                  cn, format (Intl), icon type
   query/                TanStack Query bridge: createQueryClient, StrataQueryProvider, useLoad, toLoad, fetchJson
-  testing/              renderWithStrata (router + query client), exported as strata-react/testing
+  testing/              renderWithStrata (router + query client), installLayoutShims, installFakeIntersectionObserver; exported as strata-react/testing
   styles/strata.css     token contract, namespace reset, type steps, motion utilities, base layer
 stories/                Storybook stories; fixtures/ (kiln-room sample data); mocks/handlers.ts (MSW); screens/ (whole screens)
 .storybook/             config, plus the FIXTURE theme (kiln room) stories render on
@@ -115,6 +115,10 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
+   Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
+   `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
+   its end. Copy from `format` keeps its non-breaking space in role names: query
+   `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`.
 
 ## Commands
 
