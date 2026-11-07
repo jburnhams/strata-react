@@ -1,4 +1,7 @@
 import * as React from "react";
+import { Monitor, Moon, Sun } from "lucide-react";
+import type { IconComponent } from "../lib/icon";
+import { cn } from "../lib/utils";
 import { ChoiceGroup } from "./field";
 
 // strata.css keys dark mode on a `.dark` ancestor (`@custom-variant dark (&:is(.dark *))`) and
@@ -22,6 +25,13 @@ import { ChoiceGroup } from "./field";
 //   "Match this device" first because it is the default and the one most people should keep. A
 //   product that wants the choice elsewhere (a menu item, a header button) builds it from
 //   `useColorScheme`. Changing theme is rare, so the picker has no motion and no icon flourish.
+// - `compact` is the same choice for an app with no settings page (a homepage, a single-page
+//   tool), sized to sit in a header or footer: three segments with an icon each, named
+//   "Appearance" (strata-react issue #25). They are still native radio buttons, so arrow keys move
+//   the choice and a screen reader hears "Match this device, radio button, 1 of 3, Appearance".
+//   Each segment is named by `aria-label` on its radio and shows the same words as a tooltip; the
+//   icons are the familiar three (screen, sun, moon), and none of them is a toggle that loses the
+//   system setting. The visible words are left out only because the icons are that well known.
 // - Storybook's decorator and `renderWithStrata({ colorScheme })` run through this provider, so
 //   stories and tests see the same class, in the same place, as an app.
 
@@ -185,22 +195,66 @@ const defaultLabels: ColorSchemeLabels = {
   dark: { label: "Dark" },
 };
 
-/** The three colour-scheme preferences as radio buttons, bound to the nearest `ThemeProvider`. For a settings page. */
+const icons: Record<ColorSchemePreference, IconComponent> = { system: Monitor, light: Sun, dark: Moon };
+
+/** The three colour-scheme preferences as radio buttons, bound to the nearest `ThemeProvider`. A list for a settings page, or `compact` icon segments named "Appearance" for a header. */
 export function ColorSchemeChoice({
-  legend = "Theme",
+  legend,
   labels = defaultLabels,
+  compact = false,
+  className,
 }: {
-  /** The group's name, as the settings page words it. */
+  /** The group's name, as the page words it. Defaults to "Theme", or "Appearance" when `compact`. */
   legend?: string;
   /** Overrides the words for each choice, in the product's voice. */
   labels?: Partial<ColorSchemeLabels>;
+  /** Three icon segments for a header or footer, for an app with no settings page. */
+  compact?: boolean;
+  /** Layout at the call site (compact only). */
+  className?: string;
 }) {
   const { preference, setPreference } = useColorScheme();
   const name = React.useId();
   const words = { ...defaultLabels, ...labels };
+  if (compact) {
+    return (
+      <div
+        role="radiogroup"
+        aria-label={legend ?? "Appearance"}
+        className={cn("inline-flex gap-0.5 rounded-surface border border-border bg-background p-0.5", className)}
+      >
+        {PREFERENCES.map((value) => {
+          const Icon = icons[value];
+          return (
+            <label
+              key={value}
+              title={words[value].label}
+              className={cn(
+                // Outer 6px less 2px padding: the segments are 4px, as optical nesting asks.
+                "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control text-muted-foreground transition-state",
+                "hover:text-foreground has-checked:bg-muted has-checked:text-foreground",
+                "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring",
+              )}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={value}
+                checked={preference === value}
+                onChange={() => setPreference(value)}
+                aria-label={words[value].label}
+                className="sr-only"
+              />
+              <Icon aria-hidden className="size-4" />
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <ChoiceGroup
-      legend={legend}
+      legend={legend ?? "Theme"}
       name={name}
       value={preference}
       onChange={(value) => {

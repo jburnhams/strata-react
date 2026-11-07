@@ -126,14 +126,18 @@ scripts/                copy-css, clean, build-site
    `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
    `KeysLegend`, answers through `useUndoable`. Never bind single keys with a hand-written
    `keydown` listener.
-8. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-9. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+8. A status dashboard: a level with limits is a `Meter` with named `thresholds` (one shared set
+   for like things, as shares of `max`), what a whole is made of is a `CompositionBar`, a way
+   to another app or area is a `LinkCard` in a `LinkCardList`, and sizes go through
+   `format.bytes`. An app with no settings page puts `ColorSchemeChoice compact` in the header.
+9. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+10. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
    Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
    `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
    its end. Copy from `format` keeps its non-breaking space in role names: query
    `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`.
-10. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+11. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
    version and commit `tests/visual/baselines/`. See the README for the config and the CI job.
@@ -153,7 +157,7 @@ scripts/                copy-css, clean, build-site
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests run through `strata-visual`, the same command apps use, so a change to
-`src/visual/` is tested on this repo's own 118 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+`src/visual/` is tested on this repo's own 214 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings

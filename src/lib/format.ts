@@ -14,6 +14,11 @@
 
 export const NBSP = " ";
 
+/** The decimal byte units `format.bytes` writes. */
+export type ByteUnit = "B" | "kB" | "MB" | "GB" | "TB" | "PB";
+const BYTE_UNITS: readonly ByteUnit[] = ["B", "kB", "MB", "GB", "TB", "PB"];
+const BYTE_SIZE = Object.fromEntries(BYTE_UNITS.map((u, i) => [u, 1000 ** i])) as Record<ByteUnit, number>;
+
 /** An `Intl.NumberFormat` that can also be called directly: `f(n)` is `f.format(n)`. */
 export type NumberFormatter = ((value: number | bigint) => string) & Pick<Intl.NumberFormat, "format" | "formatToParts" | "resolvedOptions">;
 
@@ -26,7 +31,7 @@ function callable(nf: Intl.NumberFormat): NumberFormatter {
   });
 }
 
-/** Intl formatters for one locale: integers, decimals, percent, times, days, units with a non-breaking space, and counted nouns. */
+/** Intl formatters for one locale: integers, decimals, percent, times, days, units with a non-breaking space, byte sizes, and counted nouns. */
 export function createFormat(locale: string) {
   const integer = callable(new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }));
   const decimal = callable(new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }));
@@ -51,6 +56,18 @@ export function createFormat(locale: string) {
     withUnit,
     /** A temperature in °C, joined by a non-breaking space. */
     celsius: (value: number) => withUnit(value, "°C"),
+    /**
+     * A size in bytes in the largest decimal unit it reaches (kB, MB, GB, TB, as disks and
+     * networks are sold): one decimal below 10 ("5.2 GB"), whole above ("431 GB"). Pass `unit`
+     * to fix the unit, so figures compared side by side ("431 of 466 GB") share one.
+     */
+    bytes: (value: number, unit?: ByteUnit) => {
+      const chosen = unit ?? [...BYTE_UNITS].reverse().find((u) => Math.abs(value) >= BYTE_SIZE[u]) ?? "B";
+      const scaled = value / BYTE_SIZE[chosen];
+      return withUnit(scaled, chosen, Math.abs(scaled) < 10 && chosen !== "B" ? decimal : integer);
+    },
+    /** The unit `bytes` would choose for a value, to share it across a set of figures. */
+    byteUnit: (value: number): ByteUnit => [...BYTE_UNITS].reverse().find((u) => Math.abs(value) >= BYTE_SIZE[u]) ?? "B",
     /**
      * "1 piece", "6 pieces": the count and its noun, so copy never reads "1 pieces". They are
      * joined by a non-breaking space (`NBSP`), not a plain one: in a test, match with the same

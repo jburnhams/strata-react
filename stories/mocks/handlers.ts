@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse } from "msw";
 import { bookings, firings, readings, type Booking, type Firing } from "../fixtures/kiln";
+import { serverStatus } from "../fixtures/server";
 
 // The fixture API, served by MSW in Storybook (service worker) and in the unit tests (Node). The
 // default handlers answer like a healthy server; the named sets below replace one route to put a
@@ -10,6 +11,7 @@ export const api = {
   bookings: "/api/bookings",
   readings: "/api/kilns/2/readings",
   firings: "/api/firings",
+  server: "/api/server",
 } as const;
 
 /** One page of the firing log. `after` is the id of the last firing the client holds, not an
@@ -41,6 +43,7 @@ export const handlers = [
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
   http.get(api.firings, ({ request }) => HttpResponse.json(firingPage(request.url))),
+  http.get(api.server, () => HttpResponse.json(serverStatus)),
   http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
   http.post(api.bookings, async () => {
     await delay(600);
@@ -87,3 +90,12 @@ export const bookingConflict = http.post(api.bookings, async () => {
   await delay(600);
   return HttpResponse.json({ message: "kiln taken" }, { status: 409, statusText: "Conflict" });
 });
+
+export const serverLoading = http.get(api.server, async () => {
+  await delay("infinite");
+  return HttpResponse.json(serverStatus);
+});
+
+export const serverUnreachable = http.get(api.server, () =>
+  HttpResponse.json({ message: "status agent not answering" }, { status: 502, statusText: "Bad Gateway" }),
+);
