@@ -28,10 +28,7 @@ import { api } from "../mocks/handlers";
 
 export function ReviewBookingsScreen({ initial }: { initial?: string }) {
   const load = useLoad({ queryKey: ["bookings"], queryFn: () => fetchJson<Booking[]>(api.bookings) });
-  // The undo hook owns which bookings are out of the queue, so an answered one leaves at once and
-  // comes back on Undo or a failed commit.
   const undoable = useUndoable();
-  const { pending, schedule } = undoable;
 
   const queue = load.status === "ready" ? load.data.filter((b) => !undoable.isRemoved(b.id)) : [];
   const active = useActiveItem(queue, (b) => b.id, { initial, noun: "booking" });
@@ -40,21 +37,20 @@ export function ReviewBookingsScreen({ initial }: { initial?: string }) {
   const answer = (b: Booking | null, verb: "Approved" | "Returned") => {
     if (!b) return;
     const what = `${b.member}'s ${format.count(b.pieces, "piece")}`;
-    schedule({
+    undoable.schedule({
       id: b.id,
       message: verb === "Approved" ? `Approved ${what}.` : `Returned ${what} to them.`,
       failure: `${what} are back in the queue: the ${verb === "Approved" ? "approval" : "return"} did not go through.`,
       commit: () => undefined, // the product's mutation goes here
     });
   };
-  const restore = undoable.undo;
 
   const nothing = active.activeItem === null;
   const shortcuts: Shortcut[] = [
     ...active.shortcuts,
     { keys: ["a"], label: "Approve", run: () => answer(active.activeItem, "Approved"), disabled: nothing },
     { keys: ["r"], label: "Return to member", run: () => answer(active.activeItem, "Returned"), disabled: nothing },
-    { keys: ["z"], label: "Undo", run: restore, disabled: !pending },
+    { keys: ["z"], label: "Undo", run: undoable.undo, disabled: !undoable.pending },
   ];
   useHotkeys(shortcuts);
 
