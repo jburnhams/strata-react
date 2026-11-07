@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, ColorSchemeChoice, Status, useColorScheme } from "../src";
+import { Button, ColorSchemeChoice, PageHeader, Status, useColorScheme } from "../src";
 
 // Storybook's decorator wraps every story in ThemeProvider, driven by the Theme toolbar, so these
 // stories use the same provider an app does.
@@ -25,11 +25,20 @@ export const ProductWords: Story = {
   },
 };
 
+/** `compact`: the same three choices as icon segments named "Appearance", for an app with no settings page. Each segment's name is its tooltip. */
+export const Compact: Story = { args: { compact: true } };
+
+/** Where the compact choice usually goes: the header's actions, beside nothing that competes with it. */
+export const CompactInHeader: Story = {
+  render: () => <PageHeader title="Studio server" scope="kilnroom-office" actions={<ColorSchemeChoice compact />} />,
+};
+
 function Live() {
   const { preference, scheme } = useColorScheme();
   return (
     <div className="grid max-w-md gap-6 rounded-surface border border-border bg-background p-6">
       <ColorSchemeChoice />
+      <ColorSchemeChoice compact />
       <p className="type-body-sm text-muted-foreground">
         Chosen: {preference}. Showing: {scheme}.
       </p>

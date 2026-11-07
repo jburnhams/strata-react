@@ -31,6 +31,16 @@ describe("format", () => {
     expect(format.integer.resolvedOptions().locale).toBe("en-GB");
     expect(format.withUnit(2.25, "kg", format.decimal)).toBe(`2.3${NBSP}kg`);
   });
+
+  it("writes byte sizes in the largest decimal unit reached, or a unit given", () => {
+    expect(format.bytes(512)).toBe(`512${NBSP}B`);
+    expect(format.bytes(5.24e9)).toBe(`5.2${NBSP}GB`);
+    expect(format.bytes(431e9)).toBe(`431${NBSP}GB`);
+    expect(format.bytes(1.64e12)).toBe(`1.6${NBSP}TB`);
+    expect(format.bytes(431e9, "TB")).toBe(`0.4${NBSP}TB`);
+    expect(format.byteUnit(466e9)).toBe("GB");
+    expect(format.bytes(0)).toBe(`0${NBSP}B`);
+  });
 });
 
 describe("sort in the URL", () => {

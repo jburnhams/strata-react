@@ -7,7 +7,7 @@
  */
 
 export { cn, typeSteps } from "./lib/utils";
-export { createFormat, format, NBSP, type Format, type NumberFormatter } from "./lib/format";
+export { createFormat, format, NBSP, type ByteUnit, type Format, type NumberFormatter } from "./lib/format";
 export type { IconComponent } from "./lib/icon";
 
 export {
@@ -24,6 +24,9 @@ export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAc
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
+export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from "./components/meter";
+export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
+export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
 export {
   DataTable,

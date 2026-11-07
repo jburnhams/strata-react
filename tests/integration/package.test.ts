@@ -22,7 +22,7 @@ describe("package exports", () => {
 
   it("exports the components and helpers from the ESM build", async () => {
     const mod = await import(pathToFileURL(join(root, "dist/index.js")).href);
-    for (const name of ["Button", "IconButton", "AsyncButton", "DataView", "DataTable", "VirtualList", "InfiniteList", "LineChart", "AppShell", "Tabs", "Done", "ThemeProvider", "useColorScheme", "ColorSchemeChoice", "colorSchemeScript", "useLoad", "useInfiniteLoad", "toLoad", "fetchJson", "cn", "format"]) {
+    for (const name of ["Button", "IconButton", "AsyncButton", "DataView", "DataTable", "VirtualList", "InfiniteList", "LineChart", "Meter", "CompositionBar", "LinkCard", "LinkCardList", "AppShell", "Tabs", "Done", "ThemeProvider", "useColorScheme", "ColorSchemeChoice", "colorSchemeScript", "useLoad", "useInfiniteLoad", "toLoad", "fetchJson", "cn", "format"]) {
       expect(mod[name], name).toBeDefined();
     }
     const testing = await import(pathToFileURL(join(root, "dist/testing.js")).href);
