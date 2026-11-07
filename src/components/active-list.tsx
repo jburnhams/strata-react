@@ -66,16 +66,27 @@ export function useActiveItem<T>(
   if (index === -1 && keys.length > 0) index = Math.min(lastIndex.current, keys.length - 1);
   const activeKey = index >= 0 ? keys[index] : null;
 
+  // Remember the position, and the last item that left the list while active. Answering two in a
+  // row (at the end of the queue, say) must make the second the one an Undo brings back as
+  // active, not the first.
+  const prevActive = React.useRef<string | null>(activeKey);
   React.useLayoutEffect(() => {
     if (index >= 0) lastIndex.current = index;
+    const gone = prevActive.current;
+    prevActive.current = activeKey;
+    if (gone !== null && gone !== chosen && !keys.includes(gone)) setChosen(gone);
   });
 
-  // Move focus to the active item when the person moved it, or when the focused item was removed
-  // (focus has fallen to <body>). Never steal focus from somewhere else on the page.
+  // Move focus to the active item when the person moved it, when the focused item was removed
+  // (focus has fallen to <body>), or when focus is on another item in the list (an Undo made the
+  // restored item active again). Never take focus from somewhere else on the page.
   React.useLayoutEffect(() => {
     const el = activeKey === null ? undefined : elements.current.get(activeKey);
-    const lost = focusWithin.current && (document.activeElement === null || document.activeElement === document.body);
-    if (el && (navigated.current || lost)) {
+    const focused = document.activeElement;
+    const lost = focusWithin.current && (focused === null || focused === document.body);
+    const elsewhereInList =
+      focused !== null && !el?.contains(focused) && [...elements.current.values()].some((item) => item.contains(focused));
+    if (el && (navigated.current || lost || elsewhereInList)) {
       el.focus({ preventScroll: true });
       el.scrollIntoView?.({ block: "nearest" });
     }

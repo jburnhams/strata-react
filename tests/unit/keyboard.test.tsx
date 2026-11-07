@@ -198,6 +198,25 @@ describe("useActiveItem and ActiveList", () => {
     expect(current()).toHaveTextContent("Sam");
   });
 
+  it("an undo straight after an answer makes the restored item active and focused", async () => {
+    const user = userEvent.setup();
+    render(<Queue />);
+    await user.keyboard("jaz");
+    expect(current()).toHaveTextContent("Tom");
+    expect(current()).toHaveFocus();
+  });
+
+  it("an undo after two answers at the end of the queue restores the second as active", async () => {
+    const user = userEvent.setup();
+    render(<Queue initial="4" />);
+    await user.keyboard("j"); // already at the end: focuses Marta
+    await user.keyboard("aa"); // Marta, then Sam
+    expect(current()).toHaveTextContent("Aoife");
+    await user.keyboard("z"); // restores Sam (the harness undoes the last answer)
+    expect(current()).toHaveTextContent("Sam");
+    expect(current()).toHaveFocus();
+  });
+
   it("does not take focus from elsewhere on the page when the list changes", async () => {
     const user = userEvent.setup();
     render(<Queue />);
