@@ -53,7 +53,7 @@ export function useLoad<T, K extends QueryKey = QueryKey>(
   return toLoad(useQuery(rest), describeError);
 }
 
-/** fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default. */
+/** fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default, and the usual commit for a write. A 204 or empty body resolves to undefined. */
 export async function fetchJson<T>(input: string | URL, init?: RequestInit): Promise<T> {
   // Headers, tuple arrays and plain objects are all valid HeadersInit; normalise before adding the
   // default so a caller's Authorization (or their own Accept) is never dropped.
@@ -61,5 +61,8 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit): Pro
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   const res = await fetch(input, { ...init, headers });
   if (!res.ok) throw new HttpError(res.status, res.statusText, String(input));
-  return (await res.json()) as T;
+  // Writes (DELETE, a PUT that returns nothing) answer 204 or an empty body; that is success, not a
+  // JSON parse error.
+  const text = res.status === 204 ? "" : await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }

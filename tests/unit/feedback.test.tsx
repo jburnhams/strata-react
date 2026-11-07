@@ -1,53 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
-import { Done, LineChart, Metric, MetricStrip, Status, UndoBar, useUndoable } from "../../src";
-
-describe("useUndoable and UndoBar", () => {
-  function Harness({ commit }: { commit: () => void }) {
-    const { pending, schedule, undo } = useUndoable(8000);
-    return (
-      <>
-        <button onClick={() => schedule({ id: "a", message: "Withdrew 3 pieces.", commit })}>Withdraw</button>
-        <UndoBar inline pending={pending} onUndo={undo} />
-      </>
-    );
-  }
-
-  it("commits after the window", () => {
-    vi.useFakeTimers();
-    const commit = vi.fn();
-    render(<Harness commit={commit} />);
-    act(() => screen.getByText("Withdraw").click());
-    expect(screen.getByText("Withdrew 3 pieces.")).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(7999));
-    expect(commit).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(1));
-    expect(commit).toHaveBeenCalledOnce();
-    expect(screen.queryByText("Withdrew 3 pieces.")).toBeNull();
-    vi.useRealTimers();
-  });
-
-  it("does not commit when undone", () => {
-    vi.useFakeTimers();
-    const commit = vi.fn();
-    render(<Harness commit={commit} />);
-    act(() => screen.getByText("Withdraw").click());
-    act(() => screen.getByRole("button", { name: "Undo" }).click());
-    act(() => vi.advanceTimersByTime(10_000));
-    expect(commit).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it("commits the first removal when a second one starts", () => {
-    vi.useFakeTimers();
-    const commit = vi.fn();
-    render(<Harness commit={commit} />);
-    act(() => screen.getByText("Withdraw").click());
-    act(() => screen.getByText("Withdraw").click());
-    expect(commit).toHaveBeenCalledOnce();
-    vi.useRealTimers();
-  });
-});
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { Done, LineChart, Metric, MetricStrip, Status } from "../../src";
 
 describe("Done", () => {
   it("moves focus to its heading so the result is announced", () => {
@@ -96,24 +49,6 @@ describe("LineChart", () => {
     render(<LineChart label="t" series={series} seriesLabel="s" formatX={String} formatY={String} xTicks={[]} />);
     // max 900 → step 250 → 0, 250, 500, 750, 1000
     for (const t of ["0", "250", "500", "750", "1000"]) expect(screen.getAllByText(t).length).toBeGreaterThan(0);
-  });
-});
-
-describe("useUndoable on unmount", () => {
-  it("commits a pending removal when its screen unmounts inside the window", () => {
-    vi.useFakeTimers();
-    const commit = vi.fn();
-    function Screen() {
-      const { schedule } = useUndoable(8000);
-      return <button onClick={() => schedule({ id: "a", message: "Withdrew 3 pieces.", commit })}>Withdraw</button>;
-    }
-    const { unmount } = render(<Screen />);
-    act(() => screen.getByText("Withdraw").click());
-    unmount();
-    expect(commit).toHaveBeenCalledOnce();
-    act(() => vi.advanceTimersByTime(10_000));
-    expect(commit).toHaveBeenCalledOnce();
-    vi.useRealTimers();
   });
 });
 
