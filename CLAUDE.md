@@ -46,7 +46,7 @@ First use: the live demos and examples in ux-research. Then other products.
 | Network in tests and stories | MSW | `stories/mocks/handlers.ts` serves both. **Never** `vi.mock` a module or stub `fetch`; put the server into the state with `server.use(...)` (tests) or `beforeEach: ({ msw }) => msw.use(...)` (stories) |
 | Canvas | @napi-rs/canvas | Only for unit-testing code that draws to a `<canvas>` (jsdom has none). Charts here are SVG |
 | Component docs | Storybook 10 (`@storybook/react-vite`) | `stories/`; every component in every state; addon-docs, addon-a11y, msw-storybook-addon |
-| Visual regression | Playwright Chromium + pixelmatch (pngjs) | `scripts/visual.mjs` screenshots every story light and dark, compares with `tests/visual/baselines/` |
+| Visual regression | Playwright Chromium + pixelmatch (pngjs) | Shipped as `strata-react/visual` and the `strata-visual` command, so apps use the same runner. `strata-visual.config.ts` names two targets: every story light and dark, and the example app's routes in each MSW state; baselines in `tests/visual/baselines/` |
 | API docs | TypeDoc | `typedoc.json`; every export has a TSDoc comment; `validation.notExported` keeps the reference whole |
 | CI | GitHub Actions | `.github/workflows/ci.yml` (typecheck, unit + coverage, integration, visual); `pages.yml` publishes the site (`npm run site`) from main |
 
@@ -59,14 +59,17 @@ src/
   lib/                  cn, format (Intl), icon type
   query/                TanStack Query bridge: createQueryClient, StrataQueryProvider, useLoad, toLoad, fetchJson
   testing/              renderWithStrata (router + query client), exported as strata-react/testing
+  visual/               the visual regression runner, exported as strata-react/visual; cli.ts is the strata-visual command
   styles/strata.css     token contract, namespace reset, type steps, motion utilities, base layer
 stories/                Storybook stories; fixtures/ (kiln-room sample data); mocks/handlers.ts (MSW); screens/ (whole screens)
 .storybook/             config, plus the FIXTURE theme (kiln room) stories render on
 tests/unit/             Vitest + Testing Library + MSW (jsdom)
 tests/integration/      the built package: exports, bundle externals, strata.css compiled by Tailwind as an app would
 tests/utils/            setup (jest-dom, MSW server, layout shims)
-tests/visual/baselines/ committed PNGs, one per story per theme
-scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
+tests/visual/baselines/ committed PNGs, one per story per theme and per route state per viewport per theme
+examples/kiln-app/      the kiln-room screen run as an app (router, base path, no stories): route mode's test bed
+bin/                    strata-visual, a thin wrapper over dist/visual-cli.js
+scripts/                copy-css, clean, build-site
 ```
 
 ## Writing a component
@@ -111,6 +114,10 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
 6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+8. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+   `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
+   unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
+   version and commit `tests/visual/baselines/`. See the README for the config and the CI job.
 
 ## Commands
 
@@ -120,23 +127,28 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 | `npm test` | typecheck + unit tests |
 | `npm run test:integration` | build, then test the built package and its CSS |
 | `npm run storybook` | Storybook on :6006 |
-| `npm run test:visual` | build Storybook, screenshot every story light and dark, compare with baselines |
+| `npm run test:visual` | build the package, Storybook and the example app, then `strata-visual`: every story and every example route state, light and dark, against the baselines |
 | `npm run test:visual:update` | the same, writing new baselines (removes obsolete ones) |
-| `node scripts/visual.mjs --filter data-table` | one group of stories (after `npm run build-storybook`) |
+| `node bin/strata-visual.js --filter data-table` | only shots whose name contains the text (after the builds) |
 | `npm run docs:api` | TypeDoc API reference into `site/api/` |
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
-Visual tests: a story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+Visual tests run through `strata-visual`, the same command apps use, so a change to
+`src/visual/` is tested on this repo's own 118 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings
 and shadows), and grows past the viewport when the component is bigger, so a baseline shows
-the component and nothing else. Animations are frozen and fonts
-are bundled (`@fontsource-variable`), so screenshots are deterministic. pixelmatch runs at
+the component and nothing else. Route shots (the example app) are whole pages, named
+`route--state--viewport--theme`, with every request answered by the MSW handlers in Node; a
+request no handler answers fails the shot. Animations are frozen, fonts are bundled
+(`@fontsource-variable`), and pages run in UTC and `en-US`, so screenshots are deterministic. pixelmatch runs at
 threshold 0.1, ignores anti-aliasing, and allows 20 stray pixels; a size change always fails.
 Changed screenshots land in `tests/visual/output/` as `.actual`, `.expected` and `.diff` PNGs,
 which CI uploads as the `visual-diffs` artifact. Baselines are written in the same Chromium CI
-uses (Playwright is pinned to an exact version for that reason). **Look at a diff before you
+uses (Playwright is pinned to an exact version for that reason); `--update` records that
+Chromium and platform in `tests/visual/baselines/.strata-visual.json`, and a later run that
+differs says so beside its failures. **Look at a diff before you
 update a baseline**, and say in the PR which baselines changed and why.
 
 ## Before finishing any change

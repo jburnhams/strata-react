@@ -27,12 +27,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci --no-audit --no-fund
+      # The integration suite runs strata-visual on a throwaway app, so it needs the browser too.
+      - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
       - run: npm run coverage
       - run: npm run test:integration
 
   visual:
-    name: Visual regression (Storybook in Chromium, pixelmatch)
+    name: Visual regression (Storybook and the example app in Chromium, pixelmatch)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +47,9 @@ jobs:
       # machine that wrote the baselines render with the same browser.
       - run: npx playwright install --with-deps chromium
       - run: npm run build-storybook
-      - run: node scripts/visual.mjs
+      - run: npm run build-example
+      # strata-visual, as an app would run it; strata-visual.config.ts names both targets.
+      - run: node bin/strata-visual.js
       - name: Upload screenshots that differ
         if: failure()
         uses: actions/upload-artifact@v4
