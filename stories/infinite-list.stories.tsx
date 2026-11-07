@@ -93,7 +93,7 @@ function useFiringLog(limit = 20) {
       fetchJson<FiringPage>(`${api.firings}?limit=${limit}${cursor ? `&after=${cursor}` : ""}`, { signal }),
     items: (page) => page.firings,
     itemKey: (f) => f.id,
-    nextCursor: (page, held) => (page.hasMore ? held.at(-1)?.id : undefined),
+    hasMore: (page) => page.hasMore,
   });
 }
 

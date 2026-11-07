@@ -17,14 +17,14 @@ afterEach(() => io.uninstall());
 
 let exposed: InfiniteLoad<Firing> | undefined;
 
-function FiringLog({ limit = 20, keepAtLeast }: { limit?: number; keepAtLeast?: number }) {
+function FiringLog({ limit = 20, keepAtLeast, filter = "all" }: { limit?: number; keepAtLeast?: number; filter?: string }) {
   const load = useInfiniteLoad({
-    queryKey: ["firings", limit],
+    queryKey: ["firings", limit, filter],
     queryFn: ({ cursor, signal }) =>
       fetchJson<FiringPage>(`${api.firings}?limit=${limit}${cursor ? `&after=${cursor}` : ""}`, { signal }),
     items: (page) => page.firings,
     itemKey: (f) => f.id,
-    nextCursor: (page, held) => (page.hasMore ? held.at(-1)?.id : undefined),
+    hasMore: (page) => page.hasMore,
   });
   exposed = load;
   return (
@@ -137,6 +137,44 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     expect(rows()).toHaveLength(5);
     for (const id of ["f-0412", "f-0411"]) exposed!.dismiss(id);
     await waitFor(() => expect(rows()).toHaveLength(8));
+  });
+
+  it("keeps paging when every item held is dismissed, going after the last one seen", async () => {
+    const cursors = recordCursors();
+    renderWithStrata(<FiringLog limit={1} />);
+    await screen.findByText("Firing f-0412");
+    exposed!.dismiss("f-0412");
+    await waitFor(() => expect(screen.queryByText("Firing f-0412")).toBeNull());
+    expect(screen.queryByText("No firings yet")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    expect(await screen.findByText("Firing f-0411")).toBeInTheDocument();
+    expect(cursors).toEqual([null, "f-0412"]);
+  });
+
+  it("does not ask for the same page twice when a page brings back only dismissed items", async () => {
+    // The server has not caught up with the dismissals yet: it keeps serving them.
+    const cursors = recordCursors();
+    renderWithStrata(<FiringLog limit={3} />);
+    await screen.findByText("Firing f-0410");
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    await screen.findByText("Firing f-0407");
+    for (const id of ["f-0409", "f-0408", "f-0407"]) exposed!.dismiss(id);
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    await waitFor(() => expect(cursors).toHaveLength(3));
+    // After f-0410 (the last held) the server sends f-0409..f-0407 again: nothing new.
+    expect(cursors[2]).toBe("f-0410");
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    expect(await screen.findByText("Firing f-0406")).toBeInTheDocument();
+    expect(cursors[3]).toBe("f-0407");
+  });
+
+  it("forgets dismissals when the query changes", async () => {
+    const { rerender } = renderWithStrata(<FiringLog filter="all" />);
+    await screen.findByText("Firing f-0412");
+    exposed!.dismiss("f-0412");
+    await waitFor(() => expect(screen.queryByText("Firing f-0412")).toBeNull());
+    rerender(<FiringLog filter="kiln-2" />);
+    expect(await screen.findByText("Firing f-0412")).toBeInTheDocument();
   });
 
   it("shows the empty state when the first page is empty and there are no more", async () => {

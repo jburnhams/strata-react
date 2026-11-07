@@ -49,7 +49,8 @@ export function VirtualList<T>({
     initialRect: { width: 0, height },
   });
 
-  const plain = (
+  // Built only when it is shown: a virtual list must not render every row it keeps out of the DOM.
+  const plain = () => (
     <ul aria-label={label} className={cn("grid min-w-0", !bounded && !footer && className)}>
       {items.map((item, i) => (
         <li key={itemKey(item)} data-index={i} className="border-t border-border first:border-t-0">
@@ -62,11 +63,11 @@ export function VirtualList<T>({
   if (!virtual && !bounded) {
     return footer ? (
       <div className={cn("min-w-0", className)}>
-        {plain}
+        {plain()}
         {footer}
       </div>
     ) : (
-      plain
+      plain()
     );
   }
 
@@ -100,7 +101,7 @@ export function VirtualList<T>({
           })}
         </ul>
       ) : (
-        plain
+        plain()
       )}
       {footer}
     </div>

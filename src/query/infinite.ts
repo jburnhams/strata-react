@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
+import { hashKey, useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
 import type { Load } from "../components/data-view";
 import { describeHttpError, type DescribeError } from "./index";
 
@@ -9,13 +9,19 @@ import { describeHttpError, type DescribeError } from "./index";
 // first page's loading, error and empty states), and a `more` object for everything after it.
 //
 // Three opinions:
-// 1. The cursor is "after the last item held", never an offset. `nextCursor` is handed the items
-//    the person can see. In a queue people work through (answered reviews, archived firings),
-//    items leave the server's list between pages, and an offset would skip the ones that moved
-//    up to fill the gap.
+// 1. The cursor is "after the last item held", never an offset, and the hook works it out: the
+//    app says how to make a cursor from an item (`cursorAfter`) and whether a page says there are
+//    more (`hasMore`). In a queue people work through (answered reviews, archived firings), items
+//    leave the server's list between pages, and an offset would skip the ones that moved up to
+//    fill the gap. Two cases fall back to the last item *seen*, dismissed or not: when everything
+//    held has been dismissed (there is no held item to go after, and starting again from the top
+//    could fetch the same dismissed page forever), and when the last page brought nothing new
+//    (only items already held or dismissed came back, so going after the last held item again
+//    would ask for the same page in a loop).
 // 2. Items have keys. Pages are merged by key, so an item that shifts across a page boundary is
 //    shown once, and `dismiss(key)` hides one at once (an optimistic remove, paired with
-//    useUndoable) without the app rewriting TanStack's page cache by hand.
+//    useUndoable) without the app rewriting TanStack's page cache by hand. Dismissals belong to
+//    one query: a new `queryKey` (another filter) starts with none.
 // 3. A later page failing is not the list failing. The held items stay; `more.error` says what
 //    happened and `more.loadMore` is the Try again. Only a failed first page is a `Load` error.
 
@@ -35,7 +41,7 @@ export type More = {
 export type InfiniteLoad<T> = Load<T[]> & {
   more: More;
   itemKey: (item: T) => string;
-  /** Hide an item at once (an optimistic removal). The cursor moves to the last item still held. */
+  /** Hide an item at once (an optimistic removal). The next cursor goes after the last item still held. */
   dismiss: (key: string) => void;
   /** Show a dismissed item again: the Undo of `dismiss`. */
   restore: (key: string) => void;
@@ -44,21 +50,23 @@ export type InfiniteLoad<T> = Load<T[]> & {
 /** Options for `useInfiniteLoad`. */
 export type InfiniteLoadOptions<T, Page, Cursor, K extends QueryKey> = {
   queryKey: K;
-  /** Fetch one page. `cursor` is undefined for the first page, else what `nextCursor` returned. */
+  /** Fetch one page. `cursor` is undefined for the first page, else `cursorAfter` of the last item held. */
   queryFn: (context: { cursor: Cursor | undefined; signal: AbortSignal }) => Promise<Page>;
   /** The items in a page. For an API that returns a bare array, `(page) => page`. */
   items: (page: Page) => T[];
   /** A stable key per item: merges pages, and is what `dismiss` takes. */
   itemKey: (item: T) => string;
-  /**
-   * The cursor for the next page, or undefined when there are no more. `held` is every item the
-   * person can see, in order, so "after the last item held" is `held.at(-1)?.id`.
-   */
-  nextCursor: (lastPage: Page, held: T[]) => Cursor | undefined;
+  /** Whether the server says there is a page after this one. */
+  hasMore: (lastPage: Page) => boolean;
+  /** The cursor that asks for the items after this one; usually its id. Defaults to `itemKey`. */
+  cursorAfter?: (item: T) => Cursor;
   describeError?: DescribeError;
   enabled?: boolean;
   staleTime?: number;
 };
+
+type Dismissed = { query: string; keys: ReadonlySet<string> };
+type PageParam<Cursor> = { cursor: Cursor | undefined };
 
 /** `useInfiniteQuery` for cursor-paged data, returned as an `InfiniteLoad<T>` for `InfiniteList` (or `DataView`). */
 export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = QueryKey>({
@@ -66,23 +74,28 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   queryFn,
   items,
   itemKey,
-  nextCursor,
+  hasMore,
+  cursorAfter = itemKey as unknown as (item: T) => Cursor,
   describeError = describeHttpError,
   enabled,
   staleTime,
 }: InfiniteLoadOptions<T, Page, Cursor, K>): InfiniteLoad<T> {
-  const [dismissed, setDismissed] = React.useState<ReadonlySet<string>>(() => new Set());
+  const queryHash = hashKey(queryKey);
+  const [stored, setStored] = React.useState<Dismissed>(() => ({ query: queryHash, keys: new Set() }));
+  const dismissed = stored.query === queryHash ? stored.keys : none;
   // TanStack calls getNextPageParam outside render; it reads the latest dismissals and accessors.
-  const latest = React.useRef({ dismissed, items, itemKey, nextCursor });
-  latest.current = { dismissed, items, itemKey, nextCursor };
+  const latest = React.useRef({ dismissed, items, itemKey, hasMore, cursorAfter });
+  latest.current = { dismissed, items, itemKey, hasMore, cursorAfter };
 
   const query = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam, signal }) => queryFn({ cursor: (pageParam as Cursor | null) ?? undefined, signal }),
-    initialPageParam: null as Cursor | null,
-    getNextPageParam: (lastPage, pages) => {
-      const { dismissed: hidden, items: of, itemKey: key, nextCursor: next } = latest.current;
-      return next(lastPage, held(pages, of, key, hidden)) ?? null;
+    queryFn: ({ pageParam, signal }) => queryFn({ cursor: pageParam.cursor, signal }),
+    initialPageParam: { cursor: undefined } as PageParam<Cursor>,
+    getNextPageParam: (lastPage, pages): PageParam<Cursor> | null => {
+      const l = latest.current;
+      if (!l.hasMore(lastPage)) return null;
+      const after = nextAfter(pages, l.items, l.itemKey, l.dismissed);
+      return { cursor: after === undefined ? undefined : l.cursorAfter(after) };
     },
     enabled,
     staleTime,
@@ -92,7 +105,7 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   // Keyed on the pages and dismissals only, so inline `items`/`itemKey` arrows do not hand the
   // list a new array every render.
   const list = React.useMemo(
-    () => (pages ? held(pages, latest.current.items, latest.current.itemKey, dismissed) : undefined),
+    () => (pages ? merge(pages, latest.current.items, latest.current.itemKey, dismissed).held : undefined),
     [pages, dismissed],
   );
 
@@ -100,16 +113,17 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   const loadMore = React.useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const dismiss = React.useCallback((key: string) => setDismissed((s) => new Set(s).add(key)), []);
-  const restore = React.useCallback(
-    (key: string) =>
-      setDismissed((s) => {
-        const next = new Set(s);
-        next.delete(key);
-        return next;
+  const change = React.useCallback(
+    (edit: (keys: Set<string>) => void) =>
+      setStored((s) => {
+        const keys = new Set(s.query === queryHash ? s.keys : none);
+        edit(keys);
+        return { query: queryHash, keys };
       }),
-    [],
+    [queryHash],
   );
+  const dismiss = React.useCallback((key: string) => change((keys) => keys.add(key)), [change]);
+  const restore = React.useCallback((key: string) => change((keys) => keys.delete(key)), [change]);
 
   const more: More = {
     hasMore: Boolean(hasNextPage),
@@ -123,16 +137,30 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   return { status: "loading", ...extra };
 }
 
-/** Every page's items, in order, once each by key, without the dismissed ones. */
-function held<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, dismissed: ReadonlySet<string>) {
+const none: ReadonlySet<string> = new Set();
+
+/** Every page's items, in order, once each by key: the ones held (not dismissed) and the last one seen. */
+function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, dismissed: ReadonlySet<string>) {
   const seen = new Set<string>();
-  const out: T[] = [];
-  for (const page of pages)
+  const held: T[] = [];
+  let last: T | undefined;
+  let lastPageAddedAny = false;
+  pages.forEach((page, p) => {
     for (const item of items(page)) {
       const key = itemKey(item);
       if (seen.has(key)) continue;
       seen.add(key);
-      if (!dismissed.has(key)) out.push(item);
+      last = item;
+      if (p === pages.length - 1) lastPageAddedAny = true;
+      if (!dismissed.has(key)) held.push(item);
     }
-  return out;
+  });
+  return { held, last, lastPageAddedAny };
+}
+
+/** The item the next page goes after: the last held, or the last seen when nothing is held or the last page brought nothing new. */
+function nextAfter<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, dismissed: ReadonlySet<string>) {
+  const { held, last, lastPageAddedAny } = merge(pages, items, itemKey, dismissed);
+  if (held.length === 0 || (pages.length > 1 && !lastPageAddedAny)) return last;
+  return held[held.length - 1];
 }
