@@ -32,7 +32,7 @@ First use: the live demos and examples in ux-research. Then other products.
 
 | Concern | Choice | How it is used |
 |---|---|---|
-| Runtime for tooling | Node 26 (LTS) | `.nvmrc`, `engines`, every workflow; TypeScript targets ES2024 |
+| Runtime for tooling | Node 26 (LTS) to develop; Node 22.22+ for apps | `.nvmrc`, `devEngines` and every workflow use 26. `engines` is what an app needs to run `strata-react/testing` and `strata-visual`: the floor the peers set (react-router 8, msw), and CI's test job runs on it too. Raise it only when a peer or a Node API forces it. TypeScript targets ES2024 |
 | UI | React 19, TypeScript strict | Function components; `React.useId` for ids |
 | Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
@@ -93,6 +93,12 @@ scripts/                copy-css, clean, build-site
    the reason when you change the behaviour.
 9. **Done means**: exported from `src/index.ts` with a one-line TSDoc comment (`/** ... */`, it is the API reference's summary); stories for every state; unit tests for its
    behaviour and accessibility; baselines updated; README component table and changelog updated.
+10. **Imports decide the peers.** The main entry may import only `dependencies` and the required
+   peers (React, React Router, TanStack Query); anything else (msw, Testing Library, Playwright,
+   Vite) stays behind `strata-react/testing` or `strata-react/visual` as an optional peer. The
+   peer-contract test in `tests/integration/package.test.ts` walks the built chunks and fails
+   otherwise. Never add an app-side install step (such as an `@source` line) a component needs:
+   `dist/strata.css` already scans the built components.
 
 ## Building an app on Strata
 
