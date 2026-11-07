@@ -20,6 +20,8 @@ comfortable and compact density.
   fetch through TanStack Query from MSW. DataTable and VirtualList virtualise long data.
 - **Page**: AppShell and Tabs use React Router; tab and sort state live in the URL.
 - **Feedback**: UndoBar before confirm, with its failure state in the same bar; Done for the rare, earned completion.
+- **Settings**: ThemeProvider owns the `.dark` class (the Theme toolbar drives it);
+  ColorSchemeChoice is the settings-page picker.
 - **Screens**: a whole Operate screen composed from the above.
 
 Every story is screenshotted in Chromium, light and dark, and compared with a committed

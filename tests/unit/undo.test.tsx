@@ -183,7 +183,7 @@ describe("useUndoable: a failed commit", () => {
     act(() => screen.getByText("Withdraw").click());
     await act(() => handle.current!.flush().catch(() => undefined));
     expect(row()).toBeInTheDocument();
-    expect(screen.getByText(/Tom Ellery's booking is back\. The server could not answer \(503\)\. Nothing was changed\./)).toBeInTheDocument();
+    expect(screen.getByText(/Tom Ellery's booking is back\. The server could not answer \(503\)\./)).toBeInTheDocument();
     expect(onError).toHaveBeenCalledWith(expect.any(HttpError));
   });
 
@@ -226,6 +226,14 @@ describe("useUndoable: a failed commit", () => {
     act(() => screen.getByText("Withdraw").click());
     unmount();
     await waitFor(() => expect(onError).toHaveBeenCalledOnce());
+  });
+
+  it("shows the removal's failure sentence alone when the error has nothing to say", async () => {
+    const handle: { current?: Undoable } = {};
+    render(<Harness removal={{ commit: () => Promise.reject("x") }} api={handle} />);
+    act(() => screen.getByText("Withdraw").click());
+    await act(() => handle.current!.flush().catch(() => undefined));
+    expect(screen.getByText("Tom Ellery's booking is back.")).toBeInTheDocument();
   });
 
   it("describes failures with the product's own words when given", async () => {

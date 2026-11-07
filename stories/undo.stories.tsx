@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, HttpError, UndoBar, describeHttpError, fetchJson, useUndoable, type PendingRemoval } from "../src";
+import { Button, HttpError, UndoBar, describeActionError, fetchJson, useUndoable, type PendingRemoval } from "../src";
 import { api, withdrawServerError } from "./mocks/handlers";
 
 // The bar has two states: a removal inside its window (Undo), and a removal whose commit failed
@@ -35,7 +35,7 @@ export const Failed: Story = {
   args: {
     undoable: {
       pending: null,
-      failed: { removal, message: describeHttpError(new HttpError(503, "Service Unavailable", api.bookings)) },
+      failed: { removal, message: describeActionError(new HttpError(503, "Service Unavailable", api.bookings)) },
       undo: noop,
       retry: resolved,
       dismiss: noop,

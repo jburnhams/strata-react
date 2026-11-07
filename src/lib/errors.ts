@@ -1,8 +1,11 @@
-// One vocabulary for failures, shared by reads and writes. A read that fails (DataView through
-// `toLoad`) and a write that fails (an undoable removal's commit) are described for a person by
-// the same `DescribeError`, so a product writes its error copy once and both paths use it.
+// Errors, described for a person. Anything that fails in front of someone (a load in DataView, an
+// action in AsyncButton) says what happened in a sentence, in the product's words, not the
+// developer's: `HttpError`'s own message ("409 Conflict from /api/bookings") is for logs. Loads
+// and actions share HttpError's status sentences, so the same failure reads the same everywhere,
+// and differ only in what is true afterwards: a failed load changed nothing, while a failed action
+// may have reached the server, so its sentence does not promise that.
 
-/** Thrown by `fetchJson` for a non-2xx response; carries the status so the copy can say what happened. */
+/** Thrown by `fetchJson` on a non-2xx response; carries the status for `describeHttpError` and `describeActionError`. */
 export class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -17,12 +20,26 @@ export class HttpError extends Error {
 /** Writes an error for a person: what happened, in a sentence. A product passes its own words. */
 export type DescribeError = (error: unknown) => string;
 
-/** The default `DescribeError`: says whether the server failed or refused, and that nothing was changed. */
+function refused(error: HttpError) {
+  return `The request was refused (${error.status}): ${error.statusText || "no reason given"}.`;
+}
+
+/** The default `DescribeError` for loads: the HTTP status in a sentence, else the error's message, else a plain fallback. */
 export const describeHttpError: DescribeError = (error) =>
   error instanceof HttpError
     ? error.status >= 500
       ? `The server could not answer (${error.status}). Nothing was changed.`
-      : `The request was refused (${error.status}): ${error.statusText || "no reason given"}.`
+      : refused(error)
     : error instanceof Error && error.message
       ? error.message
-      : "The request did not complete. Nothing was changed.";
+      : "The data could not be loaded. Nothing was changed.";
+
+/** The default for `useAsyncAction`: the HTTP status in a sentence, else the thrown Error's message, else undefined (the retry label alone). */
+export const describeActionError = (error: unknown): string | undefined =>
+  error instanceof HttpError
+    ? error.status >= 500
+      ? `The server could not answer (${error.status}).`
+      : refused(error)
+    : error instanceof Error && error.message
+      ? error.message
+      : undefined;

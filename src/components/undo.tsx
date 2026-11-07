@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Button } from "./button";
-import { describeHttpError, type DescribeError } from "../lib/errors";
+import { describeActionError } from "../lib/errors";
 
 // Destructive actions take effect visibly at once and commit after a window, with Undo in reach.
 // For reversible removals this beats a confirm dialog: the dialog interrupts every time to protect
@@ -21,8 +21,9 @@ import { describeHttpError, type DescribeError } from "../lib/errors";
 // `flush()` exists for the action that depends on the removal having happened (retrain on the
 // answers, export the list): commit now and await it, rather than racing the window.
 //
-// Failures are described with the same `DescribeError` as reads (`describeHttpError` unless the
-// product passes its own), so DataView and the undo bar speak with one voice.
+// Failures are described like any other failed action (`describeActionError`, as AsyncButton uses,
+// unless the product passes its own): the same HTTP sentences as reads, without promising that
+// nothing changed, since a write that failed may still have reached the server.
 
 /** A removal waiting out its undo window: what to say, what to do when the window closes, and what to say if that fails. */
 export type PendingRemoval = {
@@ -39,14 +40,14 @@ export type PendingRemoval = {
 };
 
 /** A removal whose commit failed: the removal, and the error described for a person. */
-export type FailedRemoval = { removal: PendingRemoval; message: string };
+export type FailedRemoval = { removal: PendingRemoval; message?: string };
 
 /** Options for `useUndoable`. */
 export type UndoableOptions = {
   /** How long Undo stays in reach, in milliseconds. Default 8000. */
   windowMs?: number;
-  /** Describes a failed commit for a person. Default `describeHttpError`, the same as reads. */
-  describeError?: DescribeError;
+  /** Describes a failed commit for a person, or returns undefined to show the removal's `failure` alone. Default `describeActionError`, as for `useAsyncAction`. */
+  describeError?: (error: unknown) => string | undefined;
 };
 
 /** What `useUndoable` returns. Pass it whole to `UndoBar`. */
@@ -79,7 +80,7 @@ export type Undoable = {
  * action, and in tests let MSW answer the request or flush before unmounting.
  */
 export function useUndoable(options: number | UndoableOptions = {}): Undoable {
-  const { windowMs = 8000, describeError = describeHttpError } =
+  const { windowMs = 8000, describeError = describeActionError } =
     typeof options === "number" ? { windowMs: options } : options;
   const [pending, setPending] = React.useState<PendingRemoval | null>(null);
   const [failed, setFailed] = React.useState<FailedRemoval | null>(null);
@@ -240,7 +241,7 @@ export function UndoBar({
             failed && (
               <>
                 <p className="min-w-0 type-body-sm">
-                  {failed.removal.failure} {failed.message}
+                  {failed.message ? `${failed.removal.failure} ${failed.message}` : failed.removal.failure}
                 </p>
                 <div className="flex shrink-0 gap-1">
                   <Button size="sm" variant="ghost" className={ghost} onClick={() => void retry().catch(() => undefined)}>
