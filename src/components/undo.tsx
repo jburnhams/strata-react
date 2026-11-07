@@ -7,6 +7,9 @@ import { describeActionError } from "../lib/errors";
 // against the rare mistake, and people learn to click through it. Keep a confirm dialog for
 // actions that cannot be undone (deleting an account, firing a kiln).
 
+// A bulk removal is one removal with `ids`: the selected rows go, come back on Undo, and fail
+// together, under one message and one commit, because the person did one thing.
+//
 // One removal is pending at a time. Scheduling a second commits the first at once: in rapid-fire
 // triage (withdraw, withdraw, withdraw) Undo reaches back one step, and the bar never stacks up a
 // queue of messages nobody reads. Undo is for the slip just made, not for an audit trail.
@@ -29,6 +32,8 @@ import { describeActionError } from "../lib/errors";
 export type PendingRemoval = {
   /** Identifies the removed item: `isRemoved(id)` is true from `schedule` until Undo or a failed commit. */
   id: string;
+  /** A bulk removal's items, all removed, undone, committed and restored together (one `commit` for the batch). `isRemoved` is true for each. Default `[id]`. */
+  ids?: readonly string[];
   /** What happened, in the product's words: "Withdrew Tom Ellery's 3 pieces from kiln 2." */
   message: string;
   /** What the person reads if the commit fails, saying the item is back: "Tom Ellery's 3 pieces are back in kiln 2: the withdrawal did not go through." */
@@ -95,12 +100,15 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
   const describe = React.useRef(describeError);
   describe.current = describeError;
 
-  const hide = React.useCallback((id: string, out: boolean) => {
+  const hide = React.useCallback((p: PendingRemoval, out: boolean) => {
+    const ids = p.ids ?? [p.id];
     setRemoved((s) => {
-      if (s.has(id) === out) return s;
+      if (ids.every((id) => s.has(id) === out)) return s;
       const n = new Set(s);
-      if (out) n.add(id);
-      else n.delete(id);
+      for (const id of ids) {
+        if (out) n.add(id);
+        else n.delete(id);
+      }
       return n;
     });
   }, []);
@@ -119,7 +127,7 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
         () => undefined,
         (error: unknown) => {
           if (mounted.current) {
-            hide(p.id, false);
+            hide(p, false);
             setFailed({ removal: p, message: describe.current(error) });
           }
           p.onError?.(error);
@@ -158,7 +166,7 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
     (next: PendingRemoval) => {
       commitDetached(); // a second removal commits the first
       setFailed(null);
-      hide(next.id, true);
+      hide(next, true);
       current.current = next;
       setPending(next);
       timer.current = window.setTimeout(commitDetached, windowMs);
@@ -171,7 +179,7 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
     const p = current.current;
     current.current = null;
     setPending(null);
-    if (p) hide(p.id, false);
+    if (p) hide(p, false);
   }, [hide]);
 
   const flush = React.useCallback(async () => {
@@ -184,7 +192,7 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
   const retry = React.useCallback(() => {
     if (!failed) return Promise.resolve();
     setFailed(null);
-    hide(failed.removal.id, true);
+    hide(failed.removal, true);
     return attempt(failed.removal);
   }, [attempt, failed, hide]);
 

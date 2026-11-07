@@ -11,6 +11,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchParams } from "react-router";
 import { cn } from "../lib/utils";
+import { Checkbox } from "./checkbox";
 
 // The table real product screens use: 12px muted sentence-case headers, row rules (no zebra),
 // numbers right-aligned in tabular figures, one status mark and at most one action per row.
@@ -22,6 +23,15 @@ import { cn } from "../lib/utils";
 // stays small on purpose (key, header, cell, numeric, sort), so a screen reads as a list of
 // decisions about columns, not as table plumbing. `sortParam` keeps the sort in the URL
 // (?sort=when.desc) so a sorted view can be linked and survives a reload.
+//
+// Selection is opt-in (`selection`), because checkboxes belong only where a bulk action exists
+// (one of 23 real product screens had them; a checkbox on every row is a generated-UI tell). When
+// it is on, the first column is a checkbox per row, named from the row (`rowLabel` is required),
+// disabled where `isSelectable` says no; the header's "Select all shown" covers the selectable rows
+// in `rows` (all of them, not only the rendered ones of a virtualised table) and is mixed when some
+// are chosen. Selected rows take the sunken fill, not a ring, so a selection never reads as focus.
+// The table only draws the selection; the state is the caller's, usually `useSelection`, and the
+// actions live in a `BulkBar`.
 
 export type Column<T> = {
   key: string;
@@ -32,7 +42,20 @@ export type Column<T> = {
   sort?: (a: T, b: T) => number;
   /** Cells that may hold long text get truncated rather than stretching the table. */
   truncate?: boolean;
+  /** Keep the header for screen readers only, as for a column of row actions. `header` still names it. */
+  hideHeader?: boolean;
   className?: string;
+};
+
+/** Row selection for a `DataTable`: the chosen row keys, how to change them, and how to name each row's checkbox. */
+export type RowSelection<T> = {
+  /** Keys (from `rowKey`) of the chosen rows. */
+  selected: ReadonlySet<string>;
+  onChange: (next: Set<string>) => void;
+  /** Names the row in its checkbox ("Select <rowLabel>"). Required: an unnamed checkbox is a column of "checkbox, not checked". */
+  rowLabel: (row: T) => string;
+  /** Rows that cannot be chosen get a disabled checkbox and are left out of select-all. Default: every row. */
+  isSelectable?: (row: T) => boolean;
 };
 
 export type Sort = { key: string; dir: "ascending" | "descending" };
@@ -50,6 +73,8 @@ export type DataTableProps<T> = {
   virtualizeFrom?: number;
   /** Height of the scroll region once virtualised, in px. Default 480. */
   maxHeight?: number;
+  /** Adds a checkbox column and "Select all shown". Use only where a `BulkBar` acts on the selection. */
+  selection?: RowSelection<T>;
   className?: string;
 };
 
@@ -105,7 +130,25 @@ function UrlSortedTable<T>(props: DataTableProps<T> & { sortParam: string }) {
   return <Table {...props} sortState={useUrlSort(props.sortParam, props.initialSort)} />;
 }
 
-type Meta = { numeric?: boolean; truncate?: boolean; className?: string };
+type Meta = { numeric?: boolean; truncate?: boolean; hideHeader?: boolean; className?: string };
+
+function useSelectAll<T>(rows: T[], rowKey: (row: T) => string, selection?: RowSelection<T>) {
+  return React.useMemo(() => {
+    if (!selection) return undefined;
+    const keys = rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey);
+    const chosen = keys.filter((k) => selection.selected.has(k)).length;
+    const checked: boolean | "mixed" = chosen === 0 ? false : chosen === keys.length ? true : "mixed";
+    const toggle = () => {
+      const next = new Set(selection.selected);
+      // A full or mixed box clears what is shown; an empty one selects every selectable row shown.
+      // Keys outside `rows` (filtered away) are left as they are.
+      if (checked === false) keys.forEach((k) => next.add(k));
+      else keys.forEach((k) => next.delete(k));
+      selection.onChange(next);
+    };
+    return { checked, toggle, disabled: keys.length === 0 };
+  }, [rows, rowKey, selection]);
+}
 
 function Table<T>({
   caption,
@@ -115,8 +158,10 @@ function Table<T>({
   sortState: [sort, setSort],
   virtualizeFrom = 100,
   maxHeight = 480,
+  selection,
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
+  const selectAll = useSelectAll(rows, rowKey, selection);
   const defs = React.useMemo<ColumnDef<T>[]>(
     () =>
       columns.map((c) => ({
@@ -128,7 +173,7 @@ function Table<T>({
         cell: (info) => c.cell(info.row.original),
         enableSorting: Boolean(c.sort),
         sortingFn: c.sort ? (a, b) => c.sort!(a.original, b.original) : undefined,
-        meta: { numeric: c.numeric, truncate: c.truncate, className: c.className } satisfies Meta,
+        meta: { numeric: c.numeric, truncate: c.truncate, hideHeader: c.hideHeader, className: c.className } satisfies Meta,
       })),
     [columns],
   );
@@ -177,7 +222,7 @@ function Table<T>({
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className={cn("min-w-0 overflow-x-auto", virtual && "overflow-y-auto", className)}
+      className={cn("relative min-w-0 overflow-x-auto", virtual && "overflow-y-auto", className)}
       style={virtual ? { maxHeight } : undefined}
     >
       <table className="w-full border-collapse type-body-sm" aria-rowcount={virtual ? modelRows.length + 1 : undefined}>
@@ -185,11 +230,24 @@ function Table<T>({
         <thead className={cn(virtual && "sticky top-0 z-10 bg-background")}>
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
+              {selectAll && (
+                <th scope="col" className="w-8 py-2 pr-2 text-left align-bottom">
+                  <Checkbox
+                    className="-my-1"
+                    label="Select all shown"
+                    hideLabel
+                    checked={selectAll.checked}
+                    disabled={selectAll.disabled}
+                    onCheckedChange={selectAll.toggle}
+                  />
+                </th>
+              )}
               {group.headers.map((header) => {
                 const meta = header.column.columnDef.meta as Meta | undefined;
                 const active = sort?.key === header.id && header.column.getCanSort() ? sort.dir : undefined;
                 const Icon = active === "ascending" ? ArrowUp : active === "descending" ? ArrowDown : ArrowUpDown;
-                const label = flexRender(header.column.columnDef.header, header.getContext());
+                const rendered = flexRender(header.column.columnDef.header, header.getContext());
+                const label = meta?.hideHeader ? <span className="sr-only">{rendered}</span> : rendered;
                 return (
                   <th
                     key={header.id}
@@ -224,12 +282,31 @@ function Table<T>({
         </thead>
         <tbody>
           {padTop > 0 && <tr aria-hidden style={{ height: padTop }} />}
-          {visible.map((row, i) => (
+          {visible.map((row, i) => {
+            const chosen = selection?.selected.has(row.id) ?? false;
+            return (
             <tr
               key={row.id}
-              className="border-t border-border"
+              className={cn("border-t border-border", chosen && "bg-surface-sunken")}
               aria-rowindex={virtual ? (items[i]?.index ?? 0) + 2 : undefined}
             >
+              {selection && (
+                <td className="w-8 py-2.5 pr-2 align-middle">
+                  <Checkbox
+                    className="-my-0.5"
+                    label={`Select ${selection.rowLabel(row.original)}`}
+                    hideLabel
+                    checked={chosen}
+                    disabled={!(selection.isSelectable?.(row.original) ?? true)}
+                    onCheckedChange={(on) => {
+                      const next = new Set(selection.selected);
+                      if (on) next.add(row.id);
+                      else next.delete(row.id);
+                      selection.onChange(next);
+                    }}
+                  />
+                </td>
+              )}
               {row.getVisibleCells().map((cell) => {
                 const meta = cell.column.columnDef.meta as Meta | undefined;
                 return (
@@ -247,7 +324,8 @@ function Table<T>({
                 );
               })}
             </tr>
-          ))}
+            );
+          })}
           {padBottom > 0 && <tr aria-hidden style={{ height: padBottom }} />}
         </tbody>
       </table>

@@ -10,13 +10,32 @@ export { cn, typeSteps } from "./lib/utils";
 export { createFormat, format, NBSP, type Format, type NumberFormatter } from "./lib/format";
 export type { IconComponent } from "./lib/icon";
 
-export { Button, IconButton, buttonVariants, type ButtonProps, type IconButtonProps } from "./components/button";
+export {
+  Button,
+  IconButton,
+  RowAction,
+  buttonVariants,
+  type ButtonProps,
+  type IconButtonProps,
+  type RowActionProps,
+} from "./components/button";
+export { Checkbox, type CheckboxProps } from "./components/checkbox";
 export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
-export { DataTable, TableSkeleton, parseSort, serialiseSort, type Column, type Sort, type DataTableProps } from "./components/data-table";
+export {
+  DataTable,
+  TableSkeleton,
+  parseSort,
+  serialiseSort,
+  type Column,
+  type Sort,
+  type DataTableProps,
+  type RowSelection,
+} from "./components/data-table";
+export { BulkBar, useSelection } from "./components/selection";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";

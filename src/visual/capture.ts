@@ -146,7 +146,7 @@ function paintedBox({ root: selector, margin }: { root: string; margin: number }
       (s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== "none",
     );
   };
-  const clipTo = (r: DOMRect, el: Element) => {
+  const clipTo = (r: DOMRect, el: Node) => {
     let { left, top, right, bottom } = r;
     for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
       const cs = getComputedStyle(a);
@@ -169,7 +169,9 @@ function paintedBox({ root: selector, margin }: { root: string; margin: number }
       const range = document.createRange();
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) {
-        const c = clipTo(r, n.parentElement);
+        // From the text node itself, so its own element's clip counts too (an sr-only span is a
+        // 1px clipped box, and its text paints nothing).
+        const c = clipTo(r, n);
         if (c) rects.push(c);
       }
       continue;

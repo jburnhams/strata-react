@@ -116,19 +116,24 @@ scripts/                copy-css, clean, build-site
    `UndoBar`; only irreversible ones get a confirm dialog. Filter rows with `isRemoved(id)`
    (never a second hidden set), give each removal a `failure` sentence, make `commit` the request
    plus a query invalidation, and `await flush()` before anything that depends on the removal.
-5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
-6. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
+5. A row action is a `RowAction` (named "Withdraw Tom Ellery", not "Withdraw" eight times) in a
+   column whose header is hidden, not empty (`hideHeader`), shown only on rows where it applies.
+   Checkboxes only where a bulk action exists: `useSelection` → `DataTable selection=` (with
+   `rowLabel`, and `isSelectable` for rows that cannot be chosen) → `BulkBar` with the actions, one
+   filled and named with its count. A bulk removal goes through `useUndoable` like a single one.
+6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
+7. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
    `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
    `KeysLegend`, answers through `useUndoable`. Never bind single keys with a hand-written
    `keydown` listener.
-7. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-8. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+8. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+9. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
    Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
    `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
    its end. Copy from `format` keeps its non-breaking space in role names: query
    `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`.
-8. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+10. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
    version and commit `tests/visual/baselines/`. See the README for the config and the CI job.

@@ -15,6 +15,7 @@ import {
   Metric,
   MetricStrip,
   PageHeader,
+  RowAction,
   TableSkeleton,
   UndoBar,
   fetchJson,
@@ -60,12 +61,13 @@ export function KilnRoomScreen() {
     ...bookingColumns,
     {
       key: "action",
-      header: "",
+      header: "Actions",
+      hideHeader: true,
       cell: (b) =>
         b.state === "booked" ? (
-          <Button
-            size="sm"
-            variant="ghost"
+          <RowAction
+            label="Withdraw"
+            subject={b.member}
             onClick={() =>
               undoable.schedule({
                 id: b.id,
@@ -77,9 +79,7 @@ export function KilnRoomScreen() {
                 },
               })
             }
-          >
-            Withdraw
-          </Button>
+          />
         ) : null,
     },
   ];
