@@ -1,0 +1,75 @@
+{
+  "name": "my-library",
+  "version": "0.1.0",
+  "description": "A description of your library",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/YOUR_REPO.git"
+  },
+  "main": "dist/my-library.cjs",
+  "module": "dist/my-library.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": {
+        "default": "./dist/my-library.js"
+      },
+      "import": "./dist/my-library.js",
+      "require": "./dist/my-library.cjs",
+      "default": "./dist/my-library.js"
+    },
+    "./bundle": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/my-library.js"
+    },
+    "./browser": {
+      "default": "./dist/my-library.iife.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "browser": "dist/my-library.iife.js",
+  "unpkg": "dist/my-library.iife.js",
+  "jsdelivr": "dist/my-library.iife.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && vite build",
+    "build:docs": "npm run build -w docs",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "npm run build && vitest run tests/integration",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "smoke": "npm run smoke:esm && npm run smoke:cjs",
+    "smoke:esm": "node scripts/smoke-esm.mjs",
+    "smoke:cjs": "node scripts/smoke-cjs.cjs",
+    "coverage": "vitest run tests/unit --coverage",
+    "size": "npm run build && node scripts/check-bundle-size.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "library",
+    "template"
+  ],
+  "author": "",
+  "license": "MIT",
+  "workspaces": [
+    "docs"
+  ],
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "happy-dom": "^20.4.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
