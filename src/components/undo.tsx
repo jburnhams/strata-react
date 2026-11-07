@@ -1,70 +1,212 @@
 import * as React from "react";
 import { Button } from "./button";
+import { describeHttpError, type DescribeError } from "../lib/errors";
 
 // Destructive actions take effect visibly at once and commit after a window, with Undo in reach.
 // For reversible removals this beats a confirm dialog: the dialog interrupts every time to protect
 // against the rare mistake, and people learn to click through it. Keep a confirm dialog for
 // actions that cannot be undone (deleting an account, firing a kiln).
 
-/** A removal waiting out its undo window: what to say, and what to do when the window closes. */
-export type PendingRemoval = { id: string; message: string; commit: () => void };
+// One removal is pending at a time. Scheduling a second commits the first at once: in rapid-fire
+// triage (withdraw, withdraw, withdraw) Undo reaches back one step, and the bar never stacks up a
+// queue of messages nobody reads. Undo is for the slip just made, not for an audit trail.
+//
+// The hook owns which items are out of view (`isRemoved`), so a screen filters its rows by it and
+// never keeps a second "hidden" set that can drift from the pending one. An item stays removed
+// from when it is scheduled; Undo brings it back; a commit that fails brings it back and puts the
+// failure in the same bar, with "Try again", because the screen told the person it was done and a
+// silent failure would leave the screen lying. A committed item stays removed until the screen's
+// data drops it (the commit should invalidate the query it came from), so it never flickers back.
+//
+// `flush()` exists for the action that depends on the removal having happened (retrain on the
+// answers, export the list): commit now and await it, rather than racing the window.
+//
+// Failures are described with the same `DescribeError` as reads (`describeHttpError` unless the
+// product passes its own), so DataView and the undo bar speak with one voice.
 
-/** Schedules a reversible removal to commit after `windowMs` unless undone. A second removal, or unmounting, commits the pending one. */
-export function useUndoable(windowMs = 8000) {
+/** A removal waiting out its undo window: what to say, what to do when the window closes, and what to say if that fails. */
+export type PendingRemoval = {
+  /** Identifies the removed item: `isRemoved(id)` is true from `schedule` until Undo or a failed commit. */
+  id: string;
+  /** What happened, in the product's words: "Withdrew Tom Ellery's 3 pieces from kiln 2." */
+  message: string;
+  /** What the person reads if the commit fails, saying the item is back: "Tom Ellery's 3 pieces are back in kiln 2: the withdrawal did not go through." */
+  failure: string;
+  /** Makes the removal real (usually a request, then invalidating the query the item came from). Runs once per attempt: when the window closes, on `flush()`, when a second removal is scheduled, or when the owner unmounts. */
+  commit: () => void | Promise<unknown>;
+  /** Called after a failed commit, for anything beyond restoring the item and showing the failure (which the hook does). The only failure path once the owner has unmounted. */
+  onError?: (error: unknown) => void;
+};
+
+/** A removal whose commit failed: the removal, and the error described for a person. */
+export type FailedRemoval = { removal: PendingRemoval; message: string };
+
+/** Options for `useUndoable`. */
+export type UndoableOptions = {
+  /** How long Undo stays in reach, in milliseconds. Default 8000. */
+  windowMs?: number;
+  /** Describes a failed commit for a person. Default `describeHttpError`, the same as reads. */
+  describeError?: DescribeError;
+};
+
+/** What `useUndoable` returns. Pass it whole to `UndoBar`. */
+export type Undoable = {
+  /** The removal inside its window, or null. */
+  pending: PendingRemoval | null;
+  /** The last removal whose commit failed, until it is retried, dismissed or another removal is scheduled. */
+  failed: FailedRemoval | null;
+  /** Whether an item is out of view: scheduled, committing or committed, and not undone or failed. Filter rows with it. */
+  isRemoved: (id: string) => boolean;
+  /** Removes an item and starts its window. Commits any removal already pending first: only one is pending at a time. */
+  schedule: (next: PendingRemoval) => void;
+  /** Cancels the pending removal and brings the item back; its `commit` never runs. */
+  undo: () => void;
+  /** Commits the pending removal now and resolves when its commit settles; rejects if it failed, so a dependent action does not run. Resolves at once when nothing is pending. */
+  flush: () => Promise<void>;
+  /** Removes the failed item again and commits it now (the person already waited out the window); settles like `flush`. */
+  retry: () => Promise<void>;
+  /** Clears the failure from the bar; the item stays back. */
+  dismiss: () => void;
+};
+
+/**
+ * Schedules a reversible removal to commit after a window unless undone, and owns which items
+ * are out of view meanwhile.
+ *
+ * Only one removal is pending at a time: scheduling a second commits the first immediately.
+ * Unmounting inside the window commits the pending removal (leaving is not Undo), so a navigation
+ * or a test that unmounts still sends the commit's request: await `flush()` before a dependent
+ * action, and in tests let MSW answer the request or flush before unmounting.
+ */
+export function useUndoable(options: number | UndoableOptions = {}): Undoable {
+  const { windowMs = 8000, describeError = describeHttpError } =
+    typeof options === "number" ? { windowMs: options } : options;
   const [pending, setPending] = React.useState<PendingRemoval | null>(null);
+  const [failed, setFailed] = React.useState<FailedRemoval | null>(null);
+  const [removed, setRemoved] = React.useState<ReadonlySet<string>>(() => new Set());
   const current = React.useRef<PendingRemoval | null>(null);
   const timer = React.useRef<number | undefined>(undefined);
+  const mounted = React.useRef(true);
+  const describe = React.useRef(describeError);
+  describe.current = describeError;
 
-  const set = React.useCallback((p: PendingRemoval | null) => {
-    current.current = p;
-    setPending(p);
+  const hide = React.useCallback((id: string, out: boolean) => {
+    setRemoved((s) => {
+      if (s.has(id) === out) return s;
+      const n = new Set(s);
+      if (out) n.add(id);
+      else n.delete(id);
+      return n;
+    });
   }, []);
+
+  // Runs one attempt at a removal's commit. A synchronous throw is treated like a rejection, so
+  // there is one failure path: bring the item back, show the failure, tell onError, reject.
+  const attempt = React.useCallback(
+    (p: PendingRemoval): Promise<void> => {
+      let result: void | Promise<unknown>;
+      try {
+        result = p.commit();
+      } catch (error) {
+        result = Promise.reject(error);
+      }
+      return Promise.resolve(result).then(
+        () => undefined,
+        (error: unknown) => {
+          if (mounted.current) {
+            hide(p.id, false);
+            setFailed({ removal: p, message: describe.current(error) });
+          }
+          p.onError?.(error);
+          throw error;
+        },
+      );
+    },
+    [hide],
+  );
+
+  // Takes the pending removal out (so it commits only once) and attempts it.
+  const take = React.useCallback((): { removal: PendingRemoval; done: Promise<void> } | null => {
+    window.clearTimeout(timer.current);
+    const p = current.current;
+    if (!p) return null;
+    current.current = null;
+    if (mounted.current) setPending(null);
+    return { removal: p, done: attempt(p) };
+  }, [attempt]);
+
+  // Commits the hook starts itself (window closed, second removal, unmount) have no caller to
+  // await them. A failure is handled once it is in the bar or onError has it; only a failure
+  // nobody can see (unmounted, no onError) is left to surface as an unhandled rejection.
+  const commitDetached = React.useCallback(() => {
+    const t = take();
+    t?.done.catch((error: unknown) => {
+      if (!mounted.current && !t.removal.onError) throw error;
+    });
+  }, [take]);
 
   const schedule = React.useCallback(
     (next: PendingRemoval) => {
-      window.clearTimeout(timer.current);
-      current.current?.commit(); // a second removal commits the first
-      set(next);
-      timer.current = window.setTimeout(() => {
-        current.current?.commit();
-        set(null);
-      }, windowMs);
+      commitDetached(); // a second removal commits the first
+      setFailed(null);
+      hide(next.id, true);
+      current.current = next;
+      setPending(next);
+      timer.current = window.setTimeout(commitDetached, windowMs);
     },
-    [set, windowMs],
+    [commitDetached, hide, windowMs],
   );
 
   const undo = React.useCallback(() => {
     window.clearTimeout(timer.current);
-    set(null);
-  }, [set]);
+    const p = current.current;
+    current.current = null;
+    setPending(null);
+    if (p) hide(p.id, false);
+  }, [hide]);
+
+  const flush = React.useCallback(() => take()?.done ?? Promise.resolve(), [take]);
+
+  const retry = React.useCallback(() => {
+    if (!failed) return Promise.resolve();
+    setFailed(null);
+    hide(failed.removal.id, true);
+    return attempt(failed.removal);
+  }, [attempt, failed, hide]);
+
+  const dismiss = React.useCallback(() => setFailed(null), []);
+
+  const isRemoved = React.useCallback((id: string) => removed.has(id), [removed]);
 
   // Leaving the screen is not Undo: if the owner unmounts inside the window (the person navigated
   // away), commit what was scheduled rather than silently dropping it.
-  React.useEffect(
-    () => () => {
-      window.clearTimeout(timer.current);
-      current.current?.commit();
-      current.current = null;
-    },
-    [],
-  );
-  return { pending, schedule, undo };
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      commitDetached();
+    };
+  }, [commitDetached]);
+
+  return { pending, failed, isRemoved, schedule, undo, flush, retry, dismiss };
 }
 
 // The bar lives in a polite live region that is always mounted, so screen readers hear the message
-// when it appears. It is fixed to the bottom of the viewport; a page that uses it keeps that much
-// bottom padding so the bar never covers the focused row.
-/** The polite live region that shows a pending removal with an Undo button. */
+// when it appears, and a failure replaces the message in the same place the person was looking.
+// It is fixed to the bottom of the viewport; a page that uses it keeps that much bottom padding so
+// the bar never covers the focused row. A failure stays until it is retried or dismissed: an error
+// that times out is one a person can miss.
+/** The polite live region that shows a pending removal with Undo, or a failed one with Try again. Pass it the whole `useUndoable()` result. */
 export function UndoBar({
-  pending,
-  onUndo,
+  undoable,
   inline = false,
 }: {
-  pending: PendingRemoval | null;
-  onUndo: () => void;
+  undoable: Pick<Undoable, "pending" | "failed" | "undo" | "retry" | "dismiss">;
   /** Render in the flow instead of fixed to the viewport; for the state-matrix page. */
   inline?: boolean;
 }) {
+  const { pending, failed, undo, retry, dismiss } = undoable;
+  const ghost = "text-background hover:bg-neutral-11";
   return (
     <div
       aria-live="polite"
@@ -72,12 +214,32 @@ export function UndoBar({
         inline ? "flex" : "pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4"
       }
     >
-      {pending && (
+      {(pending || failed) && (
         <div className="pointer-events-auto flex max-w-lg items-center gap-4 rounded-overlay bg-foreground py-2 pr-2 pl-4 text-background shadow-overlay">
-          <p className="min-w-0 type-body-sm">{pending.message}</p>
-          <Button size="sm" variant="ghost" className="text-background hover:bg-neutral-11" onClick={onUndo}>
-            Undo
-          </Button>
+          {pending ? (
+            <>
+              <p className="min-w-0 type-body-sm">{pending.message}</p>
+              <Button size="sm" variant="ghost" className={ghost} onClick={undo}>
+                Undo
+              </Button>
+            </>
+          ) : (
+            failed && (
+              <>
+                <p className="min-w-0 type-body-sm">
+                  {failed.removal.failure} {failed.message}
+                </p>
+                <div className="flex shrink-0 gap-1">
+                  <Button size="sm" variant="ghost" className={ghost} onClick={() => void retry().catch(() => undefined)}>
+                    Try again
+                  </Button>
+                  <Button size="sm" variant="ghost" className={ghost} onClick={dismiss}>
+                    Dismiss
+                  </Button>
+                </div>
+              </>
+            )
+          )}
         </div>
       )}
     </div>

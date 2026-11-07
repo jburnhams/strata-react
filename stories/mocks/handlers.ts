@@ -23,6 +23,7 @@ export const handlers = [
     return HttpResponse.json(size === "large" ? manyBookings : bookings);
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
+  http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
 ];
 
 export const bookingsLoading = http.get(api.bookings, async () => {
@@ -33,5 +34,10 @@ export const bookingsLoading = http.get(api.bookings, async () => {
 export const bookingsEmpty = http.get(api.bookings, () => HttpResponse.json([]));
 
 export const bookingsServerError = http.get(api.bookings, () =>
+  HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
+);
+
+/** Withdrawing a booking fails: the undo bar brings the row back and says why. */
+export const withdrawServerError = http.delete(`${api.bookings}/:id`, () =>
   HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
 );
