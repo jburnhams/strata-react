@@ -61,7 +61,7 @@ export type Undoable = {
   schedule: (next: PendingRemoval) => void;
   /** Cancels the pending removal and brings the item back; its `commit` never runs. */
   undo: () => void;
-  /** Commits the pending removal now and resolves when its commit settles; rejects if it failed, so a dependent action does not run. Resolves at once when nothing is pending. */
+  /** Commits the pending removal now and resolves when it and every earlier commit still in flight have settled; rejects if any failed, so a dependent action does not run. Resolves at once when nothing is pending or running. */
   flush: () => Promise<void>;
   /** Removes the failed item again and commits it now (the person already waited out the window); settles like `flush`. */
   retry: () => Promise<void>;
@@ -87,6 +87,10 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
   const current = React.useRef<PendingRemoval | null>(null);
   const timer = React.useRef<number | undefined>(undefined);
   const mounted = React.useRef(true);
+  // Every commit still running, whoever started it: flush() waits for all of them, not only the
+  // pending one, because an earlier removal's request may still be in flight (its window closed,
+  // or a second removal committed it) and a dependent action must not overtake it.
+  const inFlight = React.useRef(new Set<Promise<void>>());
   const describe = React.useRef(describeError);
   describe.current = describeError;
 
@@ -110,7 +114,7 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
       } catch (error) {
         result = Promise.reject(error);
       }
-      return Promise.resolve(result).then(
+      const done = Promise.resolve(result).then(
         () => undefined,
         (error: unknown) => {
           if (mounted.current) {
@@ -121,6 +125,10 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
           throw error;
         },
       );
+      inFlight.current.add(done);
+      const settle = () => void inFlight.current.delete(done);
+      done.then(settle, settle);
+      return done;
     },
     [hide],
   );
@@ -165,7 +173,12 @@ export function useUndoable(options: number | UndoableOptions = {}): Undoable {
     if (p) hide(p.id, false);
   }, [hide]);
 
-  const flush = React.useCallback(() => take()?.done ?? Promise.resolve(), [take]);
+  const flush = React.useCallback(async () => {
+    take();
+    const results = await Promise.allSettled([...inFlight.current]);
+    const failure = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failure) throw failure.reason;
+  }, [take]);
 
   const retry = React.useCallback(() => {
     if (!failed) return Promise.resolve();

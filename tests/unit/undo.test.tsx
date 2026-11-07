@@ -121,6 +121,31 @@ describe("useUndoable: flush", () => {
     vi.useRealTimers();
   });
 
+  it("also waits for an earlier commit still in flight, and rejects if it fails", async () => {
+    vi.useFakeTimers();
+    let fail!: (e: Error) => void;
+    const slow = vi.fn(() => new Promise<void>((_, reject) => (fail = reject)));
+    const handle: { current?: Undoable } = {};
+    render(<Harness removal={{ commit: slow }} api={handle} />);
+    act(() => screen.getByText("Withdraw").click());
+    act(() => vi.advanceTimersByTime(8000)); // the window closed; the request is in flight
+    expect(slow).toHaveBeenCalledOnce();
+    let settled = false;
+    let outcome!: Promise<unknown>;
+    act(() => {
+      outcome = handle.current!.flush().then(
+        () => "resolved",
+        (e: unknown) => e,
+      ).finally(() => void (settled = true));
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    const error = new Error("The kiln controller is offline.");
+    await act(async () => fail(error));
+    expect(await outcome).toBe(error);
+    vi.useRealTimers();
+  });
+
   it("resolves at once with nothing pending", async () => {
     const handle: { current?: Undoable } = {};
     render(<Harness removal={{ commit: vi.fn() }} api={handle} />);
