@@ -23,6 +23,7 @@ export const handlers = [
     return HttpResponse.json(size === "large" ? manyBookings : bookings);
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
+  http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
   http.post(api.bookings, async () => {
     await delay(600);
     return HttpResponse.json({ id: "b-4001" }, { status: 201 });
@@ -40,6 +41,10 @@ export const bookingsServerError = http.get(api.bookings, () =>
   HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
 );
 
+/** Withdrawing a booking fails: the undo bar brings the row back and says why. */
+export const withdrawServerError = http.delete(`${api.bookings}/:id`, () =>
+  HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
+);
 /** Booking a firing when the kiln is already taken: 409, for AsyncButton's error state. */
 export const bookingConflict = http.post(api.bookings, async () => {
   await delay(600);
