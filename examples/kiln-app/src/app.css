@@ -1,0 +1,10 @@
+/* Assembled as a product's stylesheet is (CLAUDE.md, "Building an app on Strata"), with the
+   kiln-room fixture theme in the product's place. */
+@import "tailwindcss";
+@import "../../../src/styles/strata.css";
+@import "../../../.storybook/theme.generated.css";
+@import "../../../.storybook/theme.css";
+
+@source "../../../src";
+@source "../../../stories";
+@source "./";

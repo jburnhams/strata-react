@@ -86,8 +86,9 @@ const fixed = (load: Load<Firing[]>, m?: Partial<More>): InfiniteLoad<Firing> =>
   restore: noop,
 });
 
-function useFiringLog(limit = 20) {
+function useFiringLog(limit = 20, isRemoved?: (id: string) => boolean) {
   return useInfiniteLoad({
+    isRemoved,
     queryKey: ["firings", limit],
     queryFn: ({ cursor, signal }) =>
       fetchJson<FiringPage>(`${api.firings}?limit=${limit}${cursor ? `&after=${cursor}` : ""}`, { signal }),
@@ -101,15 +102,21 @@ function FromApi({ limit }: { limit?: number }) {
   return <FiringLog state={useFiringLog(limit)} />;
 }
 
-// A queue someone works through: archiving a firing hides it at once (dismiss) with Undo in
-// reach, and keepAtLeast refills the list before it runs dry. The cursor follows the last firing
-// still held, so archiving never skips one.
+// A queue someone works through: archiving a firing hides it at once with Undo in reach, and
+// keepAtLeast refills the list before it runs dry. useUndoable owns what is out of view; the
+// list reads it through `isRemoved`, so the cursor follows the last firing still shown and
+// archiving never skips one.
 function ArchiveQueue() {
-  const log = useFiringLog(8);
-  const { pending, schedule, undo } = useUndoable();
+  const undoable = useUndoable();
+  const log = useFiringLog(8, undoable.isRemoved);
   const archive = (f: Firing) => {
-    log.dismiss(f.id);
-    schedule({ id: f.id, message: `Archived the ${format.day.format(minuteToDate(f.endedMin))} firing.`, commit: noop });
+    const day = format.day.format(minuteToDate(f.endedMin));
+    undoable.schedule({
+      id: f.id,
+      message: `Archived the ${day} firing.`,
+      failure: `The ${day} firing is back: archiving it did not go through.`,
+      commit: noop,
+    });
   };
   return (
     <div className="grid gap-4">
@@ -126,14 +133,7 @@ function ArchiveQueue() {
           <FiringRow f={f} action={<IconButton label={`Archive firing ${f.id}`} icon={Archive} onClick={() => archive(f)} />} />
         )}
       </InfiniteList>
-      <UndoBar
-        pending={pending}
-        onUndo={() => {
-          if (pending) log.restore(pending.id);
-          undo();
-        }}
-        inline
-      />
+      <UndoBar undoable={undoable} inline />
     </div>
   );
 }

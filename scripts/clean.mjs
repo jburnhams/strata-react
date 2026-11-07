@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 
-const targets = ['dist', 'storybook-static', 'site', 'coverage', 'tests/visual/output'];
+const targets = ['dist', 'storybook-static', 'site', 'coverage', 'tests/visual/output', 'examples/kiln-app/dist'];
 
 for (const target of targets) {
   const fullPath = path.join(projectRoot, target);

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { Button, EmptyState, InfiniteList, Skeleton, fetchJson, useInfiniteLoad, type InfiniteLoad } from "../../src";
+import { Button, EmptyState, InfiniteList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { api, firingPage, firingsEmpty, firingsLaterPageError, firingsServerError, type FiringPage } from "../../stories/mocks/handlers";
@@ -165,6 +165,42 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
     expect(await screen.findByText("Firing f-0406")).toBeInTheDocument();
     expect(cursors[3]).toBe("f-0407");
+  });
+
+  it("hides what useUndoable removes, moves the cursor past it, and brings it back on Undo", async () => {
+    const cursors = recordCursors();
+    function Archive() {
+      const undoable = useUndoable();
+      const load = useInfiniteLoad({
+        queryKey: ["firings", "archive"],
+        queryFn: ({ cursor, signal }) => fetchJson<FiringPage>(`${api.firings}?limit=20${cursor ? `&after=${cursor}` : ""}`, { signal }),
+        items: (page) => page.firings,
+        itemKey: (f) => f.id,
+        hasMore: (page) => page.hasMore,
+        isRemoved: undoable.isRemoved,
+      });
+      return (
+        <>
+          <InfiniteList state={load} label="Firing log" moreLabel="Show older firings" skeleton={<Skeleton className="h-10" />} empty={<EmptyState title="No firings yet" />}>
+            {(f) => (
+              <Button onClick={() => undoable.schedule({ id: f.id, message: `Archived ${f.id}.`, failure: `${f.id} is back.`, commit: () => undefined })}>
+                Archive {f.id}
+              </Button>
+            )}
+          </InfiniteList>
+          <UndoBar undoable={undoable} inline />
+        </>
+      );
+    }
+    renderWithStrata(<Archive />);
+    await userEvent.click(await screen.findByRole("button", { name: "Archive f-0393" }));
+    expect(screen.queryByRole("button", { name: "Archive f-0393" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    await screen.findByRole("button", { name: "Archive f-0374" });
+    expect(cursors).toEqual([null, "f-0394"]);
+    expect(screen.queryByRole("button", { name: "Archive f-0393" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("button", { name: "Archive f-0393" })).toBeInTheDocument();
   });
 
   it("forgets dismissals when the query changes", async () => {

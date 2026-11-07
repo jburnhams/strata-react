@@ -1,7 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "name": "strata-react API",
-  "entryPoints": ["src/index.ts", "src/testing/index.tsx"],
+  "entryPoints": ["src/index.ts", "src/testing/index.tsx", "src/visual/index.ts"],
   "entryPointStrategy": "resolve",
   "tsconfig": "tsconfig.json",
   "out": "site/api",

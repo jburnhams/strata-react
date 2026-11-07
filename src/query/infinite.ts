@@ -21,7 +21,10 @@ import { describeHttpError, type DescribeError } from "./index";
 // 2. Items have keys. Pages are merged by key, so an item that shifts across a page boundary is
 //    shown once, and `dismiss(key)` hides one at once (an optimistic remove, paired with
 //    useUndoable) without the app rewriting TanStack's page cache by hand. Dismissals belong to
-//    one query: a new `queryKey` (another filter) starts with none.
+//    one query: a new `queryKey` (another filter) starts with none. A screen that removes items
+//    with `useUndoable` passes its `isRemoved` instead, so the undo hook stays the one owner of
+//    what is out of view (Undo, a failed commit and Try again all show through) and the cursor
+//    still skips past what it hides.
 // 3. A later page failing is not the list failing. The held items stay; `more.error` says what
 //    happened and `more.loadMore` is the Try again. Only a failed first page is a `Load` error.
 
@@ -60,6 +63,8 @@ export type InfiniteLoadOptions<T, Page, Cursor, K extends QueryKey> = {
   hasMore: (lastPage: Page) => boolean;
   /** The cursor that asks for the items after this one; usually its id. Defaults to `itemKey`. */
   cursorAfter?: (item: T) => Cursor;
+  /** Items hidden by someone else, usually `useUndoable().isRemoved`: treated like dismissed ones. */
+  isRemoved?: (key: string) => boolean;
   describeError?: DescribeError;
   enabled?: boolean;
   staleTime?: number;
@@ -76,6 +81,7 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   itemKey,
   hasMore,
   cursorAfter = itemKey as unknown as (item: T) => Cursor,
+  isRemoved,
   describeError = describeHttpError,
   enabled,
   staleTime,
@@ -83,9 +89,10 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   const queryHash = hashKey(queryKey);
   const [stored, setStored] = React.useState<Dismissed>(() => ({ query: queryHash, keys: new Set() }));
   const dismissed = stored.query === queryHash ? stored.keys : none;
-  // TanStack calls getNextPageParam outside render; it reads the latest dismissals and accessors.
-  const latest = React.useRef({ dismissed, items, itemKey, hasMore, cursorAfter });
-  latest.current = { dismissed, items, itemKey, hasMore, cursorAfter };
+  const hidden = React.useCallback((key: string) => dismissed.has(key) || (isRemoved?.(key) ?? false), [dismissed, isRemoved]);
+  // TanStack calls getNextPageParam outside render; it reads the latest hidden set and accessors.
+  const latest = React.useRef({ hidden, items, itemKey, hasMore, cursorAfter });
+  latest.current = { hidden, items, itemKey, hasMore, cursorAfter };
 
   const query = useInfiniteQuery({
     queryKey,
@@ -94,7 +101,7 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
     getNextPageParam: (lastPage, pages): PageParam<Cursor> | null => {
       const l = latest.current;
       if (!l.hasMore(lastPage)) return null;
-      const after = nextAfter(pages, l.items, l.itemKey, l.dismissed);
+      const after = nextAfter(pages, l.items, l.itemKey, l.hidden);
       return { cursor: after === undefined ? undefined : l.cursorAfter(after) };
     },
     enabled,
@@ -105,8 +112,8 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   // Keyed on the pages and dismissals only, so inline `items`/`itemKey` arrows do not hand the
   // list a new array every render.
   const list = React.useMemo(
-    () => (pages ? merge(pages, latest.current.items, latest.current.itemKey, dismissed).held : undefined),
-    [pages, dismissed],
+    () => (pages ? merge(pages, latest.current.items, latest.current.itemKey, hidden).held : undefined),
+    [pages, hidden],
   );
 
   const { hasNextPage, isFetchingNextPage, fetchNextPage, refetch } = query;
@@ -140,7 +147,7 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
 const none: ReadonlySet<string> = new Set();
 
 /** Every page's items, in order, once each by key: the ones held (not dismissed) and the last one seen. */
-function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, dismissed: ReadonlySet<string>) {
+function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, hidden: (key: string) => boolean) {
   const seen = new Set<string>();
   const held: T[] = [];
   let last: T | undefined;
@@ -152,15 +159,15 @@ function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (ite
       seen.add(key);
       last = item;
       if (p === pages.length - 1) lastPageAddedAny = true;
-      if (!dismissed.has(key)) held.push(item);
+      if (!hidden(key)) held.push(item);
     }
   });
   return { held, last, lastPageAddedAny };
 }
 
 /** The item the next page goes after: the last held, or the last seen when nothing is held or the last page brought nothing new. */
-function nextAfter<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, dismissed: ReadonlySet<string>) {
-  const { held, last, lastPageAddedAny } = merge(pages, items, itemKey, dismissed);
+function nextAfter<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, hidden: (key: string) => boolean) {
+  const { held, last, lastPageAddedAny } = merge(pages, items, itemKey, hidden);
   if (held.length === 0 || (pages.length > 1 && !lastPageAddedAny)) return last;
   return held[held.length - 1];
 }

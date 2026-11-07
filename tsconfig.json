@@ -4,6 +4,6 @@
     "noEmit": true,
     "types": ["node", "@testing-library/jest-dom/vitest"]
   },
-  "include": ["src", "tests", "stories", ".storybook", "vite.config.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist", "storybook-static"]
+  "include": ["src", "tests", "stories", ".storybook", "examples", "strata-visual.config.ts", "vite.config.ts", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist", "storybook-static", "examples/*/dist"]
 }

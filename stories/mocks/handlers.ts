@@ -41,6 +41,7 @@ export const handlers = [
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
   http.get(api.firings, ({ request }) => HttpResponse.json(firingPage(request.url))),
+  http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
   http.post(api.bookings, async () => {
     await delay(600);
     return HttpResponse.json({ id: "b-4001" }, { status: 201 });
@@ -74,6 +75,11 @@ export const firingsLaterPageError = http.get(api.firings, ({ request }) =>
   new URL(request.url).searchParams.has("after")
     ? HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" })
     : HttpResponse.json(firingPage(request.url)),
+);
+
+/** Withdrawing a booking fails: the undo bar brings the row back and says why. */
+export const withdrawServerError = http.delete(`${api.bookings}/:id`, () =>
+  HttpResponse.json({ message: "controller offline" }, { status: 503, statusText: "Service Unavailable" }),
 );
 
 /** Booking a firing when the kiln is already taken: 409, for AsyncButton's error state. */
