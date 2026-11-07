@@ -2,6 +2,18 @@
 
 ## 2026-11-07
 
+**Keyboard triage: `useHotkeys`, `KeysLegend`, `useActiveItem`, `ActiveList`** (branch `claude/project-thread-9k96br`, issue #7). Issue #7 asked for the keyboard flow written by hand in strata-listory (a window `keydown` handler that skips fields and modifiers, a j/k active item with `aria-current`, focus moving on after an answer) to become part of the library, with a legend so the keys can be found. Jonathan asked for issues to be solved so they advance the library rather than the one app, so the pieces share one shortcut list, work with `useUndoable` and `DataView`, and come with a whole screen that composes them.
+
+- `src/components/hotkeys.tsx` (**new**): `useHotkeys` binds a `Shortcut[]` (or a `{ key: run }` record) on the window and ignores keys typed into inputs, textareas, selects and contenteditable (checkboxes, radios and buttons are not typing), chords with Ctrl, Meta or Alt, IME composition, held keys unless the shortcut is `repeat`, and `disabled` shortcuts. `KeysLegend` renders the same list as a `<dl>` of `<kbd>`s, alternatives read as "j or ↓", disabled ones muted, hidden on coarse pointers. `isTypingTarget` is exported for components with their own key handling.
+- `src/components/active-list.tsx` (**new**): `useActiveItem(items, getKey, { initial, noun })` tracks the active item by key, moves it (`next`, `prev`, `first`, `last`, `setActive`), makes it a roving tab stop with `aria-current`, and returns j/k `shortcuts` labelled with the noun. When the active item leaves the list the one that took its place becomes active (the one before it at the end) and focus follows if it was in the list; it never takes focus from elsewhere on the page. It remembers the chosen key, so an Undo that restores the item makes it active again. `ActiveList` renders the queue with the arrow keys, Home and End, a rule in ink plus a tint on the active row, and a required `empty`.
+- `src/index.ts`: exports the above and the `Shortcut` and `ActiveItem` types.
+- `stories/keyboard.stories.tsx` (**new**, `Data/ActiveList`): first active, second active, empty, and the legend. `stories/screens/review-bookings.tsx` and `.stories.tsx` (**new**, `Screens/Bookings to check`): the whole pattern on kiln-room bookings, j/k, a to approve, r to return, z to undo, data through `useLoad` and `DataView`, in its ready, third-active, loading, all-checked and server-error states.
+- `tests/unit/keyboard.test.tsx` (**new**, 16 tests): the typing, chord, repeat and disabled rules; the legend's terms; moving, the ends, the arrow keys; moving on after an answer by key and by a row's button; the last item; undo; not stealing focus; the empty state; and the whole screen against MSW. 62 unit tests in all.
+- `tests/visual/baselines/`: 18 **new** baselines for the two story files; the other 94 are unchanged.
+- `README.md`: a Keyboard row in the component table. `CLAUDE.md`: rule 6 under "Building an app on Strata" says queue screens use these pieces and never a hand-written `keydown` listener.
+
+Not done: `DataTable` has no active-row mode yet, so a triage over a table still needs `ActiveList`; a `?` shortcut that opens the legend in a dialog waits for the Dialog component.
+
 **Publish to npm when a release is published** (branch `claude/project-thread-nwljes`). After PR #4 the release for v0.1.2 was created, but NPM Publish never ran. `softprops/action-gh-release` creates the release as a draft and then publishes it (created 17:28:01, published 17:28:22), and creating a draft fires no `release: created` event.
 
 - `.github/workflows/npm-publish.yml`: triggers on `release: published`, and can also be run by hand (`workflow_dispatch`).

@@ -109,8 +109,12 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 4. One filled (`variant="default"`) button per view. Reversible removals use `useUndoable` +
    `UndoBar`; only irreversible ones get a confirm dialog.
 5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
-6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+6. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
+   `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
+   `KeysLegend`, answers through `useUndoable`. Never bind single keys with a hand-written
+   `keydown` listener.
+7. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+8. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
 
 ## Commands
 

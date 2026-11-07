@@ -86,6 +86,7 @@ function KilnRoom() {
 | Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; charts label values directly |
 | Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out |
 | Page and navigation | `AppShell`, `SideNav`, `Breadcrumb`, `Tabs`, `PageHeader` | React Router; tab and sort state in the URL |
+| Keyboard | `useHotkeys`, `KeysLegend`, `Shortcut`, `useActiveItem`, `ActiveList`, `isTypingTarget` | For queues worked from the keyboard; one shortcut list drives the handler and the legend; keys never fire while typing; answering moves focus to the next item |
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; `Done` is the one celebration, and it must say what happens next |
 | Helpers | `cn`, `format`, `createFormat` | `cn` knows `type-*`; all numbers and dates through `Intl` |
 | Testing | `strata-react/testing`: `renderWithStrata`, `createTestQueryClient` | Router + query client around Testing Library's `render` |
