@@ -6,3 +6,4 @@ tests/visual/output
 *.tsbuildinfo
 .DS_Store
 *.log
+site

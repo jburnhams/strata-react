@@ -2,6 +2,15 @@
 
 ## 2026-11-07
 
+**Publish Storybook, an API reference and the visual baselines to GitHub Pages** (branch `claude/project-thread-nwljes`, PR #2). Jonathan asked for Pages to carry Storybook, the library docs and the visuals, and for a Javadoc equivalent; TypeDoc is that, reading the TSDoc comments. npm publishing from the template is unchanged.
+
+- `typedoc.json` (**new**): API reference for `strata-react` and `strata-react/testing` into `site/api/`, with links back to Storybook and the gallery; warns on unexported types and broken links. Its links to Storybook and the gallery are absolute (`https://jburnhams.github.io/strata-react/`), because TypeDoc writes them verbatim into every page and a relative `../` broke them on nested reference pages (found in review).
+- `scripts/build-site.mjs` (**new**): assembles `site/` from `storybook-static/` and the API docs, and writes `site/visuals/index.html`, every baseline grouped by story, light beside dark, each linked to its story.
+- `package.json`: **new** scripts `docs:api` and `site`; TypeDoc 0.28 as a dev dependency. `scripts/clean.mjs` and `.gitignore` cover `site/`.
+- `.github/workflows/pages.yml` (renamed from `storybook-pages.yml`): builds and deploys the whole site, not Storybook alone.
+- `src/`: a one-line TSDoc summary on every export, and `@module` names on the two entry points. The undo hook's pending type is now exported as `PendingRemoval` (it was an unexported `Pending` that the public `useUndoable` returned).
+- `stories/introduction.mdx`: links to the API reference and the gallery. `README.md`: a docs-site section. `CLAUDE.md`: TypeDoc in the stack, the two commands, and a TSDoc summary in the definition of done.
+
 **Build strata-react out from the library template into an opinionated React + Tailwind framework** (branch `claude/project-thread-nwljes`). Jonathan asked for strata-react to become his own component, UX and styles library based on the ux-research findings, used first for the ux-research examples and live demos and then elsewhere, with Storybook and visual regression testing (headless Chromium screenshots compared with pixelmatch in CI). While the work was under way he fixed the stack: Vite and Vitest, Testing Library, MSW instead of module mocks, TanStack Query, Table and Virtual, React Router, and @napi-rs/canvas only for testing canvas drawing; and he asked for all of it to be written into `CLAUDE.md`. The design follows ux-research `ui-library/` (placeholder name Plinth) with one change: Plinth specified a shadcn-style copy-in registry, and Strata is a package, because Jonathan wants one shared framework across his products. The app still owns its theme; the components are the package's.
 
 - `package.json`: renamed from the template's `my-library` to `strata-react`; ESM-only exports for `.`, `./testing` and `./strata.css`; React 19, React Router, TanStack Query and Tailwind v4 as peers; TanStack Table and Virtual, cva, clsx, tailwind-merge, Radix Slot and Lucide as dependencies; Playwright pinned to an exact version so baselines and CI use the same Chromium; `prepare` builds, so the package installs from GitHub.

@@ -48,7 +48,9 @@
     "test:visual": "npm run build-storybook && node scripts/visual.mjs",
     "test:visual:update": "npm run build-storybook && node scripts/visual.mjs --update",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run test:all"
+    "prepublishOnly": "npm run test:all",
+    "docs:api": "typedoc",
+    "site": "npm run build-storybook && typedoc && node scripts/build-site.mjs"
   },
   "keywords": [
     "react",
@@ -110,6 +112,7 @@
     "react-router": "^8.5.1",
     "storybook": "^10.6.6",
     "tailwindcss": "^4.3.5",
+    "typedoc": "^0.28.20",
     "typescript": "~5.9",
     "vite": "^8.3.6",
     "vite-plugin-dts": "^5.1.2",

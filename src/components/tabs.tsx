@@ -9,6 +9,7 @@ import { cn } from "../lib/utils";
 
 export type TabItem = { value: string; label: string };
 
+/** Tabs whose selection lives in a URL search parameter (React Router), with the ARIA tabs keyboard model. */
 export function Tabs({
   param,
   items,

@@ -16,6 +16,7 @@ import { cn } from "../lib/utils";
 //   motion makes it instant. Nothing loops and nothing plays a sound.
 // - Focus moves to the heading on mount, so keyboard and screen-reader users land on the result.
 
+/** The completion moment for a rare, earned finish: what happened (past tense, with its object), what happens next, and optionally a figure drawn from the person's own data. Focus moves to the heading. */
 export function Done({
   title,
   next,

@@ -1,5 +1,6 @@
-# Publishes Storybook to GitHub Pages from main. One-time setup: Settings > Pages > Source: GitHub Actions.
-name: Storybook to Pages
+# Publishes the docs site to GitHub Pages from main: Storybook at /, TypeDoc API at /api/, the
+# visual baselines at /visuals/. One-time setup: Settings > Pages > Source: GitHub Actions.
+name: Docs site to Pages
 
 on:
   push:
@@ -23,10 +24,10 @@ jobs:
           node-version: 26.x
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run build-storybook
+      - run: npm run site
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: storybook-static
+          path: site
 
   deploy:
     needs: build

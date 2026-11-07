@@ -14,6 +14,7 @@ const twMerge = extendTailwindMerge({
   },
 });
 
+/** clsx + tailwind-merge, taught that `type-*` utilities are font sizes. */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

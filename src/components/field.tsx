@@ -32,6 +32,7 @@ export type FieldProps = {
   className?: string;
 };
 
+/** A labelled form field: wires the label, hint, error, `aria-describedby` and `aria-invalid` into the one control it wraps. */
 export function Field({ label, id: idProp, hint, error, children, className }: FieldProps) {
   const generated = React.useId();
   const id = idProp ?? generated;
@@ -65,16 +66,19 @@ export function Field({ label, id: idProp, hint, error, children, className }: F
 const control =
   "w-full min-w-0 rounded-control border border-input bg-background px-3 type-body text-foreground transition-state placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 aria-invalid:border-danger";
 
+/** A text input that picks up its id and descriptions from the surrounding `Field`. */
 export function Input({ className, id, ...props }: React.ComponentProps<"input">) {
   return <input {...useField(id)} className={cn(control, "h-(--control-h)", className)} {...props} />;
 }
 
+/** A multi-line input that picks up its id and descriptions from the surrounding `Field`. */
 export function Textarea({ className, id, ...props }: React.ComponentProps<"textarea">) {
   return <textarea {...useField(id)} className={cn(control, "min-h-24 py-2", className)} {...props} />;
 }
 
 // A native select, styled. For short option lists on a touch screen it beats a custom listbox:
 // the platform picker, typeahead and form autofill all work with no code.
+/** The platform select, styled. The default for short lists, especially on touch screens. */
 export function NativeSelect({ className, id, ...props }: React.ComponentProps<"select">) {
   return <select {...useField(id)} className={cn(control, "h-(--control-h) pr-8", className)} {...props} />;
 }
@@ -83,6 +87,7 @@ export function NativeSelect({ className, id, ...props }: React.ComponentProps<"
 // one hit target. accent-color carries the theme into the native control.
 export type Choice = { value: string; label: string; detail?: string };
 
+/** Radio choices in a fieldset with a legend; each whole row is the hit target. For 2 to 5 options that each need a sentence. */
 export function ChoiceGroup({
   legend,
   name,

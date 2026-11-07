@@ -12,6 +12,7 @@ export type Load<T> =
   | { status: "error"; message: string; retry: () => void }
   | { status: "ready"; data: T };
 
+/** Every view of remote data: renders `skeleton` while loading, an alert with Try again on error, `empty` when `isEmpty`, else `children(data)`. The skeleton and empty state are required. */
 export function DataView<T>({
   state,
   isEmpty,
@@ -25,7 +26,7 @@ export function DataView<T>({
   isEmpty: (data: T) => boolean;
   /** Mirrors the final layout, so nothing jumps when data arrives. Not a centred spinner. */
   skeleton: React.ReactNode;
-  /** What goes here and how to add it. An <EmptyState>, not an illustration. */
+  /** What goes here and how to add it. An `EmptyState`, not an illustration. */
   empty: React.ReactNode;
   children: (data: T) => React.ReactNode;
   className?: string;
@@ -49,6 +50,7 @@ export function DataView<T>({
 }
 
 // An empty state teaches the next action. No illustration slot exists, on purpose.
+/** An empty state that teaches the next action: a title, a sentence and an action. No illustration slot, on purpose. */
 export function EmptyState({ title, children, action }: { title: string; children?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="grid justify-items-start gap-2 border-y border-border py-6">
@@ -59,6 +61,7 @@ export function EmptyState({ title, children, action }: { title: string; childre
   );
 }
 
+/** A placeholder block for a loading layout. Size it with layout classes so it mirrors the final content. */
 export function Skeleton({ className }: { className?: string }) {
   return <div aria-hidden className={cn("rounded-control bg-muted motion-safe:animate-pulse", className)} />;
 }

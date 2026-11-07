@@ -6,20 +6,22 @@ import { Button } from "./button";
 // against the rare mistake, and people learn to click through it. Keep a confirm dialog for
 // actions that cannot be undone (deleting an account, firing a kiln).
 
-type Pending = { id: string; message: string; commit: () => void };
+/** A removal waiting out its undo window: what to say, and what to do when the window closes. */
+export type PendingRemoval = { id: string; message: string; commit: () => void };
 
+/** Schedules a reversible removal to commit after `windowMs` unless undone. A second removal, or unmounting, commits the pending one. */
 export function useUndoable(windowMs = 8000) {
-  const [pending, setPending] = React.useState<Pending | null>(null);
-  const current = React.useRef<Pending | null>(null);
+  const [pending, setPending] = React.useState<PendingRemoval | null>(null);
+  const current = React.useRef<PendingRemoval | null>(null);
   const timer = React.useRef<number | undefined>(undefined);
 
-  const set = React.useCallback((p: Pending | null) => {
+  const set = React.useCallback((p: PendingRemoval | null) => {
     current.current = p;
     setPending(p);
   }, []);
 
   const schedule = React.useCallback(
-    (next: Pending) => {
+    (next: PendingRemoval) => {
       window.clearTimeout(timer.current);
       current.current?.commit(); // a second removal commits the first
       set(next);
@@ -52,12 +54,13 @@ export function useUndoable(windowMs = 8000) {
 // The bar lives in a polite live region that is always mounted, so screen readers hear the message
 // when it appears. It is fixed to the bottom of the viewport; a page that uses it keeps that much
 // bottom padding so the bar never covers the focused row.
+/** The polite live region that shows a pending removal with an Undo button. */
 export function UndoBar({
   pending,
   onUndo,
   inline = false,
 }: {
-  pending: Pending | null;
+  pending: PendingRemoval | null;
   onUndo: () => void;
   /** Render in the flow instead of fixed to the viewport; for the state-matrix page. */
   inline?: boolean;

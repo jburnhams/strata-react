@@ -65,6 +65,7 @@ export function niceMax(max: number) {
   return step * 4;
 }
 
+/** One measured series, drawn in real pixels, with the peak and current readings labelled on the chart and every reading in a screen-reader table. Optional plan, threshold band and `colourScale`. */
 export function LineChart({
   label,
   series,

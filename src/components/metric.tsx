@@ -7,6 +7,7 @@ import { cn } from "../lib/utils";
 // Thursday"), because a green "+12.5%" pill says neither what changed nor since when, and the trend
 // gets its own chart.
 
+/** Headline figures as one description list split by hairlines. Holds `Metric`s. */
 export function MetricStrip({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <dl
@@ -30,6 +31,7 @@ export type MetricProps = {
   note?: React.ReactNode;
 };
 
+/** One figure: label over value, an optional muted unit and a note that states any change in words with its window. */
 export function Metric({ label, value, unit, note }: MetricProps) {
   return (
     <div className="grid content-start gap-0.5 border-border py-3 not-first:border-t sm:px-5 sm:not-first:border-t-0 sm:first:pl-0">
