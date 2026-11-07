@@ -44,17 +44,26 @@ kiln-room fixture).
 
 ```tsx
 import { createBrowserRouter, RouterProvider } from "react-router";
-import { StrataQueryProvider } from "strata-react";
+import { StrataQueryProvider, ThemeProvider } from "strata-react";
 import "./app.css";
 
 const router = createBrowserRouter([{ path: "/", element: <KilnRoom /> }]);
 
 createRoot(document.getElementById("root")!).render(
-  <StrataQueryProvider>
-    <RouterProvider router={router} />
-  </StrataQueryProvider>,
+  <ThemeProvider>
+    <StrataQueryProvider>
+      <RouterProvider router={router} />
+    </StrataQueryProvider>
+  </ThemeProvider>,
 );
 ```
+
+`ThemeProvider` sets the `.dark` class strata.css keys on. It follows the operating system until
+a person chooses light or dark, keeps that choice in localStorage (and carries on without it when
+storage is blocked), and follows a choice made in another tab. Put `<ColorSchemeChoice />` on the
+settings page, or build your own control from `useColorScheme()`. So a dark page does not flash
+light while the bundle loads, inline the pre-paint script in `index.html`'s `<head>`; generate it
+once with `colorSchemeScript()` (it reads the same key the provider writes).
 
 ```tsx
 // One question: "Is my work out of the kiln yet?"
@@ -80,16 +89,17 @@ function KilnRoom() {
 
 | Group | Exports | Notes |
 |---|---|---|
-| Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error |
+| Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error, and announces `error` with its retry label; `useAsyncAction` returns `{ phase, run, error }` with a stable `run`, and describes an `HttpError` in a sentence (`describeActionError`, or the product's own `describeError`) |
 | Form | `Field`, `Input`, `Textarea`, `NativeSelect`, `ChoiceGroup` | `Field` wires label, hint, error, `aria-describedby`, `aria-invalid` |
 | Status and figures | `Status`, `Metric`, `MetricStrip` | A status is always a word; figures have no icons or sparklines |
 | Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; charts label values directly |
 | Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out |
 | Page and navigation | `AppShell`, `SideNav`, `Breadcrumb`, `Tabs`, `PageHeader` | React Router; tab and sort state in the URL |
 | Keyboard | `useHotkeys`, `KeysLegend`, `Shortcut`, `useActiveItem`, `ActiveList`, `isTypingTarget` | For queues worked from the keyboard; one shortcut list drives the handler and the legend; keys never fire while typing; answering moves focus to the next item |
+| Theme | `ThemeProvider`, `useColorScheme`, `useSystemColorScheme`, `ColorSchemeChoice`, `colorSchemeScript` | System, light or dark; sets `.dark`, persists in localStorage when it can; no picker beyond the settings-page radio group |
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; `Done` is the one celebration, and it must say what happens next |
-| Helpers | `cn`, `format`, `createFormat` | `cn` knows `type-*`; all numbers and dates through `Intl` |
-| Testing | `strata-react/testing`: `renderWithStrata`, `createTestQueryClient` | Router + query client around Testing Library's `render` |
+| Helpers | `cn`, `format`, `createFormat`, `NBSP` | `cn` knows `type-*`; all numbers and dates through `Intl`; `format.integer(n)`, `.decimal(n)`, `.percent(n)` are callable and keep Intl's methods; units and counts join with a non-breaking space |
+| Testing | `strata-react/testing`: `renderWithStrata`, `createTestQueryClient`, `installLayoutShims`, `installFakeIntersectionObserver` | Router + query client around Testing Library's `render`; a fixed box and ResizeObserver so measuring components render in jsdom; an IntersectionObserver the test fires with `scrollToEnd()` or `intersect(el)`. Role names keep the non-breaking space from `format.count`, so match them with the same call or a `\s` regex |
 
 Specs for the components not built yet (dialogs, sheets, menus, toasts, command menu, prose)
 are in ux-research `ui-library/components.md`.

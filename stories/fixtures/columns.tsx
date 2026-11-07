@@ -15,7 +15,7 @@ export const states: Record<KilnState, { tone: Tone; icon: IconComponent; label:
 
 export const bookingColumns: Column<Booking>[] = [
   { key: "member", header: "Member", cell: (b) => b.member, sort: (a, b) => a.member.localeCompare(b.member), className: "whitespace-nowrap" },
-  { key: "pieces", header: "Pieces", cell: (b) => format.integer.format(b.pieces), numeric: true, sort: (a, b) => a.pieces - b.pieces },
+  { key: "pieces", header: "Pieces", cell: (b) => format.integer(b.pieces), numeric: true, sort: (a, b) => a.pieces - b.pieces },
   { key: "kiln", header: "Kiln", cell: (b) => `Kiln ${b.kiln}`, className: "whitespace-nowrap" },
   { key: "glaze", header: "Glaze", cell: (b) => glazeNames[b.glaze], className: "whitespace-nowrap" },
   {
