@@ -3,9 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Button, EmptyState, InfiniteList, Skeleton, fetchJson, useInfiniteLoad, type InfiniteLoad } from "../../src";
-import { renderWithStrata } from "../../src/testing";
+import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
-import { installFakeIntersectionObserver } from "../utils/intersection";
 import { api, firingPage, firingsEmpty, firingsLaterPageError, firingsServerError, type FiringPage } from "../../stories/mocks/handlers";
 import { firings, type Firing } from "../../stories/fixtures/kiln";
 

@@ -41,6 +41,10 @@ export const handlers = [
   }),
   http.get(api.readings, () => HttpResponse.json(readings)),
   http.get(api.firings, ({ request }) => HttpResponse.json(firingPage(request.url))),
+  http.post(api.bookings, async () => {
+    await delay(600);
+    return HttpResponse.json({ id: "b-4001" }, { status: 201 });
+  }),
 ];
 
 export const bookingsLoading = http.get(api.bookings, async () => {
@@ -71,3 +75,9 @@ export const firingsLaterPageError = http.get(api.firings, ({ request }) =>
     ? HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" })
     : HttpResponse.json(firingPage(request.url)),
 );
+
+/** Booking a firing when the kiln is already taken: 409, for AsyncButton's error state. */
+export const bookingConflict = http.post(api.bookings, async () => {
+  await delay(600);
+  return HttpResponse.json({ message: "kiln taken" }, { status: 409, statusText: "Conflict" });
+});
