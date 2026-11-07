@@ -63,7 +63,7 @@ describe("visual compare (pixelmatch)", () => {
 
   it("absorbs anti-aliasing that moved along an edge", () => {
     expect(compare(edge(0), edge(0.2), { blur: 0, includeAA: true }).diffPixels).toBe(64);
-    expect(compare(edge(0), edge(0.2))).toMatchObject({ same: true, diffPixels: 0 });
+    expect(compare(edge(0), edge(0.2))).toMatchObject({ same: true, diffPixels: 0, reason: expect.stringMatching(/^0 pixels differ \(0\.000%\), \d+ without the blur$/) });
   });
 
   it("still fails a small mark the size of a changed letter's stroke", () => {

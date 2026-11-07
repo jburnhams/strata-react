@@ -49,6 +49,8 @@ export interface CompareResult {
   identical: boolean;
   /** Pixels that differ beyond the threshold after the blur (Infinity when the size changed). */
   diffPixels: number;
+  /** The same count without the blur: how much anti-aliasing the blur absorbed. */
+  unblurredDiffPixels: number;
   /** One line for a report: what changed. */
   reason: string;
   /** A PNG highlighting the differing pixels in red over the faded baseline, when the images differ in content. */
@@ -109,23 +111,26 @@ export function compare(expected: Image, actual: Image, options: CompareOptions 
       same: false,
       identical: false,
       diffPixels: Number.POSITIVE_INFINITY,
+      unblurredDiffPixels: Number.POSITIVE_INFINITY,
       reason: `size ${expected.width}×${expected.height} → ${actual.width}×${actual.height}`,
     };
   }
   const { width, height } = expected;
-  if (sameBytes(expected.data, actual.data)) return { same: true, identical: true, diffPixels: 0, reason: "identical" };
+  if (sameBytes(expected.data, actual.data)) return { same: true, identical: true, diffPixels: 0, unblurredDiffPixels: 0, reason: "identical" };
   const mask = new Uint8Array(width * height * 4);
   const diffPixels = pixelmatch(boxBlur(expected, blur), boxBlur(actual, blur), mask, width, height, {
     threshold,
     includeAA,
     diffMask: true,
   });
+  const unblurredDiffPixels = blur > 0 ? pixelmatch(expected.data, actual.data, null, width, height, { threshold, includeAA }) : diffPixels;
   const same = diffPixels <= maxDiffPixels;
   return {
     same,
     identical: false,
     diffPixels,
-    reason: `${diffPixels} pixels differ (${((diffPixels / (width * height)) * 100).toFixed(3)}%)`,
+    unblurredDiffPixels,
+    reason: `${diffPixels} pixels differ (${((diffPixels / (width * height)) * 100).toFixed(3)}%)${blur > 0 ? `, ${unblurredDiffPixels} without the blur` : ""}`,
     diff: same ? undefined : diffImage(expected, mask),
   };
 }

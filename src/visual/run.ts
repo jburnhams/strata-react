@@ -224,7 +224,11 @@ export function pinWarnings(cwd: string): string[] {
     );
 }
 
-const pixels = (line: string) => Number(/: (\d+) pixels/.exec(line)?.[1] ?? 0);
+// Sorts by the blurred count, then by the count without the blur.
+const pixels = (line: string) => {
+  const m = /: (\d+) pixels differ[^,]*(?:, (\d+) without)?/.exec(line);
+  return Number(m?.[1] ?? 0) * 1e9 + Number(m?.[2] ?? 0);
+};
 
 /** The report as the lines the command prints. */
 export function formatReport(report: VisualReport): string {
