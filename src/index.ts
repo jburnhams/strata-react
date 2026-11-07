@@ -25,6 +25,18 @@ export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";
 export {
+  ThemeProvider,
+  useColorScheme,
+  useSystemColorScheme,
+  ColorSchemeChoice,
+  colorSchemeScript,
+  COLOR_SCHEME_STORAGE_KEY,
+  type ColorScheme,
+  type ColorSchemePreference,
+  type ColorSchemeLabels,
+  type ColorSchemeState,
+} from "./components/theme";
+export {
   StrataQueryProvider,
   createQueryClient,
   toLoad,
