@@ -19,6 +19,9 @@ jobs:
         uses: 'actions/checkout@v4'
         with:
           ref: main
+          # Push the bump with the release token. The default token can't push to main, and the
+          # credentials checkout persists would otherwise win over the token given to the bump step.
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: 'Setup Node.js'
         uses: 'actions/setup-node@v4'

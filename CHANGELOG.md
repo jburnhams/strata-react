@@ -2,6 +2,10 @@
 
 ## 2026-11-07
 
+**Fix the version bump on main** (branch `claude/project-thread-nwljes`). The release workflow failed after PR #1 and PR #2 merged with "Permission to jburnhams/strata-react.git denied to github-actions[bot]", even with `RELEASE_TOKEN` set, so 0.1.0 was published to npm by hand.
+
+- `.github/workflows/release.yml`: checkout now uses `RELEASE_TOKEN`. The default `GITHUB_TOKEN` that checkout persisted in git's config was used for the push instead of the token passed to the bump action, and that token cannot push to main.
+
 **Publish Storybook, an API reference and the visual baselines to GitHub Pages** (branch `claude/project-thread-nwljes`, PR #2). Jonathan asked for Pages to carry Storybook, the library docs and the visuals, and for a Javadoc equivalent; TypeDoc is that, reading the TSDoc comments. npm publishing from the template is unchanged.
 
 - `typedoc.json` (**new**): API reference for `strata-react` and `strata-react/testing` into `site/api/`, with links back to Storybook and the gallery; warns on unexported types and broken links. Its links to Storybook and the gallery are absolute (`https://jburnhams.github.io/strata-react/`), because TypeDoc writes them verbatim into every page and a relative `../` broke them on nested reference pages (found in review).
