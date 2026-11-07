@@ -26,5 +26,8 @@ jobs:
       - name: Update npm
         run: npm install -g npm@latest
       - run: npm ci
+      # test:all runs the integration suite, which drives strata-visual in real Chromium on a
+      # throwaway app. Without the browser 0.1.7 and 0.1.8 failed here and never reached npm.
+      - run: npx playwright install --with-deps chromium
       - run: npm run test:all
       - run: npm publish

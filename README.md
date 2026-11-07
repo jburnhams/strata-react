@@ -20,11 +20,31 @@ Storybook 10 · Playwright Chromium + pixelmatch visual regression · GitHub Act
 
 ## Install
 
-Not on npm yet. Install from GitHub (the `prepare` script builds it):
-
 ```bash
-npm install github:jburnhams/strata-react react react-dom react-router @tanstack/react-query tailwindcss @tailwindcss/vite
+npm install strata-react react react-dom react-router @tanstack/react-query
+npm install -D tailwindcss @tailwindcss/vite
 ```
+
+The npm package is built: nothing runs on install. It needs **Node 26 or later**, for apps as
+well as for this repo; an older Node gets an `EBADENGINE` warning, so upgrade it. Strata's own dependencies
+(TanStack Table and Virtual, class-variance-authority, clsx, tailwind-merge, lucide-react, Radix
+Slot) come with it, so an app does not list them.
+
+**Peers.** What an app installs follows from what it imports, and the integration suite checks
+it against the built files:
+
+| Import | Needs | Why |
+|---|---|---|
+| `strata-react` | `react`, `react-dom`, `react-router`, `@tanstack/react-query`, `tailwindcss` | The stack is fixed: `DataTable` and `Tabs` keep sort and tab in the URL, `AppShell` links with `NavLink`, every remote read is `useLoad`. The barrel imports both libraries, so an app that uses only a `Button` still installs them (both are needed for anything past a static page) |
+| `strata-react/testing` | the above, plus `@testing-library/react` | `renderWithStrata` wraps Testing Library's `render` |
+| `strata-react/visual`, `strata-visual` | `playwright` (exact version), `msw`, `vite` | The screenshot runner; see [Visual regression for apps](#visual-regression-for-apps) |
+
+The last three are optional peers: an app that never imports those entries never needs them.
+
+**An unreleased commit** can be installed from GitHub with
+`npm install github:jburnhams/strata-react#<sha>`. npm then runs `prepare`, which installs every
+dev dependency and builds the package, so it is slow and also needs Node 26.
+Use it to try a fix before it is released, then move back to the npm version.
 
 ## Set up an app
 
@@ -35,6 +55,13 @@ npm install github:jburnhams/strata-react react react-dom react-router @tanstack
 @import "./theme.generated.css";     /* your palette: ux-research ux-design/skill/scripts/palette.mjs */
 @import "./theme.css";               /* your status roles, faces and subject colours, with reasons */
 ```
+
+No `@source` line for the library is needed. Tailwind's automatic detection skips `node_modules`,
+so `strata.css` names the built components itself (`@source "./*.js"`, relative to the installed
+file), and importing it is enough for every class they use to be generated. The integration suite
+checks this on a copy installed as real files under an app's git-ignored `node_modules`. An app
+that sets `source(none)` on its Tailwind import still gets them, since that turns off only
+automatic detection.
 
 `theme.css` supplies what Strata names but does not choose: `--success`, `--success-subtle`,
 `--warning…`, `--danger…`, `--info…` (pale tint + dark ink of one hue, ink at least 6:1),
