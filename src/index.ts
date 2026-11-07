@@ -20,7 +20,14 @@ export { DataTable, TableSkeleton, parseSort, serialiseSort, type Column, type S
 export { VirtualList } from "./components/virtual-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
 export { PageHeader } from "./components/page-header";
-export { UndoBar, useUndoable, type PendingRemoval } from "./components/undo";
+export {
+  UndoBar,
+  useUndoable,
+  type PendingRemoval,
+  type FailedRemoval,
+  type Undoable,
+  type UndoableOptions,
+} from "./components/undo";
 export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";

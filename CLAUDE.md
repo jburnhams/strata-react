@@ -110,7 +110,9 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
    `EmptyState` that teaches the next action. Errors say what happened in the product's words.
 4. One filled (`variant="default"`) button per view. Reversible removals use `useUndoable` +
-   `UndoBar`; only irreversible ones get a confirm dialog.
+   `UndoBar`; only irreversible ones get a confirm dialog. Filter rows with `isRemoved(id)`
+   (never a second hidden set), give each removal a `failure` sentence, make `commit` the request
+   plus a query invalidation, and `await flush()` before anything that depends on the removal.
 5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
 6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
