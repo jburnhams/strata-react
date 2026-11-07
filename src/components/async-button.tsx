@@ -63,7 +63,7 @@ export function AsyncButton({
 export type AsyncActionOptions = {
   /** How long `done` shows before returning to `idle`. Default 2000ms. */
   settleMs?: number;
-  /** Called with whatever the action threw, after `phase` becomes `error`: for logging, or to move focus. */
+  /** Called with whatever the action threw, once the `error` render has committed: for logging, or to move focus to the retry button or an error message. */
   onError?: (error: unknown) => void;
   /** Turns what was thrown into `error`'s sentence, in the product's words. Default `describeActionError`: HTTP status sentences for `fetchJson`'s `HttpError`, else the Error's message. */
   describeError?: (error: unknown) => string | undefined;
@@ -88,6 +88,7 @@ export function useAsyncAction<A extends unknown[]>(
 ): AsyncAction<A> {
   const [state, setState] = React.useState<{ phase: Phase; error: string | undefined }>({ phase: "idle", error: undefined });
   const timer = React.useRef<number | undefined>(undefined);
+  const unreported = React.useRef<{ thrown: unknown } | undefined>(undefined);
   const latest = React.useRef({ action, onError, settleMs, describeError });
   React.useLayoutEffect(() => {
     latest.current = { action, onError, settleMs, describeError };
@@ -101,9 +102,18 @@ export function useAsyncAction<A extends unknown[]>(
       setState({ phase: "done", error: undefined });
       timer.current = window.setTimeout(() => setState({ phase: "idle", error: undefined }), latest.current.settleMs);
     } catch (thrown) {
+      unreported.current = { thrown };
       setState({ phase: "error", error: latest.current.describeError(thrown) });
-      latest.current.onError?.(thrown);
     }
   }, []);
+  // onError runs after the error render commits, not inside the catch: there the button is still
+  // disabled from `pending` and an error message rendered on `error` does not exist yet, so a
+  // callback that moves focus to either would find nothing to focus.
+  React.useEffect(() => {
+    if (state.phase !== "error" || !unreported.current) return;
+    const { thrown } = unreported.current;
+    unreported.current = undefined;
+    latest.current.onError?.(thrown);
+  }, [state]);
   return { phase: state.phase, run, error: state.error };
 }

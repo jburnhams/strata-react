@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -169,5 +170,27 @@ describe("AsyncButton", () => {
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
     expect(screen.getByRole("status")).toHaveTextContent("Kiln 2 was booked by someone else a moment ago. Try again");
+  });
+
+  it("calls onError after the error render, so it can move focus to an error message shown on error", async () => {
+    function Live() {
+      const ref = React.useRef<HTMLParagraphElement>(null);
+      const { phase, run, error } = useAsyncAction(() => Promise.reject(new Error("Kiln 2 is offline.")), {
+        onError: () => ref.current?.focus(),
+      });
+      return (
+        <>
+          <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />
+          {error && (
+            <p ref={ref} tabIndex={-1}>
+              {error}
+            </p>
+          )}
+        </>
+      );
+    }
+    render(<Live />);
+    await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
+    expect(screen.getByText("Kiln 2 is offline.", { selector: "p" })).toHaveFocus();
   });
 });
