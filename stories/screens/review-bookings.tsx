@@ -6,7 +6,6 @@
 // effect at once with Undo (useUndoable), not behind a confirm dialog. Data comes through
 // useLoad → DataView, so the stories put the server into each state with MSW.
 
-import * as React from "react";
 import {
   ActiveList,
   Button,
@@ -29,31 +28,21 @@ import { api } from "../mocks/handlers";
 
 export function ReviewBookingsScreen({ initial }: { initial?: string }) {
   const load = useLoad({ queryKey: ["bookings"], queryFn: () => fetchJson<Booking[]>(api.bookings) });
-  const [answered, setAnswered] = React.useState<Set<string>>(new Set());
-  const { pending, schedule, undo } = useUndoable();
+  const undoable = useUndoable();
 
-  const queue = load.status === "ready" ? load.data.filter((b) => !answered.has(b.id)) : [];
+  const queue = load.status === "ready" ? load.data.filter((b) => !undoable.isRemoved(b.id)) : [];
   const active = useActiveItem(queue, (b) => b.id, { initial, noun: "booking" });
   const pieces = queue.reduce((n, b) => n + b.pieces, 0);
 
   const answer = (b: Booking | null, verb: "Approved" | "Returned") => {
     if (!b) return;
-    setAnswered((s) => new Set(s).add(b.id));
     const what = `${b.member}'s ${format.count(b.pieces, "piece")}`;
-    schedule({
+    undoable.schedule({
       id: b.id,
       message: verb === "Approved" ? `Approved ${what}.` : `Returned ${what} to them.`,
+      failure: `${what} are back in the queue: the ${verb === "Approved" ? "approval" : "return"} did not go through.`,
       commit: () => undefined, // the product's mutation goes here
     });
-  };
-  const restore = () => {
-    if (!pending) return;
-    setAnswered((s) => {
-      const n = new Set(s);
-      n.delete(pending.id);
-      return n;
-    });
-    undo();
   };
 
   const nothing = active.activeItem === null;
@@ -61,7 +50,7 @@ export function ReviewBookingsScreen({ initial }: { initial?: string }) {
     ...active.shortcuts,
     { keys: ["a"], label: "Approve", run: () => answer(active.activeItem, "Approved"), disabled: nothing },
     { keys: ["r"], label: "Return to member", run: () => answer(active.activeItem, "Returned"), disabled: nothing },
-    { keys: ["z"], label: "Undo", run: restore, disabled: !pending },
+    { keys: ["z"], label: "Undo", run: undoable.undo, disabled: !undoable.pending },
   ];
   useHotkeys(shortcuts);
 
@@ -116,7 +105,7 @@ export function ReviewBookingsScreen({ initial }: { initial?: string }) {
         )}
       </DataView>
       {load.status === "ready" && queue.length > 0 && <KeysLegend shortcuts={shortcuts} />}
-      <UndoBar pending={pending} onUndo={restore} />
+      <UndoBar undoable={undoable} />
     </main>
   );
 }
