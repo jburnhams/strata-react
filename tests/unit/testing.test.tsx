@@ -46,6 +46,16 @@ describe("installFakeIntersectionObserver", () => {
     expect(screen.getByRole("heading", { name: /3\spages/ })).toBeInTheDocument();
   });
 
+  it("waits for the next scroll before firing a sentinel observed during this one, on any observer", () => {
+    const later = document.createElement("div");
+    const second = new IntersectionObserver(() => {});
+    const first = new IntersectionObserver(() => second.observe(later));
+    first.observe(document.createElement("div"));
+    second.observe(document.createElement("div"));
+    expect(io.scrollToEnd()).toBe(2);
+    expect(io.scrollToEnd()).toBe(3);
+  });
+
   it("keeps the options the component passed, and forgets disconnected targets", () => {
     render(<Pages />);
     io.scrollToEnd();

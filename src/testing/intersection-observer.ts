@@ -96,7 +96,7 @@ export function installFakeIntersectionObserver(): FakeIntersectionObserverContr
     value: FakeIntersectionObserver,
   });
 
-  const deliver = (observer: (typeof observers)[number], targets: Element[], isIntersecting: boolean) => {
+  const deliver = (observer: (typeof observers)[number], targets: readonly Element[], isIntersecting: boolean) => {
     act(() => observer.callback(targets.map((t) => entryFor(t, isIntersecting)), observer.self));
   };
 
@@ -108,16 +108,12 @@ export function installFakeIntersectionObserver(): FakeIntersectionObserverContr
       return watching.length;
     },
     scrollToEnd() {
-      let count = 0;
-      // Snapshot first: a callback that loads more may observe a new sentinel, which the person
-      // has not scrolled to yet.
-      for (const o of observers.slice()) {
-        const targets = [...o.targets];
-        if (targets.length === 0) continue;
-        count += targets.length;
-        deliver(o, targets, true);
-      }
-      return count;
+      // Snapshot every observer's targets before any callback runs: a callback that loads more
+      // may observe a new sentinel, on this observer or another, which the person has not
+      // scrolled to yet.
+      const batches = observers.map((o) => [o, [...o.targets]] as const).filter(([, targets]) => targets.length > 0);
+      for (const [o, targets] of batches) deliver(o, targets, true);
+      return batches.reduce((n, [, targets]) => n + targets.length, 0);
     },
     uninstall() {
       if (previous) Object.defineProperty(globalThis, "IntersectionObserver", previous);
