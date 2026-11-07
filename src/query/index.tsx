@@ -72,7 +72,11 @@ export class HttpError extends Error {
 
 /** fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default. */
 export async function fetchJson<T>(input: string | URL, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, { ...init, headers: { Accept: "application/json", ...init?.headers } });
+  // Headers, tuple arrays and plain objects are all valid HeadersInit; normalise before adding the
+  // default so a caller's Authorization (or their own Accept) is never dropped.
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  const res = await fetch(input, { ...init, headers });
   if (!res.ok) throw new HttpError(res.status, res.statusText, String(input));
   return (await res.json()) as T;
 }

@@ -98,3 +98,30 @@ describe("LineChart", () => {
     for (const t of ["0", "250", "500", "750", "1000"]) expect(screen.getAllByText(t).length).toBeGreaterThan(0);
   });
 });
+
+describe("useUndoable on unmount", () => {
+  it("commits a pending removal when its screen unmounts inside the window", () => {
+    vi.useFakeTimers();
+    const commit = vi.fn();
+    function Screen() {
+      const { schedule } = useUndoable(8000);
+      return <button onClick={() => schedule({ id: "a", message: "Withdrew 3 pieces.", commit })}>Withdraw</button>;
+    }
+    const { unmount } = render(<Screen />);
+    act(() => screen.getByText("Withdraw").click());
+    unmount();
+    expect(commit).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(commit).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+});
+
+describe("LineChart with all-zero data", () => {
+  it("draws without NaN coordinates", () => {
+    const { container } = render(
+      <LineChart label="Flat" series={[{ x: 0, y: 0 }, { x: 10, y: 0 }]} seriesLabel="s" formatX={String} formatY={String} xTicks={[0, 10]} />,
+    );
+    expect(container.innerHTML).not.toContain("NaN");
+  });
+});

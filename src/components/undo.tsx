@@ -36,7 +36,16 @@ export function useUndoable(windowMs = 8000) {
     set(null);
   }, [set]);
 
-  React.useEffect(() => () => window.clearTimeout(timer.current), []);
+  // Leaving the screen is not Undo: if the owner unmounts inside the window (the person navigated
+  // away), commit what was scheduled rather than silently dropping it.
+  React.useEffect(
+    () => () => {
+      window.clearTimeout(timer.current);
+      current.current?.commit();
+      current.current = null;
+    },
+    [],
+  );
   return { pending, schedule, undo };
 }
 

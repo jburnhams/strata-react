@@ -56,7 +56,9 @@ function useWidth<T extends HTMLElement>() {
 }
 
 /** Four gridline steps of a size people write on a scale (1, 2, 2.5, 4 or 5 × 10ⁿ), ending above the max. */
-function niceMax(max: number) {
+export function niceMax(max: number) {
+  // All-zero (or empty) data still needs a positive extent, or every coordinate divides by zero.
+  if (!(max > 0)) return 4;
   const raw = max / 4;
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 4, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;

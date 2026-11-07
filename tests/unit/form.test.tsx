@@ -28,6 +28,26 @@ describe("Field", () => {
   });
 });
 
+describe("Field ids", () => {
+  it("keeps the label on the control when an id is chosen on the Field", () => {
+    render(
+      <Field label="Name" id="name">
+        <Input />
+      </Field>,
+    );
+    expect(screen.getByLabelText("Name")).toHaveAttribute("id", "name");
+  });
+
+  it("keeps the label on the control even if the control is given its own id", () => {
+    render(
+      <Field label="Name">
+        <Input id="name" />
+      </Field>,
+    );
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+  });
+});
+
 describe("ChoiceGroup", () => {
   it("is a fieldset of radios where the whole row selects", async () => {
     function Choices() {

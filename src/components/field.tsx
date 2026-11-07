@@ -12,7 +12,9 @@ const FieldContext = React.createContext<FieldState | null>(null);
 function useField(id?: string) {
   const field = React.useContext(FieldContext);
   return {
-    id: id ?? field?.id,
+    // Inside a Field the Field's id wins, so the label always points at the control. To choose the
+    // id yourself, pass it to Field.
+    id: field?.id ?? id,
     "aria-describedby": field?.describedBy,
     "aria-invalid": field?.invalid || undefined,
   };
@@ -20,6 +22,8 @@ function useField(id?: string) {
 
 export type FieldProps = {
   label: string;
+  /** The control's id, when the page needs a known one (an anchor, a test). Generated otherwise. */
+  id?: string;
   /** What the person needs to know before typing, such as limits or units. */
   hint?: React.ReactNode;
   /** What went wrong and how to fix it, in one sentence. Shown under the control, never in a toast. */
@@ -28,8 +32,9 @@ export type FieldProps = {
   className?: string;
 };
 
-export function Field({ label, hint, error, children, className }: FieldProps) {
-  const id = React.useId();
+export function Field({ label, id: idProp, hint, error, children, className }: FieldProps) {
+  const generated = React.useId();
+  const id = idProp ?? generated;
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
