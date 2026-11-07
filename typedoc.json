@@ -10,8 +10,8 @@
   "excludeInternal": true,
   "sort": ["kind", "alphabetical"],
   "navigationLinks": {
-    "Storybook": "../",
-    "Visual baselines": "../visuals/",
+    "Storybook": "https://jburnhams.github.io/strata-react/",
+    "Visual baselines": "https://jburnhams.github.io/strata-react/visuals/",
     "GitHub": "https://github.com/jburnhams/strata-react"
   },
   "validation": { "notExported": true, "invalidLink": true, "notDocumented": false }

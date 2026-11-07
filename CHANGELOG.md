@@ -4,7 +4,7 @@
 
 **Publish Storybook, an API reference and the visual baselines to GitHub Pages** (branch `claude/project-thread-nwljes`, PR #2). Jonathan asked for Pages to carry Storybook, the library docs and the visuals, and for a Javadoc equivalent; TypeDoc is that, reading the TSDoc comments. npm publishing from the template is unchanged.
 
-- `typedoc.json` (**new**): API reference for `strata-react` and `strata-react/testing` into `site/api/`, with links back to Storybook and the gallery; warns on unexported types and broken links.
+- `typedoc.json` (**new**): API reference for `strata-react` and `strata-react/testing` into `site/api/`, with links back to Storybook and the gallery; warns on unexported types and broken links. Its links to Storybook and the gallery are absolute (`https://jburnhams.github.io/strata-react/`), because TypeDoc writes them verbatim into every page and a relative `../` broke them on nested reference pages (found in review).
 - `scripts/build-site.mjs` (**new**): assembles `site/` from `storybook-static/` and the API docs, and writes `site/visuals/index.html`, every baseline grouped by story, light beside dark, each linked to its story.
 - `package.json`: **new** scripts `docs:api` and `site`; TypeDoc 0.28 as a dev dependency. `scripts/clean.mjs` and `.gitignore` cover `site/`.
 - `.github/workflows/pages.yml` (renamed from `storybook-pages.yml`): builds and deploys the whole site, not Storybook alone.
