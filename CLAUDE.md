@@ -101,7 +101,10 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 @import "./theme.css";            /* status roles, faces, subject colours, each with its reason */
 ```
 
-1. Wrap the app in `StrataQueryProvider` and a React Router router; lay screens out in `AppShell`.
+1. Wrap the app in `ThemeProvider`, `StrataQueryProvider` and a React Router router; lay screens
+   out in `AppShell`. Never write a matchMedia listener for dark mode: `ThemeProvider` owns the
+   `.dark` class (Storybook's decorator and `renderWithStrata` use it too), `ColorSchemeChoice`
+   goes on the settings page, and `colorSchemeScript()` is inlined in `<head>` to avoid a flash.
 2. Every screen: write its one question and its finding in a comment at the top; `PageHeader`
    with the finding; blocks in the order a person asks the next questions.
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
@@ -111,6 +114,7 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
 6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+   Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
 
 ## Commands
 

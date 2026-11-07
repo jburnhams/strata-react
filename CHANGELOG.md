@@ -2,6 +2,18 @@
 
 ## 2026-11-07
 
+**Add ThemeProvider and useColorScheme for dark mode** (branch `claude/project-thread-64c07h`, issue #10). strata.css keys dark mode on a `.dark` ancestor, but nothing in the library set the class, so each app wrote its own matchMedia listener (strata-listory did, in PR #17 there). Jonathan asked for issues to be solved in a way that advances the library, so the provider is also what Storybook and the test helper use, and it comes with a settings-page picker and a pre-paint script.
+
+- `src/components/theme.tsx` (**new**): `ThemeProvider` (system, light or dark; default system; persisted under `strata-color-scheme` in localStorage, read and written in try/catch; ignores unknown stored values; follows a change made in another tab; `storageKey={null}` keeps it for the visit; `target` sets the class on an element other than the root), `useColorScheme` (preference, scheme in effect, setter; throws outside a provider), `useSystemColorScheme` (`useSyncExternalStore` on `prefers-color-scheme`, light on the server), `ColorSchemeChoice` (a `ChoiceGroup` of the three with "Match this device" first, words overridable) and `colorSchemeScript()` (an inline `<head>` script that sets `.dark` before the bundle runs).
+- `src/index.ts`: exports the above, with `ColorScheme`, `ColorSchemePreference`, `ColorSchemeLabels`, `ColorSchemeState` and `COLOR_SCHEME_STORAGE_KEY`.
+- `src/testing/index.tsx`: `renderWithStrata` wraps in `ThemeProvider` with storage off, and takes `colorScheme` to render dark.
+- `.storybook/preview.tsx`: the Theme toolbar now drives `ThemeProvider` instead of toggling the class by hand. All 94 existing baselines still match, light and dark.
+- `stories/introduction.mdx`: a Settings line. `stories/theme.stories.tsx` (**new**): `ColorSchemeChoice` default and in a product's words, and an interactive demo (`no-visual`).
+- `tests/visual/baselines/`: four **new** baselines for the two stories, light and dark.
+- `tests/unit/theme.test.tsx` (**new**, 12 tests): system following, persistence and restore, explicit choice beating the system, invalid stored value, storage that throws, another tab, a target element, the error outside a provider, `renderWithStrata({ colorScheme })`, and the pre-paint script. jsdom has no matchMedia, so the test installs a stand-in for the operating system setting, as `tests/utils/setup.ts` does for layout.
+- `tests/integration/`: checks the new exports in the built package.
+- `README.md`: the app setup wraps in `ThemeProvider` and explains the picker and the script; a Theme row in the component table. `CLAUDE.md`: "Building an app" step 1 and step 7 name the provider, the picker, the script and `colorScheme` in tests.
+
 **Publish to npm when a release is published** (branch `claude/project-thread-nwljes`). After PR #4 the release for v0.1.2 was created, but NPM Publish never ran. `softprops/action-gh-release` creates the release as a draft and then publishes it (created 17:28:01, published 17:28:22), and creating a draft fires no `release: created` event.
 
 - `.github/workflows/npm-publish.yml`: triggers on `release: published`, and can also be run by hand (`workflow_dispatch`).
