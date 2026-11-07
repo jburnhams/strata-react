@@ -2,6 +2,16 @@
 
 ## 2026-11-07
 
+**Surface errors from `useAsyncAction`** (branch `claude/project-thread-wxau7h`, issue #9). Issue #9 asked for the hook to return the error, take `onError`, keep `run` stable, and have `AsyncButton` announce the error. In strata-listory every caller had written its own try/catch, error state and rethrow. Jonathan asked for each issue to be solved in a way that moves the library forward, so the error is described the way `useLoad` already describes load errors, and not passed through as the raw `Error.message`. `fetchJson`'s `HttpError` message ("409 Conflict from /api/bookings") is written for logs, not for the person using the screen.
+
+- `src/components/async-button.tsx`: `useAsyncAction(action, { settleMs, onError, describeError })` now returns `{ phase, run, error }`. It used to return a `[phase, run]` tuple and take `settleMs` as its second argument, so callers must change; the release is a minor bump (0.2.0), and ux-research's `^0.1.3` range does not pick it up until its examples are updated. `run` keeps one identity for the component's life because the action and options are read through a ref, so the latest action always runs. `error` is cleared when `run` starts again. `action` may now resolve to any value, so `fetchJson` can be passed directly. `AsyncButton` takes `error` and announces "<error> Try again" in its live region. **New** exported types `AsyncAction` and `AsyncActionOptions`.
+- `src/lib/errors.ts` (**new**): `HttpError`, `DescribeError` and `describeHttpError` moved here from `src/query/` (still re-exported there and from the package, so no import changes), plus **new** `describeActionError`. It uses the same status sentences as loads, but leaves out "Nothing was changed.", because a failed action may still have reached the server. It falls back to the Error's message, and otherwise to undefined, which leaves the retry label on its own.
+- `src/index.ts`: exports `describeActionError`, `AsyncAction` and `AsyncActionOptions`.
+- `stories/mocks/handlers.ts`: **new** `POST /api/bookings` (201) in the default handlers, and `bookingConflict` (409).
+- `stories/async-button.stories.tsx`: `Interactive` uses the new return shape. **New** `InteractiveFailure` (`no-visual`) books against `bookingConflict` and shows the hook's `error` next to the button.
+- `tests/unit/actions.test.tsx`: seven **new** tests. They cover the error announcement, the thrown message, `onError`, the error clearing on retry, a value with no message, the stable `run`, the latest action running, an `HttpError` from MSW described in a sentence, and a custom `describeError`. There are 53 unit tests in all.
+- `README.md`: the Actions row describes the new return value and the error announcement.
+
 **Publish to npm when a release is published** (branch `claude/project-thread-nwljes`). After PR #4 the release for v0.1.2 was created, but NPM Publish never ran. `softprops/action-gh-release` creates the release as a draft and then publishes it (created 17:28:01, published 17:28:22), and creating a draft fires no `release: created` event.
 
 - `.github/workflows/npm-publish.yml`: triggers on `release: published`, and can also be run by hand (`workflow_dispatch`).

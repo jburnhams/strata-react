@@ -80,7 +80,7 @@ function KilnRoom() {
 
 | Group | Exports | Notes |
 |---|---|---|
-| Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error |
+| Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error, and announces `error` with its retry label; `useAsyncAction` returns `{ phase, run, error }` with a stable `run`, and describes an `HttpError` in a sentence (`describeActionError`, or the product's own `describeError`) |
 | Form | `Field`, `Input`, `Textarea`, `NativeSelect`, `ChoiceGroup` | `Field` wires label, hint, error, `aria-describedby`, `aria-invalid` |
 | Status and figures | `Status`, `Metric`, `MetricStrip` | A status is always a word; figures have no icons or sparklines |
 | Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; charts label values directly |
