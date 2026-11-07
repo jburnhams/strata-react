@@ -108,20 +108,24 @@ export const RowActions: Story = {
 
 function SelectThenAct() {
   const [rows, setRows] = React.useState(bookings);
-  const { pending, schedule, undo } = useUndoable();
-  const [hidden, setHidden] = React.useState<ReadonlySet<string>>(new Set());
-  const shown = rows.filter((b) => !hidden.has(b.id));
+  const undoable = useUndoable();
+  // The undo hook owns which rows are out of view; the selection follows the rows that are shown.
+  const shown = rows.filter((b) => !undoable.isRemoved(b.id));
   const selection = useSelection(shown, (b) => b.id);
   const withdraw = (chosen: Booking[]) => {
     const ids = chosen.map((b) => b.id);
-    setHidden(new Set(ids));
     const pieces = chosen.reduce((n, b) => n + b.pieces, 0);
-    schedule({
+    const one = chosen.length === 1 ? chosen[0] : undefined;
+    // One removal for the batch: one message, one Undo, one commit.
+    undoable.schedule({
       id: ids.join(","),
-      message:
-        chosen.length === 1
-          ? `Withdrew ${chosen[0].member}'s ${format.count(pieces, "piece")}.`
-          : `Withdrew ${format.count(chosen.length, "booking")}, ${format.count(pieces, "piece")}.`,
+      ids,
+      message: one
+        ? `Withdrew ${one.member}'s ${format.count(pieces, "piece")}.`
+        : `Withdrew ${format.count(chosen.length, "booking")}, ${format.count(pieces, "piece")}.`,
+      failure: one
+        ? `${one.member}'s booking is back: the withdrawal did not go through.`
+        : `The ${format.count(chosen.length, "booking")} are back: the withdrawal did not go through.`,
       commit: () => setRows((r) => r.filter((b) => !ids.includes(b.id))),
     });
   };
@@ -139,14 +143,7 @@ function SelectThenAct() {
         rowKey={(b) => b.id}
         selection={{ ...selection, rowLabel: (b) => b.member, isSelectable: canWithdraw }}
       />
-      <UndoBar
-        inline
-        pending={pending}
-        onUndo={() => {
-          undo();
-          setHidden(new Set());
-        }}
-      />
+      <UndoBar inline undoable={undoable} />
     </div>
   );
 }

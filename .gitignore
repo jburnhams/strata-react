@@ -7,3 +7,4 @@ tests/visual/output
 .DS_Store
 *.log
 site
+examples/*/dist

@@ -189,6 +189,11 @@ function Table<T>({
     getRowId: (row) => rowKey(row),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    // No pagination or expansion here, so nothing to reset. Left on, TanStack resets the page
+    // index whenever `rows` is a new array; a screen that filters its rows on every render (the
+    // kiln room after Withdraw) then re-renders forever and the tab freezes. Found by the
+    // example app's visual suite, which jsdom did not show.
+    autoResetAll: false,
   });
 
   const toggle = (key: string) =>

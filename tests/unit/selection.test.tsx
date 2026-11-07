@@ -10,6 +10,7 @@ import {
   IconButton,
   RowAction,
   useSelection,
+  useUndoable,
   type Column,
 } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -160,6 +161,40 @@ describe("DataTable selection", () => {
     await userEvent.click(selectAll());
     await userEvent.click(screen.getByRole("button", { name: "Clear selection" }));
     expect(selectAll()).not.toBeChecked();
+  });
+});
+
+describe("Bulk removal through useUndoable", () => {
+  it("removes, undoes and commits every id of one removal together", async () => {
+    const commit = vi.fn();
+    function Bulk() {
+      const undoable = useUndoable();
+      const shown = bookable.filter((b) => !undoable.isRemoved(b.id));
+      return (
+        <>
+          <button
+            onClick={() =>
+              undoable.schedule({ id: "bulk", ids: bookable.map((b) => b.id), message: "Withdrew 2 bookings.", failure: "They are back.", commit })
+            }
+          >
+            Withdraw all
+          </button>
+          <button onClick={undoable.undo}>Undo</button>
+          <button onClick={() => void undoable.flush()}>Flush</button>
+          <output data-testid="shown">{shown.length}</output>
+        </>
+      );
+    }
+    render(<Bulk />);
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw all" }));
+    expect(screen.getByTestId("shown")).toHaveTextContent("0");
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByTestId("shown")).toHaveTextContent(String(bookable.length));
+    expect(commit).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw all" }));
+    await userEvent.click(screen.getByRole("button", { name: "Flush" }));
+    expect(commit).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("shown")).toHaveTextContent("0");
   });
 });
 

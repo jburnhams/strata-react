@@ -3,7 +3,7 @@
 // time computed from the readings. Data comes from the API through TanStack Query (useLoad), so
 // the stories can put the server into each state with MSW.
 
-import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Flame, Layers, Users } from "lucide-react";
 import {
   AppShell,
@@ -47,10 +47,11 @@ const nav = [
 
 export function KilnRoomScreen() {
   const load = useLoad({ queryKey: ["bookings"], queryFn: () => fetchJson<Booking[]>(api.bookings) });
-  const [hidden, setHidden] = React.useState<Set<string>>(new Set());
-  const { pending, schedule, undo } = useUndoable();
+  const queryClient = useQueryClient();
+  const undoable = useUndoable();
 
-  const rows = load.status === "ready" ? load.data.filter((b) => !hidden.has(b.id)) : [];
+  // The hook owns which rows are out of view, through Undo, a failed withdrawal, and the refetch.
+  const rows = load.status === "ready" ? load.data.filter((b) => !undoable.isRemoved(b.id)) : [];
   const inKiln2 = rows.filter((b) => b.kiln === 2 && b.state === "cooling");
   const pieces = inKiln2.reduce((n, b) => n + b.pieces, 0);
   const now = readings[readings.length - 1];
@@ -67,10 +68,17 @@ export function KilnRoomScreen() {
           <RowAction
             label="Withdraw"
             subject={b.member}
-            onClick={() => {
-              setHidden((h) => new Set(h).add(b.id));
-              schedule({ id: b.id, message: `Withdrew ${b.member}'s ${format.count(b.pieces, "piece")} from kiln ${b.kiln}.`, commit: () => undefined });
-            }}
+            onClick={() =>
+              undoable.schedule({
+                id: b.id,
+                message: `Withdrew ${b.member}'s ${format.count(b.pieces, "piece")} from kiln ${b.kiln}.`,
+                failure: `${b.member}'s booking is back in kiln ${b.kiln}: the withdrawal did not go through.`,
+                commit: async () => {
+                  await fetchJson(`${api.bookings}/${b.id}`, { method: "DELETE" });
+                  await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+                },
+              })
+            }
           />
         ) : null,
     },
@@ -133,10 +141,7 @@ export function KilnRoomScreen() {
           </DataView>
         </section>
       </div>
-      <UndoBar pending={pending} onUndo={() => {
-        if (pending) setHidden((h) => { const n = new Set(h); n.delete(pending.id); return n; });
-        undo();
-      }} />
+      <UndoBar undoable={undoable} />
     </AppShell>
   );
 }

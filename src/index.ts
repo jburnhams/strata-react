@@ -39,10 +39,19 @@ export { BulkBar, useSelection } from "./components/selection";
 export { VirtualList } from "./components/virtual-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
 export { PageHeader } from "./components/page-header";
-export { UndoBar, useUndoable, type PendingRemoval } from "./components/undo";
+export {
+  UndoBar,
+  useUndoable,
+  type PendingRemoval,
+  type FailedRemoval,
+  type Undoable,
+  type UndoableOptions,
+} from "./components/undo";
 export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";
+export { useHotkeys, KeysLegend, isTypingTarget, type Shortcut } from "./components/hotkeys";
+export { useActiveItem, ActiveList, type ActiveItem } from "./components/active-list";
 export {
   ThemeProvider,
   useColorScheme,
