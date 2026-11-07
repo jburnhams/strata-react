@@ -7,7 +7,7 @@
  */
 
 export { cn, typeSteps } from "./lib/utils";
-export { createFormat, format, NBSP, type Format } from "./lib/format";
+export { createFormat, format, NBSP, type Format, type NumberFormatter } from "./lib/format";
 export type { IconComponent } from "./lib/icon";
 
 export { Button, IconButton, buttonVariants, type ButtonProps, type IconButtonProps } from "./components/button";

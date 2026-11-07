@@ -2,6 +2,17 @@
 
 ## 2026-11-07
 
+**IntersectionObserver and layout stand-ins in `strata-react/testing`, callable number formatters** (branch `claude/project-thread-n167kf`, issue #12). Jonathan raised that testing an infinite list in strata-listory needed a hand-written firable IntersectionObserver, that `format.count`'s non-breaking space broke plain-string queries, and that `format.integer(n)` did not exist. He asked for each issue to be solved in a way that advances the library, so the jsdom layout shims Strata's own suite used privately are now exported next to the new fake, and the suite installs them the same way an app would.
+
+- `src/testing/intersection-observer.ts` (**new**): `installFakeIntersectionObserver()` replaces the global with a stand-in that records each observer's options and targets; `scrollToEnd()` reports every watched element as in view (a sentinel observed during the callback waits for the next call), `intersect(el, isIntersecting)` reports one, both inside `act`; `uninstall()` restores the previous global.
+- `src/testing/layout.ts` (**new**): `installLayoutShims({ width, height })`, moved from `tests/utils/setup.ts`: a fixed box for every element and a ResizeObserver that reports it on observe, returning a restore function.
+- `src/testing/index.tsx`: exports both, and gives `renderWithStrata` and `createTestQueryClient` TSDoc summaries.
+- `src/lib/format.ts`: `integer`, `decimal` and `percent` are callable (`format.integer(1222)`) and keep `format`, `formatToParts` and `resolvedOptions`, so existing `format.integer.format(n)` calls work; **new** exported type `NumberFormatter`. The file comment and `count`'s TSDoc say that the non-breaking space survives into accessible names, so `getByRole(..., { name: "6 pieces" })` fails while `getByText("6 pieces")` passes (checked in `tests/unit/testing.test.tsx`).
+- `tests/utils/setup.ts`: calls `installLayoutShims()` instead of defining the shims inline.
+- `tests/unit/testing.test.tsx` (**new**): the fake, the shims and the NBSP query behaviour. `tests/unit/lib.test.ts`: callable formatters. `tests/integration/package.test.ts`: checks the new testing exports in the build.
+- `stories/`: `format.integer.format(n)` calls become `format.integer(n)`; the 94 visual baselines are unchanged.
+- `README.md`, `CLAUDE.md`: the testing helpers and the role-name rule.
+
 **Publish to npm when a release is published** (branch `claude/project-thread-nwljes`). After PR #4 the release for v0.1.2 was created, but NPM Publish never ran. `softprops/action-gh-release` creates the release as a draft and then publishes it (created 17:28:01, published 17:28:22), and creating a draft fires no `release: created` event.
 
 - `.github/workflows/npm-publish.yml`: triggers on `release: published`, and can also be run by hand (`workflow_dispatch`).
