@@ -14,7 +14,7 @@ Rules for working in this repo, for people and coding agents: [`CLAUDE.md`](./CL
 
 ## The stack
 
-React 19 · TypeScript · Vite 8 · Tailwind v4 · class-variance-authority · lucide-react ·
+Node 26 · React 19 · TypeScript · Vite 8 · Tailwind v4 · class-variance-authority · lucide-react ·
 TanStack Query, Table and Virtual · React Router · Vitest + Testing Library + MSW ·
 Storybook 10 · Playwright Chromium + pixelmatch visual regression · GitHub Actions.
 

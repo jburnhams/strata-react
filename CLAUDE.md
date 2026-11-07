@@ -32,6 +32,7 @@ First use: the live demos and examples in ux-research. Then other products.
 
 | Concern | Choice | How it is used |
 |---|---|---|
+| Runtime for tooling | Node 26 (LTS) | `.nvmrc`, `engines`, every workflow; TypeScript targets ES2024 |
 | UI | React 19, TypeScript strict | Function components; `React.useId` for ids |
 | Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
