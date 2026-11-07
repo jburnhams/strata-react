@@ -11,7 +11,7 @@ export { createFormat, format, NBSP, type Format, type NumberFormatter } from ".
 export type { IconComponent } from "./lib/icon";
 
 export { Button, IconButton, buttonVariants, type ButtonProps, type IconButtonProps } from "./components/button";
-export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels } from "./components/async-button";
+export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
@@ -34,3 +34,4 @@ export {
   describeHttpError,
   type DescribeError,
 } from "./query";
+export { describeActionError } from "./lib/errors";
