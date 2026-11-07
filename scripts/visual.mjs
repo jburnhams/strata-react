@@ -8,7 +8,9 @@
 // port, reads index.json, opens each story's iframe in headless Chromium (Playwright), waits for
 // fonts and the network to settle with animations off, saves a PNG, and compares it with the
 // baseline using pixelmatch. Changed stories get actual, expected and diff PNGs in
-// tests/visual/output/ (uploaded by CI as an artifact). Story tags pick the viewport:
+// tests/visual/output/ (uploaded by CI as an artifact). Each PNG is clipped to the story's own
+// paint, so a baseline shows the component, not the empty canvas around it. Story tags pick
+// the viewport the component lays out in:
 // `visual-wide` (1440×900), `visual-phone` (390×844), default 1024 wide; `no-visual` skips.
 import { createServer } from "node:http";
 import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -71,7 +73,8 @@ const jobs = stories.flatMap((story) => themes.map((theme) => ({ story, theme })
 for (const { story, theme } of jobs) seen.add(`${story.id}--${theme}.png`);
 
 async function shoot({ story, theme }) {
-  const tag = Object.keys(viewports).find((t) => story.tags?.includes(t)) ?? "default";
+  // A story's own tag beats its file's (Storybook merges both): phone first, then wide.
+  const tag = ["visual-phone", "visual-wide"].find((t) => story.tags?.includes(t)) ?? "default";
   {
     const name = `${story.id}--${theme}.png`;
     const context = await browser.newContext({ viewport: viewports[tag], deviceScaleFactor: 1, reducedMotion: "reduce", colorScheme: theme });
@@ -88,7 +91,58 @@ async function shoot({ story, theme }) {
       await page.waitForLoadState("networkidle", { timeout: 3_000 }).catch(() => undefined);
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(250);
-      const png = await page.screenshot({ fullPage: true, animations: "disabled" });
+      // Clip to what the story actually paints: text, replaced and form elements, SVGs, and any
+      // box with a background, border, outline or shadow, each cut to the scroll containers it
+      // sits in. So a row of buttons is cropped to the buttons, not the full-width div holding
+      // them, and fixed elements (the undo bar) count wherever they are. fullPage lets the clip
+      // extend past the viewport, so a tall or wide component is captured whole.
+      const clip = await page.evaluate((margin) => {
+        const root = document.querySelector("#storybook-root");
+        const replaced = new Set(["IMG", "INPUT", "SELECT", "TEXTAREA", "CANVAS", "VIDEO", "svg", "HR"]);
+        const transparent = (c) => c === "transparent" || /rgba\(.*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c);
+        const paints = (el) => {
+          const cs = getComputedStyle(el);
+          if (replaced.has(el.tagName)) return true;
+          if (!transparent(cs.backgroundColor) || cs.backgroundImage !== "none" || cs.boxShadow !== "none") return true;
+          return ["Top", "Right", "Bottom", "Left"].some((s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== "none");
+        };
+        const clipTo = (r, el) => {
+          let { left, top, right, bottom } = r;
+          for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+            const cs = getComputedStyle(a);
+            if (cs.overflowX !== "visible" || cs.overflowY !== "visible" || cs.clipPath !== "none" || cs.clip !== "auto") {
+              const b = a.getBoundingClientRect();
+              left = Math.max(left, b.left); top = Math.max(top, b.top);
+              right = Math.min(right, b.right); bottom = Math.min(bottom, b.bottom);
+            }
+            if (cs.position === "fixed") break;
+          }
+          return right - left > 1 && bottom - top > 1 ? { left, top, right, bottom } : null;
+        };
+        const rects = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if (n.nodeType === Node.TEXT_NODE) {
+            if (!n.textContent.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(n);
+            for (const r of range.getClientRects()) { const c = clipTo(r, n.parentElement); if (c) rects.push(c); }
+            continue;
+          }
+          if (n.closest("svg") && n.tagName !== "svg") continue;
+          if (getComputedStyle(n).visibility === "hidden" || !paints(n)) continue;
+          const c = clipTo(n.getBoundingClientRect(), n);
+          if (c) rects.push(c);
+        }
+        if (!rects.length) return null;
+        const x0 = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.left)) + scrollX - margin));
+        const y0 = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.top)) + scrollY - margin));
+        const x1 = Math.min(document.documentElement.scrollWidth, Math.ceil(Math.max(...rects.map((r) => r.right)) + scrollX + margin));
+        const y1 = Math.min(document.documentElement.scrollHeight, Math.ceil(Math.max(...rects.map((r) => r.bottom)) + scrollY + margin));
+        return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+      }, 8);
+      if (!clip) throw new Error("story rendered nothing visible");
+      const png = await page.screenshot({ fullPage: true, clip, animations: "disabled" });
       if (problems.length) results.errors.push(`${name}: ${problems.join(" | ")}`);
       const baselinePath = join(baselineDir, name);
       if (update || !existsSync(baselinePath)) {

@@ -124,7 +124,11 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
 | `node scripts/visual.mjs --filter data-table` | one group of stories (after `npm run build-storybook`) |
 
 Visual tests: a story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
-otherwise 1024 wide; `no-visual` skips (interactive demos). Animations are frozen and fonts
+otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
+demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
+with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings
+and shadows), and grows past the viewport when the component is bigger, so a baseline shows
+the component and nothing else. Animations are frozen and fonts
 are bundled (`@fontsource-variable`), so screenshots are deterministic. pixelmatch runs at
 threshold 0.1, ignores anti-aliasing, and allows 20 stray pixels; a size change always fails.
 Changed screenshots land in `tests/visual/output/` as `.actual`, `.expected` and `.diff` PNGs,
