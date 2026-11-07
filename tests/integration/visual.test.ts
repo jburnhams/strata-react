@@ -56,10 +56,11 @@ beforeAll(() => {
   @font-face { font-family: "Public Sans"; src: url(/app/public-sans.woff2) format("woff2"); font-weight: 100 900; }
   body { margin: 0; font: 20px/1.4 "Public Sans"; background: #fafaf8; color: #222; }
   body.system { font-family: sans-serif; }
+  body.pseudo #root::before { content: "\\2318"; font-family: sans-serif; }
   .dark body { background: #1c1b19; color: #eee; }
   h1 { margin: 16px; font-size: 24px; }
 </style></head><body><div id="root"></div><script type="module">
-  if (location.search.includes("font=system")) document.body.className = "system";
+  document.body.className = new URLSearchParams(location.search).get("font") ?? "";
   const root = document.getElementById("root");
   root.innerHTML = "<p aria-busy='true'>Loading the kiln room</p>";
   const r = await fetch("/api/greeting");
@@ -120,11 +121,13 @@ describe("strata-visual on an app's routes", () => {
   }, 120_000);
 
   it("fails a shot whose text is drawn in a system font, naming the face, or warns when told to", () => {
-    const states = `{ system: { path: "/?font=system" } }`;
+    const states = `{ system: { path: "/?font=system" }, pseudo: { path: "/?font=pseudo" } }`;
     config(states, undefined, `\n  baselines: "tests/visual/fonts",`);
     const strict = run(["--update"]);
     expect(strict.code).toBe(1);
     expect(strict.out).toMatch(/error {4}home--system--wide--light\.png: text in a system font, which differs by machine .*: "[^"]+" in <h1> "Kiln 2 is cooling"/);
+    // Generated content on an element with no text of its own counts too.
+    expect(strict.out).toMatch(/error {4}home--pseudo--wide--light\.png: text in a system font.*: "[^"]+" in <div::before>/);
     config(states, undefined, `\n  baselines: "tests/visual/fonts",\n  systemFonts: "warn",`);
     const lenient = run(["--update"]);
     expect(lenient.code).toBe(0);

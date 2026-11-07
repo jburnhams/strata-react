@@ -156,12 +156,24 @@ async function platformFonts(page: Page): Promise<string[]> {
     await cdp.send("DOM.enable");
     await cdp.send("CSS.enable");
     const { root } = await cdp.send("DOM.getDocument", { depth: -1, pierce: true });
-    type DomNode = { nodeId: number; nodeType: number; nodeName: string; nodeValue: string; children?: DomNode[]; shadowRoots?: DomNode[]; contentDocument?: DomNode };
+    type DomNode = {
+      nodeId: number;
+      nodeType: number;
+      nodeName: string;
+      nodeValue: string;
+      pseudoType?: string;
+      children?: DomNode[];
+      shadowRoots?: DomNode[];
+      pseudoElements?: DomNode[];
+      contentDocument?: DomNode;
+    };
     const texts: { id: number; name: string; text: string }[] = [];
     const walk = (n: DomNode) => {
       if (n.nodeName === "SCRIPT" || n.nodeName === "STYLE" || n.nodeName === "HEAD") return;
       const own = n.children?.filter((c) => c.nodeType === 3 && c.nodeValue.trim()) ?? [];
       if (n.nodeType === 1 && own.length) texts.push({ id: n.nodeId, name: n.nodeName.toLowerCase(), text: own.map((c) => c.nodeValue.trim()).join(" ") });
+      // Generated content (`::before { content: "⌘" }`) draws text too; it has no text child.
+      for (const p of n.pseudoElements ?? []) texts.push({ id: p.nodeId, name: `${n.nodeName.toLowerCase()}::${p.pseudoType ?? "pseudo"}`, text: "" });
       for (const c of [...(n.children ?? []), ...(n.shadowRoots ?? []), ...(n.contentDocument ? [n.contentDocument] : [])]) walk(c);
     };
     walk(root as DomNode);
@@ -171,7 +183,8 @@ async function platformFonts(page: Page): Promise<string[]> {
       const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId: t.id }).catch(() => ({ fonts: [] }));
       for (const f of fonts) {
         if (f.isCustomFont || found.has(f.familyName)) continue;
-        found.set(f.familyName, `"${f.familyName}" in <${t.name}> "${t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text}"`);
+        const text = t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text;
+        found.set(f.familyName, `"${f.familyName}" in <${t.name}>${text ? ` "${text}"` : ""}`);
       }
     }
     return [...found.values()];

@@ -78,6 +78,8 @@ describe("visual compare (pixelmatch)", () => {
     expect(out[(1 * 5 + 1) * 4]).toBe(240);
     expect(out[0]).toBe(250);
     expect(boxBlur(dot, 0)).toBe(dot.data);
+    expect(() => boxBlur(dot, 0.5)).toThrow("blur must be a whole number of pixels");
+    expect(() => compare(dot, image(5, 5), { blur: -1 })).toThrow("blur must be a whole number of pixels");
   });
 
   it("treats a size change as a change", () => {

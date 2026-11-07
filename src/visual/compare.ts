@@ -26,7 +26,7 @@ export const MAX_DIFF_PIXELS = 4;
 export interface CompareOptions {
   /** Per-pixel colour distance treated as equal, 0–1 (pixelmatch's `threshold`). Default {@link THRESHOLD}. */
   threshold?: number;
-  /** Box blur radius applied to both images first, absorbing anti-aliasing differences. Default {@link BLUR}. */
+  /** Box blur radius in whole pixels applied to both images first, absorbing anti-aliasing differences (0 turns it off). Default {@link BLUR}. */
   blur?: number;
   /** Differing pixels tolerated. Default {@link MAX_DIFF_PIXELS}. */
   maxDiffPixels?: number;
@@ -69,7 +69,8 @@ export function encode({ width, height, data }: Image): Buffer {
 
 /** Box-blurs an RGBA image with the given radius (separable, edges averaged over what exists). */
 export function boxBlur({ width: w, height: h, data }: Image, radius: number): Uint8Array {
-  if (radius <= 0) return data;
+  if (!Number.isInteger(radius) || radius < 0) throw new Error(`blur must be a whole number of pixels, 0 or more (got ${radius})`);
+  if (radius === 0) return data;
   const pass = (src: ArrayLike<number>, horizontal: boolean) => {
     const out = new Float32Array(src.length);
     const [outer, inner] = horizontal ? [h, w] : [w, h];
