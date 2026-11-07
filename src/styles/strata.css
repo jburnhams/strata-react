@@ -1,0 +1,178 @@
+/* strata-react: the token contract, the namespace reset, the type steps, motion utilities and the
+   base layer. It ships no colours. A product imports it between Tailwind and its own theme:
+
+     @import "tailwindcss";
+     @import "strata-react/strata.css";
+     @import "./theme.generated.css";   (palette.mjs output: shadcn roles + 12-step ramps)
+     @import "./theme.css";             (status roles, fonts, any subject colours, with reasons)
+
+   The research behind every value is in jburnhams/ux-research, ui-library/tokens.md. */
+
+/* Clear Tailwind's stock namespaces right after Tailwind's own theme loads. With these gone,
+   `bg-indigo-500`, `text-sm`, `rounded-xl` and `shadow-lg` do not compile at all: the only colours,
+   type steps, radii and shadows that exist are the ones the product's theme names. That is the
+   library's strongest anti-drift rule, and it costs nothing at runtime. */
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --font-*: initial;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* Status roles are part of the contract but not of the generated palette: the product solves them
+   (pale tint + dark ink of one hue, ink >= 6:1 on its tint and on the ground) and sets the
+   variables in its theme. Strata only names them. Never the accent. */
+@theme inline {
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-surface-sunken: var(--surface-sunken);
+}
+
+@theme {
+  /* System faces until the product names its own (a later @theme block wins). One family on an
+     Operate surface; --font-display is for page titles only. */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: var(--font-sans);
+
+  /* Radius by role. Optical nesting: inner = outer - padding, so a control inside an 8px overlay
+     with 4px padding is 4px, never the same value as its container. */
+  --radius-control: 4px;
+  --radius-surface: 6px;
+  --radius-overlay: 8px;
+  --radius-pill: 9999px;
+
+  /* One elevation channel per surface: hairlines for things on the page, a shadow only for what
+     floats above it. */
+  --shadow-overlay: 0 1px 2px oklch(0% 0 0 / 0.08), 0 8px 24px oklch(0% 0 0 / 0.12);
+
+  /* Effects (colour, opacity) never overshoot; spatial gets Material Standard's barely visible
+     settle. Expressive springs are a product allowance, recorded in its DESIGN.md. */
+  --ease-effects: cubic-bezier(0.34, 0.8, 0.34, 1);
+  --ease-spatial: cubic-bezier(0.27, 1.06, 0.18, 1);
+  --ease-moment: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Non-colour defaults in the base layer, so any unlayered rule in the product's theme wins
+   regardless of import order. */
+@layer base {
+  :root {
+    --surface-sunken: var(--neutral-2);
+
+    /* Density: control heights move together (button, input, select). */
+    --control-h: 2.5rem;
+    --control-h-sm: 2rem;
+
+    --motion-effects: 200ms;
+    --motion-spatial: 350ms;
+    /* Press feedback is the one motion on a frequent action: 100ms, 2%, felt more than seen. A
+       moment is the rare, earned one; slower, hard ease-out, no overshoot. */
+    --motion-press: 100ms;
+    --motion-moment: 500ms;
+
+    /* The page title's voice. A product with a display face sets these with it. */
+    --title-weight: 650;
+    --title-stretch: 100%;
+    --title-tracking: -0.01em;
+  }
+  .dark {
+    --surface-sunken: var(--neutral-1);
+  }
+  [data-density="compact"] {
+    --control-h: 2rem;
+    --control-h-sm: 1.75rem;
+  }
+  /* After the compact rule, so a coarse pointer always wins: every control stays a 44px target. */
+  @media (pointer: coarse) {
+    :root,
+    [data-density="compact"] {
+      --control-h: 2.75rem;
+      --control-h-sm: 2.75rem;
+    }
+  }
+}
+
+/* Type steps as utilities, not --text-* keys: a compound of size, line height and weight that
+   cn() can tell apart from text colours. Operate scale, ratio about 1.2, fixed rem; nothing above
+   28px except `type-display`, which is for Persuade surfaces only. */
+@utility type-caption { font-size: 0.75rem; line-height: 1rem; font-weight: 400; }
+@utility type-label { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+@utility type-body-sm { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
+@utility type-body { font-size: 1rem; line-height: 1.5rem; font-weight: 400; }
+@utility type-heading { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; }
+@utility type-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: var(--title-weight);
+  font-stretch: var(--title-stretch);
+  letter-spacing: var(--title-tracking);
+}
+@utility type-figure { font-size: 1.75rem; line-height: 2.25rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+@utility type-display {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 4rem);
+  line-height: 1.05;
+  font-weight: var(--title-weight);
+  font-stretch: var(--title-stretch);
+  letter-spacing: -0.02em;
+}
+
+/* State transitions: named properties only (never `transition: all`). `scale` is listed for the
+   press feedback and runs at the shorter press duration. */
+@utility transition-state {
+  transition-property: color, background-color, border-color, opacity, box-shadow, scale;
+  transition-duration: var(--motion-effects), var(--motion-effects), var(--motion-effects), var(--motion-effects),
+    var(--motion-effects), var(--motion-press);
+  transition-timing-function: var(--ease-effects);
+}
+
+/* Press feedback: 2% is the most a control used tens of times a day can move without feeling slow. */
+@utility press {
+  &:active:not(:disabled) { scale: 0.98; }
+}
+
+/* A moment's entrance: CSS only, runs once when the element mounts. Reduced motion collapses it. */
+@utility enter-moment {
+  transition-property: opacity, translate;
+  transition-duration: var(--motion-moment);
+  transition-timing-function: var(--ease-moment);
+  @starting-style { opacity: 0; translate: 0 -0.75rem; }
+}
+
+@layer base {
+  html { color-scheme: light; }
+  .dark { color-scheme: dark; }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* One focus treatment for everything focusable, so no component can forget it. */
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  /* Except where a script moved focus to a heading to announce a result (Done): the heading is not
+     a control, so a ring around it says "press me" to nobody. */
+  h1[tabindex="-1"]:focus-visible, h2[tabindex="-1"]:focus-visible { outline: none; }
+  ::selection { background-color: var(--primary-5); color: var(--foreground); }
+  a { text-underline-offset: 0.2em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

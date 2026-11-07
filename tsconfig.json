@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node", "@testing-library/jest-dom/vitest"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist", "build", "docs-dist"]
+  "include": ["src", "tests", "stories", ".storybook", "vite.config.ts", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist", "storybook-static"]
 }

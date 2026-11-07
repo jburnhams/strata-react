@@ -16,16 +16,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       # Ensure npm 11.5.1 or later is installed
       - name: Update npm
         run: npm install -g npm@latest
       - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - run: npm run test:browser
-      - run: npm run smoke
-      - run: npm run size
+      - run: npm run test:all
       - run: npm publish

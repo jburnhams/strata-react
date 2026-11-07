@@ -1,6 +1,8 @@
 node_modules
 dist
-docs-dist
+storybook-static
 coverage
+tests/visual/output
+*.tsbuildinfo
 .DS_Store
 *.log

@@ -1,75 +1,126 @@
 {
-  "name": "my-library",
+  "name": "strata-react",
   "version": "0.1.0",
-  "description": "A description of your library",
+  "description": "React + Tailwind v4 components that ship structure, behaviour, states and a token contract, and no look: each product brings a theme generated from its own subject.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/YOUR_REPO.git"
+    "url": "https://github.com/jburnhams/strata-react.git"
   },
-  "main": "dist/my-library.cjs",
-  "module": "dist/my-library.js",
-  "types": "dist/index.d.ts",
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": {
-        "default": "./dist/my-library.js"
-      },
-      "import": "./dist/my-library.js",
-      "require": "./dist/my-library.cjs",
-      "default": "./dist/my-library.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
-    "./bundle": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/my-library.js"
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
     },
-    "./browser": {
-      "default": "./dist/my-library.iife.js"
+    "./strata.css": {
+      "style": "./dist/strata.css",
+      "default": "./dist/strata.css"
     },
     "./package.json": "./package.json"
   },
-  "browser": "dist/my-library.iife.js",
-  "unpkg": "dist/my-library.iife.js",
-  "jsdelivr": "dist/my-library.iife.js",
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "npm run clean && vite build",
-    "build:docs": "npm run build -w docs",
-    "test": "vitest run",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "npm run build && vitest run tests/integration",
-    "test:all": "npm run test:unit && npm run test:integration",
-    "smoke": "npm run smoke:esm && npm run smoke:cjs",
-    "smoke:esm": "node scripts/smoke-esm.mjs",
-    "smoke:cjs": "node scripts/smoke-cjs.cjs",
-    "coverage": "vitest run tests/unit --coverage",
-    "size": "npm run build && node scripts/check-bundle-size.mjs",
-    "prepublishOnly": "npm run build"
+    "build": "npm run clean && vite build && node scripts/copy-css.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run test:unit",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "npm run build && vitest run --project integration",
+    "test:all": "npm run test && npm run test:integration",
+    "coverage": "vitest run --project unit --coverage",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build --quiet -o storybook-static",
+    "test:visual": "npm run build-storybook && node scripts/visual.mjs",
+    "test:visual:update": "npm run build-storybook && node scripts/visual.mjs --update",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test:all"
   },
   "keywords": [
-    "library",
-    "template"
+    "react",
+    "tailwindcss",
+    "design-system",
+    "components",
+    "storybook"
   ],
-  "author": "",
+  "author": "jburnhams",
   "license": "MIT",
-  "workspaces": [
-    "docs"
-  ],
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "@testing-library/react": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": "^7.0.0 || ^8.0.0",
+    "tailwindcss": "^4.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@testing-library/react": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.0",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.26",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.500.0",
+    "tailwind-merge": "^3.3.0"
+  },
   "devDependencies": {
-    "@types/node": "^25.2.0",
-    "@vitest/coverage-v8": "^4.0.18",
-    "happy-dom": "^20.4.0",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/public-sans": "^5.3.0",
+    "@storybook/addon-a11y": "^10.6.6",
+    "@storybook/addon-docs": "^10.6.6",
+    "@storybook/react-vite": "^10.6.6",
+    "@tailwindcss/node": "^4.3.5",
+    "@tailwindcss/vite": "^4.3.5",
+    "@tanstack/react-query": "^5.107.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^22.20.5",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "jsdom": "^31.0.0",
+    "msw": "^3.0.4",
+    "msw-storybook-addon": "^3.0.3",
+    "pixelmatch": "^8.0.0",
+    "playwright": "1.63.0",
+    "pngjs": "^7.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^8.5.1",
+    "storybook": "^10.6.6",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~5.9",
+    "vite": "^8.3.6",
+    "vite-plugin-dts": "^5.1.2",
+    "vitest": "^5.1.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      ".storybook/public"
+    ]
   }
 }
