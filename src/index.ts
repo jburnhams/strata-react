@@ -1,46 +1,32 @@
-/**
- * A simple hello world library
- */
+// strata-react: an opinionated React + Tailwind v4 framework for building product frontends.
+// Components ship structure, behaviour, states and accessibility; the look comes from the
+// product's own theme (see README.md and CLAUDE.md).
 
-/**
- * Returns a greeting message
- * @param name - The name to greet (defaults to 'World')
- * @returns A greeting message
- */
-export function hello(name: string = 'World'): string {
-  return `Hello, ${name}!`;
-}
+export { cn, typeSteps } from "./lib/utils";
+export { createFormat, format, NBSP, type Format } from "./lib/format";
+export type { IconComponent } from "./lib/icon";
 
-/**
- * Returns a goodbye message
- * @param name - The name to say goodbye to (defaults to 'World')
- * @returns A goodbye message
- */
-export function goodbye(name: string = 'World'): string {
-  return `Goodbye, ${name}!`;
-}
-
-/**
- * A simple greeter class
- */
-export class Greeter {
-  private name: string;
-
-  constructor(name: string) {
-    this.name = name;
-  }
-
-  /**
-   * Greets with the configured name
-   */
-  greet(): string {
-    return hello(this.name);
-  }
-
-  /**
-   * Says goodbye with the configured name
-   */
-  farewell(): string {
-    return goodbye(this.name);
-  }
-}
+export { Button, IconButton, buttonVariants, type ButtonProps, type IconButtonProps } from "./components/button";
+export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels } from "./components/async-button";
+export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
+export { Status, type Tone } from "./components/status";
+export { Metric, MetricStrip, type MetricProps } from "./components/metric";
+export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
+export { DataTable, TableSkeleton, parseSort, serialiseSort, type Column, type Sort, type DataTableProps } from "./components/data-table";
+export { VirtualList } from "./components/virtual-list";
+export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
+export { PageHeader } from "./components/page-header";
+export { UndoBar, useUndoable } from "./components/undo";
+export { Done } from "./components/done";
+export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
+export { Tabs, type TabItem } from "./components/tabs";
+export {
+  StrataQueryProvider,
+  createQueryClient,
+  toLoad,
+  useLoad,
+  fetchJson,
+  HttpError,
+  describeHttpError,
+  type DescribeError,
+} from "./query";

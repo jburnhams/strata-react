@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck, unit and integration tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [26.x]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run coverage
+      - run: npm run test:integration
+
+  visual:
+    name: Visual regression (Storybook in Chromium, pixelmatch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.x
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # The Chromium build pinned by package.json's exact playwright version, so CI and the
+      # machine that wrote the baselines render with the same browser.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build-storybook
+      - run: node scripts/visual.mjs
+      - name: Upload screenshots that differ
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: tests/visual/output/
+          if-no-files-found: ignore

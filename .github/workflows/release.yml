@@ -23,7 +23,7 @@ jobs:
       - name: 'Setup Node.js'
         uses: 'actions/setup-node@v4'
         with:
-          node-version: '20'
+          node-version: '26'
 
       - name: 'cat package.json'
         run: cat ./package.json
@@ -53,8 +53,8 @@ jobs:
       - name: 'Install dependencies'
         run: npm ci
 
-      - name: 'Build browser bundle'
-        run: npm run build:docs
+      - name: 'Build'
+        run: npm run build
 
       - name: 'Create GitHub Release'
         if: ${{ steps.version-bump.outputs.newTag }}
@@ -63,7 +63,5 @@ jobs:
           tag_name: ${{ steps.version-bump.outputs.newTag }}
           name: Release ${{ steps.version-bump.outputs.newTag }}
           generate_release_notes: true
-          files: |
-            docs-dist/image-stitch.bundle.js
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

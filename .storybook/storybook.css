@@ -1,0 +1,9 @@
+/* Storybook's stylesheet is assembled exactly as a product's would be (see src/styles/strata.css),
+   with the fixture theme in the product's place. */
+@import "tailwindcss";
+@import "../src/styles/strata.css";
+@import "./theme.generated.css";
+@import "./theme.css";
+
+@source "../src";
+@source "../stories";

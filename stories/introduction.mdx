@@ -1,0 +1,26 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# strata-react
+
+An opinionated React + Tailwind v4 framework for product frontends, built from the research in
+[jburnhams/ux-research](https://github.com/jburnhams/ux-research).
+
+Every story here renders on a **fixture theme**: the kiln room at Back Lane Clay Co-op, the
+worked example from ux-research. Strata itself ships no colours; a product generates its own
+theme from its subject. Use the toolbar to switch between light and dark, and between
+comfortable and compact density.
+
+- **Actions**: Button (outline by default; one filled button per view), IconButton (requires a
+  label), AsyncButton (one object through idle, pending, done and error).
+- **Form**: Field wires labels, hints and errors into its control.
+- **Status and figures**: a status is always a word; figures have no icons or sparklines.
+- **Data**: DataView requires loading, empty and error states; the "From the API" stories
+  fetch through TanStack Query from MSW. DataTable and VirtualList virtualise long data.
+- **Page**: AppShell and Tabs use React Router; tab and sort state live in the URL.
+- **Feedback**: UndoBar before confirm; Done for the rare, earned completion.
+- **Screens**: a whole Operate screen composed from the above.
+
+Every story is screenshotted in Chromium, light and dark, and compared with a committed
+baseline in CI (`npm run test:visual`).

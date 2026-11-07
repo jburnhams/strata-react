@@ -1,0 +1,57 @@
+/* FIXTURE: the kiln room's product layer, copied from jburnhams/ux-research
+   ui-library/examples/app/globals.css. In a product this file is the product's own; it supplies
+   what Strata names but does not choose: status roles, faces, the title's voice, and any colours
+   that are facts of the subject (here, the kiln's glow and the co-op's glazes). */
+
+:root {
+  /* Status: pale tint + dark ink of one hue, ink solved to >= 6:1 on its tint and on the ground. */
+  --success-subtle: oklch(95.4% 0.035 150.6);
+  --success: oklch(45.9% 0.109 150.1);
+  --warning-subtle: oklch(95.5% 0.025 52.2);
+  --warning: oklch(47.6% 0.11 50.6);
+  --danger-subtle: oklch(95.5% 0.022 27.8);
+  --danger: oklch(48% 0.111 27);
+  --info-subtle: oklch(95.5% 0.023 246);
+  --info: oklch(46.5% 0.11 244.6);
+
+  /* Archivo, expanded and heavy: the lettering cast into a kiln maker's nameplate. */
+  --title-weight: 800;
+  --title-stretch: 125%;
+  --title-tracking: -0.015em;
+
+  /* Heat: the colours a kiln shows through the peephole, only where colour encodes temperature. */
+  --heat-unlit: oklch(46% 0.035 55);
+  --heat-dull-red: oklch(44% 0.14 27);
+  --heat-cherry: oklch(50% 0.17 30);
+  --heat-orange: oklch(55% 0.16 48);
+  --heat-yellow: oklch(63% 0.14 75);
+}
+
+.dark {
+  --success-subtle: oklch(25.9% 0.045 150.3);
+  --success: oklch(70.5% 0.09 150.1);
+  --warning-subtle: oklch(25.9% 0.045 50.1);
+  --warning: oklch(71.3% 0.09 50.9);
+  --danger-subtle: oklch(26% 0.045 27);
+  --danger: oklch(71.7% 0.089 27.3);
+  --info-subtle: oklch(26% 0.045 244.4);
+  --info: oklch(70.8% 0.09 245.3);
+  --heat-unlit: oklch(62% 0.03 55);
+  --heat-dull-red: oklch(58% 0.17 27);
+  --heat-cherry: oklch(65% 0.19 33);
+  --heat-orange: oklch(74% 0.16 55);
+  --heat-yellow: oklch(86% 0.14 88);
+}
+
+@theme inline {
+  --color-heat-unlit: var(--heat-unlit);
+  --color-heat-dull-red: var(--heat-dull-red);
+  --color-heat-cherry: var(--heat-cherry);
+  --color-heat-orange: var(--heat-orange);
+  --color-heat-yellow: var(--heat-yellow);
+}
+
+@theme {
+  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Archivo Variable", "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
+}

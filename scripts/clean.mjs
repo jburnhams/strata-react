@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 
-const targets = ['dist', 'build', 'docs-dist'];
+const targets = ['dist', 'storybook-static', 'coverage', 'tests/visual/output'];
 
 for (const target of targets) {
   const fullPath = path.join(projectRoot, target);
