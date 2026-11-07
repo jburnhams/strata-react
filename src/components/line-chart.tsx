@@ -15,7 +15,16 @@ import { cn } from "../lib/utils";
 // hue.
 //
 // It draws in real pixels (measured with ResizeObserver) rather than scaling a fixed viewBox, so
-// the 12px labels stay 12px on a phone.
+// the 12px labels stay 12px on a phone. Because the labels keep their size, the chart thins the
+// x ticks itself when they would collide (every second, third… tick, so the rhythm stays even)
+// and keeps the first and last label inside the chart, rather than overlapping on a phone.
+//
+// The y-axis autoscales to four gridline steps of a size people write on a scale, from zero (or
+// below it, if a reading is negative). `yMin` and `yMax` pin either end for a quantity whose range
+// is a fact of the subject (a percentage is 0 to 100, a battery 0 to 1): autoscaling a machine at
+// 1% CPU gives a 0 to 8% axis that makes it look busy (strata-react issue #23). A pin is a floor on
+// the extent, never a crop: a reading outside it widens the axis, because a chart that hides a
+// reading is worse than one with an untidy scale.
 
 export type Point = { x: number; y: number };
 
@@ -29,7 +38,12 @@ export type LineChartProps = {
   band?: { below: number; label: string };
   formatX: (x: number) => string;
   formatY: (y: number) => string;
+  /** Where to put x labels, in x units. The chart drops every other one (and so on) when they would overlap at its width. */
   xTicks: number[];
+  /** Pin the bottom of the y-axis (default: 0, or lower if a reading is negative). A reading below it still shows. */
+  yMin?: number;
+  /** Pin the top of the y-axis, for a bounded quantity such as a percentage (`yMax={100}`), so a low reading looks low. Choose a range that divides into four steps. A reading above it still shows. */
+  yMax?: number;
   /** CSS colour for the measured series. Defaults to the first chart token. */
   colour?: string;
   /** Colour the measured series by value: each stop applies from `at` upwards, blending to the
@@ -55,14 +69,62 @@ function useWidth<T extends HTMLElement>() {
   return [ref, width] as const;
 }
 
-/** Four gridline steps of a size people write on a scale (1, 2, 2.5, 4 or 5 × 10ⁿ), ending above the max. */
-export function niceMax(max: number) {
-  // All-zero (or empty) data still needs a positive extent, or every coordinate divides by zero.
-  if (!(max > 0)) return 4;
-  const raw = max / 4;
+/** The smallest step of a size people write on a scale (1, 2, 2.5, 4 or 5 × 10ⁿ) at least `raw`. */
+function niceStep(raw: number) {
   const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 4, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;
-  return step * 4;
+  return [1, 2, 2.5, 4, 5, 10].map((m) => m * mag).find((s) => s >= raw * (1 - 1e-9)) ?? 10 * mag;
+}
+
+/**
+ * The y-axis: four equal gridline steps covering every value. With no pins the steps are a size
+ * people write on a scale (1, 2, 2.5, 4 or 5 × 10ⁿ), from zero or a round number below the lowest
+ * reading. A pinned end is used as given unless a value lies beyond it.
+ */
+export function yScale(values: number[], pin: { min?: number; max?: number } = {}) {
+  const finite = values.filter(Number.isFinite);
+  const dMin = finite.length ? Math.min(...finite) : 0;
+  const dMax = finite.length ? Math.max(...finite) : 0;
+  const pinMin = pin.min !== undefined && dMin >= pin.min ? pin.min : undefined;
+  const pinMax = pin.max !== undefined && dMax <= pin.max ? pin.max : undefined;
+  const lo = pinMin ?? Math.min(0, dMin);
+  let min: number;
+  let max: number;
+  if (pinMax !== undefined) {
+    max = pinMax;
+    // Only the bottom is free: round it down to a step of the span, so 0 stays 0.
+    min = pinMin ?? (lo < 0 ? Math.floor(lo / niceStep((max - lo) / 4)) * niceStep((max - lo) / 4) : 0);
+  } else {
+    const hi = Math.max(dMax, pin.max ?? -Infinity);
+    // All-zero (or empty) data still needs a positive extent, or every coordinate divides by zero.
+    let step = hi > lo ? niceStep((hi - lo) / 4) : 1;
+    let base = pinMin ?? Math.floor(lo / step) * step;
+    while (base + 4 * step < hi) {
+      step = niceStep(step * 1.01);
+      base = pinMin ?? Math.floor(lo / step) * step;
+    }
+    min = base;
+    max = base + 4 * step;
+  }
+  if (!(max > min)) max = min + 4;
+  return { min, max, ticks: [0, 1, 2, 3, 4].map((i) => min + ((max - min) * i) / 4) };
+}
+
+/** Roughly how wide a 12px caption label is, in px. jsdom cannot measure text, so the chart estimates. */
+const labelWidth = (text: string) => text.length * 7;
+
+/**
+ * The x ticks that fit at this width: every k-th tick, the smallest k for which neighbouring labels
+ * leave a gap, so the spacing stays even. `scale` maps an x value to a pixel.
+ */
+export function fitTicks(ticks: number[], scale: (x: number) => number, widthOf: (t: number) => number, gap = 12) {
+  if (ticks.length < 3) return ticks;
+  const sorted = [...ticks].sort((a, b) => a - b);
+  for (let k = 1; k < sorted.length; k++) {
+    const kept = sorted.filter((_, i) => i % k === 0);
+    const fits = kept.every((t, i) => i === 0 || scale(t) - scale(kept[i - 1]) >= (widthOf(t) + widthOf(kept[i - 1])) / 2 + gap);
+    if (fits) return kept;
+  }
+  return sorted.slice(0, 1);
 }
 
 /** One measured series, drawn in real pixels, with the peak and current readings labelled on the chart and every reading in a screen-reader table. Optional plan, threshold band and `colourScale`. */
@@ -76,6 +138,8 @@ export function LineChart({
   formatX,
   formatY,
   xTicks,
+  yMin,
+  yMax,
   colour = "var(--chart-1)",
   colourScale,
   colourScaleLabel,
@@ -87,14 +151,23 @@ export function LineChart({
   const all = [...series, ...(planned ?? [])];
   const xMin = Math.min(...all.map((p) => p.x));
   const xMax = Math.max(...all.map((p) => p.x));
-  const yMax = niceMax(Math.max(...all.map((p) => p.y)));
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * yMax);
+  const y = yScale(
+    all.map((p) => p.y),
+    { min: yMin, max: yMax },
+  );
 
   const pad = { top: 16, right: 16, bottom: 28, left: 56 };
   const w = Math.max(0, width - pad.left - pad.right);
   const h = height - pad.top - pad.bottom;
   const sx = (x: number) => pad.left + ((x - xMin) / (xMax - xMin || 1)) * w;
-  const sy = (y: number) => pad.top + h - (y / yMax) * h;
+  const sy = (v: number) => pad.top + h - ((v - y.min) / (y.max - y.min)) * h;
+  const xLabelWidth = (t: number) => labelWidth(formatX(t));
+  const shownXTicks = fitTicks(xTicks, sx, xLabelWidth);
+  // Keep the first and last labels inside the chart instead of centring them past its edge.
+  const xLabelAt = (t: number) => {
+    const half = xLabelWidth(t) / 2;
+    return Math.min(Math.max(sx(t), half), Math.max(half, width - half));
+  };
   const path = (pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
 
   const last = series[series.length - 1];
@@ -113,22 +186,22 @@ export function LineChart({
               // A vertical gradient in chart space, so a colour sits at a temperature, not at a
               // point along the line: the line is the same red wherever it crosses 600 °C.
               <defs>
-                <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={sy(0)} y2={sy(yMax)}>
+                <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={sy(y.min)} y2={sy(y.max)}>
                   {stops.map((s) => (
-                    <stop key={s.at} offset={Math.min(1, Math.max(0, s.at / yMax))} stopColor={s.colour} />
+                    <stop key={s.at} offset={Math.min(1, Math.max(0, (s.at - y.min) / (y.max - y.min)))} stopColor={s.colour} />
                   ))}
                 </linearGradient>
               </defs>
             )}
-            {band && (
+            {band && band.below > y.min && (
               <g>
-                <rect x={pad.left} y={sy(band.below)} width={w} height={sy(0) - sy(band.below)} fill="var(--success-subtle)" />
-                <text x={pad.left + 8} y={sy(band.below) + 16} className="fill-success type-caption">
+                <rect x={pad.left} y={sy(Math.min(band.below, y.max))} width={w} height={sy(y.min) - sy(Math.min(band.below, y.max))} fill="var(--success-subtle)" />
+                <text x={pad.left + 8} y={sy(Math.min(band.below, y.max)) + 16} className="fill-success type-caption">
                   {band.label}
                 </text>
               </g>
             )}
-            {yTicks.map((t) => (
+            {y.ticks.map((t) => (
               <g key={t}>
                 <line x1={pad.left} x2={pad.left + w} y1={sy(t)} y2={sy(t)} stroke="var(--border)" strokeWidth={1} />
                 <text x={pad.left - 8} y={sy(t)} dy="0.32em" textAnchor="end" className="fill-muted-foreground type-caption tabular-nums">
@@ -136,8 +209,8 @@ export function LineChart({
                 </text>
               </g>
             ))}
-            {xTicks.map((t) => (
-              <text key={t} x={sx(t)} y={height - 8} textAnchor="middle" className="fill-muted-foreground type-caption tabular-nums">
+            {shownXTicks.map((t) => (
+              <text key={t} x={xLabelAt(t)} y={height - 8} textAnchor="middle" className="fill-muted-foreground type-caption tabular-nums">
                 {formatX(t)}
               </text>
             ))}

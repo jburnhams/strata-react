@@ -35,3 +35,25 @@ export const ColouredAsTheKilnGlows: Story = {
     colourScaleLabel: "coloured as the kiln glows",
   },
 };
+
+const cpu = Array.from({ length: 48 }, (_, i) => ({ x: i * 30, y: 1 + Math.round((Math.sin(i / 3) + 1) * 10) / 10 + (i === 30 ? 2 : 0) }));
+
+/** yMax: a percentage pinned to 0 to 100%, so a machine at 2% CPU looks idle. Autoscaled, the same readings fill the chart and look busy. */
+export const PinnedPercentage: Story = {
+  args: {
+    label: "CPU use over the last day",
+    series: cpu,
+    seriesLabel: "CPU",
+    formatX: (m: number) => format.clock.format(new Date(Date.UTC(2026, 10, 5, 0, m))),
+    formatY: (v: number) => format.percent(v / 100),
+    xTicks: Array.from({ length: 8 }, (_, i) => i * 180),
+    yMax: 100,
+    height: 200,
+  },
+};
+
+/** At phone width the x labels thin to every other tick, evenly, and the last stays inside the chart. */
+export const Phone: Story = {
+  ...PlanAndBand,
+  tags: ["visual-phone"],
+};
