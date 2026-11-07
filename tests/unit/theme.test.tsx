@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { COLOR_SCHEME_STORAGE_KEY, ColorSchemeChoice, ThemeProvider, colorSchemeScript, useColorScheme } from "../../src";
@@ -82,6 +84,29 @@ describe("ThemeProvider", () => {
     );
     expect(screen.getByText("dark dark")).toBeInTheDocument();
     expect(isDark()).toBe(true);
+  });
+
+  it("hydrates server markup without a mismatch, then applies the stored choice", async () => {
+    window.localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, "dark");
+    const ui = (
+      <ThemeProvider>
+        <Readout />
+      </ThemeProvider>
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(ui);
+    document.body.append(container);
+    expect(container.textContent).toBe("system light");
+    const errors: unknown[] = [];
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, ui, { onRecoverableError: (e) => errors.push(e) });
+    });
+    expect(errors).toEqual([]);
+    expect(container.textContent).toBe("dark dark");
+    expect(isDark()).toBe(true);
+    act(() => root!.unmount());
+    container.remove();
   });
 
   it("an explicit light choice wins over a dark system", () => {

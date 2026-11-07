@@ -13,6 +13,9 @@ import { ChoiceGroup } from "./field";
 //   not persist, and the page still renders. A stored value that is not one of the three is
 //   ignored.
 // - Another tab changing the choice changes this one too (the `storage` event).
+// - The first render uses the default preference, as a server render would, and the stored choice
+//   is applied in a layout effect, so server-rendered markup hydrates cleanly and nothing paints
+//   with the wrong scheme (found in review).
 // - The class is set in a layout effect, before paint. A page that must not flash light on first
 //   load before React runs puts `colorSchemeScript()` in an inline script in its `<head>`.
 // - `ColorSchemeChoice` is the picker for a settings page: a `ChoiceGroup` of the three, with
@@ -105,9 +108,14 @@ export function ThemeProvider({
    */
   target?: HTMLElement | null;
 }) {
-  const [preference, setState] = React.useState<ColorSchemePreference>(
-    () => (typeof window === "undefined" ? null : readStored(storageKey)) ?? defaultPreference,
-  );
+  // The first render uses the default, as the server does, so a server-rendered tree hydrates
+  // without a mismatch; the stored choice is read in a layout effect, which re-renders before the
+  // browser paints, so a client-only app still never shows the default first.
+  const [preference, setState] = React.useState<ColorSchemePreference>(defaultPreference);
+  React.useLayoutEffect(() => {
+    const stored = readStored(storageKey);
+    if (stored) setState(stored);
+  }, [storageKey]);
   const system = useSystemColorScheme();
   const scheme: ColorScheme = preference === "system" ? system : preference;
 
