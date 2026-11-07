@@ -171,8 +171,12 @@ and shadows), and grows past the viewport when the component is bigger, so a bas
 the component and nothing else. Route shots (the example app) are whole pages, named
 `route--state--viewport--theme`, with every request answered by the MSW handlers in Node; a
 request no handler answers fails the shot. Animations are frozen, fonts are bundled
-(`@fontsource-variable`), and pages run in UTC and `en-US`, so screenshots are deterministic. pixelmatch runs at
-threshold 0.1, ignores anti-aliasing, and allows 20 stray pixels; a size change always fails.
+(`@fontsource-variable`), and pages run in UTC and `en-US`, so screenshots are deterministic. Text
+drawn in a system font fails the shot (`systemFonts`), so every face a story or the example app
+uses is a bundled `@fontsource-variable` package imported in `.storybook/preview.tsx` and
+`examples/kiln-app/src/main.tsx`. Both images are box-blurred 3×3 before pixelmatch (threshold
+0.1, anti-aliasing ignored, 4 pixels allowed), which absorbs another machine's anti-aliasing and
+still fails a changed letter (evidence in the CHANGELOG, 2026-11-07); a size change always fails.
 Changed screenshots land in `tests/visual/output/` as `.actual`, `.expected` and `.diff` PNGs,
 which CI uploads as the `visual-diffs` artifact. Baselines are written in the same Chromium CI
 uses (Playwright is pinned to an exact version for that reason); `--update` records that

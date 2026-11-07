@@ -61,7 +61,7 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
   // A worker count that is not a positive integer would start no workers and report an empty,
   // passing run, so it is refused up front.
   if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error(`concurrency must be a whole number of pages, 1 or more (got ${String(config.concurrency)})`);
-  const report: VisualReport = { total: 0, same: 0, changed: [], added: [], obsolete: [], errors: [], warnings: pinWarnings(cwd), updated: update, failed: false };
+  const report: VisualReport = { total: 0, same: 0, tolerated: [], changed: [], added: [], obsolete: [], errors: [], warnings: pinWarnings(cwd), updated: update, failed: false };
 
   const batches: Batch[] = [];
   try {
@@ -110,7 +110,10 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
       throw new Error("strata-visual needs Playwright: npm install -D -E playwright, then npx playwright install chromium");
     });
     // Font hinting and LCD anti-aliasing off and an sRGB profile: the same pixels on every machine.
-    const browser = await chromium.launch({ args: ["--font-render-hinting=none", "--disable-lcd-text", "--force-color-profile=srgb"] });
+    // STRATA_VISUAL_CHROMIUM_ARGS adds flags, for experiments such as checking that the
+    // comparison absorbs another rasteriser (the visual-portability workflow).
+    const extraArgs = (process.env.STRATA_VISUAL_CHROMIUM_ARGS ?? "").split(/\s+/).filter(Boolean);
+    const browser = await chromium.launch({ args: ["--font-render-hinting=none", "--disable-lcd-text", "--force-color-profile=srgb", ...extraArgs] });
     const meta: Meta = { chromium: browser.version(), platform: `${process.platform}-${process.arch}` };
     try {
       for (const batch of batches) await runBatch(browser, batch, { config, baselineDir, outputDir, update, report, log });
@@ -147,14 +150,21 @@ async function runBatch(
   const shoot = async (shot: Shot) => {
     const file = `${shot.name}.png`;
     try {
-      const { png, problems } = await capture(browser, shot, {
+      const fonts = ctx.config.systemFonts ?? "error";
+      const { png, problems, systemFonts } = await capture(browser, shot, {
         baseUrl: batch.baseUrl,
         time: ctx.config.time,
         timezone: ctx.config.timezone,
         locale: ctx.config.locale,
         blockServiceWorkers: batch.blockServiceWorkers,
         onUnhandledRequest: batch.onUnhandledRequest,
+        checkFonts: fonts !== "allow",
       });
+      if (systemFonts.length) {
+        const line = `${file}: text in a system font, which differs by machine (bundle the face with @fontsource and name it in the theme's --font-*): ${systemFonts.join(", ")}`;
+        if (fonts === "error") problems.push(line.slice(file.length + 2));
+        else report.warnings.push(line);
+      }
       if (problems.length) report.errors.push(`${file}: ${problems.join(" | ")}`);
       const baselinePath = join(baselineDir, file);
       if (update || !existsSync(baselinePath)) {
@@ -164,9 +174,10 @@ async function runBatch(
         return;
       }
       const expected = readFileSync(baselinePath);
-      const result = compare(decode(expected), decode(png));
+      const result = compare(decode(expected), decode(png), ctx.config.compare);
       if (result.same) {
         report.same++;
+        if (!result.identical) report.tolerated.push(`${file}: ${result.reason}`);
         return;
       }
       report.changed.push(`${file}: ${result.reason}`);
@@ -213,13 +224,21 @@ export function pinWarnings(cwd: string): string[] {
     );
 }
 
+const pixels = (line: string) => Number(/: (\d+) pixels/.exec(line)?.[1] ?? 0);
+
 /** The report as the lines the command prints. */
 export function formatReport(report: VisualReport): string {
   const lines = [
     report.updated
       ? `Wrote ${report.total} baselines${report.obsolete.length ? `, removed ${report.obsolete.length} obsolete` : ""}.`
-      : `${report.same} of ${report.total} screenshots match their baselines.`,
+      : `${report.same} of ${report.total} screenshots match their baselines${report.tolerated.length ? ` (${report.same - report.tolerated.length} identical, ${report.tolerated.length} within tolerance)` : ""}.`,
     ...report.changed.map((l) => `changed  ${l}`),
+    // The most-differing few: enough to see how close to the allowance a machine runs.
+    ...[...report.tolerated]
+      .sort((a, b) => pixels(b) - pixels(a))
+      .slice(0, 5)
+      .map((l) => `within   ${l}`),
+    ...(report.tolerated.length > 5 ? [`within   … and ${report.tolerated.length - 5} more`] : []),
     ...report.added.map((l) => `new      ${l} (baseline written; commit it)`),
     ...report.obsolete.map((l) => `obsolete ${l}${report.updated ? " (removed)" : " (run with --update to remove)"}`),
     ...report.errors.map((l) => `error    ${l}`),

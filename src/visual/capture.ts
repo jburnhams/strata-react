@@ -5,7 +5,7 @@
 // by MSW handlers in Node, so the screenshot depends on nothing outside the suite.
 import type { Browser, BrowserContext, Page, Request as PlaywrightRequest, Route as PlaywrightRoute } from "playwright";
 import type { RequestHandler } from "msw";
-import type { Shot } from "./types";
+import type { Shot, VisualConfig } from "./types";
 
 // Animations and transitions off, caret hidden: a screenshot is of the settled state.
 const freeze = `*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`;
@@ -20,6 +20,21 @@ export interface CaptureOptions {
   /** Block service workers (an app's own MSW worker or PWA cache would bypass the handlers). */
   blockServiceWorkers?: boolean;
   onUnhandledRequest?: "error" | "bypass";
+  /** Look up which faces drew the page's text and return the ones that are not web fonts. Default true. */
+  checkFonts?: boolean;
+}
+
+/** What one shot produced. */
+export interface Capture {
+  png: Buffer;
+  /** Page errors, console errors and unanswered requests. */
+  problems: string[];
+  /**
+   * Text drawn in a font installed on this machine rather than one the page loaded, one line per
+   * face with an example element, e.g. `"DejaVu Sans" in <kbd> "⌘K"`. Such text renders
+   * differently on every machine, so the runner fails the shot (see {@link VisualConfig.systemFonts}).
+   */
+  systemFonts: string[];
 }
 
 /** Resolves a shot's path under the base URL, keeping the base's own path (`/app/` + `/review`). */
@@ -64,7 +79,7 @@ async function answerWithHandlers(
 }
 
 /** Takes one shot and returns its PNG, or throws with what went wrong. Page and console errors are returned as problems. */
-export async function capture(browser: Browser, shot: Shot, options: CaptureOptions): Promise<{ png: Buffer; problems: string[] }> {
+export async function capture(browser: Browser, shot: Shot, options: CaptureOptions): Promise<Capture> {
   const context = await browser.newContext({
     viewport: shot.viewport,
     deviceScaleFactor: 1,
@@ -115,7 +130,8 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
       if (!clip) throw new Error("rendered nothing visible");
       png = await page.screenshot({ fullPage: true, clip, animations: "disabled" });
     }
-    return { png, problems };
+    const systemFonts = options.checkFonts === false ? [] : await platformFonts(page);
+    return { png, problems, systemFonts };
   } finally {
     await context.close();
   }
@@ -126,6 +142,42 @@ async function settle(page: Page) {
   await page.waitForLoadState("networkidle", { timeout: 3_000 }).catch(() => undefined);
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await page.waitForTimeout(250);
+}
+
+// Which faces drew the text. Chromium's DevTools protocol reports, per element, the font files
+// that actually painted its glyphs and whether each came from the page (@font-face) or from the
+// machine. A system face is the largest source of machine-to-machine difference left once the
+// browser is pinned: the same `ui-sans-serif` is Cantarell on one Linux, DejaVu on another and
+// San Francisco on a Mac, and a glyph missing from a web font (an arrow, ⌘) falls back to
+// whatever the machine has. So the shot reports it rather than tolerating it in the comparison.
+async function platformFonts(page: Page): Promise<string[]> {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send("DOM.enable");
+    await cdp.send("CSS.enable");
+    const { root } = await cdp.send("DOM.getDocument", { depth: -1, pierce: true });
+    type DomNode = { nodeId: number; nodeType: number; nodeName: string; nodeValue: string; children?: DomNode[]; shadowRoots?: DomNode[]; contentDocument?: DomNode };
+    const texts: { id: number; name: string; text: string }[] = [];
+    const walk = (n: DomNode) => {
+      if (n.nodeName === "SCRIPT" || n.nodeName === "STYLE" || n.nodeName === "HEAD") return;
+      const own = n.children?.filter((c) => c.nodeType === 3 && c.nodeValue.trim()) ?? [];
+      if (n.nodeType === 1 && own.length) texts.push({ id: n.nodeId, name: n.nodeName.toLowerCase(), text: own.map((c) => c.nodeValue.trim()).join(" ") });
+      for (const c of [...(n.children ?? []), ...(n.shadowRoots ?? []), ...(n.contentDocument ? [n.contentDocument] : [])]) walk(c);
+    };
+    walk(root as DomNode);
+    const found = new Map<string, string>();
+    for (const t of texts) {
+      // A node that is not rendered (display: none) has no fonts and is skipped by Chromium.
+      const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId: t.id }).catch(() => ({ fonts: [] }));
+      for (const f of fonts) {
+        if (f.isCustomFont || found.has(f.familyName)) continue;
+        found.set(f.familyName, `"${f.familyName}" in <${t.name}> "${t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text}"`);
+      }
+    }
+    return [...found.values()];
+  } finally {
+    await cdp.detach().catch(() => undefined);
+  }
 }
 
 // Runs in the page. The box around what the root actually paints: text, replaced and form

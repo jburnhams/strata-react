@@ -1,0 +1,58 @@
+name: Visual portability
+
+# Do the committed baselines (written on ubuntu-latest x64) still match when the same pinned
+# Chromium runs somewhere else? Each leg runs the whole visual suite and never fails the build:
+# the report's "identical / within tolerance / changed" line is the result. Run it when the
+# comparison settings, the fonts or the pinned Playwright change.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/visual/**
+      - .github/workflows/visual-portability.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "Ubuntu 24.04 x64", os: ubuntu-24.04, flags: "" }
+          - { name: "Ubuntu 22.04 x64", os: ubuntu-22.04, flags: "" }
+          - { name: "Ubuntu 24.04 arm64", os: ubuntu-24.04-arm, flags: "" }
+          # GPU-style rasterisation in SwiftShader: the largest anti-aliasing change found locally.
+          - { name: "Ubuntu 24.04 x64, GPU raster", os: ubuntu-24.04, flags: "--enable-gpu-rasterization --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.x
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build && npm run build-storybook && npm run build-example
+      - name: strata-visual against the committed baselines
+        env:
+          STRATA_VISUAL_CHROMIUM_ARGS: ${{ matrix.flags }}
+        run: |
+          node bin/strata-visual.js | tee visual-report.txt || true
+          { echo "### ${{ matrix.name }}"; echo '```'; head -1 visual-report.txt; grep -E '^(changed|error|warning)' visual-report.txt | head -40; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-portability-${{ strategy.job-index }}
+          path: |
+            visual-report.txt
+            tests/visual/output/
+          if-no-files-found: ignore

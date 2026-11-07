@@ -6,6 +6,7 @@
 // Node (see ../strata-visual.config.ts at the repo root).
 import "@fontsource-variable/public-sans";
 import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/jetbrains-mono";
 import "./app.css";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
