@@ -18,6 +18,7 @@ export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
 export { DataTable, TableSkeleton, parseSort, serialiseSort, type Column, type Sort, type DataTableProps } from "./components/data-table";
 export { VirtualList } from "./components/virtual-list";
+export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
 export { PageHeader } from "./components/page-header";
 export {
@@ -50,9 +51,13 @@ export {
   createQueryClient,
   toLoad,
   useLoad,
+  useInfiniteLoad,
   fetchJson,
   HttpError,
   describeHttpError,
   type DescribeError,
+  type InfiniteLoad,
+  type InfiniteLoadOptions,
+  type More,
 } from "./query";
 export { describeActionError } from "./lib/errors";

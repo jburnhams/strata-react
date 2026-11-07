@@ -38,9 +38,9 @@ First use: the live demos and examples in ux-research. Then other products.
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
 | Icons | lucide-react | Components accept any `IconComponent` |
-| Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` |
+| Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` |
 | Tables | TanStack Table | Behind `DataTable`'s small column API (`key`, `header`, `cell`, `numeric`, `sort`) |
-| Long lists | TanStack Virtual | `DataTable` and `VirtualList` virtualise from 100 rows automatically |
+| Long lists | TanStack Virtual | `DataTable`, `VirtualList` and `InfiniteList` virtualise from 100 rows automatically |
 | Routing | React Router | `AppShell`/`SideNav` use `NavLink`; tabs (`Tabs param=`), table sort (`sortParam`), filters and open panels live in the URL |
 | Unit tests | Vitest + Testing Library + jsdom | `tests/unit/`; query by role and name, as a person would |
 | Network in tests and stories | MSW | `stories/mocks/handlers.ts` serves both. **Never** `vi.mock` a module or stub `fetch`; put the server into the state with `server.use(...)` (tests) or `beforeEach: ({ msw }) => msw.use(...)` (stories) |

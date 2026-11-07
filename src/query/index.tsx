@@ -66,3 +66,5 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit): Pro
   const text = res.status === 204 ? "" : await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
+
+export { useInfiniteLoad, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
