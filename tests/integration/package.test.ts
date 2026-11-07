@@ -26,7 +26,9 @@ describe("package exports", () => {
       expect(mod[name], name).toBeDefined();
     }
     const testing = await import(pathToFileURL(join(root, "dist/testing.js")).href);
-    expect(testing.renderWithStrata).toBeTypeOf("function");
+    for (const name of ["renderWithStrata", "createTestQueryClient", "installLayoutShims", "installFakeIntersectionObserver"]) {
+      expect(testing[name], name).toBeTypeOf("function");
+    }
   });
 
   it("keeps React, the router and TanStack Query out of the bundle", () => {

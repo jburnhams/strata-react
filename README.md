@@ -87,8 +87,8 @@ function KilnRoom() {
 | Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out |
 | Page and navigation | `AppShell`, `SideNav`, `Breadcrumb`, `Tabs`, `PageHeader` | React Router; tab and sort state in the URL |
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; `Done` is the one celebration, and it must say what happens next |
-| Helpers | `cn`, `format`, `createFormat` | `cn` knows `type-*`; all numbers and dates through `Intl` |
-| Testing | `strata-react/testing`: `renderWithStrata`, `createTestQueryClient` | Router + query client around Testing Library's `render` |
+| Helpers | `cn`, `format`, `createFormat`, `NBSP` | `cn` knows `type-*`; all numbers and dates through `Intl`; `format.integer(n)`, `.decimal(n)`, `.percent(n)` are callable and keep Intl's methods; units and counts join with a non-breaking space |
+| Testing | `strata-react/testing`: `renderWithStrata`, `createTestQueryClient`, `installLayoutShims`, `installFakeIntersectionObserver` | Router + query client around Testing Library's `render`; a fixed box and ResizeObserver so measuring components render in jsdom; an IntersectionObserver the test fires with `scrollToEnd()` or `intersect(el)`. Role names keep the non-breaking space from `format.count`, so match them with the same call or a `\s` regex |
 
 Specs for the components not built yet (dialogs, sheets, menus, toasts, command menu, prose)
 are in ux-research `ui-library/components.md`.
