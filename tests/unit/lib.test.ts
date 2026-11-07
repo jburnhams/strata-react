@@ -20,6 +20,16 @@ describe("format", () => {
   });
   it("follows the locale it was made with", () => {
     expect(createFormat("de-DE").integer.format(1222)).toBe("1.222");
+    expect(createFormat("de-DE").integer(1222)).toBe("1.222");
+  });
+  it("calls number formatters directly and keeps Intl's methods", () => {
+    expect(format.integer(1222.4)).toBe("1,222");
+    expect(format.decimal(3.14)).toBe("3.1");
+    expect(format.percent(0.42)).toBe("42%");
+    expect(format.integer.format(1222)).toBe("1,222");
+    expect(format.integer.formatToParts(1222).map((p) => p.type)).toEqual(["integer", "group", "integer"]);
+    expect(format.integer.resolvedOptions().locale).toBe("en-GB");
+    expect(format.withUnit(2.25, "kg", format.decimal)).toBe(`2.3${NBSP}kg`);
   });
 });
 

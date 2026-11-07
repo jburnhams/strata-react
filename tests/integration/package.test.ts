@@ -22,11 +22,13 @@ describe("package exports", () => {
 
   it("exports the components and helpers from the ESM build", async () => {
     const mod = await import(pathToFileURL(join(root, "dist/index.js")).href);
-    for (const name of ["Button", "IconButton", "AsyncButton", "DataView", "DataTable", "VirtualList", "LineChart", "AppShell", "Tabs", "Done", "useLoad", "toLoad", "fetchJson", "cn", "format"]) {
+    for (const name of ["Button", "IconButton", "AsyncButton", "DataView", "DataTable", "VirtualList", "LineChart", "AppShell", "Tabs", "Done", "ThemeProvider", "useColorScheme", "ColorSchemeChoice", "colorSchemeScript", "useLoad", "toLoad", "fetchJson", "cn", "format"]) {
       expect(mod[name], name).toBeDefined();
     }
     const testing = await import(pathToFileURL(join(root, "dist/testing.js")).href);
-    expect(testing.renderWithStrata).toBeTypeOf("function");
+    for (const name of ["renderWithStrata", "createTestQueryClient", "installLayoutShims", "installFakeIntersectionObserver"]) {
+      expect(testing[name], name).toBeTypeOf("function");
+    }
   });
 
   it("keeps React, the router and TanStack Query out of the bundle", () => {

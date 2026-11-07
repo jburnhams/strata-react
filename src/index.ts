@@ -7,7 +7,7 @@
  */
 
 export { cn, typeSteps } from "./lib/utils";
-export { createFormat, format, NBSP, type Format } from "./lib/format";
+export { createFormat, format, NBSP, type Format, type NumberFormatter } from "./lib/format";
 export type { IconComponent } from "./lib/icon";
 
 export {
@@ -20,7 +20,7 @@ export {
   type RowActionProps,
 } from "./components/button";
 export { Checkbox, type CheckboxProps } from "./components/checkbox";
-export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels } from "./components/async-button";
+export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
@@ -44,6 +44,18 @@ export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";
 export {
+  ThemeProvider,
+  useColorScheme,
+  useSystemColorScheme,
+  ColorSchemeChoice,
+  colorSchemeScript,
+  COLOR_SCHEME_STORAGE_KEY,
+  type ColorScheme,
+  type ColorSchemePreference,
+  type ColorSchemeLabels,
+  type ColorSchemeState,
+} from "./components/theme";
+export {
   StrataQueryProvider,
   createQueryClient,
   toLoad,
@@ -53,3 +65,4 @@ export {
   describeHttpError,
   type DescribeError,
 } from "./query";
+export { describeActionError } from "./lib/errors";

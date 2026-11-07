@@ -7,28 +7,32 @@ import { MemoryRouter } from "react-router";
 import { setupWorker } from "msw/browser";
 import { mswLoader } from "msw-storybook-addon/csf3";
 import { StrataQueryProvider, createQueryClient } from "../src/query";
+import { ThemeProvider, type ColorSchemePreference } from "../src/components/theme";
 import { handlers } from "../stories/mocks/handlers";
 
 // Every story runs the way a Strata app runs: inside a router and a fresh query client, with the
-// network served by MSW (the same handlers the unit tests use). The toolbar switches the theme
-// and density by setting the same class and data attribute a product would.
+// network served by MSW (the same handlers the unit tests use). The theme toolbar drives the
+// library's own ThemeProvider (storage off, remounted per choice), so the `.dark` class is set
+// exactly as in an app and stories can call useColorScheme. Density sets the data attribute a
+// product would.
 
 const withFrame: Decorator = (Story, context) => {
   const { theme, density } = context.globals as { theme?: string; density?: string };
   React.useLayoutEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
     if (density === "compact") root.dataset.density = "compact";
     else delete root.dataset.density;
-  }, [theme, density]);
+  }, [density]);
   const [client] = React.useState(() => createQueryClient({ defaultOptions: { queries: { retry: false } } }));
   const route = (context.parameters.route as string | undefined) ?? "/";
   return (
-    <StrataQueryProvider client={client}>
-      <MemoryRouter initialEntries={[route]}>
-        <Story />
-      </MemoryRouter>
-    </StrataQueryProvider>
+    <ThemeProvider key={theme} defaultPreference={(theme as ColorSchemePreference | undefined) ?? "light"} storageKey={null}>
+      <StrataQueryProvider client={client}>
+        <MemoryRouter initialEntries={[route]}>
+          <Story />
+        </MemoryRouter>
+      </StrataQueryProvider>
+    </ThemeProvider>
   );
 };
 
