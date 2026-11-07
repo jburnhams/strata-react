@@ -66,5 +66,8 @@ jobs:
           tag_name: ${{ steps.version-bump.outputs.newTag }}
           name: Release ${{ steps.version-bump.outputs.newTag }}
           generate_release_notes: true
+          # The action reads its `token` input (default: the workflow token), not the env below.
+          # A release made with the workflow token would also not trigger npm-publish.yml.
+          token: ${{ secrets.RELEASE_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

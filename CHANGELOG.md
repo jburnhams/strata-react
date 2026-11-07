@@ -2,6 +2,10 @@
 
 ## 2026-11-07
 
+**Create the GitHub Release with the release token** (branch `claude/project-thread-nwljes`). After PR #3 the bump to 0.1.1 was pushed and tagged, but creating the release failed with "Resource not accessible by integration", so npm publishing never started.
+
+- `.github/workflows/release.yml`: `softprops/action-gh-release` now gets `token: ${{ secrets.RELEASE_TOKEN }}`. It reads that input, which defaults to the workflow token, and ignores the `GITHUB_TOKEN` set in its env.
+
 **Fix the version bump on main** (branch `claude/project-thread-nwljes`). The release workflow failed after PR #1 and PR #2 merged with "Permission to jburnhams/strata-react.git denied to github-actions[bot]", even with `RELEASE_TOKEN` set, so 0.1.0 was published to npm by hand.
 
 - `.github/workflows/release.yml`: checkout now uses `RELEASE_TOKEN`. The default `GITHUB_TOKEN` that checkout persisted in git's config was used for the push instead of the token passed to the bump action, and that token cannot push to main.
