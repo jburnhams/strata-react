@@ -80,10 +80,11 @@ function KilnRoom() {
 
 | Group | Exports | Notes |
 |---|---|---|
-| Actions | `Button`, `IconButton`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `AsyncButton` keeps one width through idle, pending, done and error |
-| Form | `Field`, `Input`, `Textarea`, `NativeSelect`, `ChoiceGroup` | `Field` wires label, hint, error, `aria-describedby`, `aria-invalid` |
+| Actions | `Button`, `IconButton`, `RowAction`, `AsyncButton`, `useAsyncAction` | Default is `outline`; one filled button per view; `IconButton` requires `label`; `RowAction` is named for its row ("Withdraw Tom Ellery"); `AsyncButton` keeps one width through idle, pending, done and error |
+| Form | `Field`, `Input`, `Textarea`, `NativeSelect`, `ChoiceGroup`, `Checkbox` | `Field` wires label, hint, error, `aria-describedby`, `aria-invalid`; `Checkbox` requires `label` and is one target with it, and has a mixed state |
 | Status and figures | `Status`, `Metric`, `MetricStrip` | A status is always a word; figures have no icons or sparklines |
 | Data | `DataView`, `Load<T>`, `EmptyState`, `Skeleton`, `DataTable`, `TableSkeleton`, `VirtualList`, `LineChart` | `DataView` requires skeleton and empty; tables and lists virtualise from 100 rows; charts label values directly |
+| Selection | `useSelection`, `BulkBar`, `DataTable`'s `selection` (`RowSelection<T>`) | Opt-in checkbox column with "Select all shown" that respects `isSelectable`; the selection drops rows that are gone; `BulkBar` announces the count politely |
 | Data loading | `StrataQueryProvider`, `createQueryClient`, `useLoad`, `toLoad`, `fetchJson`, `HttpError` | TanStack Query in, `Load<T>` out |
 | Page and navigation | `AppShell`, `SideNav`, `Breadcrumb`, `Tabs`, `PageHeader` | React Router; tab and sort state in the URL |
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; `Done` is the one celebration, and it must say what happens next |

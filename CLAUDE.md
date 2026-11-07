@@ -108,9 +108,14 @@ scripts/                copy-css, clean, visual.mjs, visual-compare.mjs
    `EmptyState` that teaches the next action. Errors say what happened in the product's words.
 4. One filled (`variant="default"`) button per view. Reversible removals use `useUndoable` +
    `UndoBar`; only irreversible ones get a confirm dialog.
-5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
-6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+5. A row action is a `RowAction` (named "Withdraw Tom Ellery", not "Withdraw" eight times) in a
+   column whose header is hidden, not empty (`hideHeader`), shown only on rows where it applies.
+   Checkboxes only where a bulk action exists: `useSelection` → `DataTable selection=` (with
+   `rowLabel`, and `isSelectable` for rows that cannot be chosen) → `BulkBar` with the actions, one
+   filled and named with its count. A bulk removal goes through `useUndoable` like a single one.
+6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
+7. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+8. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
 
 ## Commands
 

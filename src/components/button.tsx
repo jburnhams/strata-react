@@ -60,3 +60,31 @@ export function IconButton({ icon: Icon, label, variant = "ghost", ...props }: I
     </Button>
   );
 }
+
+// A row action says what it does in the row ("Withdraw") and whom it does it to in its name
+// ("Withdraw Tom Ellery"): a table of eight "Withdraw" buttons is eight identical names in a
+// screen reader's list of controls. The name is an aria-label that starts with the visible verb,
+// so it meets WCAG 2.5.3 (label in name) and voice control still finds it by "Withdraw". Visually
+// hidden suffix text is not used: a hidden span joined to the verb did not form a name with its
+// space in dom-testing-library (strata-react issue #11). Ghost and small, one per row, shown only
+// on the rows where it applies; an icon-only row action is an `IconButton` whose `label` names the
+// row the same way. It keeps the row's pitch: rows with and without the action are the same height.
+export type RowActionProps = Omit<ButtonProps, "children" | "aria-label" | "asChild"> & {
+  /** The visible verb, sentence case: "Withdraw", "Remove". */
+  label: string;
+  /** What the row is, as a person would say it: "Tom Ellery", "Moonbeam". Completes the accessible name. */
+  subject: string;
+  icon?: IconComponent;
+};
+
+/** A small ghost action for one table row: shows `label`, and is named "`label` `subject`" so every row's action has its own name. */
+export function RowAction({ label, subject, icon: Icon, variant = "ghost", size = "sm", className, ...props }: RowActionProps) {
+  // -my-1.5 lets the 32px button sit in the 20px line of a table row, inside the row's padding, so
+  // rows with an action keep the same pitch as rows without one.
+  return (
+    <Button variant={variant} size={size} aria-label={`${label} ${subject}`} className={cn("-my-1.5", className)} {...props}>
+      {Icon && <Icon aria-hidden />}
+      {label}
+    </Button>
+  );
+}

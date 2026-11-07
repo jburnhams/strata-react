@@ -126,7 +126,9 @@ async function shoot({ story, theme }) {
             if (!n.textContent.trim()) continue;
             const range = document.createRange();
             range.selectNodeContents(n);
-            for (const r of range.getClientRects()) { const c = clipTo(r, n.parentElement); if (c) rects.push(c); }
+            // From the text node itself, so its own element's clip counts too (an sr-only span is
+            // a 1px clipped box, and its text paints nothing).
+            for (const r of range.getClientRects()) { const c = clipTo(r, n); if (c) rects.push(c); }
             continue;
           }
           if (n.closest("svg") && n.tagName !== "svg") continue;
