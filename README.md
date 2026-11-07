@@ -14,7 +14,7 @@ Rules for working in this repo, for people and coding agents: [`CLAUDE.md`](./CL
 
 ## The stack
 
-Node 26 to develop (apps run on 22.22+) · React 19 · TypeScript · Vite 8 · Tailwind v4 · class-variance-authority · lucide-react ·
+Node 26 · React 19 · TypeScript · Vite 8 · Tailwind v4 · class-variance-authority · lucide-react ·
 TanStack Query, Table and Virtual · React Router · Vitest + Testing Library + MSW ·
 Storybook 10 · Playwright Chromium + pixelmatch visual regression · GitHub Actions.
 
@@ -25,8 +25,8 @@ npm install strata-react react react-dom react-router @tanstack/react-query
 npm install -D tailwindcss @tailwindcss/vite
 ```
 
-The npm package is built: nothing runs on install, and it needs Node 22.22 or later (the floor
-react-router 8 and msw set; the repo itself is developed on Node 26). Strata's own dependencies
+The npm package is built: nothing runs on install. It needs **Node 26 or later**, for apps as
+well as for this repo; an older Node gets an `EBADENGINE` warning, so upgrade it. Strata's own dependencies
 (TanStack Table and Virtual, class-variance-authority, clsx, tailwind-merge, lucide-react, Radix
 Slot) come with it, so an app does not list them.
 
@@ -43,7 +43,7 @@ The last three are optional peers: an app that never imports those entries never
 
 **An unreleased commit** can be installed from GitHub with
 `npm install github:jburnhams/strata-react#<sha>`. npm then runs `prepare`, which installs every
-dev dependency and builds the package, so it is slow and wants Node 26 (an older Node warns).
+dev dependency and builds the package, so it is slow and also needs Node 26.
 Use it to try a fix before it is released, then move back to the npm version.
 
 ## Set up an app
