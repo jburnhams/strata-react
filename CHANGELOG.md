@@ -2,6 +2,10 @@
 
 ## 2026-11-07
 
+**Publish to npm when a release is published** (branch `claude/project-thread-nwljes`). After PR #4 the release for v0.1.2 was created, but NPM Publish never ran. `softprops/action-gh-release` creates the release as a draft and then publishes it (created 17:28:01, published 17:28:22), and creating a draft fires no `release: created` event.
+
+- `.github/workflows/npm-publish.yml`: triggers on `release: published`, and can also be run by hand (`workflow_dispatch`).
+
 **Create the GitHub Release with the release token** (branch `claude/project-thread-nwljes`). After PR #3 the bump to 0.1.1 was pushed and tagged, but creating the release failed with "Resource not accessible by integration", so npm publishing never started.
 
 - `.github/workflows/release.yml`: `softprops/action-gh-release` now gets `token: ${{ secrets.RELEASE_TOKEN }}`. It reads that input, which defaults to the workflow token, and ignores the `GITHUB_TOKEN` set in its env.

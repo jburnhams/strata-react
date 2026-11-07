@@ -1,8 +1,11 @@
 name: NPM Publish Package
 
 on:
+  # `published`, not `created`: action-gh-release makes a draft and then publishes it, and a
+  # draft's creation fires no `created` event.
   release:
-    types: [created]
+    types: [published]
+  workflow_dispatch:
 
 permissions:
   id-token: write  # Required for OIDC
