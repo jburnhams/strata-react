@@ -98,11 +98,12 @@ export function CompositionBar({
         {rows
           .filter((r) => r.value > 0)
           .map((r) => (
-            // Grow by value from a zero basis, so the gaps come out of every segment fairly and the
-            // parts still fill the track exactly.
-            <div key={r.key} className="h-full min-w-0" style={{ flex: `${r.value} 1 0`, background: r.colour }} />
+            // Grow by share from a zero basis, so the gaps come out of every segment fairly and the
+            // parts fill the track exactly. Shares, not raw values: flex-grow factors that sum to
+            // less than 1 fill only that fraction of the track (found in review).
+            <div key={r.key} className="h-full min-w-0" style={{ flex: `${r.share} 1 0`, background: r.colour }} />
           ))}
-        {rest > 0 && <div className="h-full min-w-0" style={{ flex: `${rest} 1 0` }} />}
+        {rest > 0 && <div className="h-full min-w-0" style={{ flex: `${shareOf(rest)} 1 0` }} />}
       </div>
       <table aria-labelledby={captionId} className="w-full border-collapse type-body-sm">
         <thead className="sr-only">

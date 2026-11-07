@@ -71,6 +71,7 @@ const diskColumns: Column<Disk>[] = [
 
 function Finding({ disks }: { disks: Disk[] }) {
   const worst = [...disks].sort((a, b) => b.used / b.size - a.used / a.size)[0];
+  if (!worst) return <>The status agent reports no disks.</>;
   const share = worst.used / worst.size;
   const crossed = crossedThreshold(share, diskThresholds);
   if (!crossed) return <>Every disk has room: the fullest, {worst.mount}, is {format.percent(share)} used.</>;
@@ -105,7 +106,7 @@ export function StudioServerScreen() {
         title="Studio server"
         scope="kilnroom-office · checked every minute"
         actions={<ColorSchemeChoice compact />}
-        finding={load.status === "ready" ? { text: <Finding disks={load.data.disks} /> } : undefined}
+        finding={load.status === "ready" && load.data.disks.length > 0 ? { text: <Finding disks={load.data.disks} /> } : undefined}
       />
       <DataView
         state={load}

@@ -16,6 +16,8 @@
 - `tests/visual/baselines/`: 40 **new** baselines (20 stories, light and dark); the 174 existing ones match.
 - `README.md`: the component table names the new exports and drops "no picker beyond the settings-page radio group". `CLAUDE.md`: **new** step 8 in "Building an app on Strata" for status dashboards, and the shot count is 214.
 
+- Fixes from the Codex review of PR #29: the bar's segments now grow by their share rather than their raw value, because flex-grow factors that sum to less than 1 (parts of 0.2 and 0.3) filled only half the track; and the Studio server screen no longer crashes on a response with no disks (its finding read the first disk unguarded) but shows its empty state. Both have a unit test; 163 in all, and the 214 screenshots are unchanged.
+
 Not done: a `BarChart` (specified in ux-research, not built) and a meter whose thresholds are in value units rather than shares; neither was needed by the homepage. A meter in a phone-width table is narrow (about 80px of bar); the figure beside it still carries the reading.
 
 **DataTable row selection, a bulk-action bar and named row actions** (branch `claude/project-thread-pkwejq`, PR #20, issue #11). Issue #11 asked for `selection={{selected, onChange, isSelectable}}` on `DataTable`, a header select-all that respects `isSelectable`, a `BulkBar` that announces the count, and a row-action pattern with accessible names, after strata-listory built all of it by hand. Jonathan asked for each issue to be solved in a way that advances the library rather than only the immediate need, so the checkbox became a general `Checkbox` (specified in ux-research but not yet built), the selection state got a hook that prunes itself, and the kiln-room screen now uses the row-action pattern.

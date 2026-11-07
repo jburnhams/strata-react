@@ -5,7 +5,8 @@ import { useLocation } from "react-router";
 import { ColorSchemeChoice, CompositionBar, LinkCard, LinkCardList, Meter, Status, crossedThreshold, format, useColorScheme } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
-import { serverUnreachable } from "../../stories/mocks/handlers";
+import { http, HttpResponse } from "msw";
+import { api, serverUnreachable } from "../../stories/mocks/handlers";
 import { diskThresholds } from "../../stories/fixtures/server";
 import { StudioServerScreen } from "../../stories/screens/studio-server";
 
@@ -89,6 +90,14 @@ describe("CompositionBar", () => {
     six[5] = { ...six[5], colour: "var(--muted-foreground)" } as (typeof six)[number];
     renderWithStrata(<CompositionBar label="Six" parts={six} formatValue={String} />);
     expect(screen.getByRole("table", { name: "Six" })).toBeInTheDocument();
+  });
+
+  it("fills the track with fractional values (flex factors are shares)", () => {
+    const { container } = renderWithStrata(
+      <CompositionBar label="Split" parts={[{ key: "a", label: "A", value: 0.2 }, { key: "b", label: "B", value: 0.3 }]} formatValue={String} />,
+    );
+    const segments = [...container.querySelectorAll<HTMLElement>("figure > [aria-hidden] > div")];
+    expect(segments.map((el) => el.style.flexGrow)).toEqual(["0.4", "0.6"]);
   });
 
   it("copes with a whole of nothing", () => {
@@ -177,6 +186,12 @@ describe("Studio server screen (served by MSW)", () => {
     expect(screen.getByRole("meter", { name: "/ space used" })).toHaveAccessibleDescription(`${format.bytes(18.4e9)} of ${format.bytes(64e9)}`);
     expect(screen.getByRole("table", { name: /16\sGB in all/ })).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "Appearance" })).toBeInTheDocument();
+  });
+
+  it("shows the empty state when the agent reports nothing", async () => {
+    server.use(http.get(api.server, () => HttpResponse.json({ disks: [], apps: [], memory: { total: 0, used: 0, cached: 0, buffers: 0 } })));
+    renderWithStrata(<StudioServerScreen />);
+    expect(await screen.findByText("The status agent has nothing to report")).toBeInTheDocument();
   });
 
   it("says when the status agent cannot be reached", async () => {
