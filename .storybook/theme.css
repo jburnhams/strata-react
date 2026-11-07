@@ -54,4 +54,6 @@
 @theme {
   --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Archivo Variable", "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Bundled so <kbd> in KeysLegend renders the same on every machine (the visual suite). */
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 }

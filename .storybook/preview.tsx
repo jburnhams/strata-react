@@ -1,5 +1,6 @@
 import "@fontsource-variable/public-sans";
 import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/jetbrains-mono";
 import "./storybook.css";
 import * as React from "react";
 import type { Decorator, Preview } from "@storybook/react-vite";
