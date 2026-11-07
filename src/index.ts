@@ -31,6 +31,8 @@ export {
 export { Done } from "./components/done";
 export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-shell";
 export { Tabs, type TabItem } from "./components/tabs";
+export { useHotkeys, KeysLegend, isTypingTarget, type Shortcut } from "./components/hotkeys";
+export { useActiveItem, ActiveList, type ActiveItem } from "./components/active-list";
 export {
   ThemeProvider,
   useColorScheme,
