@@ -58,7 +58,7 @@ src/
   components/           one file per component; each opens with the reasons it is shaped that way
   lib/                  cn, format (Intl), icon type
   query/                TanStack Query bridge: createQueryClient, StrataQueryProvider, useLoad, toLoad, fetchJson
-  testing/              renderWithStrata (router + query client), exported as strata-react/testing
+  testing/              renderWithStrata (router + query client), installLayoutShims, installFakeIntersectionObserver; exported as strata-react/testing
   visual/               the visual regression runner, exported as strata-react/visual; cli.ts is the strata-visual command
   styles/strata.css     token contract, namespace reset, type steps, motion utilities, base layer
 stories/                Storybook stories; fixtures/ (kiln-room sample data); mocks/handlers.ts (MSW); screens/ (whole screens)
@@ -104,7 +104,10 @@ scripts/                copy-css, clean, build-site
 @import "./theme.css";            /* status roles, faces, subject colours, each with its reason */
 ```
 
-1. Wrap the app in `StrataQueryProvider` and a React Router router; lay screens out in `AppShell`.
+1. Wrap the app in `ThemeProvider`, `StrataQueryProvider` and a React Router router; lay screens
+   out in `AppShell`. Never write a matchMedia listener for dark mode: `ThemeProvider` owns the
+   `.dark` class (Storybook's decorator and `renderWithStrata` use it too), `ColorSchemeChoice`
+   goes on the settings page, and `colorSchemeScript()` is inlined in `<head>` to avoid a flash.
 2. Every screen: write its one question and its finding in a comment at the top; `PageHeader`
    with the finding; blocks in the order a person asks the next questions.
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
@@ -114,6 +117,11 @@ scripts/                copy-css, clean, build-site
 5. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
 6. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 7. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+   Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
+   Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
+   `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
+   its end. Copy from `format` keeps its non-breaking space in role names: query
+   `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`.
 8. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact

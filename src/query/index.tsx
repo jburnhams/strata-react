@@ -8,6 +8,9 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type { Load } from "../components/data-view";
+import { HttpError, describeHttpError, type DescribeError } from "../lib/errors";
+
+export { HttpError, describeHttpError, type DescribeError };
 
 // Data loading, the Strata way: TanStack Query fetches and caches, and every view of the result
 // goes through DataView, which takes a Load<T>. `toLoad` is the one bridge between them, so a
@@ -35,18 +38,6 @@ export function StrataQueryProvider({ client, children }: { client?: QueryClient
   return <QueryClientProvider client={client ?? fallback}>{children}</QueryClientProvider>;
 }
 
-/** Writes an error for a person: what happened, in a sentence. A product passes its own words. */
-export type DescribeError = (error: unknown) => string;
-
-export const describeHttpError: DescribeError = (error) =>
-  error instanceof HttpError
-    ? error.status >= 500
-      ? `The server could not answer (${error.status}). Nothing was changed.`
-      : `The request was refused (${error.status}): ${error.statusText || "no reason given"}.`
-    : error instanceof Error && error.message
-      ? error.message
-      : "The data could not be loaded. Nothing was changed.";
-
 /** Turns a TanStack query result into the `Load<T>` that `DataView` takes; errors are described for a person by `describe`. */
 export function toLoad<T>(query: UseQueryResult<T>, describe: DescribeError = describeHttpError): Load<T> {
   if (query.status === "success") return { status: "ready", data: query.data };
@@ -60,17 +51,6 @@ export function useLoad<T, K extends QueryKey = QueryKey>(
 ): Load<T> {
   const { describeError, ...rest } = options;
   return toLoad(useQuery(rest), describeError);
-}
-
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly statusText: string,
-    readonly url: string,
-  ) {
-    super(`${status} ${statusText} from ${url}`);
-    this.name = "HttpError";
-  }
 }
 
 /** fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default. */
