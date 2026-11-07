@@ -86,7 +86,9 @@ export function yScale(values: number[], pin: { min?: number; max?: number } = {
   const dMax = finite.length ? Math.max(...finite) : 0;
   const pinMin = pin.min !== undefined && dMin >= pin.min ? pin.min : undefined;
   const pinMax = pin.max !== undefined && dMax <= pin.max ? pin.max : undefined;
-  const lo = pinMin ?? Math.min(0, dMin);
+  let lo = pinMin ?? Math.min(0, dMin);
+  // Readings all at a pinned top (say all -10 under yMax={-10}) leave no span: open one below.
+  if (pinMax !== undefined && pinMin === undefined && !(pinMax > lo)) lo = pinMax - (Math.abs(pinMax) || 4);
   let min: number;
   let max: number;
   if (pinMax !== undefined) {
@@ -162,12 +164,13 @@ export function LineChart({
   const sx = (x: number) => pad.left + ((x - xMin) / (xMax - xMin || 1)) * w;
   const sy = (v: number) => pad.top + h - ((v - y.min) / (y.max - y.min)) * h;
   const xLabelWidth = (t: number) => labelWidth(formatX(t));
-  const shownXTicks = fitTicks(xTicks, sx, xLabelWidth);
   // Keep the first and last labels inside the chart instead of centring them past its edge.
   const xLabelAt = (t: number) => {
     const half = xLabelWidth(t) / 2;
     return Math.min(Math.max(sx(t), half), Math.max(half, width - half));
   };
+  // Fit against where the labels are drawn, so pulling an end label in cannot make it collide.
+  const shownXTicks = fitTicks(xTicks, xLabelAt, xLabelWidth);
   const path = (pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
 
   const last = series[series.length - 1];

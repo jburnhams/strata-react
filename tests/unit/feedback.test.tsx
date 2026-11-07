@@ -95,6 +95,8 @@ describe("LineChart y-axis range", () => {
     expect(yScale([-7, 12])).toMatchObject({ min: -10, max: 30 });
     expect(yScale([0, 900]).ticks).toEqual([0, 250, 500, 750, 1000]);
     expect(yScale([])).toMatchObject({ min: 0, max: 4 });
+    // Every reading at a negative pinned top: no span to round, so one opens below.
+    expect(yScale([-10, -10], { max: -10 })).toMatchObject({ min: -20, max: -10 });
   });
 });
 
@@ -108,5 +110,12 @@ describe("LineChart x labels", () => {
 
   it("drops every other tick, evenly, when neighbours would overlap", () => {
     expect(fitTicks([0, 50, 100, 150, 200, 250], scale, wide)).toEqual([0, 100, 200]);
+  });
+
+  it("fits against the drawn positions, so an end label pulled inside the chart cannot collide", () => {
+    // Centres 56…356 fit at 75px apart, but the last label pulled in to 340.5 would overlap.
+    const clamped = (x: number) => Math.min(x, 340.5);
+    expect(fitTicks([56, 131, 206, 281, 356], scale, () => 63)).toHaveLength(5);
+    expect(fitTicks([56, 131, 206, 281, 356], clamped, () => 63)).toEqual([56, 206, 356]);
   });
 });
