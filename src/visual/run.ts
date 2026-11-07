@@ -57,6 +57,10 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
   const update = options.update ?? false;
   const ci = options.ci ?? Boolean(process.env.CI);
   const log = options.log ?? (() => undefined);
+  const concurrency = config.concurrency ?? 4;
+  // A worker count that is not a positive integer would start no workers and report an empty,
+  // passing run, so it is refused up front.
+  if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error(`concurrency must be a whole number of pages, 1 or more (got ${String(config.concurrency)})`);
   const report: VisualReport = { total: 0, same: 0, changed: [], added: [], obsolete: [], errors: [], warnings: pinWarnings(cwd), updated: update, failed: false };
 
   const batches: Batch[] = [];
@@ -65,23 +69,27 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
       const target = typeof config.storybook === "string" ? { dir: config.storybook } : config.storybook;
       const dir = resolve(cwd, target.dir ?? "storybook-static");
       if (!existsSync(join(dir, "index.json"))) throw new Error(`${join(dir, "index.json")} not found: build Storybook first (storybook build)`);
-      const server = await serveStatic(dir);
-      batches.push({ shots: storybookShots({ ...target, dir }, themes), server, baseUrl: server.url, blockServiceWorkers: false });
+      // Shots first: if building them throws, no server is left running to hold the process open.
+      const shots = storybookShots({ ...target, dir }, themes);
+      const batch: Batch = { shots, baseUrl: "", blockServiceWorkers: false };
+      batches.push(batch);
+      batch.server = await serveStatic(dir);
+      batch.baseUrl = batch.server.url;
     }
     if (config.app !== undefined) {
       const app = config.app;
       if (!app.dir === !app.url) throw new Error("app needs exactly one of dir (a build to serve) or url (a running server)");
-      let server: StaticServer | undefined;
-      let baseUrl: string;
+      const shots = routeShots(app, themes);
+      const batch: Batch = { shots, baseUrl: "", blockServiceWorkers: true, onUnhandledRequest: app.onUnhandledRequest ?? "error" };
+      batches.push(batch);
       if (app.dir) {
         const dir = resolve(cwd, app.dir);
         if (!existsSync(join(dir, "index.html"))) throw new Error(`${join(dir, "index.html")} not found: build the app first`);
-        server = await serveStatic(dir, { spa: true, base: app.base });
-        baseUrl = server.url;
+        batch.server = await serveStatic(dir, { spa: true, base: app.base });
+        batch.baseUrl = batch.server.url;
       } else {
-        baseUrl = new URL(`${(app.base ?? "/").replace(/^\/*/, "/").replace(/\/*$/, "/")}`, app.url).href;
+        batch.baseUrl = new URL(`${(app.base ?? "/").replace(/^\/*/, "/").replace(/\/*$/, "/")}`, app.url).href;
       }
-      batches.push({ shots: routeShots(app, themes), server, baseUrl, blockServiceWorkers: true, onUnhandledRequest: app.onUnhandledRequest ?? "error" });
     }
     if (!batches.length) throw new Error("nothing to screenshot: the config needs storybook or app");
 
@@ -174,7 +182,7 @@ async function runBatch(
   // A few pages at once: each shot has its own context, so they cannot affect each other.
   const queue = [...batch.shots];
   await Promise.all(
-    Array.from({ length: Math.max(1, ctx.config.concurrency ?? 4) }, async () => {
+    Array.from({ length: ctx.config.concurrency ?? 4 }, async () => {
       for (let shot = queue.shift(); shot; shot = queue.shift()) await shoot(shot);
     }),
   );

@@ -113,6 +113,20 @@ describe("strata-visual on an app's routes", () => {
     expect(r.out).toContain("error    home--ready--wide--light.png: no handler for GET /api/greeting");
   }, 120_000);
 
+  it("exits with an error, and does not hang, on a bad route name or concurrency", () => {
+    writeFileSync(
+      join(app, "strata-visual.config.ts"),
+      `export default { app: { dir: "dist", routes: [{ name: "Home page", path: "/" }] } };\n`,
+    );
+    const name = run([]);
+    expect(name.code).toBe(1);
+    expect(name.out).toContain('route name "Home page" must be lower-case');
+    config(`{ ready: [] }`);
+    const workers = run(["--concurrency", "four"]);
+    expect(workers.code).toBe(1);
+    expect(workers.out).toContain("concurrency must be a whole number");
+  }, 60_000);
+
   it("reports obsolete baselines, removes them on update, and in CI fails a shot with no baseline", () => {
     config(`{ ready: [], loading: [http.get("/api/greeting", async () => { await delay("infinite"); return HttpResponse.json({}); })] }`);
     const ci = run([], { CI: "true" });
