@@ -202,3 +202,54 @@ export function firedWork(f: Firing): FiredWork[] {
     };
   });
 }
+
+/** Photos of finished pieces, as members upload them after a firing. The colours stand in for the
+ *  glazes on a real photo; they are the subject's, not the theme's. One photo is missing on disk,
+ *  as happens when a file is moved, and one piece was never photographed. */
+export const glazeSwatches: Record<Glaze, { glaze: string; clay: string }> = {
+  celadon: { glaze: "#8fb3a1", clay: "#d9d2c3" },
+  tenmoku: { glaze: "#4a2a1c", clay: "#c9b49a" },
+  shino: { glaze: "#e6c7a4", clay: "#d8c2a8" },
+  cobalt: { glaze: "#2c4a8a", clay: "#d9d4cb" },
+  "copper-red": { glaze: "#8e2a2a", clay: "#d6cdc0" },
+  bisque: { glaze: "#e3c3a5", clay: "#e3c3a5" },
+  raku: { glaze: "#d8d6cf", clay: "#3a3632" },
+};
+
+export type PiecePhoto = { id: string; title: string; member: string; glaze: Glaze; photo: string | null };
+export const piecePhotos: PiecePhoto[] = [
+  { id: "p-301", title: "Celadon bowl", member: "Priya Natarajan", glaze: "celadon", photo: "/api/photos/p-301.svg" },
+  { id: "p-302", title: "Tenmoku tea bowl", member: "Tom Ellery", glaze: "tenmoku", photo: "/api/photos/p-302.svg" },
+  { id: "p-303", title: "Shino jar", member: "Aoife Byrne", glaze: "shino", photo: "/api/photos/p-303.svg" },
+  { id: "p-304", title: "Cobalt vase", member: "Sam Okafor", glaze: "cobalt", photo: "/api/photos/p-304.svg" },
+  { id: "p-305", title: "Copper red bottle", member: "Hannah Lowe", glaze: "copper-red", photo: "/api/photos/p-305-moved.svg" },
+  { id: "p-306", title: "Raku dish", member: "Hannah Lowe", glaze: "raku", photo: null },
+];
+
+/** Photos of the pieces from Tuesday's glaze firing in kiln 2, taken at the shelf as it was unloaded.
+ *  `thin` marks the pieces the unloading note says came out thin-glazed (the bottom shelf ran cool):
+ *  the review screen starts with those chosen for a second glaze. `collected` pieces have gone home. */
+export type ShelfPhoto = { id: string; member: string; piece: string; glaze: Glaze; thin: boolean; collected: boolean };
+
+const pieceForms = ["Bowl", "Mug", "Jug", "Vase", "Plate", "Bottle"] as const;
+const photoMembers: [string, Glaze][] = [
+  ["Priya Natarajan", "celadon"],
+  ["Tom Ellery", "tenmoku"],
+  ["Aoife Byrne", "shino"],
+  ["Sam Okafor", "cobalt"],
+];
+
+/** Every piece photographed: 4 members' work, 6 forms each, numbered by shelf position. */
+export function shelfPhotos(count = 18): ShelfPhoto[] {
+  return Array.from({ length: count }, (_, i) => {
+    const [member, glaze] = photoMembers[i % photoMembers.length];
+    return {
+      id: `p-${String(i + 1).padStart(3, "0")}`,
+      member,
+      piece: `${pieceForms[(i * 5) % pieceForms.length]} ${i + 1}`,
+      glaze,
+      thin: i % 7 === 2 || i % 7 === 5,
+      collected: i % 9 === 8,
+    };
+  });
+}

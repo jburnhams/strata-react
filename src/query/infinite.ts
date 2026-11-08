@@ -1,7 +1,7 @@
 import * as React from "react";
 import { hashKey, useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
 import type { Load } from "../components/data-view";
-import { describeHttpError, type DescribeError } from "./index";
+import { describeHttpError, staleOf, type DescribeError } from "./index";
 
 // Cursor-paged reads, the Strata way. `useLoad` covers a read that arrives whole; a feed, a log or
 // a triage queue arrives a page at a time. This is the same bridge for those: TanStack's
@@ -26,7 +26,9 @@ import { describeHttpError, type DescribeError } from "./index";
 //    what is out of view (Undo, a failed commit and Try again all show through) and the cursor
 //    still skips past what it hides.
 // 3. A later page failing is not the list failing. The held items stay; `more.error` says what
-//    happened and `more.loadMore` is the Try again. Only a failed first page is a `Load` error.
+//    happened and `more.loadMore` is the Try again. A refetch of the held pages failing is not the
+//    list failing either: the items stay and `stale` says how old they are, as with `useLoad`.
+//    Only a failed first page is a `Load` error.
 
 /** The state of the pages after the first: whether there are more, whether one is on its way, and why the last one failed. */
 export type More = {
@@ -139,7 +141,11 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
     loadMore,
   };
   const extra = { more, itemKey, dismiss, restore };
-  if (list) return { status: "ready", data: list, ...extra };
+  if (list) {
+    // isRefetchError excludes a failed next page, which is `more.error`'s to report.
+    const stale = query.isRefetchError ? staleOf(query, describeError) : undefined;
+    return { status: "ready", data: list, ...(stale && { stale }), ...extra };
+  }
   if (query.status === "error") return { status: "error", message: describeError(query.error), retry: () => void refetch(), ...extra };
   return { status: "loading", ...extra };
 }

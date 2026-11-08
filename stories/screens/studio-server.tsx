@@ -11,6 +11,7 @@ import {
   CompositionBar,
   DataTable,
   DataView,
+  StaleNotice,
   EmptyState,
   LinkCard,
   LinkCardList,
@@ -98,7 +99,9 @@ function DashboardSkeleton() {
 }
 
 export function StudioServerScreen() {
-  const load = useLoad({ queryKey: ["server"], queryFn: () => fetchJson<ServerStatus>(api.server) });
+  // Polled, as the header says. A poll that fails keeps the last readings on screen and says how
+  // old they are (DataView's stale notice), so a restarting agent does not blank the dashboard.
+  const load = useLoad({ queryKey: ["server"], queryFn: () => fetchJson<ServerStatus>(api.server), refetchInterval: 60_000 });
 
   return (
     <main className="mx-auto grid max-w-5xl gap-10 px-4 py-8 sm:px-8">
@@ -112,6 +115,7 @@ export function StudioServerScreen() {
         state={load}
         isEmpty={(s) => s.apps.length === 0 && s.disks.length === 0}
         skeleton={<DashboardSkeleton />}
+        staleNotice={(stale) => <StaleNotice stale={stale} shown={(when) => `These readings are from ${when}.`} />}
         empty={<EmptyState title="The status agent has nothing to report">Start it on the server with <code className="font-mono">systemctl start status-agent</code>.</EmptyState>}
       >
         {(s) => (

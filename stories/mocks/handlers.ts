@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import { bookings, firedWork, firings, readings, type Booking, type Firing } from "../fixtures/kiln";
+import { bookings, firedWork, firings, glazeSwatches, piecePhotos, readings, type Booking, type Firing } from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
 
 // The fixture API, served by MSW in Storybook (service worker) and in the unit tests (Node). The
@@ -14,6 +14,8 @@ export const api = {
   /** `GET /api/firings/:id/work`: whose work was in one firing. */
   firingWork: (id: string) => `/api/firings/${id}/work`,
   server: "/api/server",
+  pieces: "/api/pieces",
+  photos: "/api/photos",
 } as const;
 
 /** One page of the firing log. `after` is the id of the last firing the client holds, not an
@@ -38,7 +40,30 @@ export const manyBookings: Booking[] = Array.from({ length: 480 }, (_, i) => {
   return { ...b, id: `b-${3000 + i}`, pieces: ((i * 7) % 12) + 1 };
 });
 
+/** A stand-in photo of a piece: a pot in its glaze on a shelf, drawn as SVG so it needs no binary
+ *  fixture and renders the same on every machine. No text, so no font is involved. */
+export function piecePhotoSvg(file: string): string | null {
+  // Files on disk are named by piece id; p-305's record points at a file that was moved.
+  const piece = piecePhotos.find((p) => `${p.id}.svg` === file);
+  if (!piece) return null;
+  const { glaze, clay } = glazeSwatches[piece.glaze];
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<rect width="400" height="300" fill="#efe9df"/><rect y="230" width="400" height="70" fill="#cfc6b8"/>
+<ellipse cx="200" cy="236" rx="96" ry="14" fill="#b9ae9e"/>
+<path d="M130 90 Q120 170 150 230 L250 230 Q280 170 270 90 Z" fill="${clay}"/>
+<path d="M130 90 Q122 150 138 196 L262 196 Q278 150 270 90 Z" fill="${glaze}"/>
+<ellipse cx="200" cy="90" rx="70" ry="16" fill="${glaze}"/><ellipse cx="200" cy="90" rx="56" ry="10" fill="#00000033"/>
+</svg>`;
+}
+
+const photo = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
+  const svg = piecePhotoSvg(String(params.id));
+  return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
+};
+
 export const handlers = [
+  http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
+  http.get(`${api.photos}/:id`, photo),
   http.get(api.bookings, ({ request }) => {
     const size = new URL(request.url).searchParams.get("size");
     return HttpResponse.json(size === "large" ? manyBookings : bookings);
@@ -105,6 +130,17 @@ export const serverLoading = http.get(api.server, async () => {
 export const serverUnreachable = http.get(api.server, () =>
   HttpResponse.json({ message: "status agent not answering" }, { status: 502, statusText: "Bad Gateway" }),
 );
+
+/** Photos that never arrive, for Thumbnail's loading state. */
+export const photosLoading = http.get(`${api.photos}/:id`, async () => {
+  await delay("infinite");
+  return new HttpResponse(null, { status: 404 });
+});
+
+export const piecesLoading = http.get(api.pieces, async () => {
+  await delay("infinite");
+  return HttpResponse.json([]);
+});
 
 /** A firing's work never arrives: the detail row's skeleton. */
 export const firingWorkLoading = http.get("/api/firings/:id/work", async () => {
