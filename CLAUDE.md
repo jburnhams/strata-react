@@ -86,7 +86,9 @@ scripts/                copy-css, clean, build-site
 5. **Copy is specific** ("Book firing", "Booking…", "Booked", "Try again"), sentence case, the
    same verb through every state. No "Oops", "Something went wrong", "You're all set!".
 6. **Numbers and dates through `format`** (`createFormat(locale)`); units joined with a
-   non-breaking space; quantities right-aligned with `tabular-nums`.
+   non-breaking space; quantities right-aligned with `tabular-nums`. Dates by use: `clock`,
+   `day`, `shortDay`, `date`, `dateTime` (a log or history row), each called with a Date or
+   the API's ISO string. A missing date style is added to `format`, never built in a screen.
 7. **Motion**: `transition-state` (named properties, never `transition: all`), `press` on
    controls, `enter-moment` once for a rare moment. Reduced motion is handled in the base layer.
 8. **Open the file with a comment saying why** it is shaped that way, citing the finding. Change

@@ -10,6 +10,17 @@
 - `tests/integration/package.test.ts`: the built `strata-react/testing` must export `renderRoutes`.
 - `README.md`, `CLAUDE.md`: the testing rows and rule 10 name `renderRoutes` and say to export an app's route tree and share it with the tests.
 
+**A date formatter and a date-time formatter; every date formatter callable with a Date or ISO string** (branch `claude/project-thread-2h7kpg`, PR #36, issue #31). Porting the Bright Horizons review app found no date-with-time formatter, so its History screen built its own `Intl.DateTimeFormat`, which the rules forbid. Rather than add one more Intl object, the date formatters now take the shape the number ones took in issue #12: callable, keeping Intl's methods, and accepting what an API sends.
+
+- `src/lib/format.ts`: **new** `format.date` ("8 Nov 2026", Intl `dateStyle: "medium"`) and `format.dateTime` ("8 Nov 2026, 06:05", plus `timeStyle: "short"`), so the locale orders the parts ("Nov 8, 2026, 6:05 AM" in en-US). `clock`, `day` and `shortDay` are now `DateFormatter`s too: `format.clock(at)` works, and `format`, `formatToParts`, `formatRange` and `resolvedOptions` remain, each accepting a Date, an ISO string or epoch milliseconds. Existing `format.clock.format(date)` calls are unchanged. **New** `toDate`, which throws a RangeError naming the input instead of letting "Invalid Date" reach a row. **New** second argument `createFormat(locale, { timeZone })` for products that show a place's times rather than the viewer's; `format.timeZone` reports it.
+- `src/index.ts`: exports `toDate`, `DateFormatter`, `DateInput` and `FormatOptions`.
+- `tests/unit/lib.test.ts`: **new** "format dates" tests: the two new styles, the three input kinds, Intl's methods, locale order (en-US, de-DE), a time zone shift, and the invalid-date error. The en-US time and the range are matched with `\s`, because ICU versions differ on whether the space before "AM" and around the range dash is a narrow no-break space.
+- `README.md`: the Helpers row names the date formatters and `timeZone`.
+- `CLAUDE.md`: rule 6 of "Writing a component" names the date formatters by use and says a missing style is added to `format`.
+- No rendered output changes, so no baselines change.
+
+Follow-ups not done here: a `<Time>` component that renders `<time dateTime={iso}>` with the formatted text (machine-readable dates for assistive tech and copy), and a relative formatter ("3 hours ago") through `Intl.RelativeTimeFormat` for activity feeds, which would need a "now" the visual suite can freeze.
+
 ## 2026-11-07
 
 **Visual baselines that match on any machine: no system fonts, a comparison that absorbs anti-aliasing** (branch `claude/project-thread-9pzvnj`, PR #30). Jonathan asked for baselines to match regardless of the machine that runs them: bundle every face with fontsource so a system font is never used, and configure pixelmatch to cope with different anti-aliasing, tuned by experiment. The experiment changed the plan: no pixelmatch threshold or pixel allowance separates another rasteriser's anti-aliasing from a changed letter, so the comparison now blurs both images 3×3 first.
