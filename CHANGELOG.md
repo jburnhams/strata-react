@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-08
+
+**Keep data on screen when a refresh fails: `Load`'s `stale` and `StaleNotice`** (branch `claude/project-thread-vqq9vb`, issue #26). Issue #26 (found in jburnhams/homepage#2, which worked around it in its own hook) reported that `toLoad` turned a polling dashboard into an error panel when one refetch failed, because TanStack Query keeps `data` and sets `status` to `"error"`. The issue suggested returning ready with a `stale?: string`; Jonathan asks for each issue to advance the library, so the fix is in `Load` and `DataView` for every read: the stale state carries the reason, when the data was read and a Try again, `DataView` shows it without each screen wiring it up, and `useInfiniteLoad`, which kept its items but said nothing about a failed refetch, reports it the same way.
+
+- `src/components/data-view.tsx`: **new** type `Stale` (`message`, `readAt`, `retry`, `retrying?`); `Load`'s ready state takes an optional `stale`. `DataView` renders a `StaleNotice` above the data (or the empty state) when `stale` is set, replaceable through the **new** `staleNotice` prop. **New** `StaleNotice`: `role="status"` (polite, since nothing was lost), on the warning tint, with the reason, "Showing data from 13:50." (the weekday as well when the data was not read today, through `format`), and Try again, which reads "Trying again…" and is disabled while a fetch is on its way; `shown` takes the product's words. The opening comment gives the reasons.
+- `src/query/index.tsx`: `toLoad` returns ready with `stale` when the query is in error but has data; only a read that never produced data is still `{ status: "error" }`. **New** `staleOf(query, describe)` builds the `Stale` from a query's error, `dataUpdatedAt` and `isFetching`, for `toLoad`, `useInfiniteLoad` and an app's own bridge.
+- `src/query/infinite.ts`: a failed refetch of the held pages (`isRefetchError`) now sets `stale`; a failed next page is still `more.error` and does not.
+- `src/index.ts`: exports `StaleNotice`, `Stale`, `staleOf`.
+- `stories/data-view.stories.tsx`: **new** `Stale`. `stories/screens/studio-server.tsx`: the screen now polls every minute (its header already said "checked every minute") and words its notice "These readings are from …". `stories/screens/studio-server.stories.tsx`: **new** `ReadingsOld`, readings from an earlier poll in the cache and the agent answering 502.
+- `tests/unit/data.test.tsx`: 4 **new** tests (rows kept with the notice, then cleared by Try again; a first read still fails as an error; the notice over an empty state with the product's words and the disabled retry; the weekday for data not read today). `tests/unit/infinite.test.tsx`: 2 **new** (a refetch failure is stale, a next-page failure is not). `tests/unit/dashboard.test.tsx`: 1 **new** (the dashboard keeps its meters when a poll fails). 182 unit tests in all. `tests/integration/package.test.ts` checks the new exports.
+- `tests/visual/baselines/`: 4 **new** baselines (the two stories, light and dark); the 218 existing ones match.
+- `README.md`: the Data and Data loading rows name the stale state. `CLAUDE.md`: "Building an app" step 3 says a failed refresh keeps the data, and the shot count is 222.
+
+Not done: a route state for the stale screen in the example app; a route state is one set of MSW handlers, and this state needs a good answer followed by a failed one, which the runner has no way to express yet.
+
 ## 2026-11-07
 
 **Visual baselines that match on any machine: no system fonts, a comparison that absorbs anti-aliasing** (branch `claude/project-thread-9pzvnj`, PR #30). Jonathan asked for baselines to match regardless of the machine that runs them: bundle every face with fontsource so a system font is never used, and configure pixelmatch to cope with different anti-aliasing, tuned by experiment. The experiment changed the plan: no pixelmatch threshold or pixel allowance separates another rasteriser's anti-aliasing from a changed letter, so the comparison now blurs both images 3×3 first.

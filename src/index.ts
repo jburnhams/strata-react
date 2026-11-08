@@ -27,7 +27,7 @@ export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from "./components/meter";
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
-export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
+export { DataView, EmptyState, Skeleton, StaleNotice, type Load, type Stale } from "./components/data-view";
 export {
   DataTable,
   TableSkeleton,
@@ -72,6 +72,7 @@ export {
   StrataQueryProvider,
   createQueryClient,
   toLoad,
+  staleOf,
   useLoad,
   useInfiniteLoad,
   fetchJson,

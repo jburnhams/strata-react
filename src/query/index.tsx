@@ -7,7 +7,7 @@ import {
   type UseQueryOptions,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import type { Load } from "../components/data-view";
+import type { Load, Stale } from "../components/data-view";
 import { HttpError, describeHttpError, type DescribeError } from "../lib/errors";
 
 export { HttpError, describeHttpError, type DescribeError };
@@ -38,11 +38,25 @@ export function StrataQueryProvider({ client, children }: { client?: QueryClient
   return <QueryClientProvider client={client ?? fallback}>{children}</QueryClientProvider>;
 }
 
-/** Turns a TanStack query result into the `Load<T>` that `DataView` takes; errors are described for a person by `describe`. */
+/**
+ * Turns a TanStack query result into the `Load<T>` that `DataView` takes; errors are described for a person by `describe`.
+ * A refetch that fails after data arrived stays `ready`, with `stale` saying why and when the data was read.
+ */
 export function toLoad<T>(query: UseQueryResult<T>, describe: DescribeError = describeHttpError): Load<T> {
   if (query.status === "success") return { status: "ready", data: query.data };
+  // TanStack keeps the last good data when a refetch fails and sets status "error" (isRefetchError).
+  // That is old data, not no data: keep it on screen and say how old it is.
+  if (query.status === "error" && query.data !== undefined) return { status: "ready", data: query.data, stale: staleOf(query, describe) };
   if (query.status === "error") return { status: "error", message: describe(query.error), retry: () => void query.refetch() };
   return { status: "loading" };
+}
+
+/** The `Stale` of a query whose refetch failed after a good read. Shared by `toLoad` and `useInfiniteLoad`. */
+export function staleOf(
+  query: { error: unknown; dataUpdatedAt: number; isFetching: boolean; refetch: () => unknown },
+  describe: DescribeError = describeHttpError,
+): Stale {
+  return { message: describe(query.error), readAt: new Date(query.dataUpdatedAt), retry: () => void query.refetch(), retrying: query.isFetching };
 }
 
 /** `useQuery`, returned as a `Load<T>` for `DataView`. */

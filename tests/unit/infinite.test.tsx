@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Button, EmptyState, InfiniteList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
@@ -56,6 +56,27 @@ function recordCursors() {
 const rows = () => within(screen.getByRole("list", { name: "Firing log" })).getAllByRole("listitem");
 
 describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
+  it("keeps the held items when a refetch fails, with a stale notice rather than a page error", async () => {
+    const { client } = renderWithStrata(<FiringLog />);
+    await screen.findByText("Firing f-0412");
+    server.use(firingsServerError);
+    await act(() => client.refetchQueries({ queryKey: ["firings"] }));
+    expect(await screen.findByText(/Showing data from/)).toBeInTheDocument();
+    expect(rows()).toHaveLength(20);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(exposed?.status === "ready" && exposed.stale?.message).toBe("The server could not answer (503). Nothing was changed.");
+    expect(exposed?.more.error).toBeUndefined();
+  });
+
+  it("reports a failed next page as more.error, not as stale data", async () => {
+    server.use(firingsLaterPageError);
+    renderWithStrata(<FiringLog />);
+    await screen.findByText("Firing f-0412");
+    io.scrollToEnd();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(exposed?.status === "ready" && exposed.stale).toBeUndefined();
+  });
+
   it("shows the skeleton, then the first page with a Show more button", async () => {
     const { container } = renderWithStrata(<FiringLog />);
     expect(container.querySelector("[aria-busy=true]")).not.toBeNull();

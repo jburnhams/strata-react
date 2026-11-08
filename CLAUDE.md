@@ -118,6 +118,8 @@ scripts/                copy-css, clean, build-site
    with the finding; blocks in the order a person asks the next questions.
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
    `EmptyState` that teaches the next action. Errors say what happened in the product's words.
+   A refresh that fails after a good read keeps the data and shows a `StaleNotice` (`Load`'s
+   `stale`); a screen with readings says what is old in its words through `staleNotice`.
 4. One filled (`variant="default"`) button per view. Reversible removals use `useUndoable` +
    `UndoBar`; only irreversible ones get a confirm dialog. Filter rows with `isRemoved(id)`
    (never a second hidden set), give each removal a `failure` sentence, make `commit` the request
@@ -163,7 +165,7 @@ scripts/                copy-css, clean, build-site
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests run through `strata-visual`, the same command apps use, so a change to
-`src/visual/` is tested on this repo's own 214 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+`src/visual/` is tested on this repo's own 222 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings

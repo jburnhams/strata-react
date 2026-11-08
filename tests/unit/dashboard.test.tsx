@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
 import { ColorSchemeChoice, CompositionBar, LinkCard, LinkCardList, Meter, Status, crossedThreshold, format, useColorScheme } from "../../src";
@@ -198,5 +198,15 @@ describe("Studio server screen (served by MSW)", () => {
     server.use(serverUnreachable);
     renderWithStrata(<StudioServerScreen />);
     expect(await screen.findByRole("alert")).toHaveTextContent("502");
+  });
+
+  it("keeps the last readings when a poll fails, and says how old they are", async () => {
+    const { client } = renderWithStrata(<StudioServerScreen />);
+    await screen.findByText(/\/srv\/photos \(glaze test photos\) is 92% full/);
+    server.use(serverUnreachable);
+    await act(() => client.refetchQueries({ queryKey: ["server"] }));
+    expect(await screen.findByRole("status")).toHaveTextContent(/502.*These readings are from \d\d:\d\d\./);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("meter", { name: "/srv/photos space used" })).toBeInTheDocument();
   });
 });
