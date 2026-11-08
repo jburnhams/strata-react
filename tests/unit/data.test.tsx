@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { useLocation } from "react-router";
-import { DataTable, DataView, EmptyState, TableSkeleton, fetchJson, useLoad, type Column } from "../../src";
+import { DataTable, DataView, EmptyState, StaleNotice, TableSkeleton, fetchJson, format, useLoad, type Column, type Load } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { api, bookingsEmpty, bookingsServerError, manyBookings } from "../../stories/mocks/handlers";
@@ -52,6 +52,65 @@ describe("DataView fed by TanStack Query (served by MSW)", () => {
     server.use(http.get(api.bookings, () => HttpResponse.json(bookings.slice(0, 2))));
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(bodyRows()).toHaveLength(2));
+  });
+});
+
+describe("a refresh that fails after a good read (issue #26)", () => {
+  it("keeps the rows, says why and how old they are, and clears on Try again", async () => {
+    const { client } = renderWithStrata(<Bookings />);
+    await screen.findByRole("table", { name: "Work in the kilns" });
+    const readAt = new Date(client.getQueryState(["bookings"])!.dataUpdatedAt);
+
+    server.use(bookingsServerError);
+    await act(() => client.refetchQueries({ queryKey: ["bookings"] }));
+
+    const notice = await screen.findByRole("status");
+    // The data stays; no error panel replaces it.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(bodyRows()).toHaveLength(bookings.length);
+    expect(notice).toHaveTextContent("The server could not answer (503). Nothing was changed.");
+    expect(notice).toHaveTextContent(`Showing data from ${format.clock.format(readAt)}.`);
+
+    server.use(http.get(api.bookings, () => HttpResponse.json(bookings.slice(0, 2))));
+    await userEvent.click(within(notice).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(bodyRows()).toHaveLength(2));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("still shows the error panel when the first read fails", async () => {
+    server.use(bookingsServerError);
+    renderWithStrata(<Bookings />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("The server could not answer (503).");
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("shows the notice over an empty state too, and takes the product's words", () => {
+    const load: Load<Booking[]> = {
+      status: "ready",
+      data: [],
+      stale: { message: "Kiln 2's controller is not answering.", readAt: new Date(2026, 10, 7, 13, 50), retry: () => undefined, retrying: true },
+    };
+    render(
+      <DataView
+        state={load}
+        isEmpty={(rows) => rows.length === 0}
+        skeleton={<TableSkeleton />}
+        empty={<EmptyState title="All three kilns are cold" />}
+        staleNotice={(stale) => <StaleNotice stale={stale} shown={(when) => `Readings from ${when}.`} />}
+      >
+        {() => null}
+      </DataView>,
+    );
+    expect(screen.getByText("All three kilns are cold")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(`Kiln 2's controller is not answering. Readings from ${format.shortDay.format(load.stale!.readAt)}.`);
+    // A fetch on its way: the button says so and cannot be pressed twice.
+    expect(screen.getByRole("button", { name: "Trying again…" })).toBeDisabled();
+  });
+
+  it("names the day when the data was not read today", () => {
+    const readAt = new Date(2026, 0, 5, 9, 30);
+    render(<StaleNotice stale={{ message: "The server could not answer (503).", readAt, retry: () => undefined }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(`Showing data from ${format.shortDay.format(readAt)}.`);
   });
 });
 

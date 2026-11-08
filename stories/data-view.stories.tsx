@@ -6,7 +6,8 @@ import { api, bookingsEmpty, bookingsLoading, bookingsServerError } from "./mock
 
 // DataView requires a skeleton and an empty state, so every view of remote data has all four
 // states. The "From the API" stories fetch through TanStack Query (useLoad) from MSW: the same
-// code path a product runs, with the server put into each state.
+// code path a product runs, with the server put into each state. `Stale` is a refresh that failed
+// after a good read: the rows stay and a notice says how old they are.
 
 function Bookings({ load }: { load: Load<Booking[]> }) {
   return (
@@ -44,6 +45,21 @@ export const Failed: Story = {
       message:
         "Kiln 2's controller has not reported since 13:50, so these readings are 20 minutes old. The panel by the kiln-room door shows the live temperature.",
       retry: () => undefined,
+    },
+  },
+};
+
+/** A refresh failed after a good read: the rows stay, under a notice saying why and how old they are. */
+export const Stale: Story = {
+  args: {
+    load: {
+      status: "ready",
+      data: bookings,
+      stale: {
+        message: "The server could not answer (503). Nothing was changed.",
+        readAt: new Date(Date.UTC(2026, 10, 7, 13, 50)),
+        retry: () => undefined,
+      },
     },
   },
 };
