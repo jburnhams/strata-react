@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { BulkBar, Button, SelectableGrid, format, useSelection, type SelectableGridProps } from "../src";
-import { glazeNames, piecePhotos, type PiecePhoto } from "./fixtures/kiln";
+import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
 // Kiln 2's glaze firing, photographed shelf by shelf as it was unloaded. The bottom shelf ran
 // cool, so some pieces came out thin; the member chooses which go back for a second glaze.
 
-const photos = piecePhotos();
-const rowLabel = (p: PiecePhoto) => `${p.member}, ${p.piece}`;
-const uncollected = (p: PiecePhoto) => !p.collected;
+const photos = shelfPhotos();
+const rowLabel = (p: ShelfPhoto) => `${p.member}, ${p.piece}`;
+const uncollected = (p: ShelfPhoto) => !p.collected;
 
-function PieceGrid(props: Partial<SelectableGridProps<PiecePhoto>>) {
+function PieceGrid(props: Partial<SelectableGridProps<ShelfPhoto>>) {
   return (
     <SelectableGrid
       label="Pieces from kiln 2, Tuesday's glaze firing"
@@ -45,7 +45,7 @@ export const NoneChosen: Story = {
 export const SmallPortrait: Story = { args: { tileSize: "sm", aspect: "portrait" } };
 
 /** 400 tiles: from 100 only the visible rows of tiles are in the DOM, inside a labelled scroll region. */
-export const Virtualised: Story = { args: { rows: piecePhotos(400), maxHeight: 420 } };
+export const Virtualised: Story = { args: { rows: shelfPhotos(400), maxHeight: 420 } };
 
 /** At phone width the tiles still fill the row, two or three across. */
 export const Phone: Story = { tags: ["visual-phone"], args: { tileSize: "sm" } };

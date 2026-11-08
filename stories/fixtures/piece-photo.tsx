@@ -1,4 +1,4 @@
-import type { Glaze, PiecePhoto } from "./kiln";
+import type { Glaze, ShelfPhoto } from "./kiln";
 
 // A stand-in for a photo of a fired piece: its form drawn in its glaze, on the kiln shelf. The
 // colours are the picture's content (what the glaze looks like), not interface colour, so they are
@@ -25,7 +25,7 @@ const forms = [
 ];
 
 /** Draws one piece. `alt` is left to the tile's box, which names the piece. */
-export function PiecePicture({ photo }: { photo: PiecePhoto }) {
+export function PiecePicture({ photo }: { photo: ShelfPhoto }) {
   const n = Number(photo.id.slice(2));
   const fill = glazeColour[photo.glaze];
   return (

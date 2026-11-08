@@ -4,15 +4,15 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BulkBar, Button, DataTable, SelectableGrid, useSelection, type Column, type InitialSelection } from "../../src";
 import { renderWithStrata } from "../../src/testing";
-import { piecePhotos, type PiecePhoto } from "../../stories/fixtures/kiln";
+import { shelfPhotos, type ShelfPhoto } from "../../stories/fixtures/kiln";
 
-const photos = piecePhotos();
-const label = (p: PiecePhoto) => `${p.member}, ${p.piece}`;
-const box = (p: PiecePhoto) => screen.getByRole("checkbox", { name: `Select ${label(p)}` });
+const photos = shelfPhotos();
+const label = (p: ShelfPhoto) => `${p.member}, ${p.piece}`;
+const box = (p: ShelfPhoto) => screen.getByRole("checkbox", { name: `Select ${label(p)}` });
 const selectAll = () => screen.getByRole("checkbox", { name: "Select all shown" });
-const uncollected = (p: PiecePhoto) => !p.collected;
+const uncollected = (p: ShelfPhoto) => !p.collected;
 
-function Grid({ rows = photos, initial }: { rows?: PiecePhoto[]; initial?: InitialSelection<PiecePhoto> }) {
+function Grid({ rows = photos, initial }: { rows?: ShelfPhoto[]; initial?: InitialSelection<ShelfPhoto> }) {
   const selection = useSelection(rows, (p) => p.id, initial);
   return (
     <>
@@ -111,7 +111,7 @@ describe("SelectableGrid", () => {
   });
 
   it("virtualises from 100 tiles and select-all still covers every tile", async () => {
-    const many = piecePhotos(400);
+    const many = shelfPhotos(400);
     renderWithStrata(<Grid rows={many} />);
     const shown = within(screen.getByRole("list", { name: "Pieces from kiln 2" })).getAllByRole("listitem");
     expect(shown.length).toBeLessThan(many.length);
@@ -123,7 +123,7 @@ describe("SelectableGrid", () => {
 
   it("starts with the rows `initial` names, once they arrive", async () => {
     function Loading() {
-      const [rows, setRows] = React.useState<PiecePhoto[]>([]);
+      const [rows, setRows] = React.useState<ShelfPhoto[]>([]);
       return (
         <>
           <button onClick={() => setRows(photos)}>Load</button>
@@ -140,10 +140,10 @@ describe("SelectableGrid", () => {
 });
 
 describe("useSelection initial", () => {
-  function Paged({ initial }: { initial: InitialSelection<PiecePhoto> }) {
+  function Paged({ initial }: { initial: InitialSelection<ShelfPhoto> }) {
     const [count, setCount] = React.useState(6);
     const [hidden, setHidden] = React.useState(false);
-    const rows = piecePhotos(count).filter((p) => !(hidden && p.id === "p-003"));
+    const rows = shelfPhotos(count).filter((p) => !(hidden && p.id === "p-003"));
     const selection = useSelection(rows, (p) => p.id, initial);
     return (
       <>
@@ -201,7 +201,7 @@ describe("useSelection initial", () => {
 });
 
 describe("DataTable range select", () => {
-  const columns: Column<PiecePhoto>[] = [
+  const columns: Column<ShelfPhoto>[] = [
     { key: "piece", header: "Piece", cell: (p) => p.piece, sort: (a, b) => a.piece.localeCompare(b.piece) },
   ];
   function Table() {
