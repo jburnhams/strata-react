@@ -19,7 +19,7 @@ export {
   type IconButtonProps,
   type RowActionProps,
 } from "./components/button";
-export { Checkbox, type CheckboxProps } from "./components/checkbox";
+export { Checkbox, type CheckboxProps, type CheckboxGesture } from "./components/checkbox";
 export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
@@ -38,7 +38,13 @@ export {
   type DataTableProps,
   type RowSelection,
 } from "./components/data-table";
-export { BulkBar, useSelection } from "./components/selection";
+export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
+export {
+  SelectableGrid,
+  type SelectableGridProps,
+  type TileAspect,
+  type TileSize,
+} from "./components/selectable-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";

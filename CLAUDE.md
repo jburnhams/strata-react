@@ -127,6 +127,10 @@ scripts/                copy-css, clean, build-site
    Checkboxes only where a bulk action exists: `useSelection` → `DataTable selection=` (with
    `rowLabel`, and `isSelectable` for rows that cannot be chosen) → `BulkBar` with the actions, one
    filled and named with its count. A bulk removal goes through `useUndoable` like a single one.
+   Choosing among pictures is the same selection drawn as `SelectableGrid` (`renderImage`,
+   `rowLabel`). Rows that start chosen are `useSelection`'s `initial` (keys, or a test on the
+   row), never an effect that writes the selection once data arrives. Shift-click ranges come
+   with both; never hand-write them.
 6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
 7. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
    `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
@@ -163,7 +167,7 @@ scripts/                copy-css, clean, build-site
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests run through `strata-visual`, the same command apps use, so a change to
-`src/visual/` is tested on this repo's own 214 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+`src/visual/` is tested on this repo's own 230 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings
