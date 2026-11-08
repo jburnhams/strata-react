@@ -56,9 +56,15 @@ export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, 
   // `initial` is read when a row first appears, so a new function each render is fine.
   const initialRef = React.useRef(initial);
   initialRef.current = initial;
+  // Keys are read into a set once per `initial` value, not once per row: a single-use iterable (a
+  // generator, `set.values()`) would otherwise be used up by the first row, and an array rebuilt
+  // for every row. The set is kept for rows that arrive later.
+  const initialKeys = React.useRef<{ source: InitialSelection<T>; keys: ReadonlySet<string> } | undefined>(undefined);
   const test = (row: T, key: string) => {
     const init = initialRef.current;
-    return typeof init === "function" ? init(row) : new Set(init).has(key);
+    if (typeof init === "function") return init(row);
+    if (initialKeys.current?.source !== init) initialKeys.current = { source: init, keys: new Set(init) };
+    return initialKeys.current.keys.has(key);
   };
   const keys = rows.map(rowKey);
   const [state, setState] = React.useState<SelectionState>(() =>

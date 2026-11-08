@@ -180,6 +180,16 @@ describe("useSelection initial", () => {
     expect(screen.getByTestId("chosen")).toHaveTextContent(/^p-008$/);
   });
 
+  it("reads a single-use iterable of keys once, for every row", () => {
+    function Once() {
+      const [initial] = React.useState(() => new Set(["p-002", "p-003"]).values());
+      const selection = useSelection(photos.slice(0, 4), (p) => p.id, initial);
+      return <output data-testid="chosen">{[...selection.selected].sort().join(" ")}</output>;
+    }
+    renderWithStrata(<Once />);
+    expect(screen.getByTestId("chosen")).toHaveTextContent(/^p-002 p-003$/);
+  });
+
   it("does not loop when the rows are a new array every render", () => {
     function Fresh() {
       const selection = useSelection(photos.slice(0, 4), (p) => p.id, ["p-001"]);
