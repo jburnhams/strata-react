@@ -66,6 +66,14 @@ describe("Thumbnail", () => {
     expect(box).not.toHaveAttribute("aria-busy");
   });
 
+  it("starts again when only srcSet changes after a failure", () => {
+    const { rerender } = render(<Thumbnail src={photo} srcSet="/api/photos/gone-2x.svg 2x" alt="Tenmoku tea bowl" missing="Photo not found" eager />);
+    fireEvent.error(screen.getByRole("img", { name: "Tenmoku tea bowl" }));
+    expect(screen.getByRole("img", { name: "Tenmoku tea bowl: Photo not found" })).toBeInTheDocument();
+    rerender(<Thumbnail src={photo} srcSet="/api/photos/p-302-2x.svg 2x" alt="Tenmoku tea bowl" missing="Photo not found" eager />);
+    expect(screen.getByRole("img", { name: "Tenmoku tea bowl" })).toHaveAttribute("srcset", "/api/photos/p-302-2x.svg 2x");
+  });
+
   it("loads at once with eager, without an observer", () => {
     const before = io.observers.length;
     render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" eager />);

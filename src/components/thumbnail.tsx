@@ -68,10 +68,12 @@ export function Thumbnail({
   rootMargin = "200px",
   className,
 }: ThumbnailProps) {
-  // The outcome is kept with the URL it belongs to, so a new `src` starts loading again without
-  // an effect to reset it, and a late event from the old image cannot mark the new one.
-  const [result, setResult] = React.useState<{ src: string; ok: boolean } | null>(null);
-  const phase: Phase = !src ? "missing" : result?.src === src ? (result.ok ? "loaded" : "missing") : "loading";
+  // The outcome is kept with the request it belongs to (`src` and `srcSet`, since the browser may
+  // have loaded a candidate from either), so a new request starts loading again without an effect
+  // to reset it, and a late event from the old image cannot mark the new one.
+  const request = src ? `${src} ${srcSet ?? ""}` : null;
+  const [result, setResult] = React.useState<{ request: string; ok: boolean } | null>(null);
+  const phase: Phase = !request ? "missing" : result?.request === request ? (result.ok ? "loaded" : "missing") : "loading";
   const near = useInView({ active: !eager && !!src, rootMargin, once: true, unsupported: true });
   const requested = eager || near.inView;
 
@@ -83,16 +85,16 @@ export function Thumbnail({
       aria-busy={phase === "loading" || undefined}
     >
       {phase === "loading" && <Skeleton className="absolute inset-0" />}
-      {src && phase !== "missing" && requested && (
+      {src && request && phase !== "missing" && requested && (
         <img
-          key={src}
+          key={request}
           src={src}
           srcSet={srcSet}
           sizes={sizes}
           alt={alt}
           decoding="async"
-          onLoad={() => setResult({ src, ok: true })}
-          onError={() => setResult({ src, ok: false })}
+          onLoad={() => setResult({ request, ok: true })}
+          onError={() => setResult({ request, ok: false })}
           className={cn("absolute inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain", phase === "loading" && "opacity-0")}
         />
       )}
