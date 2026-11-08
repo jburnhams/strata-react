@@ -12,6 +12,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchParams } from "react-router";
 import { cn } from "../lib/utils";
 import { Checkbox } from "./checkbox";
+import { Chevron } from "./disclosure";
 
 // The table real product screens use: 12px muted sentence-case headers, row rules (no zebra),
 // numbers right-aligned in tabular figures, one status mark and at most one action per row.
@@ -32,6 +33,15 @@ import { Checkbox } from "./checkbox";
 // are chosen. Selected rows take the sunken fill, not a ring, so a selection never reads as focus.
 // The table only draws the selection; the state is the caller's, usually `useSelection`, and the
 // actions live in a `BulkBar`.
+//
+// Expansion is opt-in too (`expansion`): a row opens a detail row under it, for what belongs to
+// the row but would crowd the table (a firing's pieces, a batch's faces). It follows `Disclosure`:
+// the toggle is a button with `aria-expanded`, named for what it shows (`rowLabel`, "Pieces in
+// firing 412"), and the detail is mounted only while open, so a `useLoad` inside it runs on the
+// first open and not for every row on load. The detail row spans the data columns, starts under
+// the first of them, and has no rule between it and its row, so the two read as one. State is the
+// caller's, usually `useExpanded` (which can keep it in the URL). A virtualised table measures
+// each detail row, so details of any height scroll correctly.
 
 export type Column<T> = {
   key: string;
@@ -58,6 +68,19 @@ export type RowSelection<T> = {
   isSelectable?: (row: T) => boolean;
 };
 
+/** Row expansion for a `DataTable`: the open row keys, how to change them, how to name each toggle, and the detail to show. */
+export type RowExpansion<T> = {
+  /** Keys (from `rowKey`) of the open rows. */
+  expanded: ReadonlySet<string>;
+  onChange: (next: Set<string>) => void;
+  /** Names the row's toggle by what it shows: "Pieces in firing 412". Its state is `aria-expanded`, so the name stays the same open or closed. */
+  rowLabel: (row: T) => string;
+  /** The row's detail, mounted only while it is open. Return an element whose component makes any request, so the request runs on open. */
+  detail: (row: T) => React.ReactNode;
+  /** Rows with nothing to show get no toggle. Default: every row. */
+  isExpandable?: (row: T) => boolean;
+};
+
 export type Sort = { key: string; dir: "ascending" | "descending" };
 
 export type DataTableProps<T> = {
@@ -75,6 +98,8 @@ export type DataTableProps<T> = {
   maxHeight?: number;
   /** Adds a checkbox column and "Select all shown". Use only where a `BulkBar` acts on the selection. */
   selection?: RowSelection<T>;
+  /** Adds a toggle per row that opens a detail row under it. Spread `useExpanded()` in with a `rowLabel` and `detail`. */
+  expansion?: RowExpansion<T>;
   className?: string;
 };
 
@@ -159,8 +184,10 @@ function Table<T>({
   virtualizeFrom = 100,
   maxHeight = 480,
   selection,
+  expansion,
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
+  const baseId = React.useId();
   const selectAll = useSelectAll(rows, rowKey, selection);
   const defs = React.useMemo<ColumnDef<T>[]>(
     () =>
@@ -189,7 +216,7 @@ function Table<T>({
     getRowId: (row) => rowKey(row),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    // No pagination or expansion here, so nothing to reset. Left on, TanStack resets the page
+    // No pagination here, and expansion is the caller's state, not TanStack's: nothing to reset. Left on, TanStack resets the page
     // index whenever `rows` is a new array; a screen that filters its rows on every render (the
     // kiln room after Withdraw) then re-renders forever and the tab freezes. Found by the
     // example app's visual suite, which jsdom did not show.
@@ -200,12 +227,27 @@ function Table<T>({
     setSort({ key, dir: sort?.key === key && sort.dir === "ascending" ? "descending" : "ascending" });
 
   const modelRows = table.getRowModel().rows;
+  const canExpand = (row: T) => expansion?.isExpandable?.(row) ?? true;
+  // What the body draws, in order: every row, and a detail line after each open one. The
+  // virtualiser counts these lines, so an open detail takes its own measured slot.
+  const lines = React.useMemo(
+    () =>
+      expansion
+        ? modelRows.flatMap((row) =>
+            expansion.expanded.has(row.id) && canExpand(row.original)
+              ? [{ row, detail: false }, { row, detail: true }]
+              : [{ row, detail: false }],
+          )
+        : modelRows.map((row) => ({ row, detail: false })),
+    // canExpand reads `expansion`, which is a dependency.
+    [modelRows, expansion],
+  );
   const virtual = modelRows.length >= virtualizeFrom;
   const scroller = React.useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
-    count: virtual ? modelRows.length : 0,
+    count: virtual ? lines.length : 0,
     getScrollElement: () => scroller.current,
-    estimateSize: () => 41,
+    estimateSize: (i) => (lines[i]?.detail ? 160 : 41),
     overscan: 8,
     // Until the region is measured, assume it is full height: the first paint (and a test DOM
     // with no layout) shows the first page of rows instead of none.
@@ -214,7 +256,8 @@ function Table<T>({
   const items = virtual ? virtualizer.getVirtualItems() : [];
   const padTop = items.length ? items[0].start : 0;
   const padBottom = items.length ? virtualizer.getTotalSize() - items[items.length - 1].end : 0;
-  const visible = virtual ? items.map((i) => modelRows[i.index]) : modelRows;
+  const visible = virtual ? items.map((i) => ({ ...lines[i.index], index: i.index })) : lines.map((l, index) => ({ ...l, index }));
+  const lead = (selection ? 1 : 0) + (expansion ? 1 : 0);
 
   return (
     <div
@@ -225,7 +268,7 @@ function Table<T>({
       className={cn("relative min-w-0 overflow-x-auto", virtual && "overflow-y-auto", className)}
       style={virtual ? { maxHeight } : undefined}
     >
-      <table className="w-full border-collapse type-body-sm" aria-rowcount={virtual ? modelRows.length + 1 : undefined}>
+      <table className="w-full border-collapse type-body-sm" aria-rowcount={virtual ? lines.length + 1 : undefined}>
         <caption className="sr-only">{caption}</caption>
         <thead className={cn(virtual && "sticky top-0 z-10 bg-background")}>
           {table.getHeaderGroups().map((group) => (
@@ -240,6 +283,11 @@ function Table<T>({
                     disabled={selectAll.disabled}
                     onCheckedChange={selectAll.toggle}
                   />
+                </th>
+              )}
+              {expansion && (
+                <th scope="col" className="w-10 py-2 pr-2">
+                  <span className="sr-only">Details</span>
                 </th>
               )}
               {group.headers.map((header) => {
@@ -282,13 +330,30 @@ function Table<T>({
         </thead>
         <tbody>
           {padTop > 0 && <tr aria-hidden style={{ height: padTop }} />}
-          {visible.map((row, i) => {
+          {visible.map(({ row, detail, index }) => {
             const chosen = selection?.selected.has(row.id) ?? false;
+            const detailId = `${baseId}-detail-${row.id}`;
+            if (detail && expansion)
+              return (
+                <tr
+                  key={`${row.id}-detail`}
+                  ref={virtual ? virtualizer.measureElement : undefined}
+                  data-index={index}
+                  className={cn(chosen && "bg-surface-sunken")}
+                  aria-rowindex={virtual ? index + 2 : undefined}
+                >
+                  {lead > 0 && <td colSpan={lead} />}
+                  <td id={detailId} colSpan={columns.length} className="pt-0.5 pb-4 align-top">
+                    {expansion.detail(row.original)}
+                  </td>
+                </tr>
+              );
+            const open = expansion?.expanded.has(row.id) ?? false;
             return (
             <tr
               key={row.id}
               className={cn("border-t border-border", chosen && "bg-surface-sunken")}
-              aria-rowindex={virtual ? (items[i]?.index ?? 0) + 2 : undefined}
+              aria-rowindex={virtual ? index + 2 : undefined}
             >
               {selection && (
                 <td className="w-8 py-2.5 pr-2 align-middle">
@@ -305,6 +370,28 @@ function Table<T>({
                       selection.onChange(next);
                     }}
                   />
+                </td>
+              )}
+              {expansion && (
+                <td className="w-10 py-2.5 pr-2 align-middle">
+                  {canExpand(row.original) && (
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-controls={open ? detailId : undefined}
+                      aria-label={expansion.rowLabel(row.original)}
+                      title={expansion.rowLabel(row.original)}
+                      onClick={() => {
+                        const next = new Set(expansion.expanded);
+                        if (open) next.delete(row.id);
+                        else next.add(row.id);
+                        expansion.onChange(next);
+                      }}
+                      className="-my-1.5 grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control hover:bg-muted"
+                    >
+                      <Chevron open={open} />
+                    </button>
+                  )}
                 </td>
               )}
               {row.getVisibleCells().map((cell) => {

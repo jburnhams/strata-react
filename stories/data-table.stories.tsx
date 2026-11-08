@@ -9,6 +9,7 @@ import {
   TableSkeleton,
   UndoBar,
   format,
+  useExpanded,
   useSelection,
   useUndoable,
   type Column,
@@ -150,3 +151,57 @@ function SelectThenAct() {
 
 /** Choose, act, undo: the bulk withdrawal goes through useUndoable like a single one, and the selection drops the withdrawn rows by itself. */
 export const SelectThenActInteractive: Story = { tags: ["no-visual"], render: () => <SelectThenAct /> };
+
+/** What a booking's detail row shows: the firing and when it is out. Static here; a real detail would make its own request (see Screens/Firing history). */
+function BookingDetail({ b }: { b: Booking }) {
+  return (
+    <p className="type-body-sm text-muted-foreground">
+      {b.firing} in kiln {b.kiln}, {format.count(b.pieces, "piece")}. Collect: {b.out}.
+    </p>
+  );
+}
+
+const bookingExpansion = (expanded: Iterable<string>) => ({
+  expanded: new Set(expanded),
+  onChange: () => undefined,
+  rowLabel: (b: Booking) => `Details of ${b.member}'s booking`,
+  detail: (b: Booking) => <BookingDetail b={b} />,
+});
+
+/** A toggle per row opens a detail row under it, with no rule between the two. Here Tom Ellery's is open. Ready work has nothing more to show, so it has no toggle. */
+export const Expansion: Story = {
+  render: (args) => <BookingTable {...args} expansion={{ ...bookingExpansion(["b-2042"]), isExpandable: (b) => b.state !== "ready" }} />,
+};
+
+/** Expansion with selection: the detail starts under the first data column, and a chosen row's detail shares its fill. */
+export const ExpansionWithSelection: Story = {
+  render: (args) => (
+    <BookingTable
+      {...args}
+      expansion={bookingExpansion(["b-2051"])}
+      selection={{ selected: new Set(["b-2051"]), onChange: () => undefined, rowLabel: (b) => b.member, isSelectable: canWithdraw }}
+    />
+  ),
+};
+
+/** 480 rows with two open: each detail row is measured, so the rows after it are placed below it. */
+export const ExpansionVirtualised: Story = {
+  args: { rows: manyBookings, maxHeight: 360 },
+  render: (args) => <BookingTable {...args} expansion={bookingExpansion(["b-3001", "b-3004"])} />,
+};
+
+function ExpandInUrl(args: Omit<DataTableProps<Booking>, "columns" | "rowKey" | "caption">) {
+  const expanded = useExpanded({ param: "open" });
+  return (
+    <>
+      <BookingTable {...args} expansion={{ ...expanded, rowLabel: (b) => `Details of ${b.member}'s booking`, detail: (b) => <BookingDetail b={b} /> }} />
+      <ShowUrl />
+    </>
+  );
+}
+
+/** `useExpanded({ param: "open" })`: open rows live in ?open=, so an opened row can be linked. Starts with Priya's open. */
+export const ExpansionInUrl: Story = {
+  parameters: { route: "/bookings?open=b-2041" },
+  render: (args) => <ExpandInUrl {...args} />,
+};

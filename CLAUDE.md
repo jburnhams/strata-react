@@ -128,6 +128,10 @@ scripts/                copy-css, clean, build-site
    `rowLabel`, and `isSelectable` for rows that cannot be chosen) → `BulkBar` with the actions, one
    filled and named with its count. A bulk removal goes through `useUndoable` like a single one.
 6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
+   A row that shows more of itself in place is a `Disclosure` (in a list) or `DataTable
+   expansion=` (in a table), with `useExpanded({ param })` holding the open keys; the detail's
+   `useLoad` lives in the detail's own component, so it runs when the row opens. Never a raw
+   `<details>`: it mounts every closed body, and each one's request runs on load.
 7. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
    `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
    `KeysLegend`, answers through `useUndoable`. Never bind single keys with a hand-written
@@ -163,7 +167,7 @@ scripts/                copy-css, clean, build-site
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests run through `strata-visual`, the same command apps use, so a change to
-`src/visual/` is tested on this repo's own 214 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+`src/visual/` is tested on this repo's own 252 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings

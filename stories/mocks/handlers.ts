@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import { bookings, firings, readings, type Booking, type Firing } from "../fixtures/kiln";
+import { bookings, firedWork, firings, readings, type Booking, type Firing } from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
 
 // The fixture API, served by MSW in Storybook (service worker) and in the unit tests (Node). The
@@ -11,6 +11,8 @@ export const api = {
   bookings: "/api/bookings",
   readings: "/api/kilns/2/readings",
   firings: "/api/firings",
+  /** `GET /api/firings/:id/work`: whose work was in one firing. */
+  firingWork: (id: string) => `/api/firings/${id}/work`,
   server: "/api/server",
 } as const;
 
@@ -44,6 +46,10 @@ export const handlers = [
   http.get(api.readings, () => HttpResponse.json(readings)),
   http.get(api.firings, ({ request }) => HttpResponse.json(firingPage(request.url))),
   http.get(api.server, () => HttpResponse.json(serverStatus)),
+  http.get("/api/firings/:id/work", ({ params }) => {
+    const f = firings.find((x) => x.id === params.id);
+    return f ? HttpResponse.json(firedWork(f)) : HttpResponse.json({ message: "no such firing" }, { status: 404, statusText: "Not Found" });
+  }),
   http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
   http.post(api.bookings, async () => {
     await delay(600);
@@ -98,4 +104,17 @@ export const serverLoading = http.get(api.server, async () => {
 
 export const serverUnreachable = http.get(api.server, () =>
   HttpResponse.json({ message: "status agent not answering" }, { status: 502, statusText: "Bad Gateway" }),
+);
+
+/** A firing's work never arrives: the detail row's skeleton. */
+export const firingWorkLoading = http.get("/api/firings/:id/work", async () => {
+  await delay("infinite");
+  return HttpResponse.json([]);
+});
+
+/** A firing logged with nothing recorded in it (a test firing). */
+export const firingWorkEmpty = http.get("/api/firings/:id/work", () => HttpResponse.json([]));
+
+export const firingWorkServerError = http.get("/api/firings/:id/work", () =>
+  HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" }),
 );

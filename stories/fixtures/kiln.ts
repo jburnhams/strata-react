@@ -170,3 +170,35 @@ export const firings: Firing[] = Array.from({ length: 137 }, (_, i) => {
     endedMin: -i * 2310 - 685,
   };
 });
+
+/** How a piece came out of the kiln. Most come out whole; the rest are what a member asks about. */
+export type Outcome = "whole" | "crazed" | "cracked";
+/** One member's work in one firing: what the firing log's row opens to show. */
+export type FiredWork = { id: string; member: string; pieces: number; glaze: Glaze; outcome: Outcome };
+
+const members = ["Priya Natarajan", "Tom Ellery", "Aoife Byrne", "Sam Okafor", "Marta Kowalczyk", "Dev Raman", "Hannah Lowe", "Joe Pryce"];
+const glazesFor: Record<FiringType, Glaze[]> = {
+  bisque: ["bisque"],
+  glaze: ["celadon", "tenmoku", "shino", "cobalt", "copper-red"],
+  raku: ["raku"],
+};
+
+/** Whose work was in a firing, split across three to five members, summing to the firing's pieces. */
+export function firedWork(f: Firing): FiredWork[] {
+  const n = Number(f.id.slice(2));
+  const people = 3 + (n % 3);
+  const glazes = glazesFor[f.type];
+  let left = f.pieces;
+  return Array.from({ length: people }, (_, i) => {
+    const share = i === people - 1 ? left : Math.max(1, Math.round(f.pieces / people) - ((n + i) % 2));
+    left -= share;
+    const outcome: Outcome = (n + i * 3) % 11 === 0 ? "cracked" : (n + i) % 7 === 0 ? "crazed" : "whole";
+    return {
+      id: `${f.id}-${i}`,
+      member: members[(n + i * 3) % members.length],
+      pieces: share,
+      glaze: glazes[(n + i) % glazes.length],
+      outcome,
+    };
+  });
+}

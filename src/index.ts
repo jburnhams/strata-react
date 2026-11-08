@@ -37,7 +37,9 @@ export {
   type Sort,
   type DataTableProps,
   type RowSelection,
+  type RowExpansion,
 } from "./components/data-table";
+export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection } from "./components/selection";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
