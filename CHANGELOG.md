@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-08
+
+**`renderRoutes`: test an app's own route tree with Strata's providers** (branch `claude/project-thread-eimgzg`, issue #35). The issue, found porting the Bright Horizons review app, asked for a helper beside `renderWithStrata` because testing an app shell with nested routes and redirects meant hand-building `createMemoryRouter`, `ThemeProvider` and `StrataQueryProvider`. Beyond the issue, the helper takes the same `RouteObject[]` the app gives `createBrowserRouter`, so the test cannot drift from the app, and the kiln example app now exports its routes from their own module to show that.
+
+- `src/testing/index.tsx`: **new** `renderRoutes(routes, { route, basename, client, colorScheme, ...render options })`, which renders the tree in a memory data router (so layout routes, `<Navigate>` and loader redirects, loaders, actions and error elements run, which `MemoryRouter` cannot do) inside the same providers as `renderWithStrata`, and returns `client`, `router` and `navigate` (a `router.navigate` inside `act`, taking a path or a history step such as `-1`). `route` is the full URL with the basename, as the browser shows it, and defaults to the basename. **New** types `StrataRenderOptions` and `RenderRoutesOptions`; the providers are one internal `StrataProviders` used by both helpers. Correction: `renderWithStrata`'s options no longer accept `wrapper`, which used to replace Strata's providers silently; its type is now `StrataRenderOptions`.
+- `examples/kiln-app/src/routes.tsx` (**new**): the kiln app's `routes` and `basename`; `examples/kiln-app/src/main.tsx` builds its browser router from them. The built app is unchanged, so no route baseline changed.
+- `tests/unit/routes.test.tsx` (**new**): a shell with an index route, a loader served by MSW, its error element, a `<Navigate>` and a loader `redirect()` (asserting `router.state.location`), link and `navigate` moves including back, the dark scheme and the test query client; and the kiln app's own routes under `/kiln`, loading bookings through MSW, reading `?sort=` and showing its error.
+- `tests/integration/package.test.ts`: the built `strata-react/testing` must export `renderRoutes`.
+- `README.md`, `CLAUDE.md`: the testing rows and rule 10 name `renderRoutes` and say to export an app's route tree and share it with the tests.
+
 ## 2026-11-07
 
 **Visual baselines that match on any machine: no system fonts, a comparison that absorbs anti-aliasing** (branch `claude/project-thread-9pzvnj`, PR #30). Jonathan asked for baselines to match regardless of the machine that runs them: bundle every face with fontsource so a system font is never used, and configure pixelmatch to cope with different anti-aliasing, tuned by experiment. The experiment changed the plan: no pixelmatch threshold or pixel allowance separates another rasteriser's anti-aliasing from a changed letter, so the comparison now blurs both images 3×3 first.

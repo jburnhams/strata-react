@@ -58,7 +58,7 @@ src/
   components/           one file per component; each opens with the reasons it is shaped that way
   lib/                  cn, format (Intl), icon type
   query/                TanStack Query bridge: createQueryClient, StrataQueryProvider, useLoad, toLoad, fetchJson
-  testing/              renderWithStrata (router + query client), installLayoutShims, installFakeIntersectionObserver; exported as strata-react/testing
+  testing/              renderWithStrata (router + query client), renderRoutes (the app's route tree), installLayoutShims, installFakeIntersectionObserver; exported as strata-react/testing
   visual/               the visual regression runner, exported as strata-react/visual; cli.ts is the strata-visual command
   styles/strata.css     token contract, namespace reset, type steps, motion utilities, base layer
 stories/                Storybook stories; fixtures/ (kiln-room sample data); mocks/handlers.ts (MSW); screens/ (whole screens)
@@ -67,7 +67,7 @@ tests/unit/             Vitest + Testing Library + MSW (jsdom)
 tests/integration/      the built package: exports, bundle externals, strata.css compiled by Tailwind as an app would
 tests/utils/            setup (jest-dom, MSW server, layout shims)
 tests/visual/baselines/ committed PNGs, one per story per theme and per route state per viewport per theme
-examples/kiln-app/      the kiln-room screen run as an app (router, base path, no stories): route mode's test bed
+examples/kiln-app/      the kiln-room screen run as an app (router, base path, no stories): route mode's test bed; src/routes.tsx is its route tree, shared with its tests
 bin/                    strata-visual, a thin wrapper over dist/visual-cli.js
 scripts/                copy-css, clean, build-site
 ```
@@ -138,7 +138,10 @@ scripts/                copy-css, clean, build-site
    `format.bytes`. An app with no settings page puts `ColorSchemeChoice compact` in the header.
 9. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 10. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
-   Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`.
+   Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`. Export the app's
+   `RouteObject[]` from its own module (as `examples/kiln-app/src/routes.tsx` does), give the same
+   array to `createBrowserRouter` and to `renderRoutes(routes, { route, basename })` in tests, and
+   test shells, redirects and loaders that way, never with a hand-built `createMemoryRouter`.
    Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
    `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
    its end. Copy from `format` keeps its non-breaking space in role names: query
