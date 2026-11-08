@@ -38,7 +38,9 @@ export {
   type Sort,
   type DataTableProps,
   type RowSelection,
+  type RowExpansion,
 } from "./components/data-table";
+export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
 export {
   SelectableGrid,
