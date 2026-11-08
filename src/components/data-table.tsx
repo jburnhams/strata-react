@@ -12,6 +12,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchParams } from "react-router";
 import { cn } from "../lib/utils";
 import { Checkbox } from "./checkbox";
+import { useSelectRows } from "./selection";
 
 // The table real product screens use: 12px muted sentence-case headers, row rules (no zebra),
 // numbers right-aligned in tabular figures, one status mark and at most one action per row.
@@ -29,7 +30,8 @@ import { Checkbox } from "./checkbox";
 // it is on, the first column is a checkbox per row, named from the row (`rowLabel` is required),
 // disabled where `isSelectable` says no; the header's "Select all shown" covers the selectable rows
 // in `rows` (all of them, not only the rendered ones of a virtualised table) and is mixed when some
-// are chosen. Selected rows take the sunken fill, not a ring, so a selection never reads as focus.
+// are chosen. Shift-click (or Shift+Space) chooses or clears the run from the last row clicked, in
+// the sorted order shown (`useSelectRows`, shared with `SelectableGrid`). Selected rows take the sunken fill, not a ring, so a selection never reads as focus.
 // The table only draws the selection; the state is the caller's, usually `useSelection`, and the
 // actions live in a `BulkBar`.
 
@@ -132,24 +134,6 @@ function UrlSortedTable<T>(props: DataTableProps<T> & { sortParam: string }) {
 
 type Meta = { numeric?: boolean; truncate?: boolean; hideHeader?: boolean; className?: string };
 
-function useSelectAll<T>(rows: T[], rowKey: (row: T) => string, selection?: RowSelection<T>) {
-  return React.useMemo(() => {
-    if (!selection) return undefined;
-    const keys = rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey);
-    const chosen = keys.filter((k) => selection.selected.has(k)).length;
-    const checked: boolean | "mixed" = chosen === 0 ? false : chosen === keys.length ? true : "mixed";
-    const toggle = () => {
-      const next = new Set(selection.selected);
-      // A full or mixed box clears what is shown; an empty one selects every selectable row shown.
-      // Keys outside `rows` (filtered away) are left as they are.
-      if (checked === false) keys.forEach((k) => next.add(k));
-      else keys.forEach((k) => next.delete(k));
-      selection.onChange(next);
-    };
-    return { checked, toggle, disabled: keys.length === 0 };
-  }, [rows, rowKey, selection]);
-}
-
 function Table<T>({
   caption,
   columns,
@@ -161,7 +145,6 @@ function Table<T>({
   selection,
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
-  const selectAll = useSelectAll(rows, rowKey, selection);
   const defs = React.useMemo<ColumnDef<T>[]>(
     () =>
       columns.map((c) => ({
@@ -200,6 +183,10 @@ function Table<T>({
     setSort({ key, dir: sort?.key === key && sort.dir === "ascending" ? "descending" : "ascending" });
 
   const modelRows = table.getRowModel().rows;
+  // In the order shown, so a Shift-click range runs down the sorted table, not the data's order.
+  const sortedRows = React.useMemo(() => modelRows.map((r) => r.original), [modelRows]);
+  const select = useSelectRows(sortedRows, rowKey, selection);
+  const selectAll = selection ? select.all : undefined;
   const virtual = modelRows.length >= virtualizeFrom;
   const scroller = React.useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -298,12 +285,7 @@ function Table<T>({
                     hideLabel
                     checked={chosen}
                     disabled={!(selection.isSelectable?.(row.original) ?? true)}
-                    onCheckedChange={(on) => {
-                      const next = new Set(selection.selected);
-                      if (on) next.add(row.id);
-                      else next.delete(row.id);
-                      selection.onChange(next);
-                    }}
+                    onCheckedChange={(on, gesture) => select.toggle(row.id, on, gesture)}
                   />
                 </td>
               )}

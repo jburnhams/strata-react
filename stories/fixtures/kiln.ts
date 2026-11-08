@@ -193,3 +193,31 @@ export const piecePhotos: PiecePhoto[] = [
   { id: "p-305", title: "Copper red bottle", member: "Hannah Lowe", glaze: "copper-red", photo: "/api/photos/p-305-moved.svg" },
   { id: "p-306", title: "Raku dish", member: "Hannah Lowe", glaze: "raku", photo: null },
 ];
+
+/** Photos of the pieces from Tuesday's glaze firing in kiln 2, taken at the shelf as it was unloaded.
+ *  `thin` marks the pieces the unloading note says came out thin-glazed (the bottom shelf ran cool):
+ *  the review screen starts with those chosen for a second glaze. `collected` pieces have gone home. */
+export type ShelfPhoto = { id: string; member: string; piece: string; glaze: Glaze; thin: boolean; collected: boolean };
+
+const pieceForms = ["Bowl", "Mug", "Jug", "Vase", "Plate", "Bottle"] as const;
+const photoMembers: [string, Glaze][] = [
+  ["Priya Natarajan", "celadon"],
+  ["Tom Ellery", "tenmoku"],
+  ["Aoife Byrne", "shino"],
+  ["Sam Okafor", "cobalt"],
+];
+
+/** Every piece photographed: 4 members' work, 6 forms each, numbered by shelf position. */
+export function shelfPhotos(count = 18): ShelfPhoto[] {
+  return Array.from({ length: count }, (_, i) => {
+    const [member, glaze] = photoMembers[i % photoMembers.length];
+    return {
+      id: `p-${String(i + 1).padStart(3, "0")}`,
+      member,
+      piece: `${pieceForms[(i * 5) % pieceForms.length]} ${i + 1}`,
+      glaze,
+      thin: i % 7 === 2 || i % 7 === 5,
+      collected: i % 9 === 8,
+    };
+  });
+}

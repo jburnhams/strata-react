@@ -12,29 +12,142 @@ import { Button } from "./button";
 // two visible rows, and an action never reaches a row the person cannot see. (Gmail and Linear
 // both drop a selection a filter hides; acting on hidden rows is how a bulk delete surprises.)
 //
+// Shift extends a range from the last row clicked, on every surface (`useSelectRows`), and
+// `initial` chooses a row when it first appears rather than only on mount, so a selection seeded
+// from data still applies once the data arrives (both from strata-react issue #32, a review screen
+// of face crops with the likely matches pre-chosen).
+//
 // The count is the bar's live region, and only the count: it is always mounted, so a screen reader
 // hears "2 bookings selected" on each change, and the buttons are outside it, so their names are
 // not read again with every tick. The actions are a labelled group. Per the research, at most one
 // of them is filled (`variant="default"`), named with its verb and count ("Withdraw 3"), and a
 // reversible bulk removal goes through `useUndoable` like a single one, not through a confirm.
 
-/** Chosen row keys, pruned to the rows that exist, and the calls that change them. Spread into `DataTable`'s `selection` with a `rowLabel`. */
-export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, initial: Iterable<string> = []) {
-  const [raw, setRaw] = React.useState<ReadonlySet<string>>(() => new Set(initial));
-  const selected = React.useMemo<ReadonlySet<string>>(() => {
-    const present = new Set(rows.map(rowKey));
-    return new Set([...raw].filter((k) => present.has(k)));
-    // rowKey is usually an inline arrow, so it is left out of the dependencies: the rows change.
-  }, [raw, rows]);
+/** Which rows start chosen: their keys, or a test on each row. Either applies to a row the first time it appears. */
+export type InitialSelection<T> = Iterable<string> | ((row: T) => boolean);
+
+type SelectionState = { keys: readonly string[]; seen: ReadonlySet<string>; raw: ReadonlySet<string> };
+
+// Bring the state up to the rows now shown: drop keys whose row has gone, and choose the rows seen
+// for the first time that `initial` names. A row seen before keeps the person's choice, even if it
+// left and came back (it returns unchosen, as it was forgotten when it left).
+function reconcile<T>(prev: SelectionState, rows: readonly T[], keys: readonly string[], initial: (row: T, key: string) => boolean): SelectionState {
+  const present = new Set(keys);
+  const raw = new Set([...prev.raw].filter((k) => present.has(k)));
+  const seen = new Set(prev.seen);
+  rows.forEach((row, i) => {
+    const key = keys[i];
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (initial(row, key)) raw.add(key);
+  });
+  return { keys, seen, raw };
+}
+
+const sameKeys = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((k, i) => k === b[i]);
+
+/**
+ * Chosen row keys, pruned to the rows that exist, and the calls that change them. Spread into
+ * `DataTable`'s or `SelectableGrid`'s `selection` with a `rowLabel`. `initial` (keys, or a test on
+ * the row) chooses each row the first time it appears, so a selection seeded from data that loads
+ * later, or a next page, still starts right.
+ */
+export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, initial: InitialSelection<T> = []) {
+  // `initial` is read when a row first appears, so a new function each render is fine.
+  const initialRef = React.useRef(initial);
+  initialRef.current = initial;
+  // Keys are read into a set once per `initial` value, not once per row: a single-use iterable (a
+  // generator, `set.values()`) would otherwise be used up by the first row, and an array rebuilt
+  // for every row. The set is kept for rows that arrive later.
+  const initialKeys = React.useRef<{ source: InitialSelection<T>; keys: ReadonlySet<string> } | undefined>(undefined);
+  const test = (row: T, key: string) => {
+    const init = initialRef.current;
+    if (typeof init === "function") return init(row);
+    if (initialKeys.current?.source !== init) initialKeys.current = { source: init, keys: new Set(init) };
+    return initialKeys.current.keys.has(key);
+  };
+  const keys = rows.map(rowKey);
+  const [state, setState] = React.useState<SelectionState>(() =>
+    reconcile({ keys: [], seen: new Set(), raw: new Set() }, rows, keys, test),
+  );
+  // Adjusted while rendering (React's pattern for state derived from props), not in an effect, so
+  // the first paint of new rows already shows them chosen. Compared by key, not by array identity,
+  // so `rows={data ?? []}` does not loop.
+  let current = state;
+  if (!sameKeys(state.keys, keys)) {
+    current = reconcile(state, rows, keys, test);
+    setState(current);
+  }
+  const selected = current.raw;
+  // rowKey is usually an inline arrow, so it is left out of the dependencies: the rows change.
   const selectedRows = React.useMemo(() => rows.filter((r) => selected.has(rowKey(r))), [rows, selected]);
-  // Forget the dropped keys too, not only hide them: a row that comes back (a filter cleared, a
-  // removal undone) returns unchosen, so a later bulk action never picks it up unasked.
-  React.useEffect(() => {
-    if (selected.size !== raw.size) setRaw(selected);
-  }, [selected, raw]);
-  const onChange = React.useCallback((next: Set<string>) => setRaw(next), []);
-  const clear = React.useCallback(() => setRaw(new Set()), []);
+  // A key with no row is never kept, so an action never reaches a row the person cannot see.
+  const onChange = React.useCallback(
+    (next: Set<string>) =>
+      setState((s) => {
+        const present = new Set(s.keys);
+        return { ...s, raw: new Set([...next].filter((k) => present.has(k))) };
+      }),
+    [],
+  );
+  const clear = React.useCallback(() => setState((s) => ({ ...s, raw: new Set() })), []);
   return { selected, selectedRows, count: selected.size, onChange, clear };
+}
+
+/** The part of a selection the surfaces drawing it (`DataTable`, `SelectableGrid`) need. */
+type SelectionLike<T> = {
+  selected: ReadonlySet<string>;
+  onChange: (next: Set<string>) => void;
+  isSelectable?: (row: T) => boolean;
+};
+
+/**
+ * Selecting rows of a surface in the order it shows them: one row, a range with Shift, and all
+ * shown. Shared by `DataTable` and `SelectableGrid`, so a range and select-all behave the same on
+ * both. `rows` are in display order (after sorting) and include rows a virtualised surface has not
+ * rendered.
+ *
+ * A range runs from the last row clicked (the anchor) to this one, over the selectable rows
+ * between, and sets them all to this row's new state, as Gmail and Finder do: Shift-clicking an
+ * unchosen row chooses the run, Shift-clicking a chosen one clears it. Every click moves the
+ * anchor. An anchor that has left the rows (filtered, removed) makes the next Shift-click a plain
+ * one.
+ * @internal
+ */
+export function useSelectRows<T>(rows: readonly T[], rowKey: (row: T) => string, selection?: SelectionLike<T>) {
+  const anchor = React.useRef<string | undefined>(undefined);
+  const keys = selection ? rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey) : [];
+  const chosen = selection ? keys.filter((k) => selection.selected.has(k)).length : 0;
+  const allChecked: boolean | "mixed" = chosen === 0 ? false : chosen === keys.length ? true : "mixed";
+
+  const toggle = (key: string, on: boolean, { shiftKey }: { shiftKey: boolean }) => {
+    if (!selection) return;
+    const next = new Set(selection.selected);
+    const from = shiftKey && anchor.current !== undefined ? keys.indexOf(anchor.current) : -1;
+    const to = keys.indexOf(key);
+    if (from >= 0 && to >= 0) {
+      const [a, b] = from < to ? [from, to] : [to, from];
+      for (const k of keys.slice(a, b + 1)) {
+        if (on) next.add(k);
+        else next.delete(k);
+      }
+    } else if (on) next.add(key);
+    else next.delete(key);
+    anchor.current = key;
+    selection.onChange(next);
+  };
+
+  // A full or mixed box clears what is shown; an empty one selects every selectable row shown.
+  // Keys outside `rows` (filtered away) are left as they are.
+  const toggleAll = () => {
+    if (!selection) return;
+    const next = new Set(selection.selected);
+    if (allChecked === false) keys.forEach((k) => next.add(k));
+    else keys.forEach((k) => next.delete(k));
+    selection.onChange(next);
+  };
+
+  return { toggle, all: { checked: allChecked, toggle: toggleAll, disabled: keys.length === 0 } };
 }
 
 /** The bar for a selection: a polite live count ("2 bookings selected"), the bulk actions, and Clear selection. Renders only the live region while nothing is chosen. */
