@@ -28,6 +28,7 @@ export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from ".
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, Skeleton, type Load } from "./components/data-view";
+export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {
   DataTable,
   TableSkeleton,
