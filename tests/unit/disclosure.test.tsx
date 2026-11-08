@@ -227,6 +227,38 @@ describe("DataTable expansion", () => {
     expect(screen.getByText("Out Today, about 14:50")).toBeInTheDocument();
   });
 
+  it("with useExpanded({ single }), opening a row closes the open one", async () => {
+    const user = userEvent.setup();
+    function Single() {
+      const expanded = useExpanded({ initial: ["b-2041"], single: true });
+      return (
+        <DataTable
+          caption="Work"
+          columns={columns}
+          rows={bookings}
+          rowKey={(b) => b.id}
+          expansion={{ ...expanded, rowLabel: (b) => `Details of ${b.member}'s booking`, detail: (b) => <p>Detail {b.member}</p> }}
+        />
+      );
+    }
+    renderWithStrata(<Single />);
+    expect(screen.getByText("Detail Priya Natarajan")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Details of Tom Ellery's booking" }));
+    expect(screen.getByText("Detail Tom Ellery")).toBeInTheDocument();
+    expect(screen.queryByText("Detail Priya Natarajan")).not.toBeInTheDocument();
+  });
+
+  it("keeps each line's place in a virtualised table when a detail above it closes", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Table rows={manyBookings} />);
+    const toggles = () => screen.getAllByRole("button", { name: /^Details of/ });
+    await user.click(toggles()[0]);
+    await user.click(toggles()[0]);
+    // Every rendered line is a row again, each with its own toggle, and the count is back.
+    expect(screen.getByRole("table", { name: "Work" })).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
+    expect(screen.queryByText(/^Out /)).not.toBeInTheDocument();
+  });
+
   it("counts detail rows in a virtualised table's row count", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Table rows={manyBookings} />);

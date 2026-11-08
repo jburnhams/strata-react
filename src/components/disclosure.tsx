@@ -108,7 +108,12 @@ export function useExpanded(options: ExpandedOptions = {}): Expanded {
 function api(expanded: ReadonlySet<string>, set: (next: Set<string>) => void, single?: boolean): Expanded {
   return {
     expanded,
-    onChange: set,
+    // With `single`, a change that opens a key keeps only that key, so `DataTable` (which calls
+    // onChange with the whole set) gets the accordion too, not only `setOpen`.
+    onChange: (next) => {
+      const opened = single ? [...next].filter((k) => !expanded.has(k)) : [];
+      set(opened.length ? new Set([opened[opened.length - 1]]) : next);
+    },
     isOpen: (key) => expanded.has(key),
     setOpen: (key, open) => {
       const next = single ? new Set<string>() : new Set(expanded);

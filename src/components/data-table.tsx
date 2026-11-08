@@ -248,6 +248,10 @@ function Table<T>({
     count: virtual ? lines.length : 0,
     getScrollElement: () => scroller.current,
     estimateSize: (i) => (lines[i]?.detail ? 160 : 41),
+    // Keyed by row and line kind, not by position: opening or closing a detail shifts every line
+    // after it, and a measured detail height must stay with its detail, not pass to the row that
+    // takes its index (rows are not measured, so a wrong height would never be corrected).
+    getItemKey: (i) => (lines[i] ? `${lines[i].row.id}${lines[i].detail ? "\u0000detail" : ""}` : i),
     overscan: 8,
     // Until the region is measured, assume it is full height: the first paint (and a test DOM
     // with no layout) shows the first page of rows instead of none.
