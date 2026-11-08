@@ -7,7 +7,7 @@
  */
 
 export { cn, typeSteps } from "./lib/utils";
-export { createFormat, format, NBSP, type ByteUnit, type Format, type NumberFormatter } from "./lib/format";
+export { createFormat, format, NBSP, toDate, type ByteUnit, type DateFormatter, type DateInput, type Format, type FormatOptions, type NumberFormatter } from "./lib/format";
 export type { IconComponent } from "./lib/icon";
 
 export {
@@ -19,7 +19,7 @@ export {
   type IconButtonProps,
   type RowActionProps,
 } from "./components/button";
-export { Checkbox, type CheckboxProps } from "./components/checkbox";
+export { Checkbox, type CheckboxProps, type CheckboxGesture } from "./components/checkbox";
 export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
@@ -28,6 +28,7 @@ export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from ".
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, Skeleton, StaleNotice, type Load, type Stale } from "./components/data-view";
+export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {
   DataTable,
   TableSkeleton,
@@ -38,7 +39,13 @@ export {
   type DataTableProps,
   type RowSelection,
 } from "./components/data-table";
-export { BulkBar, useSelection } from "./components/selection";
+export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
+export {
+  SelectableGrid,
+  type SelectableGridProps,
+  type TileAspect,
+  type TileSize,
+} from "./components/selectable-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";

@@ -65,7 +65,7 @@ describe("Checkbox", () => {
       </>,
     );
     await userEvent.click(screen.getByText("Glaze the foot ring"));
-    expect(onChange).toHaveBeenCalledWith(true);
+    expect(onChange).toHaveBeenCalledWith(true, { shiftKey: false });
     expect(screen.getByRole("checkbox", { name: "Select Tom Ellery" })).toBeChecked();
   });
 

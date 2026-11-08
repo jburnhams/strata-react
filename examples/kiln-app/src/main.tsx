@@ -12,9 +12,9 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { StrataQueryProvider } from "../../../src";
-import { KilnRoomScreen } from "../../../stories/screens/kiln-room";
+import { routes } from "./routes";
 
-const router = createBrowserRouter([{ path: "*", element: <KilnRoomScreen /> }], {
+const router = createBrowserRouter(routes, {
   basename: import.meta.env.BASE_URL.replace(/\/$/, ""),
 });
 

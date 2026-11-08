@@ -4,6 +4,7 @@ import { Button } from "./button";
 import { DataView } from "./data-view";
 import { VirtualList } from "./virtual-list";
 import type { InfiniteLoad } from "../query/infinite";
+import { useInView } from "../lib/in-view";
 
 // A list that loads its next page as the person nears the end: the view for `useInfiniteLoad`.
 // It is DataView for the first page (skeleton, error with Try again, empty state, all required)
@@ -73,7 +74,7 @@ export function InfiniteList<T>({
   const { more, itemKey } = state;
   const held = state.status === "ready" ? state.data.length : 0;
   const box = React.useRef<HTMLDivElement>(null);
-  const near = useNearEnd(state.status === "ready" && more.hasMore, rootMargin);
+  const near = useInView({ active: state.status === "ready" && more.hasMore, rootMargin });
 
   // Load on approach, and keep a worked-through queue topped up. Not after a failure: that waits
   // for Try again. Re-runs when a page lands, so a sentinel still in view asks for the next one.
@@ -157,25 +158,4 @@ export function InfiniteList<T>({
       )}
     </DataView>
   );
-}
-
-/**
- * Watches a sentinel element and reports whether it is within `rootMargin` of its scroll region
- * (the nearest `[data-strata-scroll]` ancestor, else the viewport). A callback ref, so it follows
- * the sentinel as it mounts and unmounts.
- */
-function useNearEnd(active: boolean, rootMargin: string) {
-  const [inView, setInView] = React.useState(false);
-  const [el, setEl] = React.useState<HTMLElement | null>(null);
-  React.useEffect(() => {
-    if (!active || !el || typeof IntersectionObserver === "undefined") {
-      setInView(false);
-      return;
-    }
-    const root = el.parentElement?.closest<HTMLElement>("[data-strata-scroll]") ?? null;
-    const observer = new IntersectionObserver((entries) => setInView(entries[entries.length - 1].isIntersecting), { root, rootMargin });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [active, el, rootMargin]);
-  return { ref: setEl, inView };
 }

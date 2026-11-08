@@ -26,7 +26,7 @@ describe("package exports", () => {
       expect(mod[name], name).toBeDefined();
     }
     const testing = await import(pathToFileURL(join(root, "dist/testing.js")).href);
-    for (const name of ["renderWithStrata", "createTestQueryClient", "installLayoutShims", "installFakeIntersectionObserver"]) {
+    for (const name of ["renderWithStrata", "renderRoutes", "createTestQueryClient", "installLayoutShims", "installFakeIntersectionObserver"]) {
       expect(testing[name], name).toBeTypeOf("function");
     }
   });

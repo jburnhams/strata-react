@@ -12,6 +12,10 @@ import { cn } from "../lib/utils";
 // It is the native control (an 18px box, `accent-primary`), so keyboard, forms and the platform's
 // own focus and checked rendering come free. `checked="mixed"` is the indeterminate state a
 // select-all needs; React has no prop for it, so it is set on the element.
+//
+// `onCheckedChange` also says whether Shift was held, which is how a list of checkboxes extends a
+// range (strata-react issue #32). A change event carries no modifier keys, so the label notes Shift
+// on the press that leads to it: a mouse press anywhere on the target, or Space on the box.
 
 /** A checkbox with its label as one target. `label` is required; `checked="mixed"` is indeterminate. */
 export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checked" | "onChange" | "aria-label" | "children"> & {
@@ -22,17 +26,23 @@ export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checke
   /** A muted second line under a shown label. */
   detail?: string;
   checked: boolean | "mixed";
-  onCheckedChange: (checked: boolean) => void;
+  /** Called with the new state, and whether Shift was held (a range click or Shift+Space). */
+  onCheckedChange: (checked: boolean, gesture: CheckboxGesture) => void;
 };
+
+/** How a checkbox was changed: `shiftKey` is true for Shift+click and Shift+Space, which extend a range in a list. */
+export type CheckboxGesture = { shiftKey: boolean };
 
 /** A native checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
 export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, ...props }: CheckboxProps) {
   const ref = React.useRef<HTMLInputElement>(null);
+  const shift = useShiftNote();
   React.useEffect(() => {
     if (ref.current) ref.current.indeterminate = checked === "mixed";
   }, [checked]);
   return (
     <label
+      {...shift.handlers}
       className={cn(
         "inline-flex min-h-6 min-w-6 items-start gap-3",
         hideLabel && "items-center justify-center",
@@ -47,7 +57,7 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
         aria-checked={checked === "mixed" ? "mixed" : undefined}
         aria-label={hideLabel ? label : undefined}
         disabled={disabled}
-        onChange={(e) => onCheckedChange(e.target.checked)}
+        onChange={(e) => onCheckedChange(e.target.checked, shift.take())}
         className={cn("size-4.5 shrink-0 accent-primary", !hideLabel && "mt-0.5", disabled ? "cursor-not-allowed" : "cursor-pointer")}
         {...props}
       />
@@ -58,5 +68,24 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
         </span>
       )}
     </label>
+  );
+}
+
+/** Notes Shift on the press that leads to a checkbox's change event, which has no modifier keys of its own. */
+export function useShiftNote() {
+  const held = React.useRef(false);
+  return React.useMemo(
+    () => ({
+      handlers: {
+        onMouseDown: (e: React.MouseEvent) => void (held.current = e.shiftKey),
+        onKeyDown: (e: React.KeyboardEvent) => void (held.current = e.shiftKey),
+      },
+      take: (): CheckboxGesture => {
+        const shiftKey = held.current;
+        held.current = false;
+        return { shiftKey };
+      },
+    }),
+    [],
   );
 }
