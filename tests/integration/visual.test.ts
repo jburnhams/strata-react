@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -19,14 +19,14 @@ function run(args: string[], env: Record<string, string> = {}) {
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
-function config(states: string, handlers = `[greeting("Kiln 2 is cooling")]`) {
+function config(states: string, handlers = `[greeting("Kiln 2 is cooling")]`, extra = "") {
   writeFileSync(
     join(app, "strata-visual.config.ts"),
     `import { defineVisualConfig } from "strata-react/visual";
 import { delay, http, HttpResponse } from "msw";
 const greeting = (text: string) => http.get("/api/greeting", () => HttpResponse.json({ text }));
 export default defineVisualConfig({
-  themes: ["light", "dark"],
+  themes: ["light", "dark"],${extra}
   app: {
     dir: "dist",
     base: "/app/",
@@ -46,14 +46,21 @@ beforeAll(() => {
   writeFileSync(join(app, "package.json"), JSON.stringify({ name: "app", type: "module", devDependencies: { playwright: "1.63.0" } }));
   // The app: shows that it is loading, fetches its greeting and renders it or an error, light or
   // dark from the .dark class.
+  // Its face is bundled (a fontsource file served with the build), as the runner requires; with
+  // ?font=system the text falls back to the machine's sans-serif instead.
   mkdirSync(join(app, "dist"));
+  copyFileSync(join(root, "node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2"), join(app, "dist/public-sans.woff2"));
   writeFileSync(
     join(app, "dist/index.html"),
     `<!doctype html><html><head><style>
-  body { margin: 0; font: 20px/1.4 sans-serif; background: #fafaf8; color: #222; }
+  @font-face { font-family: "Public Sans"; src: url(/app/public-sans.woff2) format("woff2"); font-weight: 100 900; }
+  body { margin: 0; font: 20px/1.4 "Public Sans"; background: #fafaf8; color: #222; }
+  body.system { font-family: sans-serif; }
+  body.pseudo #root::before { content: "\\2318"; font-family: sans-serif; }
   .dark body { background: #1c1b19; color: #eee; }
   h1 { margin: 16px; font-size: 24px; }
 </style></head><body><div id="root"></div><script type="module">
+  document.body.className = new URLSearchParams(location.search).get("font") ?? "";
   const root = document.getElementById("root");
   root.innerHTML = "<p aria-busy='true'>Loading the kiln room</p>";
   const r = await fetch("/api/greeting");
@@ -111,6 +118,21 @@ describe("strata-visual on an app's routes", () => {
     const r = run(["--filter", "home--ready--wide--light"]);
     expect(r.code).toBe(1);
     expect(r.out).toContain("error    home--ready--wide--light.png: no handler for GET /api/greeting");
+  }, 120_000);
+
+  it("fails a shot whose text is drawn in a system font, naming the face, or warns when told to", () => {
+    const states = `{ system: { path: "/?font=system" }, pseudo: { path: "/?font=pseudo" } }`;
+    config(states, undefined, `\n  baselines: "tests/visual/fonts",`);
+    const strict = run(["--update"]);
+    expect(strict.code).toBe(1);
+    expect(strict.out).toMatch(/error {4}home--system--wide--light\.png: text in a system font, which differs by machine .*: "[^"]+" in <h1> "Kiln 2 is cooling"/);
+    // Generated content on an element with no text of its own counts too.
+    expect(strict.out).toMatch(/error {4}home--pseudo--wide--light\.png: text in a system font.*: "[^"]+" in <div::before>/);
+    config(states, undefined, `\n  baselines: "tests/visual/fonts",\n  systemFonts: "warn",`);
+    const lenient = run(["--update"]);
+    expect(lenient.code).toBe(0);
+    expect(lenient.out).toMatch(/warning {2}home--system--wide--dark\.png: text in a system font/);
+    rmSync(join(app, "tests/visual/fonts"), { recursive: true, force: true });
   }, 120_000);
 
   it("exits with an error, and does not hang, on a bad route name or concurrency", () => {

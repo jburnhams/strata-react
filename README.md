@@ -187,10 +187,28 @@ npx strata-visual --filter review--error   # only some shots
 ```
 
 Baselines are named `route--state--viewport--theme.png` (`review--empty--phone--dark.png`) and
-stories `story-id--theme.png`. A shot fails when it differs from its baseline (pixelmatch at
-threshold 0.1, anti-aliasing ignored, 20 stray pixels allowed, any size change), when the page
+stories `story-id--theme.png`. A shot fails when it differs from its baseline, when any of its
+text is drawn in a font installed on the machine rather than one the page loaded, when the page
 throws or logs an error, when it makes a request no handler answers, or, in CI, when it has no
-baseline. Story tags pick the viewport: `visual-wide`, `visual-phone`, `no-visual` to skip.
+baseline.
+
+**Comparison.** Both images are box-blurred 3×3, then compared with pixelmatch at threshold 0.1
+(anti-aliased pixels ignored) and 4 differing pixels allowed; any size change fails. The blur
+keeps the ink an edge or glyph lays down and drops where exactly it fell, which is what differs
+between rasterisers: on Strata's 218 shots, Chromium's GPU raster path moved up to 159 pixels a
+shot under plain pixelmatch and at most 1 after the blur, while a changed letter still moved 2 to
+4,500 (172 of 182 caught, against 145 before). Override with `compare: { threshold, blur,
+maxDiffPixels, includeAA }` only with evidence from your own screens. The summary line says how
+many shots were pixel-identical and how many matched within tolerance (the five closest to
+failing are listed as `within`).
+
+**Fonts.** Every face must be one the page loads: bundle it with `@fontsource` (or your own
+`@font-face`) and name it first in the theme's `--font-*`. Strata's defaults fall through to
+`ui-sans-serif`, which is Cantarell on one Linux, DejaVu Sans on another and San Francisco on a
+Mac, and a glyph missing from a web font (an arrow, `⌘`) falls back the same way; no threshold
+absorbs that. The runner asks Chromium which face drew each element's text and fails the shot
+naming the face and an example (`"DejaVu Sans" in <kbd> "⌘"`). `systemFonts: "warn"` reports
+instead; `"allow"` skips the check. Story tags pick the viewport: `visual-wide`, `visual-phone`, `no-visual` to skip.
 Pages run in UTC and `en-US`; set `timezone`, `locale` or a frozen `time` in the config.
 Strata's own suite (`strata-visual.config.ts`, with the kiln-room example app in
 `examples/kiln-app/`) is a working reference.
@@ -210,6 +228,9 @@ In CI, install the pinned Chromium and upload the diffs when it fails:
 Write the baselines in that same Chromium on Linux (in CI, or in the Playwright Docker image of
 the pinned version): a Mac renders text differently. `--update` records the Chromium and platform
 in `.strata-visual.json`, and a run that differs says so beside its failures.
+`STRATA_VISUAL_CHROMIUM_ARGS` adds Chromium flags for experiments; Strata's
+`visual-portability` workflow uses it to run the suite under GPU rasterisation, on arm64 and on
+another Ubuntu against the committed baselines.
 
 ## Develop
 

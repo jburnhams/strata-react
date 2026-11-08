@@ -11,9 +11,9 @@
  */
 export { runVisual, defineVisualConfig, formatReport, pinWarnings, type RunOptions } from "./run";
 export { storybookShots, routeShots, defaultThemes } from "./targets";
-export { capture, resolveShotUrl, toFetchRequest, type CaptureOptions } from "./capture";
+export { capture, resolveShotUrl, toFetchRequest, type CaptureOptions, type Capture } from "./capture";
 export { serveStatic, type StaticServer } from "./serve";
-export { compare, decode, encode, THRESHOLD, MAX_DIFF_PIXELS, type Image, type CompareResult } from "./compare";
+export { compare, decode, encode, boxBlur, THRESHOLD, BLUR, MAX_DIFF_PIXELS, type CompareOptions, type Image, type CompareResult } from "./compare";
 export {
   viewports,
   type Theme,

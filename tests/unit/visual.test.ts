@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { http, HttpResponse } from "msw";
-import { compare, decode, encode } from "../../src/visual/compare";
+import { boxBlur, compare, decode, encode } from "../../src/visual/compare";
 import { routeShots, storybookShots } from "../../src/visual/targets";
 import { resolveShotUrl, toFetchRequest } from "../../src/visual/capture";
 import { formatReport, pinWarnings } from "../../src/visual/run";
@@ -37,13 +37,49 @@ describe("visual compare (pixelmatch)", () => {
     const changed = image(40, 20, (x, y) => (x >= 10 && x < 20 && y >= 5 && y < 15 ? [40, 90, 60] : undefined));
     const result = compare(image(40, 20), changed);
     expect(result.same).toBe(false);
-    expect(result.diffPixels).toBe(100);
+    // The block's inner 8×8 after the blur; its softened rim reads as anti-aliasing.
+    expect(result.diffPixels).toBe(64);
     expect(decode(result.diff!).width).toBe(40);
   });
 
   it("tolerates a few stray pixels", () => {
     const speck = image(40, 20, (x, y) => (x === 3 && y === 3 ? [0, 0, 0] : undefined));
     expect(compare(image(40, 20), speck).same).toBe(true);
+  });
+
+  it("says whether a match is pixel-identical", () => {
+    expect(compare(image(40, 20), image(40, 20)).identical).toBe(true);
+    const speck = image(40, 20, (x, y) => (x === 3 && y === 3 ? [0, 0, 0] : undefined));
+    expect(compare(image(40, 20), speck)).toMatchObject({ same: true, identical: false });
+  });
+
+  // An edge anti-aliased differently: the same ink, its coverage moved to the neighbouring pixel,
+  // as another machine's rasteriser does. Plain pixelmatch counts the whole edge; after the 3×3
+  // blur nothing differs.
+  const ink = [40, 40, 40] as const;
+  const mix = (cover: number) => [0, 1, 2].map((c) => Math.round(250 + (ink[c] - 250) * cover)) as [number, number, number];
+  const edge = (shift: number) =>
+    image(60, 40, (x, y) => (y < 4 || y > 35 ? undefined : x < 20 ? [...ink] : x === 20 ? mix(0.6 - shift) : x === 21 ? mix(0.2 + shift) : undefined));
+
+  it("absorbs anti-aliasing that moved along an edge", () => {
+    expect(compare(edge(0), edge(0.2), { blur: 0, includeAA: true }).diffPixels).toBe(64);
+    expect(compare(edge(0), edge(0.2))).toMatchObject({ same: true, diffPixels: 0, reason: expect.stringMatching(/^0 pixels differ \(0\.000%\), \d+ without the blur$/) });
+  });
+
+  it("still fails a small mark the size of a changed letter's stroke", () => {
+    const stroke = image(60, 40, (x, y) => (x >= 30 && x < 32 && y >= 10 && y < 18 ? [...ink] : undefined));
+    expect(compare(image(60, 40), stroke).same).toBe(false);
+  });
+
+  it("blurs with a box of the given radius and leaves flat areas alone", () => {
+    const dot = image(5, 5, (x, y) => (x === 2 && y === 2 ? [250 - 90, 250 - 90, 250 - 90] : undefined));
+    const out = boxBlur(dot, 1);
+    expect(out[(2 * 5 + 2) * 4]).toBe(240);
+    expect(out[(1 * 5 + 1) * 4]).toBe(240);
+    expect(out[0]).toBe(250);
+    expect(boxBlur(dot, 0)).toBe(dot.data);
+    expect(() => boxBlur(dot, 0.5)).toThrow("blur must be a whole number of pixels");
+    expect(() => compare(dot, image(5, 5), { blur: -1 })).toThrow("blur must be a whole number of pixels");
   });
 
   it("treats a size change as a change", () => {
@@ -166,11 +202,14 @@ describe("shot URLs and requests", () => {
 
 describe("report", () => {
   const report = (over: Partial<VisualReport>): VisualReport => ({
-    total: 4, same: 4, changed: [], added: [], obsolete: [], errors: [], warnings: [], updated: false, failed: false, ...over,
+    total: 4, same: 4, tolerated: [], changed: [], added: [], obsolete: [], errors: [], warnings: [], updated: false, failed: false, ...over,
   });
 
   it("prints what matched and, when failing, where the diffs are", () => {
     expect(formatReport(report({}))).toBe("4 of 4 screenshots match their baselines.");
+    expect(formatReport(report({ tolerated: ["b--dark.png: 1 pixels differ (0.001%)"] }))).toBe(
+      "4 of 4 screenshots match their baselines (3 identical, 1 within tolerance).\nwithin   b--dark.png: 1 pixels differ (0.001%)",
+    );
     const text = formatReport(report({ same: 3, changed: ["a--light.png: 120 pixels differ (0.100%)"], failed: true }));
     expect(text).toContain("changed  a--light.png: 120 pixels differ");
     expect(text).toContain("run with --update");

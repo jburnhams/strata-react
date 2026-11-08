@@ -4,6 +4,7 @@
 // an app's screens (strata-react issue #13).
 import type { Page } from "playwright";
 import type { RequestHandler } from "msw";
+import type { CompareOptions } from "./compare";
 
 /** The two colour schemes every shot is taken in. */
 export type Theme = "light" | "dark";
@@ -139,6 +140,21 @@ export interface VisualConfig {
   timezone?: string;
   /** The page's locale (`navigator.language`, `Intl` defaults). Default `en-US`. */
   locale?: string;
+  /**
+   * What to do with text drawn in a font installed on the machine rather than one the page
+   * loaded (a theme whose `--font-*` falls through to `ui-sans-serif`, or a glyph the web font
+   * lacks). `error` (default) fails the shot, because no comparison threshold makes Cantarell
+   * match San Francisco; `warn` reports it; `allow` skips the check. Bundle every face with
+   * `@fontsource` (or your own `@font-face`) and name it first in the theme's `--font-*`.
+   */
+  systemFonts?: "error" | "warn" | "allow";
+  /**
+   * How a screenshot is compared with its baseline. The defaults (a 3×3 blur, then pixelmatch at
+   * threshold 0.1 with 4 differing pixels allowed) absorb anti-aliasing differences between
+   * machines and still fail on a changed letter; change them only with evidence from your own
+   * screens.
+   */
+  compare?: CompareOptions;
   /** Pages captured at once. Default 4. */
   concurrency?: number;
   storybook?: StorybookTarget | string;
@@ -150,6 +166,8 @@ export interface VisualReport {
   /** Shots taken. */
   total: number;
   same: number;
+  /** `name.png: reason` for each shot that matched without being pixel-identical (anti-aliasing absorbed). */
+  tolerated: string[];
   /** `name.png: reason` for each shot that differs from its baseline. */
   changed: string[];
   /** Shots with no baseline yet (written, and copied to the output folder). */
