@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useQuery, useQueryClient, type QueryKey, type UseQueryOptions } from "@tanstack/react-query";
+import { hashKey, useQuery, useQueryClient, type QueryKey, type UseQueryOptions } from "@tanstack/react-query";
 import type { Load } from "../components/data-view";
 import type { DescribeError } from "../lib/errors";
 import { toLoad } from "./index";
@@ -13,8 +13,10 @@ import { toLoad } from "./index";
 // - `isRunning(data)` says whether the job is going; the query polls `every` ms (default 2000)
 //   only then, so an idle screen makes one request, not one every two seconds.
 // - `invalidates` names the queries the job changes; they are invalidated once, on the poll that
-//   first sees the job stopped after one that saw it running. A first read of a finished job
-//   invalidates nothing.
+//   first sees the job stopped after one that saw it running, for the same query: a first read
+//   of a finished job invalidates nothing, and neither does switching to another job's key (the
+//   new query has no status yet, which is not the old job ending). The keys invalidated are the
+//   ones given while that job was seen running.
 // - `poll()` reads the status now: the commit of the button that starts the job calls it, so
 //   polling begins without waiting for a stale time.
 // - The result is a `Load<T>` (so a failed poll keeps the last status on screen with `stale`, as
@@ -54,13 +56,19 @@ export function useJob<T, K extends QueryKey = QueryKey>({
   });
   const running = query.data !== undefined && isRunning(query.data);
 
-  const latest = React.useRef(invalidates);
-  latest.current = invalidates;
-  const was = React.useRef(running);
+  // What was last seen, for one query: whether its job ran, and what it said it would change.
+  // Only a status that has arrived counts; no data yet (a new key loading) is not "stopped".
+  const queryHash = hashKey(options.queryKey);
+  const seen = query.data === undefined ? undefined : running;
+  const was = React.useRef<{ query: string; running: boolean; invalidates: QueryKey[] } | undefined>(undefined);
   React.useEffect(() => {
-    if (was.current && !running) for (const queryKey of latest.current) void client.invalidateQueries({ queryKey });
-    was.current = running;
-  }, [running, client]);
+    if (seen === undefined) return;
+    const before = was.current;
+    if (before && before.query === queryHash && before.running && !seen) {
+      for (const queryKey of before.invalidates) void client.invalidateQueries({ queryKey });
+    }
+    was.current = { query: queryHash, running: seen, invalidates };
+  });
 
   const { refetch } = query;
   const poll = React.useCallback(() => void refetch(), [refetch]);

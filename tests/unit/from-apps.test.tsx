@@ -398,6 +398,36 @@ describe("JobStatus and useJob (#45)", () => {
     expect(readingsReads).toBe(2);
   });
 
+  it("does not take a switch to another job's key for the first job ending (Codex review of PR #53)", async () => {
+    let readingsReads = 0;
+    server.use(
+      http.get(api.logSync, ({ request }) =>
+        HttpResponse.json(new URL(request.url).searchParams.get("job") === "b" ? logSyncs.finished : logSyncs.running),
+      ),
+      http.get(api.readings, () => {
+        readingsReads++;
+        return HttpResponse.json([]);
+      }),
+    );
+    function Sync({ job: id }: { job: string }) {
+      useLoad({ queryKey: ["readings"], queryFn: () => fetchJson<unknown[]>(api.readings) });
+      const job = useJob({
+        queryKey: ["log-sync", id],
+        queryFn: () => fetchJson<LogSync>(`${api.logSync}?job=${id}`),
+        isRunning: (s) => s.running,
+        every: 1000,
+        invalidates: [["readings"]],
+      });
+      return <p>{job.status === "ready" ? `${id} ${job.running ? "running" : "stopped"}` : "loading"}</p>;
+    }
+    const { rerender } = renderWithStrata(<Sync job="a" />);
+    await screen.findByText("a running");
+    rerender(<Sync job="b" />);
+    await screen.findByText("b stopped");
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(readingsReads).toBe(1);
+  });
+
   it("invalidates nothing when the first read finds the job already finished, and poll() reads now", async () => {
     let polls = 0;
     let readingsReads = 0;
