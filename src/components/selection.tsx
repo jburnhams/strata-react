@@ -163,7 +163,7 @@ export function BulkBar({
   /** What is chosen, singular, or singular and plural: `"booking"`, `["person", "people"]`. */
   noun: string | [one: string, many: string];
   onClear: () => void;
-  /** The actions. At most one filled button, named with its verb and count. */
+  /** The actions. At most one filled button, named with its verb and count; while the bar is up it is the view's only filled button, so the screen's own primary goes to `outline`. */
   children: React.ReactNode;
   /** The product's formatters, for the count's figures and plural. Default en-GB. */
   format?: Format;
