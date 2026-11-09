@@ -122,7 +122,7 @@ scripts/                copy-css, clean, build-site
    `EmptyState` that teaches the next action. Errors say what happened in the product's words.
    A refresh that fails after a good read keeps the data and shows a `StaleNotice` (`Load`'s
    `stale`); a screen with readings says what is old in its words through `staleNotice`.
-4. One filled (`variant="default"`) button per view. Reversible removals use `useUndoable` +
+4. One filled (`variant="default"`) button per view at a time (while rows are chosen, see 5). Reversible removals use `useUndoable` +
    `UndoBar`; only irreversible ones get a confirm dialog. Filter rows with `isRemoved(id)`
    (never a second hidden set), give each removal a `failure` sentence, make `commit` the request
    plus a query invalidation, and `await flush()` before anything that depends on the removal.
@@ -130,7 +130,9 @@ scripts/                copy-css, clean, build-site
    column whose header is hidden, not empty (`hideHeader`), shown only on rows where it applies.
    Checkboxes only where a bulk action exists: `useSelection` → `DataTable selection=` (with
    `rowLabel`, and `isSelectable` for rows that cannot be chosen) → `BulkBar` with the actions, one
-   filled and named with its count. A bulk removal goes through `useUndoable` like a single one.
+   filled and named with its count. While the bar is up its action is the view's one filled
+   button, so the screen's own primary steps down: `variant={selection.count ? "outline" :
+   "default"}` (ux-research `patterns.md` §2). A bulk removal goes through `useUndoable` like a single one.
    Choosing among pictures is the same selection drawn as `SelectableGrid` (`renderImage`,
    `rowLabel`). Rows that start chosen are `useSelection`'s `initial` (keys, or a test on the
    row), never an effect that writes the selection once data arrives. Shift-click ranges come

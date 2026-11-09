@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-09
+
+**One filled button per view at a time, with a bulk bar up** (branch `claude/project-thread-3yp85x`). python-app-template showed a filled bulk "Remove 2" beside its filled "Send greeting", and the rules here said both "one filled button per view" and "BulkBar … one filled". Jonathan asked for a decision from ux-research, recorded there the same day: while rows are chosen the bulk action is the view's filled button and the screen's own primary steps down to outline. Docs only; no component or story changes, so no baselines move.
+
+- `CLAUDE.md`: "Building an app on Strata" rules 4 and 5 say "at a time" and show the one-line variant switch.
+- `src/components/selection.tsx`: `BulkBar`'s `children` TSDoc says the screen's primary goes to `outline` while the bar is up.
+- `README.md`: the Selection row says the same.
+
 ## 2026-11-08
 
 **`Disclosure`, `useExpanded` and expandable `DataTable` rows** (branch `claude/project-thread-d9xjs0`, PR #41, issue #34). Issue #34, from the Bright Horizons port, asked for a disclosure with a summary slot, an optional lazy body whose request runs only when opened, and keyboard and focus handled, so apps stop writing their own `<details>`. Jonathan asks for each issue to advance the library as a whole, so the same state drives a list of disclosures and a new `expansion` prop on `DataTable` (the issue's history list is a table in most screens), the open keys can live in the URL like sort and tabs, and a whole "Firing history" screen composes them with `useLoad` and `DataView`.
