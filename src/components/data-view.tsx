@@ -14,6 +14,12 @@ import { cn } from "../lib/utils";
 // shown was read, and offers Try again. Swapping a whole dashboard for an error panel throws away
 // readings the person was using, and a silent failure lets them act on old numbers as if live, so
 // the data stays and its age is said in words. Only a read that never produced data is an error.
+//
+// The failed read's look is replaceable (strata-react issue #50): an app with a second look (the
+// Tubes viewer, with its own tokens and pill buttons) passes `error`, a render function given the
+// message and the retry, and keeps the state machine (loading, error, ready, stale, empty) rather
+// than copying DataView to change one panel. Whatever it draws sits inside a `role="alert"` box,
+// so the failure is still announced; the default is `LoadError`, exported for reuse.
 
 /** Data still shown after a refresh failed: why the refresh failed, when the data was read, and the Try again. */
 export type Stale = {
@@ -33,6 +39,25 @@ export type Load<T> =
   | { status: "error"; message: string; retry: () => void }
   | { status: "ready"; data: T; stale?: Stale };
 
+/** What a failed read hands to an `error` renderer: the sentence for a person, and the Try again. */
+export type LoadFailure = { message: string; retry: () => void };
+
+/** The default failed-read panel: the reason on the danger tint, with Try again. Its parent carries `role="alert"`. */
+export function LoadError({ message, retry, className }: LoadFailure & { className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap items-start gap-3 rounded-surface bg-danger-subtle p-4 text-danger", className)}>
+      <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
+      <p className="min-w-0 flex-1 type-body">{message}</p>
+      <Button size="sm" onClick={retry}>
+        <RotateCcw aria-hidden />
+        Try again
+      </Button>
+    </div>
+  );
+}
+
+const defaultError = (failure: LoadFailure) => <LoadError {...failure} />;
+
 /** Every view of remote data: renders `skeleton` while loading, an alert with Try again on error, `empty` when `isEmpty`, else `children(data)`, under a `StaleNotice` when a refresh failed. The skeleton and empty state are required. */
 export function DataView<T>({
   state,
@@ -41,6 +66,7 @@ export function DataView<T>({
   empty,
   children,
   staleNotice = (stale) => <StaleNotice stale={stale} />,
+  error = defaultError,
   className,
 }: {
   state: Load<T>;
@@ -53,21 +79,14 @@ export function DataView<T>({
   children: (data: T) => React.ReactNode;
   /** Shown above the data when a refresh failed. Defaults to a `StaleNotice`; pass one with the product's words for what is old ("Readings from 13:50"). */
   staleNotice?: (stale: Stale) => React.ReactNode;
+  /** Draws a read that failed with no data, given the message and the retry. Defaults to `LoadError`. Rendered inside a `role="alert"` box. */
+  error?: (failure: LoadFailure) => React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("min-w-0", className)} aria-busy={state.status === "loading" || undefined}>
       {state.status === "loading" && skeleton}
-      {state.status === "error" && (
-        <div role="alert" className="flex flex-wrap items-start gap-3 rounded-surface bg-danger-subtle p-4 text-danger">
-          <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
-          <p className="min-w-0 flex-1 type-body">{state.message}</p>
-          <Button size="sm" onClick={state.retry}>
-            <RotateCcw aria-hidden />
-            Try again
-          </Button>
-        </div>
-      )}
+      {state.status === "error" && <div role="alert">{error({ message: state.message, retry: state.retry })}</div>}
       {state.status === "ready" && (
         <>
           {state.stale && staleNotice(state.stale)}

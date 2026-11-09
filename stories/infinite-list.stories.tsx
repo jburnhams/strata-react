@@ -138,6 +138,54 @@ function ArchiveQueue() {
   );
 }
 
+// The same log as cards in a grid that scrolls with the page (`scroll="page"`): no box of its own,
+// the grid laid out by `listClassName`, and the same next-page row (`LoadMore`) after it.
+function FiringCard({ f }: { f: Firing }) {
+  return (
+    <article className="grid gap-1 rounded-surface border border-border p-3">
+      <p className="type-label">{firingTypes[f.type].label}</p>
+      <p className="type-body-sm text-muted-foreground">
+        {kilns[f.kiln].name.split(",")[0]}, {format.shortDay.format(minuteToDate(f.endedMin))}
+      </p>
+      <p className="type-body-sm tabular-nums">
+        {format.count(f.pieces, "piece")} at {format.celsius(f.peakC)}
+      </p>
+    </article>
+  );
+}
+
+function CardsSkeleton({ cards = 3 }: { cards?: number }) {
+  return (
+    <div className="grid gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: cards }, (_, i) => (
+        <Skeleton key={i} className="h-20" />
+      ))}
+    </div>
+  );
+}
+
+function FiringGrid({ state }: { state: InfiniteLoad<Firing> }) {
+  return (
+    <InfiniteList
+      state={state}
+      label="Firings, newest first"
+      scroll="page"
+      listClassName="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      moreLabel="Show older firings"
+      skeleton={<CardsSkeleton cards={6} />}
+      moreSkeleton={<CardsSkeleton />}
+      empty={<EmptyState title="No firings yet" />}
+      end="That is every firing since the co-op opened in March."
+    >
+      {(f) => <FiringCard f={f} />}
+    </InfiniteList>
+  );
+}
+
+function GridFromApi() {
+  return <FiringGrid state={useFiringLog(9)} />;
+}
+
 const meta = {
   title: "Data/InfiniteList",
   component: FiringLog,
@@ -193,3 +241,16 @@ export const FromApiLaterPageError: Story = {
   render: () => <FromApi limit={5} />,
 };
 export const ArchiveQueueDemo: Story = { name: "Archive queue (interactive)", tags: ["no-visual"], render: () => <ArchiveQueue /> };
+
+/** Cards in a responsive grid that scrolls with the page, with Show more after the last row. */
+export const PageGrid: Story = {
+  tags: ["visual-wide"],
+  render: () => <FiringGrid state={fixed({ status: "ready", data: firings.slice(0, 6) })} />,
+};
+/** The grid with its next page on the way: card skeletons after the cards. */
+export const PageGridLoadingMore: Story = {
+  tags: ["visual-wide"],
+  render: () => <FiringGrid state={fixed({ status: "ready", data: firings.slice(0, 6) }, { loadingMore: true })} />,
+};
+/** The grid from the API, loading the next page as the end nears the viewport. */
+export const PageGridFromApi: Story = { name: "Page grid from the API (interactive)", tags: ["no-visual"], render: () => <GridFromApi /> };

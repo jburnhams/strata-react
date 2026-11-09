@@ -80,3 +80,27 @@ export const FromApiError: Story = {
   beforeEach: ({ msw }) => msw.use(bookingsServerError),
   render: () => <FromApi />,
 };
+
+// An app with a second look (a viewer side with its own layout) keeps DataView's states and draws
+// only the failure its own way; DataView still wraps it in an alert.
+function OwnFailure() {
+  return (
+    <DataView
+      state={{ status: "error", message: "The gallery could not be reached (503).", retry: () => undefined }}
+      isEmpty={(rows: Booking[]) => rows.length === 0}
+      skeleton={<TableSkeleton />}
+      empty={<EmptyState title="No pieces yet" />}
+      error={({ message, retry }) => (
+        <div className="grid justify-items-center gap-3 py-10 text-center">
+          <p className="type-body text-muted-foreground">{message}</p>
+          <Button onClick={retry}>Try again</Button>
+        </div>
+      )}
+    >
+      {() => null}
+    </DataView>
+  );
+}
+
+/** `error` draws the failed read in the app's own look: here a centred sentence and its Try again. */
+export const FailedOwnLook: Story = { name: "Failed, the app's own look", render: () => <OwnFailure /> };

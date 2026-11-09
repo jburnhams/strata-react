@@ -205,3 +205,26 @@ export const ExpansionInUrl: Story = {
   parameters: { route: "/bookings?open=b-2041" },
   render: (args) => <ExpandInUrl {...args} />,
 };
+
+// Kilns with a value some rows do not have: kiln 3 (gas, in the yard) has no element hours, and
+// kiln 4 is new and has never been serviced. `value` gives each column a typed sort that keeps
+// those rows last both ways, and the placeholder: an en dash, or "Never" where the word says more.
+type KilnService = { id: string; name: string; elementHours: number | null; serviced: string | null };
+const kilnService: KilnService[] = [
+  { id: "1", name: "Kiln 1, large electric", elementHours: 1840, serviced: "2026-06-14T09:00:00Z" },
+  { id: "2", name: "Kiln 2, small electric", elementHours: 612, serviced: "2026-09-02T09:00:00Z" },
+  { id: "3", name: "Kiln 3, raku (gas, in the yard)", elementHours: null, serviced: "2025-11-20T09:00:00Z" },
+  { id: "4", name: "Kiln 4, test kiln", elementHours: 38, serviced: null },
+];
+const serviceColumns: Column<KilnService>[] = [
+  { key: "name", header: "Kiln", value: (k) => k.name },
+  { key: "hours", header: "Element hours", numeric: true, value: (k) => k.elementHours, cell: (k) => format.count(k.elementHours, "hour") },
+  { key: "serviced", header: "Last serviced", value: (k) => k.serviced && new Date(k.serviced), missing: "Never" },
+];
+
+/** Missing values: a muted placeholder, and sorted last whichever way the column runs (here, most element hours first). */
+export const MissingValues: Story = {
+  render: () => (
+    <DataTable caption="Kiln servicing" columns={serviceColumns} rows={kilnService} rowKey={(k) => k.id} initialSort={{ key: "hours", dir: "descending" }} />
+  ),
+};

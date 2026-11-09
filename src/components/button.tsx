@@ -41,7 +41,16 @@ export type ButtonProps = React.ComponentProps<"button"> &
 /** A button with shadcn's variant names. The default variant is `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`. */
 export function Button({ className, variant, size, asChild = false, type = "button", ...props }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
-  return <Comp type={asChild ? undefined : type} className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+  // data-variant says which variant was drawn, so a test can check "one filled button per view"
+  // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
+  return (
+    <Comp
+      type={asChild ? undefined : type}
+      data-variant={variant ?? "outline"}
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
 }
 
 // An icon-only button cannot be written without a name: `label` is required by the type, becomes

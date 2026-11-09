@@ -25,18 +25,29 @@ import { cn } from "../lib/utils";
 // root margin), and once asked for it is not unloaded. `eager` is for the first few on screen.
 // There is no fade-in: a list of thumbnails is seen many times a day (ux-character.md, character
 // by frequency), so the photo simply replaces its skeleton.
+//
+// Two more uses from the Tubes viewer (strata-react issue #51), which drew plain <img>s and lost
+// all of the above:
+//
+// - `children` are drawn above the image in the same positioned box: a video's running time in
+//   one corner, "Saved" in another. They keep their place while the image loads, fails or is
+//   missing, because the box, not the image, holds them. Position them yourself (`absolute
+//   bottom-1 right-1`); they are not part of the image's name.
+// - `fallback` replaces the icon and words with the product's own drawing, such as a channel's
+//   first letter on a disc for an avatar with no picture. The missing state is still one `img`,
+//   named `alt` (with `missing` after it, when given, as "Night Sky: No picture"), so a person
+//   using a screen reader hears whose picture it is either way. A round avatar is `aspect={1}`
+//   with `className="rounded-pill"`.
 
 /** A width-over-height ratio: a number (`1.5`) or a fraction (`"4/3"`). */
 export type AspectRatio = number | `${number}/${number}`;
 
-/** The thumbnail's props. */
+/** The thumbnail's props. Either `missing` (the words shown when there is no image) or a `fallback` drawing is required. */
 export type ThumbnailProps = {
   /** The image URL. `null` when the record has no photo: the `missing` words show without a request. */
   src: string | null;
   /** What the photo shows ("Celadon bowl, front"). `""` only when the text beside it already says it. */
   alt: string;
-  /** What to show when there is no photo or it cannot be loaded, in the product's words: "Photo not found". */
-  missing: string;
   /** Width over height. The box has this shape before the image loads. Default `1`. */
   aspect?: AspectRatio;
   /** `cover` crops to fill the box (default); `contain` fits the whole image in it. */
@@ -47,15 +58,30 @@ export type ThumbnailProps = {
   eager?: boolean;
   /** How far outside the scroll region the request starts (IntersectionObserver `rootMargin`). */
   rootMargin?: string;
-  /** Layout at the call site: a width (`w-24`, `w-full`). The height follows from `aspect`. */
+  /** Layout at the call site: a width (`w-24`, `w-full`), or `rounded-pill` for an avatar. The height follows from `aspect`. */
   className?: string;
-};
+  /** Overlays drawn above the image in the same box (a running time, a "Saved" badge), in place whether the image has loaded, failed or is missing. */
+  children?: React.ReactNode;
+} & (
+  | {
+      /** What to show when there is no photo or it cannot be loaded, in the product's words: "Photo not found". */
+      missing: string;
+      /** Drawn instead of the icon and `missing` words when there is no image: a letter on a disc for an avatar. */
+      fallback?: React.ReactNode;
+    }
+  | {
+      /** Added to the missing state's name after `alt` ("Night Sky: No picture"), when given. */
+      missing?: string;
+      /** Drawn when there is no image or it cannot be loaded: a letter on a disc for an avatar. */
+      fallback: React.ReactNode;
+    }
+);
 
 type Phase = "loading" | "loaded" | "missing";
 
 const ratio = (aspect: AspectRatio) => (typeof aspect === "number" ? String(aspect) : aspect.replace("/", " / "));
 
-/** A box of fixed aspect ratio for a remote image: a skeleton until it loads, the `missing` words if it cannot, and a request only when it nears the screen. `alt` and `missing` are required. */
+/** A box of fixed aspect ratio for a remote image: a skeleton until it loads, the `missing` words (or a `fallback`) if it cannot, a request only when it nears the screen, and `children` overlaid in its corners. `alt` and `missing` or `fallback` are required. */
 export function Thumbnail({
   src,
   alt,
@@ -67,6 +93,8 @@ export function Thumbnail({
   eager = false,
   rootMargin = "200px",
   className,
+  fallback,
+  children,
 }: ThumbnailProps) {
   // The outcome is kept with the request it belongs to (`src` and `srcSet`, since the browser may
   // have loaded a candidate from either), so a new request starts loading again without an effect
@@ -101,13 +129,25 @@ export function Thumbnail({
       {phase === "missing" && (
         <div
           role="img"
-          aria-label={alt ? `${alt}: ${missing}` : missing}
-          className="absolute inset-0 grid content-center justify-items-center gap-0.5 p-1 text-center text-muted-foreground"
+          aria-label={[alt, missing].filter(Boolean).join(": ")}
+          className={cn(
+            "absolute inset-0 grid",
+            fallback === undefined && "content-center justify-items-center gap-0.5 p-1 text-center text-muted-foreground",
+          )}
         >
-          <ImageOff aria-hidden className="size-4 shrink-0" />
-          <span className="type-caption text-balance">{missing}</span>
+          {fallback === undefined ? (
+            <>
+              <ImageOff aria-hidden className="size-4 shrink-0" />
+              <span className="type-caption text-balance">{missing}</span>
+            </>
+          ) : (
+            <div aria-hidden className="grid size-full min-h-0 min-w-0">
+              {fallback}
+            </div>
+          )}
         </div>
       )}
+      {children}
     </div>
   );
 }

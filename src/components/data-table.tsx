@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchParams } from "react-router";
+import { format } from "../lib/format";
 import { cn } from "../lib/utils";
 import { Checkbox } from "./checkbox";
 import { Chevron } from "./disclosure";
@@ -44,20 +45,71 @@ import { useSelectRows } from "./selection";
 // the first of them, and has no rule between it and its row, so the two read as one. State is the
 // caller's, usually `useExpanded` (which can keep it in the URL). A virtualised table measures
 // each detail row, so details of any height scroll correctly.
+//
+// Missing values (strata-react issue #47, from the Tubes Library table): a column that gives
+// `value` gets a typed sort (numbers, then text in the locale's order with numbers in it read as
+// numbers, then dates) and a placeholder for a row whose value is `null` or `undefined`: an en
+// dash in the muted ink, named "No value" for a screen reader, or the column's `missing` word
+// where the word carries meaning ("Never"). Missing rows sort after every real value in both
+// directions, because "not known" is not "smallest"; a column's own `sort` still decides the
+// order among the rows that have a value. Without `value` a column works as before.
+
+/** What a column's `value` may be: a number, text or a date, or `null`/`undefined` when the row has none. */
+export type CellValue = number | string | Date | null | undefined;
 
 export type Column<T> = {
   key: string;
   header: string;
-  cell: (row: T) => React.ReactNode;
   /** Right-aligns and sets tabular figures. Use for every quantity. */
   numeric?: boolean;
-  sort?: (a: T, b: T) => number;
+  /** Orders two rows. With `value`, it orders only rows that have one (missing ones go last); `false` turns off `value`'s default sort. */
+  sort?: ((a: T, b: T) => number) | false;
+  /** What the cell shows when the row's `value` is missing, where the word carries meaning ("Never"). Default an en dash. */
+  missing?: string;
   /** Cells that may hold long text get truncated rather than stretching the table. */
   truncate?: boolean;
   /** Keep the header for screen readers only, as for a column of row actions. `header` still names it. */
   hideHeader?: boolean;
   className?: string;
-};
+} & (
+  | {
+      cell: (row: T) => React.ReactNode;
+      /** The row's value for this column: gives a typed default sort with missing values last, and the missing placeholder. */
+      value?: (row: T) => CellValue;
+    }
+  | {
+      /** How a row with a value is drawn. Default: numbers through `format.decimal`, dates through `format.date`, text as it is. */
+      cell?: (row: T) => React.ReactNode;
+      /** The row's value for this column: gives a typed default sort with missing values last, and the missing placeholder. */
+      value: (row: T) => CellValue;
+    }
+);
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const kind = (v: number | string | Date) => (typeof v === "number" ? 0 : typeof v === "string" ? 1 : 2);
+
+/** Orders two present values: numbers, then text (locale order, numbers in text read as numbers), then dates. */
+function compareValues(a: number | string | Date, b: number | string | Date) {
+  if (kind(a) !== kind(b)) return kind(a) - kind(b);
+  if (typeof a === "string") return collator.compare(a, b as string);
+  return Number(a) - Number(b);
+}
+
+/** A cell with no value: the column's word, or an en dash named "No value" for a screen reader. */
+function Missing({ word }: { word?: string }) {
+  return word ? (
+    <span className="text-muted-foreground">{word}</span>
+  ) : (
+    <span className="text-muted-foreground">
+      <span aria-hidden>{format.missing}</span>
+      <span className="sr-only">No value</span>
+    </span>
+  );
+}
+
+function drawValue(v: number | string | Date) {
+  return typeof v === "number" ? format.decimal(v) : v instanceof Date ? format.date(v) : v;
+}
 
 /** Row selection for a `DataTable`: the chosen row keys, how to change them, and how to name each row's checkbox. */
 export type RowSelection<T> = {
@@ -174,21 +226,46 @@ function Table<T>({
   const baseId = React.useId();
   const defs = React.useMemo<ColumnDef<T>[]>(
     () =>
-      columns.map((c) => ({
-        id: c.key,
-        // TanStack only sorts columns with an accessor; the row itself is enough, since the
-        // column's own comparator does the work.
-        accessorFn: (row) => row,
-        header: c.header,
-        cell: (info) => c.cell(info.row.original),
-        enableSorting: Boolean(c.sort),
-        sortingFn: c.sort ? (a, b) => c.sort!(a.original, b.original) : undefined,
-        meta: { numeric: c.numeric, truncate: c.truncate, hideHeader: c.hideHeader, className: c.className } satisfies Meta,
-      })),
+      columns.map((c): ColumnDef<T> => {
+        const meta = { numeric: c.numeric, truncate: c.truncate, hideHeader: c.hideHeader, className: c.className } satisfies Meta;
+        const { value, sort } = c;
+        if (!value) {
+          return {
+            id: c.key,
+            // TanStack only sorts columns with an accessor; the row itself is enough, since the
+            // column's own comparator does the work.
+            accessorFn: (row) => row,
+            header: c.header,
+            cell: (info) => c.cell?.(info.row.original),
+            enableSorting: Boolean(sort),
+            sortingFn: sort ? (a, b) => sort(a.original, b.original) : undefined,
+            meta,
+          };
+        }
+        // The accessor is the value, with null as undefined, so TanStack's `sortUndefined: "last"`
+        // keeps missing rows at the end whichever way the column is sorted (it applies before the
+        // direction is). The comparator then sees only rows that have a value.
+        return {
+          id: c.key,
+          accessorFn: (row) => value(row) ?? undefined,
+          header: c.header,
+          cell: (info) => {
+            const v = value(info.row.original);
+            if (v == null) return <Missing word={c.missing} />;
+            return c.cell ? c.cell(info.row.original) : drawValue(v);
+          },
+          enableSorting: sort !== false,
+          sortUndefined: "last",
+          sortingFn: sort
+            ? (a, b) => sort(a.original, b.original)
+            : (a, b) => compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
+          meta,
+        };
+      }),
     [columns],
   );
 
-  const sorting: SortingState = sort && columns.some((c) => c.key === sort.key && c.sort)
+  const sorting: SortingState = sort && columns.some((c) => c.key === sort.key && (c.value ? c.sort !== false : c.sort))
     ? [{ id: sort.key, desc: sort.dir === "descending" }]
     : [];
 

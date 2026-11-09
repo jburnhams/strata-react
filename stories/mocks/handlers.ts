@@ -16,7 +16,40 @@ export const api = {
   server: "/api/server",
   pieces: "/api/pieces",
   photos: "/api/photos",
+  /** `POST /api/invites` `{ email }`: invite a member to the studio. */
+  invites: "/api/invites",
+  /** `GET` the kiln log sync's status; `POST` starts one. */
+  logSync: "/api/log-sync",
 } as const;
+
+/** The kiln log sync's status: it reads each kiln controller's log in turn. */
+export type LogSync = {
+  running: boolean;
+  /** Kilns read so far, and the one being read. */
+  current: number;
+  total: number;
+  /** The kiln being read, while running. */
+  kiln?: string;
+  newReadings: number;
+  failures: { kiln: string; reason: string }[];
+  /** The sync stopped for a reason that names no kiln. */
+  error?: string;
+};
+
+/** The log sync before it has run, and at each stage: the fixtures for stories and tests. */
+export const logSyncs = {
+  idle: { running: false, current: 0, total: 0, newReadings: 0, failures: [] },
+  running: { running: true, current: 2, total: 3, kiln: "Kiln 2", newReadings: 412, failures: [] },
+  finished: { running: false, current: 3, total: 3, newReadings: 1284, failures: [] },
+  someFailed: {
+    running: false,
+    current: 3,
+    total: 3,
+    newReadings: 860,
+    failures: [{ kiln: "Kiln 3", reason: "its controller did not answer within 30 seconds" }],
+  },
+  failed: { running: false, current: 1, total: 3, newReadings: 0, failures: [], error: "The log store is full, so nothing was saved." },
+} satisfies Record<string, LogSync>;
 
 /** One page of the firing log. `after` is the id of the last firing the client holds, not an
  *  offset: firings archived since the last page drop out of the list, and an offset would skip
@@ -80,7 +113,30 @@ export const handlers = [
     await delay(600);
     return HttpResponse.json({ id: "b-4001" }, { status: 201 });
   }),
+  http.post(api.invites, async () => {
+    await delay(400);
+    return HttpResponse.json({ id: "inv-88" }, { status: 201 });
+  }),
+  http.get(api.logSync, () => HttpResponse.json(logSyncs.idle)),
+  http.post(api.logSync, () => new HttpResponse(null, { status: 202 })),
 ];
+
+/** The server refuses an invite for a reason only it can check, in its own words (FastAPI's `detail`). */
+export const inviteTaken = http.post(api.invites, async () => {
+  await delay(400);
+  return HttpResponse.json({ detail: "ada@example.org is already a member of the studio" }, { status: 409, statusText: "Conflict" });
+});
+
+/** The server's validation rejects the email field (FastAPI's 422 shape). */
+export const inviteInvalid = http.post(api.invites, () =>
+  HttpResponse.json(
+    { detail: [{ loc: ["body", "email"], msg: "Use the address the member signs in with, ending in .org or .com", type: "value_error" }] },
+    { status: 422, statusText: "Unprocessable Entity" },
+  ),
+);
+
+/** The log sync's status fixed at one stage. */
+export const logSyncAt = (stage: keyof typeof logSyncs) => http.get(api.logSync, () => HttpResponse.json(logSyncs[stage]));
 
 export const bookingsLoading = http.get(api.bookings, async () => {
   await delay("infinite");
@@ -119,7 +175,7 @@ export const withdrawServerError = http.delete(`${api.bookings}/:id`, () =>
 /** Booking a firing when the kiln is already taken: 409, for AsyncButton's error state. */
 export const bookingConflict = http.post(api.bookings, async () => {
   await delay(600);
-  return HttpResponse.json({ message: "kiln taken" }, { status: 409, statusText: "Conflict" });
+  return HttpResponse.json({ detail: "Kiln 2 is already booked for Friday's bisque" }, { status: 409, statusText: "Conflict" });
 });
 
 export const serverLoading = http.get(api.server, async () => {
