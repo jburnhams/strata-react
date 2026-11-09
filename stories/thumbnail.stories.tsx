@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataView, EmptyState, Skeleton, Thumbnail, ThumbnailSkeleton, fetchJson, useLoad } from "../src";
+import { DataView, EmptyState, Skeleton, Thumbnail, ThumbnailSkeleton, fetchJson, format, useLoad } from "../src";
 import { piecePhotos, type PiecePhoto } from "./fixtures/kiln";
 import { api, photosLoading, piecesLoading } from "./mocks/handlers";
 
@@ -90,3 +90,44 @@ export const InAList: Story = { render: () => <Pieces /> };
 
 /** The list itself loading: thumbnail-shaped skeletons. */
 export const InAListLoading: Story = { name: "In a list: loading", beforeEach: ({ msw }) => msw.use(piecesLoading), render: () => <Pieces /> };
+
+// A card's corners carry badges (a running time, "Saved"). They are the Thumbnail's children, so
+// they keep their place while the image loads, after it fails, and with no image at all.
+function Badge({ children, className }: { children: string; className: string }) {
+  return <span className={`absolute rounded-control bg-background px-1.5 py-0.5 type-caption tabular-nums text-foreground ${className}`}>{children}</span>;
+}
+
+/** Badges in the corners, over a loaded photo, one that is missing, and one still loading. */
+export const WithBadges: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-start gap-4">
+      <Thumbnail src={piecePhotos[1].photo} alt="Throwing a tea bowl" missing="Picture not found" aspect="16/9" className="w-56">
+        <Badge className="right-1.5 bottom-1.5">{format.runningTime(754)}</Badge>
+        <Badge className="top-1.5 left-1.5">Saved</Badge>
+      </Thumbnail>
+      <Thumbnail src="/api/photos/p-305-moved.svg" alt="Glazing a bottle" missing="Picture not found" aspect="16/9" className="w-56">
+        <Badge className="right-1.5 bottom-1.5">{format.runningTime(3729)}</Badge>
+      </Thumbnail>
+      <Thumbnail src={null} alt="Raku firing in the yard" missing="No picture yet" aspect="16/9" className="w-56">
+        <Badge className="top-1.5 left-1.5">Fetching</Badge>
+      </Thumbnail>
+    </div>
+  ),
+};
+
+function Initial({ name }: { name: string }) {
+  return <span className="grid place-items-center bg-muted type-label text-muted-foreground">{name[0]}</span>;
+}
+
+/** Avatars: `aspect={1}` and `rounded-pill`, with the member's initial as the `fallback` when there is no picture. Each is named by `alt`. */
+export const Avatars: Story = {
+  render: () => (
+    <ul className="flex items-center gap-3">
+      {piecePhotos.slice(2, 6).map((p) => (
+        <li key={p.id}>
+          <Thumbnail src={p.photo} alt={p.member} aspect={1} className="w-10 rounded-pill" fallback={<Initial name={p.member} />} />
+        </li>
+      ))}
+    </ul>
+  ),
+};

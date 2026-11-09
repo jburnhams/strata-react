@@ -47,7 +47,7 @@ function LiveFailure() {
   );
 }
 
-/** Click it: the server answers 409, and the hook's `error` ("The request was refused (409): Conflict.") is announced with "Try again" and shown beside the button. */
+/** Click it: the server answers 409 with its reason in the body, and the hook's `error` ("The request was refused: Kiln 2 is already booked for Friday's bisque.") is announced with "Try again" and shown beside the button. */
 export const InteractiveFailure: Story = {
   tags: ["no-visual"],
   beforeEach: ({ msw }) => msw.use(bookingConflict),

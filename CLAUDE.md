@@ -38,7 +38,7 @@ First use: the live demos and examples in ux-research. Then other products.
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
 | Icons | lucide-react | Components accept any `IconComponent` |
-| Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` |
+| Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset; a long-running server job is `useJob(...)` → `JobStatus`. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` with the response body and the server's reason |
 | Tables | TanStack Table | Behind `DataTable`'s small column API (`key`, `header`, `cell`, `numeric`, `sort`) |
 | Long lists | TanStack Virtual | `DataTable`, `VirtualList` and `InfiniteList` virtualise from 100 rows automatically |
 | Routing | React Router | `AppShell`/`SideNav` use `NavLink`; tabs (`Tabs param=`), table sort (`sortParam`), filters and open panels live in the URL |
@@ -88,7 +88,11 @@ scripts/                copy-css, clean, build-site
 6. **Numbers and dates through `format`** (`createFormat(locale)`); units joined with a
    non-breaking space; quantities right-aligned with `tabular-nums`. Dates by use: `clock`,
    `day`, `shortDay`, `date`, `dateTime` (a log or history row), each called with a Date or
-   the API's ISO string. A missing date style is added to `format`, never built in a screen.
+   the API's ISO string. Ages are `format.ago`, media durations `format.runningTime`, big counts
+   `format.compact`, a part of a whole `format.share` (never "0%" for a part that is there). A
+   value that is not known is `null` and prints `format.missing` (an en dash); in a `DataTable`
+   give the column `value` (sorted last both ways) and `missing` only where a word says more
+   ("Never"). A missing style is added to `format`, never built in a screen.
 7. **Motion**: `transition-state` (named properties, never `transition: all`), `press` on
    controls, `enter-moment` once for a rare moment. Reduced motion is handled in the base layer.
 8. **Open the file with a comment saying why** it is shaped that way, citing the finding. Change
@@ -121,7 +125,12 @@ scripts/                copy-css, clean, build-site
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
    `EmptyState` that teaches the next action. Errors say what happened in the product's words.
    A refresh that fails after a good read keeps the data and shows a `StaleNotice` (`Load`'s
-   `stale`); a screen with readings says what is old in its words through `staleNotice`.
+   `stale`); a screen with readings says what is old in its words through `staleNotice`. An app
+   with a second look changes only the failed panel, through `error` (DataView, InfiniteList),
+   never by copying DataView. A server's reason for a 4xx reaches the person through `fetchJson`
+   (`HttpError.reason`); per-field messages go under their `Field` through `useAsyncAction`'s
+   `fieldErrors` (its `validate`, or the server's 422), never a hand-kept problem state. A
+   one-field form ("Invite by email") puts its button in `Field action=`.
 4. One filled (`variant="default"`) button per view at a time (while rows are chosen, see 5). Reversible removals use `useUndoable` +
    `UndoBar`; only irreversible ones get a confirm dialog. Filter rows with `isRemoved(id)`
    (never a second hidden set), give each removal a `failure` sentence, make `commit` the request
@@ -141,7 +150,10 @@ scripts/                copy-css, clean, build-site
    A row that shows more of itself in place is a `Disclosure` (in a list) or `DataTable
    expansion=` (in a table), with `useExpanded({ param })` holding the open keys; the detail's
    `useLoad` lives in the detail's own component, so it runs when the row opens. Never a raw
-   `<details>`: it mounts every closed body, and each one's request runs on load.
+   `<details>`: it mounts every closed body, and each one's request runs on load. A paged grid
+   that scrolls with the page is `InfiniteList scroll="page" listClassName=…`; a list or grid the
+   screen draws itself ends with `LoadMore` (items marked `data-index`), never a hand-written
+   IntersectionObserver (`useInView` is exported for anything else that waits to be near the screen).
 7. A screen that clears a queue (approve, reject, next) is worked from the keyboard:
    `useActiveItem` + `ActiveList`, one `Shortcut[]` list passed to both `useHotkeys` and
    `KeysLegend`, answers through `useUndoable`. Never bind single keys with a hand-written
@@ -150,6 +162,9 @@ scripts/                copy-css, clean, build-site
    for like things, as shares of `max`), what a whole is made of is a `CompositionBar`, a way
    to another app or area is a `LinkCard` in a `LinkCardList`, and sizes go through
    `format.bytes`. An app with no settings page puts `ColorSchemeChoice compact` in the header.
+   A job the server runs for a while is `useJob({ isRunning, invalidates })` → `JobStatus` with
+   its three words, its sentence and each failure named; never a hand-written `refetchInterval`
+   plus an effect watching it end.
 9. A rare, earned completion uses `Done` with a past-tense title and what happens next.
 10. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`. Export the app's
@@ -159,7 +174,9 @@ scripts/                copy-css, clean, build-site
    Call `installLayoutShims()` in the Vitest setup file so measuring components render, and
    `installFakeIntersectionObserver()` (with `uninstall()` after each test) to scroll a list to
    its end. Copy from `format` keeps its non-breaking space in role names: query
-   `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`.
+   `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`. Check the
+   one-filled-button rule with `expectOneFilledButton()` (after an interaction too), and read an
+   `AsyncButton`'s phase with `asyncButtonPhase(el)`, never with class names or its text.
 11. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
@@ -180,7 +197,7 @@ scripts/                copy-css, clean, build-site
 | `npm run site` | the Pages site in `site/`: Storybook at `/`, API at `/api/`, baselines gallery at `/visuals/` |
 
 Visual tests run through `strata-visual`, the same command apps use, so a change to
-`src/visual/` is tested on this repo's own 282 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
+`src/visual/` is tested on this repo's own 316 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
 demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings

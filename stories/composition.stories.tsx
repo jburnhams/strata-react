@@ -59,3 +59,19 @@ export const EmptyPart: Story = {
 
 /** On a phone: the bar and the table keep their order and the figures stay right-aligned. */
 export const Phone: Story = { ...Memory, tags: ["visual-phone"] };
+
+/** A part that is small but not zero (2.4 GB of a 512 GB disk) reads "<1%", never "0%", and keeps a sliver of the bar. */
+export const SmallPart: Story = {
+  render: () => (
+    <CompositionBar
+      label="Disk, 512 GB in all"
+      parts={[
+        { key: "photos", label: "Kiln photos", value: 180e9 },
+        { key: "app", label: "This app's data", value: 2.4e9 },
+      ]}
+      total={512e9}
+      restLabel="Free"
+      formatValue={(v) => format.bytes(v)}
+    />
+  ),
+};

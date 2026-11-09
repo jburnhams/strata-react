@@ -20,7 +20,10 @@ import { cn } from "../lib/utils";
 //   empty track, and it must be named (`restLabel`, such as "Free"), so the table can say what the
 //   gap is. Neither the remainder nor a part is ever left unlabelled.
 // - Values are formatted by the caller (`formatValue`), as LineChart's `formatY` is, so units stay
-//   the product's; shares go through `format.percent` unless `formatShare` says otherwise.
+//   the product's; shares go through `format.share` unless `formatShare` says otherwise.
+// - A part that is there is never shown as nothing (strata-react issue #43: 2.4 GB of a 512 GB
+//   disk read "0%"). Its share prints "<1%" (`format.share`), and its segment keeps a 4px sliver
+//   however small it is; the table carries the exact figure.
 
 /** One part of a `CompositionBar`'s whole. */
 export type CompositionPart = {
@@ -37,7 +40,7 @@ export type CompositionBarProps = {
   label: string;
   parts: CompositionPart[];
   formatValue: (value: number) => string;
-  /** Formats a part's share of the whole (0 to 1). Defaults to `format.percent`. */
+  /** Formats a part's share of the whole (0 to 1). Defaults to `format.share` ("<1%" for a part that rounds to 0). */
   formatShare?: (share: number) => string;
   /** Header of the parts column, for screen readers and over the table. Defaults to "Part". */
   partHeader?: string;
@@ -75,7 +78,7 @@ export function CompositionBar({
   label,
   parts,
   formatValue,
-  formatShare = format.percent,
+  formatShare = format.share,
   partHeader = "Part",
   valueHeader = "Amount",
   shareHeader = "Share",
@@ -101,7 +104,7 @@ export function CompositionBar({
             // Grow by share from a zero basis, so the gaps come out of every segment fairly and the
             // parts fill the track exactly. Shares, not raw values: flex-grow factors that sum to
             // less than 1 fill only that fraction of the track (found in review).
-            <div key={r.key} className="h-full min-w-0" style={{ flex: `${r.share} 1 0`, background: r.colour }} />
+            <div key={r.key} className="h-full min-w-1" style={{ flex: `${r.share} 1 0`, background: r.colour }} />
           ))}
         {rest > 0 && <div className="h-full min-w-0" style={{ flex: `${shareOf(rest)} 1 0` }} />}
       </div>

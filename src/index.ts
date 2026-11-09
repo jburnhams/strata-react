@@ -7,7 +7,21 @@
  */
 
 export { cn, typeSteps } from "./lib/utils";
-export { createFormat, format, NBSP, toDate, type ByteUnit, type DateFormatter, type DateInput, type Format, type FormatOptions, type NumberFormatter } from "./lib/format";
+export {
+  createFormat,
+  format,
+  NBSP,
+  MISSING,
+  toDate,
+  type ByteUnit,
+  type CountOptions,
+  type DateFormatter,
+  type DateInput,
+  type Format,
+  type FormatOptions,
+  type NumberFormatter,
+} from "./lib/format";
+export { useInView, type InViewOptions } from "./lib/in-view";
 export type { IconComponent } from "./lib/icon";
 
 export {
@@ -20,20 +34,30 @@ export {
   type RowActionProps,
 } from "./components/button";
 export { Checkbox, type CheckboxProps, type CheckboxGesture } from "./components/checkbox";
-export { AsyncButton, useAsyncAction, type Phase, type AsyncLabels, type AsyncAction, type AsyncActionOptions } from "./components/async-button";
+export {
+  AsyncButton,
+  useAsyncAction,
+  type Phase,
+  type AsyncLabels,
+  type AsyncAction,
+  type AsyncActionOptions,
+  type FieldErrors,
+} from "./components/async-button";
 export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from "./components/meter";
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
-export { DataView, EmptyState, Skeleton, StaleNotice, type Load, type Stale } from "./components/data-view";
+export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type LoadFailure, type Stale } from "./components/data-view";
+export { JobStatus, type JobStatusProps, type JobFailure, type JobWords } from "./components/job-status";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {
   DataTable,
   TableSkeleton,
   parseSort,
   serialiseSort,
+  type CellValue,
   type Column,
   type Sort,
   type DataTableProps,
@@ -49,7 +73,7 @@ export {
   type TileSize,
 } from "./components/selectable-grid";
 export { VirtualList } from "./components/virtual-list";
-export { InfiniteList, type InfiniteListProps } from "./components/infinite-list";
+export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
 export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
 export { PageHeader } from "./components/page-header";
 export {
@@ -84,12 +108,18 @@ export {
   staleOf,
   useLoad,
   useInfiniteLoad,
+  useJob,
   fetchJson,
   HttpError,
   describeHttpError,
+  readErrorBody,
   type DescribeError,
+  type ErrorBody,
+  type FetchJsonOptions,
   type InfiniteLoad,
   type InfiniteLoadOptions,
+  type Job,
+  type JobOptions,
   type More,
 } from "./query";
-export { describeActionError } from "./lib/errors";
+export { describeActionError, fieldErrorsOf } from "./lib/errors";

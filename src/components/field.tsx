@@ -5,6 +5,16 @@ import { cn } from "../lib/utils";
 // Field owns the wiring a generated form usually forgets: the label's htmlFor, aria-describedby
 // pointing at the hint and the error, and aria-invalid. Controls read it from context, so a control
 // inside a Field cannot end up unlabelled or silently invalid.
+//
+// A one-field form ("paste a link, Add", a search box, "invite by email") puts its button on the
+// control's row, not beside the whole field (strata-react issue #46, from the Tubes Library
+// screen): in a plain flex row the button lines up with label, hint and error together and drifts
+// off the input whenever one shows. `action` is drawn on the control's row, both at --control-h,
+// with the hint and the error under both across the full width. It wraps under the control only
+// when the row cannot keep the control 14rem wide beside it: on a phone a short "Add" stays on the
+// row, as a search box's button does, and a long label or a narrow column wraps. The error and hint stay the input's description; the
+// button is not described by them. Field messages for a form come from `useAsyncAction`'s
+// `fieldErrors` (its `validate`, or the server's 422), so no `problem` state is kept by hand.
 
 type FieldState = { id: string; describedBy?: string; invalid: boolean };
 const FieldContext = React.createContext<FieldState | null>(null);
@@ -28,12 +38,14 @@ export type FieldProps = {
   hint?: React.ReactNode;
   /** What went wrong and how to fix it, in one sentence. Shown under the control, never in a toast. */
   error?: string;
+  /** A button on the control's row, for a one-field form (an `AsyncButton` "Add"). The hint and error run under both; on a narrow screen it wraps under the control. */
+  action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 };
 
 /** A labelled form field: wires the label, hint, error, `aria-describedby` and `aria-invalid` into the one control it wraps. */
-export function Field({ label, id: idProp, hint, error, children, className }: FieldProps) {
+export function Field({ label, id: idProp, hint, error, action, children, className }: FieldProps) {
   const generated = React.useId();
   const id = idProp ?? generated;
   const hintId = hint ? `${id}-hint` : undefined;
@@ -46,7 +58,14 @@ export function Field({ label, id: idProp, hint, error, children, className }: F
         <label htmlFor={id} className="type-label text-foreground">
           {label}
         </label>
-        {children}
+        {action ? (
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-56 flex-1">{children}</div>
+            <div className="flex shrink-0 items-center">{action}</div>
+          </div>
+        ) : (
+          children
+        )}
         {error && (
           <p id={errorId} className="flex items-start gap-1.5 type-body-sm text-danger">
             <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />

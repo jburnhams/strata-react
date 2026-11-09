@@ -91,3 +91,78 @@ describe("sort in the URL", () => {
     expect(parseSort("member")).toEqual({ key: "member", dir: "ascending" });
   });
 });
+
+describe("cn and radius roles", () => {
+  it("lets a call site's radius role replace the component's", () => {
+    expect(cn("rounded-control bg-muted", "rounded-pill")).toBe("bg-muted rounded-pill");
+  });
+});
+
+describe("format for missing values (issue #47)", () => {
+  it("prints an en dash for null or undefined from every number and date formatter", () => {
+    expect(format.integer(null)).toBe("–");
+    expect(format.decimal(undefined)).toBe("–");
+    expect(format.percent(null)).toBe("–");
+    expect(format.date(null)).toBe("–");
+    expect(format.dateTime(undefined)).toBe("–");
+    expect(format.count(null, "piece")).toBe("–");
+    expect(format.missing).toBe("–");
+  });
+  it("takes the product's own placeholder", () => {
+    const f = createFormat("en-GB", { missing: "n/a" });
+    expect(f.integer(null)).toBe("n/a");
+    expect(f.ago(undefined)).toBe("n/a");
+  });
+  it("still refuses a value that is not a date", () => {
+    expect(() => format.date("someday")).toThrow(RangeError);
+  });
+});
+
+describe("format.share (issue #43)", () => {
+  it("never prints a part that is there as 0%, or a part short of the whole as 100%", () => {
+    expect(format.share(2.4 / 512)).toBe("<1%");
+    expect(format.share(0.996)).toBe(">99%");
+    expect(format.share(0)).toBe("0%");
+    expect(format.share(1)).toBe("100%");
+    expect(format.share(0.42)).toBe("42%");
+    expect(format.share(0.005)).toBe("1%");
+  });
+});
+
+describe("format.ago, compact and runningTime (issue #52)", () => {
+  const now = new Date("2026-11-09T12:00:00Z");
+  const before = (ms: number) => new Date(now.getTime() - ms);
+  const minute = 60_000;
+  const day = 86_400_000;
+  it("says how long ago in the largest unit reached, rounded down", () => {
+    expect(format.ago(before(20_000), now)).toBe("now");
+    expect(format.ago(before(5 * minute), now)).toBe("5 minutes ago");
+    expect(format.ago(before(3 * 60 * minute), now)).toBe("3 hours ago");
+    expect(format.ago(before(day + 5 * 60 * minute), now)).toBe("yesterday");
+    expect(format.ago(before(13 * day), now)).toBe("last week");
+    expect(format.ago(before(21 * day), now)).toBe("3 weeks ago");
+    expect(format.ago(before(70 * day), now)).toBe("2 months ago");
+    expect(format.ago(before(800 * day), now)).toBe("2 years ago");
+  });
+  it("says how far ahead a future time is, and takes ISO strings", () => {
+    expect(format.ago("2026-11-09T14:30:00Z", now)).toBe("in 2 hours");
+    expect(format.ago(now.toISOString(), now.toISOString())).toBe("now");
+  });
+  it("writes compact figures, and counts with the noun agreeing with the exact count", () => {
+    // The locale writes the suffix: en-GB's thousand is "k", en-US's "K".
+    expect(format.compact(1234)).toBe("1.2k");
+    expect(createFormat("en-US").compact(1234)).toBe("1.2K");
+    expect(format.compact(2_500_000)).toBe("2.5m");
+    expect(format.count(1234, "view", undefined, { compact: true })).toBe(`1.2k${NBSP}views`);
+    expect(format.count(1, "view", undefined, { compact: true })).toBe(`1${NBSP}view`);
+  });
+  it("writes a running time as a player does, with a dash for unknown", () => {
+    expect(format.runningTime(245)).toBe("4:05");
+    expect(format.runningTime(3729)).toBe("1:02:09");
+    expect(format.runningTime(59.9)).toBe("0:59");
+    expect(format.runningTime(0)).toBe("0:00");
+    expect(format.runningTime(null)).toBe("–");
+    expect(format.runningTime(-1)).toBe("–");
+    expect(format.runningTime(Number.NaN)).toBe("–");
+  });
+});

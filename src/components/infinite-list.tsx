@@ -1,10 +1,11 @@
 import * as React from "react";
 import { CircleAlert, RotateCcw } from "lucide-react";
 import { Button } from "./button";
-import { DataView } from "./data-view";
+import { DataView, type LoadFailure } from "./data-view";
 import { VirtualList } from "./virtual-list";
 import type { InfiniteLoad } from "../query/infinite";
 import { useInView } from "../lib/in-view";
+import { cn } from "../lib/utils";
 
 // A list that loads its next page as the person nears the end: the view for `useInfiniteLoad`.
 // It is DataView for the first page (skeleton, error with Try again, empty state, all required)
@@ -27,6 +28,121 @@ import { useInView } from "../lib/in-view";
 // more by button moves focus to the first new item, because the button the person pressed is
 // gone. The list scrolls in its own region (`height`) from the first page, so passing 100 items
 // and switching to virtual rows changes nothing on screen.
+//
+// Not every paged view is a list in a box (strata-react issue #49, from the Tubes viewer, whose
+// videos are a responsive card grid that scrolls with the page). So the next-page row is its own
+// export, `LoadMore`, which an app puts after any list or grid it draws itself, and InfiniteList
+// is built on it. `scroll="page"` is the same in InfiniteList: no scroll region of its own and no
+// virtual rows, the items in a plain `ul` laid out by `listClassName` (a grid), and the sentinel
+// watching the viewport. Virtual rows need a box of known height, which a page-scrolled grid is
+// not; a feed long enough to need them belongs in the region. `error` and `moreError` replace the
+// look of a failed first page and a failed later page, as DataView's `error` does.
+
+/** The next-page row's props: `InfiniteList`'s, for a list or grid the app draws itself. */
+export type LoadMoreProps<T> = {
+  state: InfiniteLoad<T>;
+  /** The button behind the sentinel, in the product's words: "Show older firings". */
+  moreLabel: string;
+  /** The items of a page on its way, mirroring the ones already drawn. */
+  moreSkeleton: React.ReactNode;
+  /** After the last page: say that this is everything. */
+  end?: React.ReactNode;
+  /** How far before the end the next page is asked for (IntersectionObserver `rootMargin`). Default 400px. */
+  rootMargin?: string;
+  /** Load more whenever fewer than this many items are held. */
+  keepAtLeast?: number;
+  /** Draws a failed later page, given the reason and the Try again. Rendered inside a `role="alert"` box. */
+  error?: (failure: LoadFailure) => React.ReactNode;
+  className?: string;
+};
+
+function MoreFailed({ message, retry }: LoadFailure) {
+  return (
+    <div className="flex flex-wrap items-start gap-3 border-t border-border bg-danger-subtle px-3 py-2 text-danger">
+      <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <p className="min-w-0 flex-1 type-body-sm">{message}</p>
+      <Button size="sm" onClick={retry}>
+        <RotateCcw aria-hidden />
+        Try again
+      </Button>
+    </div>
+  );
+}
+
+const defaultMoreError = (failure: LoadFailure) => <MoreFailed {...failure} />;
+
+/**
+ * The row after a cursor-paged list or grid: loads the next page as it nears the screen, shows
+ * `moreSkeleton` while it comes, says why it failed with Try again, offers Show more for the
+ * keyboard, and `end` after the last page. After Show more it focuses the first new item: mark
+ * each item with `data-index` and put this row beside the list, in the same parent.
+ */
+export function LoadMore<T>({
+  state,
+  moreLabel,
+  moreSkeleton,
+  end,
+  rootMargin = "400px",
+  keepAtLeast = 0,
+  error: drawError = defaultMoreError,
+  className,
+}: LoadMoreProps<T>) {
+  const { more } = state;
+  const ready = state.status === "ready";
+  const held = ready ? state.data.length : 0;
+  const box = React.useRef<HTMLDivElement>(null);
+  const near = useInView({ active: ready && more.hasMore, rootMargin });
+
+  // Load on approach, and keep a worked-through queue topped up. Not after a failure: that waits
+  // for Try again. Re-runs when a page lands, so a sentinel still in view asks for the next one.
+  const { hasMore, loadingMore, error, loadMore } = more;
+  React.useEffect(() => {
+    if (!ready || !hasMore || loadingMore || error) return;
+    if (near.inView || held < keepAtLeast) loadMore();
+  }, [ready, hasMore, loadingMore, error, near.inView, held, keepAtLeast, loadMore]);
+
+  // After a click on Show more or Try again, focus the first new item: the button is gone.
+  const focusFrom = React.useRef<number | null>(null);
+  const loadByHand = () => {
+    focusFrom.current = held;
+    loadMore();
+  };
+  React.useEffect(() => {
+    const from = focusFrom.current;
+    if (from === null || loadingMore) return;
+    if (held > from) {
+      const item = box.current?.parentElement?.querySelector<HTMLElement>(`[data-index="${from}"]`);
+      if (item) {
+        item.tabIndex = -1;
+        item.focus();
+      }
+      focusFrom.current = null;
+    } else if (error || !hasMore) focusFrom.current = null;
+  }, [held, loadingMore, error, hasMore]);
+
+  if (!ready) return null;
+  return (
+    <div ref={box} className={className}>
+      {hasMore && !error && <div ref={near.ref} aria-hidden className="h-px" />}
+      {loadingMore ? (
+        <div aria-hidden className="border-t border-border">{moreSkeleton}</div>
+      ) : error ? (
+        <div role="alert">{drawError({ message: error, retry: loadByHand })}</div>
+      ) : hasMore ? (
+        <div className="border-t border-border py-3">
+          <Button size="sm" onClick={loadByHand}>
+            {moreLabel}
+          </Button>
+        </div>
+      ) : (
+        end && <div className="border-t border-border py-3 type-body-sm text-muted-foreground">{end}</div>
+      )}
+      <p role="status" className="sr-only">
+        {loadingMore ? "Loading more" : ""}
+      </p>
+    </div>
+  );
+}
 
 /** The infinite list's props. */
 export type InfiniteListProps<T> = {
@@ -48,13 +164,21 @@ export type InfiniteListProps<T> = {
   rootMargin?: string;
   /** Load more whenever fewer than this many items are held. */
   keepAtLeast?: number;
+  /** `region` (default): rows in a scroll region of `height`, virtual from `virtualizeFrom`. `page`: a plain list that scrolls with the page, laid out by `listClassName`. */
+  scroll?: "region" | "page";
+  /** With `scroll="page"`: the classes of the `ul`, such as a responsive grid (`grid gap-4 sm:grid-cols-2 lg:grid-cols-3`). */
+  listClassName?: string;
+  /** Draws a failed first page. Defaults to DataView's `LoadError`. */
+  error?: (failure: LoadFailure) => React.ReactNode;
+  /** Draws a failed later page. Defaults to a danger row with Try again. */
+  moreError?: (failure: LoadFailure) => React.ReactNode;
   estimateSize?: number;
   height?: number;
   virtualizeFrom?: number;
   className?: string;
 };
 
-/** A cursor-paged list for `useInfiniteLoad`: DataView's first-page states, virtual rows, and a next-page row that loads on approach, shows a skeleton, or says why it failed with Try again. */
+/** A cursor-paged list for `useInfiniteLoad`: DataView's first-page states, virtual rows (or a page-scrolled grid), and a `LoadMore` row that loads on approach, shows a skeleton, or says why it failed with Try again. */
 export function InfiniteList<T>({
   state,
   label,
@@ -66,96 +190,68 @@ export function InfiniteList<T>({
   end,
   rootMargin = "400px",
   keepAtLeast = 0,
+  scroll = "region",
+  listClassName,
+  error,
+  moreError,
   estimateSize,
   height = 480,
   virtualizeFrom,
   className,
 }: InfiniteListProps<T>) {
   const { more, itemKey } = state;
-  const held = state.status === "ready" ? state.data.length : 0;
-  const box = React.useRef<HTMLDivElement>(null);
-  const near = useInView({ active: state.status === "ready" && more.hasMore, rootMargin });
-
-  // Load on approach, and keep a worked-through queue topped up. Not after a failure: that waits
-  // for Try again. Re-runs when a page lands, so a sentinel still in view asks for the next one.
-  const { hasMore, loadingMore, error, loadMore } = more;
-  React.useEffect(() => {
-    if (state.status !== "ready" || !hasMore || loadingMore || error) return;
-    if (near.inView || held < keepAtLeast) loadMore();
-  }, [state.status, hasMore, loadingMore, error, near.inView, held, keepAtLeast, loadMore]);
-
-  // After a click on Show more or Try again, focus the first new item: the button is gone.
-  const focusFrom = React.useRef<number | null>(null);
-  const loadByHand = () => {
-    focusFrom.current = held;
-    loadMore();
-  };
-  React.useEffect(() => {
-    const from = focusFrom.current;
-    if (from === null || loadingMore) return;
-    if (held > from) {
-      const row = box.current?.querySelector<HTMLElement>(`li[data-index="${from}"]`);
-      if (row) {
-        row.tabIndex = -1;
-        row.focus();
-      }
-      focusFrom.current = null;
-    } else if (error || !hasMore) focusFrom.current = null;
-  }, [held, loadingMore, error, hasMore]);
-
   const footer = (
-    <div>
-      {hasMore && !error && <div ref={near.ref} aria-hidden className="h-px" />}
-      {loadingMore ? (
-        <div aria-hidden className="border-t border-border">{moreSkeleton}</div>
-      ) : error ? (
-        <div role="alert" className="flex flex-wrap items-start gap-3 border-t border-border bg-danger-subtle px-3 py-2 text-danger">
-          <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-          <p className="min-w-0 flex-1 type-body-sm">{error}</p>
-          <Button size="sm" onClick={loadByHand}>
-            <RotateCcw aria-hidden />
-            Try again
-          </Button>
-        </div>
-      ) : hasMore ? (
-        <div className="border-t border-border py-3">
-          <Button size="sm" onClick={loadByHand}>
-            {moreLabel}
-          </Button>
-        </div>
-      ) : (
-        end && <div className="border-t border-border py-3 type-body-sm text-muted-foreground">{end}</div>
-      )}
-      <p role="status" className="sr-only">
-        {loadingMore ? "Loading more" : ""}
-      </p>
-    </div>
+    <LoadMore
+      // A grid's cards have their own edges, so the row keeps a gap from them.
+      className={scroll === "page" ? "mt-4" : undefined}
+      state={state}
+      moreLabel={moreLabel}
+      moreSkeleton={moreSkeleton}
+      end={end}
+      rootMargin={rootMargin}
+      keepAtLeast={keepAtLeast}
+      error={moreError}
+    />
   );
 
   return (
     <DataView
       state={state}
-      isEmpty={(items) => items.length === 0 && !hasMore}
+      isEmpty={(items) => items.length === 0 && !more.hasMore}
       skeleton={skeleton}
       empty={empty}
+      error={error}
       className={className}
     >
-      {(items) => (
-        <div ref={box} aria-busy={loadingMore || undefined}>
-          <VirtualList
-            label={label}
-            items={items}
-            itemKey={itemKey}
-            estimateSize={estimateSize}
-            height={height}
-            virtualizeFrom={virtualizeFrom}
-            bounded
-            footer={footer}
-          >
-            {children}
-          </VirtualList>
-        </div>
-      )}
+      {(items) =>
+        scroll === "page" ? (
+          <div aria-busy={more.loadingMore || undefined}>
+            <ul aria-label={label} className={cn("min-w-0", listClassName ?? "grid")}>
+              {items.map((item, i) => (
+                <li key={itemKey(item)} data-index={i} className="min-w-0">
+                  {children(item, i)}
+                </li>
+              ))}
+            </ul>
+            {footer}
+          </div>
+        ) : (
+          <div aria-busy={more.loadingMore || undefined}>
+            <VirtualList
+              label={label}
+              items={items}
+              itemKey={itemKey}
+              estimateSize={estimateSize}
+              height={height}
+              virtualizeFrom={virtualizeFrom}
+              bounded
+              footer={footer}
+            >
+              {children}
+            </VirtualList>
+          </div>
+        )
+      }
     </DataView>
   );
 }

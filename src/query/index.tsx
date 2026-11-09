@@ -8,9 +8,9 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type { Load, Stale } from "../components/data-view";
-import { HttpError, describeHttpError, type DescribeError } from "../lib/errors";
+import { HttpError, describeHttpError, readErrorBody, type DescribeError, type ErrorBody } from "../lib/errors";
 
-export { HttpError, describeHttpError, type DescribeError };
+export { HttpError, describeHttpError, readErrorBody, type DescribeError, type ErrorBody };
 
 // Data loading, the Strata way: TanStack Query fetches and caches, and every view of the result
 // goes through DataView, which takes a Load<T>. `toLoad` is the one bridge between them, so a
@@ -67,14 +67,34 @@ export function useLoad<T, K extends QueryKey = QueryKey>(
   return toLoad(useQuery(rest), describeError);
 }
 
-/** fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default, and the usual commit for a write. A 204 or empty body resolves to undefined. */
-export async function fetchJson<T>(input: string | URL, init?: RequestInit): Promise<T> {
+/** Options for `fetchJson` beyond `fetch`'s own. */
+export type FetchJsonOptions = {
+  /** Finds the server's reason and per-field messages in an error body. Default `readErrorBody` (FastAPI's `detail`, `message`, `error`). */
+  readError?: (body: unknown) => ErrorBody;
+};
+
+/**
+ * fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default, and the usual commit for a write.
+ * A 204 or empty body resolves to undefined. An error response's body is read onto the HttpError (`body`, `reason`, `fieldErrors`).
+ */
+export async function fetchJson<T>(input: string | URL, init?: RequestInit, { readError = readErrorBody }: FetchJsonOptions = {}): Promise<T> {
   // Headers, tuple arrays and plain objects are all valid HeadersInit; normalise before adding the
   // default so a caller's Authorization (or their own Accept) is never dropped.
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   const res = await fetch(input, { ...init, headers });
-  if (!res.ok) throw new HttpError(res.status, res.statusText, String(input));
+  if (!res.ok) {
+    // The body is read as text and parsed only when it parses: a proxy's HTML 502 page or an empty
+    // body must still throw the HttpError, never a JSON SyntaxError in its place.
+    const raw = await res.text().catch(() => "");
+    let body: unknown = raw || undefined;
+    try {
+      if (raw) body = JSON.parse(raw);
+    } catch {
+      // Not JSON: keep the text.
+    }
+    throw new HttpError(res.status, res.statusText, String(input), body, readError(body));
+  }
   // Writes (DELETE, a PUT that returns nothing) answer 204 or an empty body; that is success, not a
   // JSON parse error.
   const text = res.status === 204 ? "" : await res.text();
@@ -82,3 +102,4 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit): Pro
 }
 
 export { useInfiniteLoad, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
+export { useJob, type Job, type JobOptions } from "./job";

@@ -14,6 +14,7 @@ import { StrataQueryProvider, createQueryClient } from "../query";
 import { ThemeProvider, type ColorSchemePreference } from "../components/theme";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
+export { filledButtons, expectOneFilledButton, asyncButtonPhase } from "./buttons";
 export {
   installFakeIntersectionObserver,
   type FakeIntersectionObserverControls,

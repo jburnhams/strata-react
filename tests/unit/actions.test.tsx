@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RefreshCw } from "lucide-react";
+import { http, HttpResponse } from "msw";
 import { AsyncButton, Button, IconButton, fetchJson, useAsyncAction } from "../../src";
 import { api, bookingConflict } from "../../stories/mocks/handlers";
 import { server } from "../utils/server";
@@ -150,6 +151,18 @@ describe("AsyncButton", () => {
 
   it("describes an HttpError from fetchJson in a sentence, not its log message", async () => {
     server.use(bookingConflict);
+    function Live() {
+      const { phase, run, error } = useAsyncAction(() => fetchJson(api.bookings, { method: "POST", body: "{}" }));
+      return <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />;
+    }
+    render(<Live />);
+    await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeEnabled();
+    expect(screen.getByRole("status")).toHaveTextContent("The request was refused: Kiln 2 is already booked for Friday's bisque. Try again");
+  });
+
+  it("falls back to the status text when the refusal has no body", async () => {
+    server.use(http.post(api.bookings, () => new HttpResponse(null, { status: 409, statusText: "Conflict" })));
     function Live() {
       const { phase, run, error } = useAsyncAction(() => fetchJson(api.bookings, { method: "POST", body: "{}" }));
       return <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />;

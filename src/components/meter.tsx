@@ -86,7 +86,8 @@ export function Meter({
   const detailId = React.useId();
   const share = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   const crossed = crossedThreshold(share, thresholds, worseWhen);
-  const text = valueText ?? `${format.percent(share)} used`;
+  // `share`, not `percent`: a disk with a little on it reads "<1% used", never "0% used".
+  const text = valueText ?? `${format.share(share)} used`;
   const hasNote = Boolean(crossed || detail);
   // Two ids rather than one wrapper, so the description reads "Nearly full, 431 GB of 466 GB"
   // with a break between the parts instead of running them together.
