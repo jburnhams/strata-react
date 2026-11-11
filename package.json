@@ -43,7 +43,7 @@
   "scripts": {
     "clean": "node scripts/clean.mjs",
     "build": "npm run clean && vite build && node scripts/copy-css.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit",
     "test": "npm run typecheck && npm run test:unit",
     "test:unit": "vitest run --project unit",
     "test:integration": "npm run build && vitest run --project integration",
@@ -96,11 +96,11 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.3.1",
     "@tanstack/react-virtual": "^3.14.26",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.500.0",
+    "lucide-react": "^1.72.0",
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
     "tailwind-merge": "^3.3.0"
@@ -134,7 +134,8 @@
     "storybook": "^10.6.6",
     "tailwindcss": "^4.3.5",
     "typedoc": "^0.28.20",
-    "typescript": "~5.9",
+    "typescript": "npm:@typescript/typescript6@~6.0.2",
+    "typescript7": "npm:typescript@~7.0.2",
     "vite": "^8.3.6",
     "vite-plugin-dts": "^5.1.2",
     "vitest": "^5.1.0"

@@ -1,10 +1,11 @@
 import * as React from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
@@ -202,16 +203,23 @@ export function DataTable<T>(props: DataTableProps<T>) {
 }
 
 function LocalSortedTable<T>(props: DataTableProps<T>) {
-  return <Table {...props} sortState={useLocalSort(props.initialSort)} />;
+  return <Table {...(props as unknown as DataTableProps<Rec>)} sortState={useLocalSort(props.initialSort)} />;
 }
 
 function UrlSortedTable<T>(props: DataTableProps<T> & { sortParam: string }) {
-  return <Table {...props} sortState={useUrlSort(props.sortParam, props.initialSort)} />;
+  return <Table {...(props as unknown as DataTableProps<Rec>)} sortState={useUrlSort(props.sortParam, props.initialSort)} />;
 }
 
 type Meta = { numeric?: boolean; truncate?: boolean; hideHeader?: boolean; className?: string };
 
-function Table<T>({
+// The one TanStack feature in use: sorting, on the client. TanStack Table 9 is tree-shaken by feature, so
+// nothing else (pagination, filtering, TanStack's own selection or expansion) is bundled.
+const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() });
+// TanStack Table 9 requires object or array rows. Every row a DataTable draws is a record, but the
+// public `T` stays unconstrained so an app's row types need no change: the cast is in the two wrappers.
+type Rec = Record<string, any>; // TanStack's own RowData
+
+function Table<T extends Rec>({
   caption,
   columns,
   rows,
@@ -224,9 +232,9 @@ function Table<T>({
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
   const baseId = React.useId();
-  const defs = React.useMemo<ColumnDef<T>[]>(
+  const defs = React.useMemo<ColumnDef<typeof features, T, unknown>[]>(
     () =>
-      columns.map((c): ColumnDef<T> => {
+      columns.map((c): ColumnDef<typeof features, T, unknown> => {
         const meta = { numeric: c.numeric, truncate: c.truncate, hideHeader: c.hideHeader, className: c.className } satisfies Meta;
         const { value, sort } = c;
         if (!value) {
@@ -238,7 +246,7 @@ function Table<T>({
             header: c.header,
             cell: (info) => c.cell?.(info.row.original),
             enableSorting: Boolean(sort),
-            sortingFn: sort ? (a, b) => sort(a.original, b.original) : undefined,
+            sortFn: sort ? (a, b) => sort(a.original, b.original) : undefined,
             meta,
           };
         }
@@ -256,7 +264,7 @@ function Table<T>({
           },
           enableSorting: sort !== false,
           sortUndefined: "last",
-          sortingFn: sort
+          sortFn: sort
             ? (a, b) => sort(a.original, b.original)
             : (a, b) => compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
           meta,
@@ -269,13 +277,12 @@ function Table<T>({
     ? [{ id: sort.key, desc: sort.dir === "descending" }]
     : [];
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns: defs,
     state: { sorting },
     getRowId: (row) => rowKey(row),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     // No pagination here, and expansion is the caller's state, not TanStack's: nothing to reset. Left on, TanStack resets the page
     // index whenever `rows` is a new array; a screen that filters its rows on every render (the
     // kiln room after Withdraw) then re-renders forever and the tab freezes. Found by the
@@ -457,7 +464,7 @@ function Table<T>({
                   )}
                 </td>
               )}
-              {row.getVisibleCells().map((cell) => {
+              {row.getAllCells().map((cell) => {
                 const meta = cell.column.columnDef.meta as Meta | undefined;
                 return (
                   <td

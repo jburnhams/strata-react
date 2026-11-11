@@ -2,6 +2,13 @@
 
 ## 2026-11-11
 
+**TypeScript 7, TanStack Table 9 and lucide-react 1.70** (branch `claude/project-thread-d1q9sc`). Dependabot's three major bumps (#63, #64, #65) failed CI. Jonathan asked for them to be migrated, so this branch does all three and replaces those PRs.
+
+- TypeScript 7 (#63) ships the native compiler without the JavaScript API that TypeDoc, Storybook's docgen, MSW and `vite-plugin-dts` import. TypeDoc 0.28 also accepts TypeScript only up to 6.0, which is why `npm ci` failed on #63. `package.json`: `typescript` is now `@typescript/typescript6` (the TypeScript 6 API, published by the TypeScript team for this case), and TypeScript 7 is the devDependency `typescript7`. `typecheck` runs `node node_modules/typescript7/bin/tsc --noEmit`, a path rather than `tsc`, because the TypeScript 6 package brings its own `tsc` bin. `tsconfig` needed no change. `CLAUDE.md`'s stack table says the same.
+- `src/components/data-table.tsx`: ported to TanStack Table 9 (#64). It uses `useTable` with an explicit `tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })`, the only feature `DataTable` uses, so nothing else is bundled. Columns use `sortFn` in place of `sortingFn`. Rows use `getAllCells`, because `getVisibleCells` now belongs to the column visibility feature. Table 9 needs record rows (`RowData`), so the two wrappers cast the props once, and `DataTable<T>`'s public `T` stays unconstrained. Behaviour is unchanged: all unit tests and all 316 visual shots pass as before.
+- lucide-react 1.72 (#65 asked for 1.70): no API change for us. Lucide redrew some icons (the moon in `ColorSchemeChoice`, the sort arrows in `DataTable` headers, and the icons in the shell and the status marks), so 95 baselines in `tests/visual/baselines/` changed. Each differs in at most 0.3 % of its pixels, all in the icons. The baselines were written in Chromium 153.0.8010.12, the version `.strata-visual.json` already records.
+- Checks run on Node 26.13: `npm run build`, `npm test` (275 tests), `npm run test:integration` (20 tests), `npm run docs:api`, and `npm run test:visual` (316 of 316 after the update).
+
 **Changelog entry for the Dependabot configuration** (branch `claude/project-thread-d1q9sc`). PR #54 added `.github/dependabot.yml` without an entry here, which Codex's review on #54 pointed out; this records it.
 
 - `.github/dependabot.yml` (added in #54): daily version updates for GitHub Actions and npm (`/`), up to 20 open PRs each; minor and patch updates are grouped into one PR per ecosystem, and each major bump is its own PR. There are no ignore rules: a breaking major is fixed, or its pin is recorded as a decision here.

@@ -33,7 +33,7 @@ First use: the live demos and examples in ux-research. Then other products.
 | Concern | Choice | How it is used |
 |---|---|---|
 | Runtime for tooling | Node 26 (LTS) | `.nvmrc`, `engines`, every workflow; TypeScript targets ES2024. Apps need it too (`engines` is published): it is the floor, and apps upgrade rather than Strata carrying an older Node |
-| UI | React 19, TypeScript strict | Function components; `React.useId` for ids |
+| UI | React 19, TypeScript 7 strict | Function components; `React.useId` for ids. `npm run typecheck` runs TypeScript 7's `tsc` (devDependency `typescript7`); `typescript` is `@typescript/typescript6`, the TypeScript 6 API that TypeDoc, Storybook's docgen, MSW and the `.d.ts` build still need (TS 7 ships no JS API) |
 | Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
