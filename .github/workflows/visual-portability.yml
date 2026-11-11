@@ -49,7 +49,7 @@ jobs:
         run: |
           node bin/strata-visual.js | tee visual-report.txt || true
           { echo "### ${{ matrix.name }}"; echo '```'; head -1 visual-report.txt; grep -E '^(changed|error|warning)' visual-report.txt | head -40; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: visual-portability-${{ strategy.job-index }}
           path: |
