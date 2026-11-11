@@ -36,7 +36,7 @@ jobs:
           - { name: "Ubuntu 24.04 x64, GPU raster", os: ubuntu-24.04, flags: "--enable-gpu-rasterization --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist" }
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 26.x
           cache: npm
