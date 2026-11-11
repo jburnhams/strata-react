@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-11
+
+**Changelog entry for the Dependabot configuration** (branch `claude/project-thread-d1q9sc`). PR #54 added `.github/dependabot.yml` without an entry here, which Codex's review on #54 pointed out; this records it.
+
+- `.github/dependabot.yml` (added in #54): daily version updates for GitHub Actions and npm (`/`), up to 20 open PRs each; minor and patch updates are grouped into one PR per ecosystem, and each major bump is its own PR. There are no ignore rules: a breaking major is fixed, or its pin is recorded as a decision here.
+
 ## 2026-11-09
 
 **The ten issues from Tubes and python-app-template, in one change** (branch `claude/project-thread-1y96tr`, PR #53, issues #42, #43, #45, #46, #47, #48, #49, #50, #51, #52). Jonathan asked for one PR covering every open issue, instead of the usual one thread per issue. Each fix is built on what exists: the server's reason and per-field messages flow from `fetchJson` through `useAsyncAction` into `Field`, the new next-page row is the one `InfiniteList` already drew, the job poller is a `Load<T>` like every read, and the test helpers read attributes the components now set rather than class names.
