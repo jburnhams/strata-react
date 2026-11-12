@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Button as AriaButton } from "react-aria-components";
 import { format } from "../lib/format";
 import { phraseAt, wordAt, type TranscriptGroup, type TranscriptPhrase } from "../lib/transcript";
 import { cn } from "../lib/utils";
@@ -240,27 +241,26 @@ function PhraseRow({ phrase, mode, active, word, onSeek, play }: { phrase: Trans
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           {phrase.speaker && <span className="type-label text-muted-foreground">{phrase.speaker}</span>}
-          <button type="button" onClick={() => onSeek(phrase.start, { phraseId: phrase.id })} className="rounded-control type-caption tabular-nums text-muted-foreground hover:text-foreground" aria-label={`Play from ${format.runningTime(phrase.start)}`}>
+          <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className="rounded-control type-caption tabular-nums text-muted-foreground hover:text-foreground" aria-label={`Play from ${format.runningTime(phrase.start)}`}>
             {format.runningTime(phrase.start)}
-          </button>
+          </AriaButton>
         </div>
         {alt !== null ? (
-          <button type="button" onClick={() => onSeek(phrase.start, { phraseId: phrase.id })} className={cn("rounded-control text-left type-body", active && "font-medium underline decoration-2 underline-offset-4")}>
+          <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className={cn("rounded-control text-left type-body", active && "font-medium underline decoration-2 underline-offset-4")}>
             {alt}
-          </button>
+          </AriaButton>
         ) : (
           <p className="type-body">
             {phrase.words.map((w, i) => (
               <React.Fragment key={i}>
                 {i > 0 && " "}
-                <button
-                  type="button"
+                <AriaButton
                   aria-current={i === word ? "true" : undefined}
-                  onClick={() => onSeek(w.start, { phraseId: phrase.id, wordIndex: i })}
+                  onPress={() => onSeek(w.start, { phraseId: phrase.id, wordIndex: i })}
                   className={cn("rounded-control hover:bg-muted", i === word && "font-medium underline decoration-2 underline-offset-4")}
                 >
                   {w.text}
-                </button>
+                </AriaButton>
               </React.Fragment>
             ))}
           </p>

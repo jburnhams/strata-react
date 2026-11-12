@@ -421,19 +421,26 @@ export type SourceAttacher = (el: HTMLMediaElement, src: string, context: Stream
  * Returns `reload`, for the player's Try again (`useMediaElement`'s `onRetry`), and gives the engine's failures to `onProblem` (`reportProblem`).
  */
 export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void): { reload: (at: number) => void } {
-  const hold = React.useRef<StreamAttachment | null>(null);
+  const hold = React.useRef<{ el: HTMLMediaElement; src: string; attach: SourceAttacher; attachment: StreamAttachment } | null>(null);
   const problem = React.useRef(onProblem);
   problem.current = onProblem;
+  // Runs after every commit, not only when `src` or `attach` change: a `MediaPlayer` that switches
+  // between audio and video replaces the element and keeps the ref object, so the element's identity
+  // is checked too, and the engine is moved to the new one.
   React.useEffect(() => {
     const el = ref.current;
+    const now = hold.current;
+    if (now && now.el === el && now.src === src && now.attach === attach) return;
+    now?.attachment.detach();
+    hold.current = null;
     if (!el || !attach || !src) return;
-    hold.current = attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m) });
-    return () => {
-      hold.current?.detach();
-      hold.current = null;
-    };
-  }, [ref, src, attach]);
-  return React.useMemo(() => ({ reload: (at: number) => hold.current?.reload(at) }), []);
+    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m) }) };
+  });
+  React.useEffect(() => () => {
+    hold.current?.attachment.detach();
+    hold.current = null;
+  }, []);
+  return React.useMemo(() => ({ reload: (at: number) => hold.current?.attachment.reload(at) }), []);
 }
 
 /** One file in a sequence. */
