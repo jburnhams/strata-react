@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Button as AriaButton } from "react-aria-components";
+import { Button as AriaButton, type PressEvent } from "react-aria-components";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
@@ -39,7 +39,11 @@ export const buttonVariants = cva(
 );
 
 export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "style"> &
-  VariantProps<typeof buttonVariants> & { className?: string };
+  VariantProps<typeof buttonVariants> & {
+    className?: string;
+    /** React Aria's press event (mouse, touch, pen and keyboard alike). `onClick` also works. */
+    onPress?: (event: PressEvent) => void;
+  };
 
 /**
  * A button with shadcn's variant names, built on React Aria's `Button` (press handling that behaves
@@ -47,7 +51,7 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`.
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
-export function Button({ className, variant, size, type = "button", disabled, ...props }: ButtonProps & { onPress?: (e: import("react-aria-components").PressEvent) => void }) {
+export function Button({ className, variant, size, type = "button", disabled, ...props }: ButtonProps) {
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
