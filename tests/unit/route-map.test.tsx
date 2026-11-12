@@ -185,6 +185,26 @@ describe("RouteMap", () => {
     expect(Number(width())).toBeGreaterThan(Number(plain));
   });
 
+  it("makes lines pressable when onSelect arrives later, with the same routes", () => {
+    const same = { routes: [run, loop] };
+    const { container, rerender } = renderWithStrata(<RouteMap {...props(same)} />);
+    expect(container.querySelector(".leaflet-interactive")).toBeNull();
+    const seen: string[] = [];
+    rerender(<RouteMap {...props({ ...same, onSelect: (id) => seen.push(id) })} />);
+    expect(container.querySelector(".leaflet-interactive")).not.toBeNull();
+    fireEvent.click(paths(container)[0]);
+    expect(seen).toEqual(["run"]);
+  });
+
+  it("describes a coloured route of any length (200,000 values do not overflow the call stack)", () => {
+    const n = 200_000;
+    const points = Array.from({ length: n }, (_, i) => [51.5 + i * 1e-7, -0.12 + i * 1e-7] as const);
+    const values = Array.from({ length: n }, (_, i) => i % 50);
+    const scale = [{ at: 0, colour: "var(--chart-1)" }];
+    const { container } = renderWithStrata(<RouteMap {...props({ routes: [{ id: "long", label: "Long ride", points, values, arrows: false, ends: false }], colourScale: scale, colourScaleLabel: "Speed" })} />);
+    expect(container.querySelector("p.sr-only")).toHaveTextContent("Speed from 0 to 49.");
+  });
+
   it("does not make lines pressable without onSelect", () => {
     const { container } = renderWithStrata(<RouteMap {...props({ routes: [run, loop] })} />);
     expect(container.querySelector(".leaflet-interactive")).toBeNull();

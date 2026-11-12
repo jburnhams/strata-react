@@ -114,6 +114,17 @@ export type RouteMapProps = {
   className?: string;
 };
 
+/** The smallest and largest value, without spreading the array (a long recording passes the engine's argument limit). */
+function extent(values: readonly number[]): [number, number] {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const v of values) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return [lo, hi];
+}
+
 const tuple = (p: LatLng): L.LatLngTuple => [p[0], p[1]];
 const plain = (v: number) => String(v);
 
@@ -185,6 +196,7 @@ export function RouteMap({
   const summaryId = React.useId();
   const latest = React.useRef({ onSelect });
   latest.current = { onSelect };
+  const selectable = Boolean(onSelect);
   const marker = React.useRef<L.CircleMarker | null>(null);
   const markerScheme = React.useRef<string | null>(null);
 
@@ -239,7 +251,7 @@ export function RouteMap({
         here = ` ${positionLabel}: ${format.distance(along[i] ?? 0, units)} along.`;
       }
       let range = "";
-      if (stops.length && r.values?.length) range = ` ${colourScaleLabel ?? "Value"} from ${formatValue(Math.min(...r.values))} to ${formatValue(Math.max(...r.values))}.`;
+      if (stops.length && r.values?.length) range = ` ${colourScaleLabel ?? "Value"} from ${formatValue(extent(r.values)[0])} to ${formatValue(extent(r.values)[1])}.`;
       return `${r.label}: ${format.distance(total, units)}${shape}.${range}${here}`;
     });
     return `Map with ${routes.length === 1 ? "one route" : `${routes.length} routes`}. ${parts.join(" ")}`;
@@ -281,7 +293,7 @@ export function RouteMap({
       const selected = route.id === selectedId;
       const dim = selectedId !== null && !selected;
       const weight = (route.weight ?? 4) + (selected ? 2 : 0);
-      const style = { weight, opacity: dim ? 0.55 : 1, lineCap: "round" as const, lineJoin: "round" as const, interactive: Boolean(latest.current.onSelect), bubblingMouseEvents: false };
+      const style = { weight, opacity: dim ? 0.55 : 1, lineCap: "round" as const, lineJoin: "round" as const, interactive: selectable, bubblingMouseEvents: false };
       const lines: L.Polyline[] = [];
       if (stops.length && route.values?.length) {
         for (const run of stepRuns(route.points, route.values, stepOf)) {
@@ -321,7 +333,7 @@ export function RouteMap({
       }
     });
     return () => void group.remove();
-  }, [map, routes, scheme, selectedId, stops]);
+  }, [map, routes, scheme, selectedId, stops, selectable]);
 
   // Fit to the routes when the map first has a size and whenever the set of routes changes.
   const routeKey = routes.map((r) => r.id).join("\n");
