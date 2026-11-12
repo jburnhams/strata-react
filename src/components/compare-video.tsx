@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, useWidth, useZoom, zoomShortcuts } from "./compare-parts";
+import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, makePicker, useWidth, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
 import type { Candidate, CompareMode, VideoMedia } from "./compare";
 import { SLOW_RATES, VideoControls, useVideoClock, type VideoLoop } from "./video-clock";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
@@ -59,6 +59,16 @@ import type { Region } from "../lib/viewport";
 // `PairVote`; arrows are left to the picture (they pan once zoomed). One list for the keys and the
 // legend (`extraShortcuts`).
 //
+// Click to choose (issue #201): as in `Compare`, `onPick` is called with the side clicked, whether the
+// clip plays or is paused (a click never toggles play: that stays on Space and the transport), in
+// side by side (the cell), swipe (the side of the divider), blink (the side showing), and on a
+// region's crop (the crop is the same frame, so a click on the enlarged face of X picks X). Fade has
+// no pick and says so. `CompareVideoGrid` has no vote and no pick.
+//
+// Judging short clips (issue #203): `autoPlay` starts the pair when it loads (muted, and again for
+// each new pair) and `loopWhole` loops the whole clip; both are the clock's (video-clock.tsx), with the
+// reasons there. A new pair now starts at 0, paused or autoplaying.
+//
 // Checked: React Aria has no video player or comparison part; the transport, seek bar and rate
 // choice are the media parts built on its slider, toolbar and select, and the swipe divider is its
 // slider, as in `Compare`.
@@ -92,6 +102,16 @@ export type CompareVideoProps = {
   onLoopChange?: (loop: VideoLoop) => void;
   /** Named boxes to look at enlarged, as in `Compare`, on the same clock; a box drawn by hand (Shift-drag) is for a paused clip. Nearest-neighbour while one is shown. */
   regions?: readonly Region[];
+  /** Called with the side clicked or tapped (side by side, swipe by the side of the divider, blink the side showing; not fade), whether the clip plays or not. A click never toggles play. A `PairVote` or `PairJudge` slot sets this. */
+  onPick?: (side: "a" | "b") => void;
+  /** Whether a click chooses at all when `onPick` is given. Default true; `false` for a screen where a click must only pan. */
+  pick?: boolean;
+  /** Words for click to choose. Defaults say "Click to choose A". */
+  pickWords?: PickWords;
+  /** Start playing when the pair has loaded, muted (unless the person has chosen a sound level), and again for each new pair. Off with reduced motion unless `"always"`. If the browser refuses, the pair stays paused with Play showing. Default false. */
+  autoPlay?: boolean | "always";
+  /** Loop the whole clip, from its end back to 0, until the judge answers. A range set with `i` and `o` wins while both ends are set; `c` goes back to the whole clip. Default false. */
+  loopWhole?: boolean;
   /** Which video's sound is heard; the other is muted. Default "a". */
   audio?: "a" | "b" | "none";
   /** Draw nearest-neighbour when shown larger than the video's own pixels (`zoomed`, default), always, or never. */
@@ -108,8 +128,9 @@ export type CompareVideoProps = {
 };
 
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
-export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
-  const clock = useVideoClock({ fps: a.media.fps ?? 30, loop: loopProp, onLoopChange, audio: audio === "none" ? null : audio === "a" ? 0 : 1 });
+export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", onPick, pick = true, pickWords, autoPlay = false, loopWhole = false, pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
+  const clock = useVideoClock({ fps: a.media.fps ?? 30, loop: loopProp, onLoopChange, audio: audio === "none" ? null : audio === "a" ? 0 : 1, autoPlay, loopWhole, pairKey: `${a.media.src}|${b.media.src}` });
+  const picker = pick && onPick ? makePicker(a, b, onPick, pickWords) : null;
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const [divider, setDivider] = React.useState(50);
@@ -168,7 +189,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
         {([a, b] as const).map((c, i) => (
           <figure key={i} className="grid gap-1.5">
             <Caption c={c} blind={blind} />
-            <ViewportFrame {...frameProps} label={`Frame ${c.label}`} ref={i === 0 ? frameRef : undefined}>
+            <ViewportFrame {...frameProps} label={`Frame ${c.label}`} ref={i === 0 ? frameRef : undefined} pick={picker?.one(i === 0 ? "a" : "b")}>
               {i === 0 && skeleton}
               {video(c, i)}
             </ViewportFrame>
@@ -188,6 +209,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           {...frameProps}
           ref={frameRef}
           cover={mode === "swipe" ? { content: video(a, 0), shown: divider } : undefined}
+          pick={mode === "swipe" ? picker?.split(divider) : mode === "blink" ? picker?.one(showing) : undefined}
           label={mode === "blink" ? `Frame ${(showing === "a" ? a : b).label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
@@ -221,6 +243,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
         <RegionChips state={rg} />
+        {picker && mode === "fade" && <p className="type-caption text-muted-foreground">{picker.unavailable(MODE_LABEL.fade)}</p>}
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>

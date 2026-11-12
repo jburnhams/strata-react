@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, Picture, VIEWPORT_HEIGHT, ZoomControls, useZoom, zoomShortcuts } from "./compare-parts";
+import { Caption, FullscreenButton, Picture, VIEWPORT_HEIGHT, ZoomControls, makePicker, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
@@ -31,6 +31,15 @@ import type { Region } from "../lib/viewport";
 // caller passes "A" and "B"), the caller's `alt` and `note` are never put on the page, and the
 // real `id` is never rendered at all. Mind the URL: `src` reaches the DOM, so a blind caller serves
 // the pictures under neutral addresses (the arena's `img/{token}/left`).
+//
+// Click to choose (issue #201, from the models judge, where a click on the picture used to answer and
+// became a pan inside `Compare`): `onPick` is called with "a" or "b" when a side is clicked, in the
+// views where that is unambiguous: side by side (the side clicked), swipe (the side of the divider
+// clicked) and blink (the side showing). Fade and difference have no pick and say so under the
+// view's controls. `ViewportFrame` decides click versus pan and waits out the double-click window
+// (see viewport.tsx); this file only says what each view's click means. The keys and the vote bar
+// stay the way to answer (a `PairVote` passes `onPick` through, with `pending` respected); `pick={false}`
+// is for a screen where a click must only pan. Blind: the hover words use the `label` only.
 //
 // Failure is a state: a picture that does not load says so in `missing` (required, in the product's
 // words) in its own place, and the other side is still usable. One filled button rule: this
@@ -112,6 +121,12 @@ export type CompareProps = {
   maxHeight?: string;
   /** Named boxes in the source's coordinates to look at enlarged: a strip of chips, keys `q` `w` `e` `r` `y` `u`, nearest-neighbour drawing while one is shown, and Shift-drag to make another. They work in every view. The same share of each side is shown, whatever its pixel size. Label them by content ("Face"), never by candidate. */
   regions?: readonly Region[];
+  /** Called with the side clicked or tapped, in the views where a click is unambiguous: side by side, swipe (by the side of the divider) and blink (the side showing). A pointer convenience: the keys and the vote bar stay the way to answer. A `PairVote` sets this for you. */
+  onPick?: (side: "a" | "b") => void;
+  /** Whether a click chooses at all when `onPick` is given. Default true; `false` for a screen where a click must only pan. */
+  pick?: boolean;
+  /** Words for click to choose. Defaults say "Click to choose A". */
+  pickWords?: PickWords;
   /** Bind the view, zoom and full-screen keys on the window. Default true; turn off when a surrounding screen binds the same keys. */
   keys?: boolean;
   /** Shortcuts of the surrounding screen (the answer keys of a `PairVote`), bound with Compare's own and drawn in the same legend, so there is one list and the two cannot clash unseen. Listed first. */
@@ -122,7 +137,7 @@ export type CompareProps = {
 };
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, regions, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, regions, onPick, pick = true, pickWords, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -158,6 +173,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
     <Picture c={c} blind={blind} missing={missing} imgRef={ref} onNatural={onNatural} pixelated={rg.active !== null} />
   );
   const learn = (w: number, h: number) => setLearned({ key: pairKey, size: [w, h] });
+  const picker = pick && onPick ? makePicker(a, b, onPick, pickWords) : null;
   const frameProps = { viewport, setViewport: rg.setViewport, onBox: rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
 
   let body: React.ReactNode;
@@ -167,7 +183,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
         {[a, b].map((c, i) => (
           <figure key={i} className="grid gap-1.5">
             <Caption c={c} blind={blind} />
-            <ViewportFrame {...frameProps} label={blind ? `Picture ${c.label}` : `${c.label}`} ref={i === 0 ? frameRef : undefined}>
+            <ViewportFrame {...frameProps} label={blind ? `Picture ${c.label}` : `${c.label}`} ref={i === 0 ? frameRef : undefined} pick={picker?.one(i === 0 ? "a" : "b")}>
               {pane(c, i === 0 ? imgRef : undefined, i === 0 ? learn : undefined)}
             </ViewportFrame>
           </figure>
@@ -213,6 +229,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           {...frameProps}
           ref={frameRef}
           cover={mode === "swipe" ? { content: pane(a, imgRef, learn), shown: divider } : undefined}
+          pick={mode === "swipe" ? picker?.split(divider) : mode === "blink" ? picker?.one(showing) : undefined}
           label={mode === "blink" ? `Picture ${top.label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
@@ -260,6 +277,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
         <RegionChips state={rg} />
+        {picker && (mode === "fade" || mode === "difference") && <p className="type-caption text-muted-foreground">{picker.unavailable(MODE_LABEL[mode])}</p>}
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>

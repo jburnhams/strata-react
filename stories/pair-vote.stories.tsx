@@ -58,3 +58,9 @@ export const Empty: Story = { args: { pair: { status: "ready", data: null } } };
 
 /** The last answer, with Undo and what it was (shown only after the answer, never during). */
 export const AfterAnswer: Story = { args: { last: { text: "You preferred A.", onUndo: () => undefined, reveal: <span>A was your final.</span> } } };
+
+/** A click on the picture you prefer answers like the key and the button (hover shows "Click to choose A"); a drag still pans and a double click still zooms. The line above the bar says what was answered. */
+export const ClickToChoose: Story = { tags: ["no-visual"] };
+
+/** `pick={false}` for a screen where a click must only pan. */
+export const ClickOff: Story = { tags: ["no-visual"], args: { pick: false } };

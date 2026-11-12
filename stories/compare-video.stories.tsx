@@ -86,3 +86,6 @@ export const Judged: Story = {
     </div>
   ),
 };
+
+/** For judging a loop: starts itself once both clips can play (muted, since browsers refuse autoplay with sound) and runs the whole clip again and again. Not with reduced motion unless `autoPlay="always"`. */
+export const AutoPlayLoop: Story = { tags: ["no-visual"], args: { autoPlay: true, loopWhole: true, audio: "none" } };
