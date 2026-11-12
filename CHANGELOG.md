@@ -2,6 +2,14 @@
 
 ## 2026-11-12
 
+**Feedback: Alert, toasts and client-side work (issue #72)** (branch `claude/feedback-72`). The issue asked for toasts, inline alerts and progress for work the browser does. Toasts and alerts are new; progress reuses `JobStatus`, so a server job and an export the browser runs are one idea with one look, instead of a second progress component.
+
+- `src/components/alert.tsx` (**new**): `Alert`, four tones each with an icon and words, a pale tint (no coloured side stripe), one optional `action`, `role="alert"` only with `announce`.
+- `src/components/toast.tsx` (**new**): `toast.show/close/clear`, `toastTimeout`, `StrataToastRegion` on React Aria's toast queue (its API is marked unstable, so it is used only in this file). No danger tone by type. Bottom end on wide screens, top on phones, on the `layer-bar` layer.
+- `src/lib/client-work.ts` (**new**): `useClientWork`: phase, progress, `cancel` (aborts the signal, ends `cancelled`), `dismiss`, a second start ignored while running, a cancelled run cannot write over a newer one.
+- `src/components/job-status.tsx`: `onCancel`/`cancelLabel`, `cancelled` (neutral ending with `words.cancelled`, default "Cancelled"), `onDismiss`. No total still means no bar.
+- `src/index.ts`, `README.md` (Feedback row), `stories/feedback.stories.tsx` (**new**), `tests/unit/feedback.test.tsx` (**new**, MSW for the abortable request), baselines for the new stories.
+
 **Commands: menus, context menu, command menu and chords from one list (issue #71)** (branch `claude/commands-71`, stacked on `claude/toolbar-69`). The issue asked to extend the "one list drives the handler and the legend" idea of `useHotkeys` to menus and chords. It is a new layer beside `useHotkeys`, which is unchanged (single keys, no chords), rather than a rewrite of it.
 
 - `src/lib/chords.ts` (**new**): chords written once ("Mod+Shift+Z"): `parseChord`, `matchesChord` (exact on modifiers, so Undo is not Redo; Shift ignored for a symbol key; Alt letters matched by physical key for macOS), `formatChord` (⇧⌘Z or Ctrl+Shift+Z), `isReservedChord` (the browser's own chords), `detectPlatform`.
