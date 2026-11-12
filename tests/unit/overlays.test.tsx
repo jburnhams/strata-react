@@ -157,6 +157,23 @@ describe("AlertDialog", () => {
   });
 });
 
+describe("overlay descriptions and height", () => {
+  it("describes a dialog and an alert dialog by their description, so it is announced with the title", async () => {
+    render(<Dialog title="Export" description="Choose a size." open />);
+    const dialog = await screen.findByRole("dialog", { name: "Export" });
+    expect(dialog).toHaveAccessibleDescription("Choose a size.");
+  });
+
+  it("describes an alert dialog by its consequence, and keeps a tall message scrollable above the buttons", async () => {
+    render(<AlertDialog open title="Delete 3 firings?" description="Their bookings go too." confirm="Delete 3 firings" onConfirm={() => undefined} />);
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete 3 firings?" });
+    expect(dialog).toHaveAccessibleDescription("Their bookings go too.");
+    expect(dialog.parentElement).toHaveClass("max-h-full");
+    expect(screen.getByText("Their bookings go too.").closest(".overflow-y-auto")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Delete 3 firings" }).closest(".overflow-y-auto")).toBeNull();
+  });
+});
+
 describe("Popover", () => {
   it("opens beside its trigger with a name, closes on Escape and returns focus", async () => {
     const user = userEvent.setup();
