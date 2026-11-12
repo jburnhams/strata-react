@@ -33,6 +33,9 @@ export {
   type IconButtonProps,
   type RowActionProps,
 } from "./components/button";
+export { Toolbar, ToolbarSeparator, type ToolbarProps } from "./components/toolbar";
+export { Toggle, ToggleGroup, type ToggleProps, type ToggleGroupProps, type ToggleOption } from "./components/toggle";
+export { Switch, type SwitchProps } from "./components/switch";
 export { Dialog, AlertDialog, type DialogProps, type AlertDialogProps } from "./components/dialog";
 export { Popover, type PopoverProps } from "./components/popover";
 export { Tooltip, type TooltipProps } from "./components/tooltip";

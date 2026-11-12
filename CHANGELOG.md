@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**Toolbar, toggles and Switch (issue #69)** (branch `claude/toolbar-69`, stacked on `claude/overlays-70`). The issue asked for the controls `components.md` §3.3 specifies and a toolbar to hold them. Built on React Aria's `Toolbar`, `ToggleButton`, `ToggleButtonGroup` and `Switch`.
+
+- `src/components/toolbar.tsx` (**new**): `Toolbar` (required `label`; one tab stop, arrow keys from React Aria, and Home and End added here because React Aria's toolbar does not do them, left alone in a typing target) and `ToolbarSeparator`. It wraps onto more lines when it runs out of width; an overflow menu waits for `Menu` (#71).
+- `src/components/toggle.tsx` (**new**): `Toggle` (`aria-pressed`) and `ToggleGroup` (single choice, one always chosen, a `radiogroup` of radios). Chosen is an ink border on a neutral tint, so it shows without colour and never looks like `variant="default"`; `label` is always required and is the name and tooltip of an icon-only toggle.
+- `src/components/switch.tsx` (**new**): `Switch`, label and control one target, on shown by position and a dot in the thumb as well as colour.
+- `src/index.ts`, `README.md`: exports and a component-table row.
+- `stories/toolbar.stories.tsx` (**new**): a preview toolbar, compact density, phone width, toggle states and switch states. `tests/unit/controls.test.tsx` (**new**): 12 tests (pressed state, controlled use, icon-only name and tooltip, one filled button still passing with a chosen toggle, group roles and arrows, switch label target, toolbar keys and separator).
+- `tests/visual/baselines/`: 10 new; none changed.
+
 **Overlays: Dialog, AlertDialog, Popover (issue #70)** (branch `claude/overlays-70`, stacked on `claude/adopt-react-aria-2`). The issue asked for the overlay family from ux-research `components.md` §3.11, not built until now. All three are React Aria (Modal, Popover) with one shared surface, so Menu, Toast and the rest can reuse it.
 
 - `src/components/dialog.tsx` (**new**): `Dialog` (required `title`, optional `description`, `hideTitle`, `actions` as nodes or a `(close) => node` render prop, `closable={false}` for work that cannot be interrupted, `placement="end"` for a sheet, three sizes) and `AlertDialog` (required `confirm` verb, `cancel` focused first, outside press ignored, `tone`, and an async `onConfirm` that shows the button busy and stays open with the server's reason, through `describeActionError`, when it fails).
