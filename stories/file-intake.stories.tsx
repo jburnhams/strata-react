@@ -74,6 +74,21 @@ export const MissingWithRelink: Story = {
   ),
 };
 
+/** A 280px library column: the name keeps its own line in full, the status and Relink wrap under it, and a thumbnail sits beside all three. */
+export const MissingInNarrowColumn: Story = {
+  render: () => (
+    <div className="grid w-70 gap-3">
+      <MissingFile name="parkrun-saturday-morning.gpx" accept={accept} onRelink={() => {}} />
+      <MissingFile
+        name="moonbeam-front-with-the-glaze-test-tile.jpg"
+        accept={accept}
+        onRelink={() => {}}
+        thumbnail={<div role="img" aria-label="Last seen picture" className="size-12 rounded-control bg-muted" />}
+      />
+    </div>
+  ),
+};
+
 /** Phone width: the zone's prompt and the picker; there is nothing to drag from on a phone, so the button is the way in. */
 export const Phone: Story = { tags: ["visual-phone"], render: () => <Zone /> };
 

@@ -172,11 +172,15 @@ export function FileOutcomes({ intake, className }: { intake: FileIntake; classN
   );
 }
 
-/** A saved item whose file is gone: the item's name, a "File missing" status (a word and an icon) and a "Relink" button that opens the picker for this one item. */
+/**
+ * A saved item whose file is gone: the item's name, a "File missing" status (a word and an icon) and a "Relink" button that opens the picker for this one item.
+ * In a narrow column the name keeps its own line, in full, and the status and button wrap under it. An optional `thumbnail` sits beside all three.
+ */
 export function MissingFile({
   name,
   accept,
   onRelink,
+  thumbnail,
   className,
 }: {
   /** The item's name as the person knows it ("run-02.mp4"). */
@@ -184,19 +188,29 @@ export function MissingFile({
   accept: readonly string[];
   /** Called with the file the person chose to stand in for it. */
   onRelink: (file: File) => void;
+  /** A picture of the item (what it last looked like), drawn at the start. */
+  thumbnail?: React.ReactNode;
   className?: string;
 }) {
+  // In a 300px library a name, a status and a button on one row left the name "parkru…" (strata-react
+  // issue #122). The name is the one thing that must stay readable, so it wraps rather than truncates,
+  // takes at least ten ems, and pushes the status and button to the next row when the row is short.
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      <span className="min-w-0 flex-1 truncate type-body" title={name}>
-        {name}
-      </span>
-      <Status tone="warning" icon={FileQuestion}>
-        File missing
-      </Status>
-      <FileButton accept={accept} variant="ghost" size="sm" aria-label={`Relink ${name}`} onFiles={([file]) => onRelink(file)}>
-        Relink
-      </FileButton>
+      {thumbnail && <div className="shrink-0">{thumbnail}</div>}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="min-w-40 flex-auto break-words type-body" title={name}>
+          {name}
+        </span>
+        <div className="flex items-center gap-2">
+          <Status tone="warning" icon={FileQuestion}>
+            File missing
+          </Status>
+          <FileButton accept={accept} variant="ghost" size="sm" aria-label={`Relink ${name}`} onFiles={([file]) => onRelink(file)}>
+            Relink
+          </FileButton>
+        </div>
+      </div>
     </div>
   );
 }

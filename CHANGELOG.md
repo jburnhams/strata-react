@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**Narrow panes (issue #122)** (branch `claude/narrow-122`). In a 300px library, strata-vid's missing-file row cut a name to "parkru…", a chart's table header said "Time" for a distance, and a frame timecode read as hours. Three small fixes, found by running the components in a pane.
+
+- `src/components/file-intake.tsx`: `MissingFile` wraps its name instead of truncating it (at least ten ems), puts the status and Relink on the next row when the row is short, and takes `thumbnail`, drawn at the start.
+- `src/components/line-chart.tsx`: `xLabel` (default "Time") names the x column in the chart's data table.
+- `src/lib/format.ts`: `timecode` with `precision: "frames"` is always `h:mm:ss:ff`; "1:05:00" read as hours.
+- `stories/file-intake.stories.tsx`: `MissingInNarrowColumn` **new**; `stories/line-chart.stories.tsx`: the profile says "Distance".
+- `tests/unit/narrow-panes.test.tsx` **new**; `tests/unit/media.test.tsx` expects the four-part form. Baselines: `missing-with-relink` and `frame-timecode` changed (the name wraps; the longer timecode makes the transport wrap on one line), `missing-in-narrow-column` **new**.
+- `README.md`, `UPGRADING.md`.
+
 **Workspace layout (issue #68)** (branch `claude/workspace-68`). strata-vid's screen was a fixed grid: nothing could be resized or hidden. `Workspace`, `Split` and `Pane` make one screen of panes for a tool; the rules are in ux-research `components.md` §3.20.
 
 - `src/components/workspace.tsx` **new**: `Workspace` (a labelled group that measures its own width), `Split` (a row or column of panes and nested splits, with a separator between a fixed pane and its neighbour), `Pane` (a region named by its own header: name, `actions`, a fold button), and `useWorkspaceState` (sizes and folds, remembered in localStorage inside try/catch when given a name; `toggle`, `setCollapsed` and `reset` for a menu or shortcut). The separator is `role="separator"` with its value and limits, in the tab order: arrows move it by 10px (Shift 50), Home and End go to the limits, Enter or a double-click restores the default; pointer, touch and arrows are React Aria's `useMove`. A pane keeps its `min` and `max`, the stage keeps its own minimum (a drag stops where it would be crossed), and a shrinking window takes from the panes only to their minimums. A folded pane is a rail one control wide beside the stage or its header bar above or below it, with a visible "Show X" button; its body stays mounted but hidden. Below `narrowBelow` (720px) side-by-side splits stack and collapsible panes start folded (not remembered). React Aria 1.22 has no splitter or panel part (checked in its exports and `useSeparator`, which is for a non-focusable separator), noted in the file.

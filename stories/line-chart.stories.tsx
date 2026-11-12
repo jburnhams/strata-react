@@ -66,6 +66,7 @@ const routeArgs = {
   label: "Elevation along the route",
   series: route,
   seriesLabel: "Elevation",
+  xLabel: "Distance",
   formatX: (x: number) => `${(x / 1000).toFixed(1)} km`,
   formatY: (y: number) => `${Math.round(y)} m`,
   xTicks: [0, 1000, 2000, 3000, 4000, 5000],

@@ -178,9 +178,12 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
     },
     /**
      * A position in media as an editor shows it, to a chosen precision: "4:05" (seconds), "4:05.250"
-     * (`"ms"`), or "4:05:07" (`"frames"` at `fps`, the last part the frame). Hours appear only from
-     * one hour. Floors, never rounds up, so a time never reads ahead of the picture. Unknown
-     * (null, negative, not finite) prints the placeholder. Set it in `tabular-nums`.
+     * (`"ms"`), or "0:04:05:07" (`"frames"` at `fps`, the last part the frame). Hours appear only
+     * from one hour, except in frames. Frames are always four parts, hours included, as SMPTE
+     * timecode is (non-drop frame, with colons): a three-part "1:05:00" reads as one hour five, so
+     * a frame count must never be three. Editors write the same four parts (strata-react issue
+     * #122). Floors, never rounds up, so a time never reads ahead of the picture. Unknown (null,
+     * negative, not finite) prints the placeholder. Set it in `tabular-nums`.
      */
     timecode: (seconds: number | null | undefined, { precision = "seconds", fps = 30 }: { precision?: "seconds" | "ms" | "frames"; fps?: number } = {}) => {
       if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return missing;
@@ -189,7 +192,7 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
       const [h, m] = [Math.floor(whole / 3600), Math.floor((whole % 3600) / 60)];
       const base = h > 0 ? `${h}:${two(m)}:${two(whole % 60)}` : `${m}:${two(whole % 60)}`;
       if (precision === "ms") return `${base}.${String(Math.min(Math.floor((seconds - whole) * 1000 + 1e-6), 999)).padStart(3, "0")}`;
-      if (precision === "frames") return `${base}:${two(Math.min(Math.floor((seconds - whole) * fps + 1e-6), Math.ceil(fps) - 1))}`;
+      if (precision === "frames") return `${h}:${two(m)}:${two(whole % 60)}:${two(Math.min(Math.floor((seconds - whole) * fps + 1e-6), Math.ceil(fps) - 1))}`;
       return base;
     },
     /** What a missing value prints as: an en dash unless `createFormat`'s `missing` says otherwise. */
