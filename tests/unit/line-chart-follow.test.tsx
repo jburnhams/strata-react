@@ -175,3 +175,38 @@ describe("area", () => {
     expect(container.querySelector('path[fill-opacity="0.12"]')!.getAttribute("fill")).toBe("var(--chart-1)");
   });
 });
+
+// Issue #138: the end of the line is "now" only when the last point is the present.
+describe("the end of the line", () => {
+  const endLabel = () => screen.queryByText("55 m up now");
+
+  it("marks the last reading as now by default, as a live reading's last point is the present", () => {
+    renderWithStrata(<LineChart {...props} />);
+    expect(endLabel()).toBeInTheDocument();
+  });
+
+  it("leaves it unmarked when `current` says where now is, and keeps the peak label", () => {
+    const { container } = renderWithStrata(<LineChart {...props} current={200} />);
+    expect(endLabel()).toBeNull();
+    expect(screen.getByText("87 m up peak")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\bnow\b/);
+  });
+
+  it("leaves it unmarked with end=\"none\" and no current", () => {
+    renderWithStrata(<LineChart {...props} end="none" />);
+    expect(endLabel()).toBeNull();
+    expect(screen.getByText("87 m up peak")).toBeInTheDocument();
+  });
+
+  it("marks it with end=\"now\" even while `current` is set", () => {
+    renderWithStrata(<LineChart {...props} current={200} end="now" />);
+    expect(endLabel()).toBeInTheDocument();
+  });
+
+  it("adds and removes the marker as `end` changes", () => {
+    const { rerender } = renderWithStrata(<LineChart {...props} />);
+    expect(endLabel()).toBeInTheDocument();
+    rerender(<LineChart {...props} end="none" />);
+    expect(endLabel()).toBeNull();
+  });
+});

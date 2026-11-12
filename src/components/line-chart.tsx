@@ -65,6 +65,8 @@ export type LineChartProps = {
   colourScale?: { at: number; colour: string }[];
   /** Says what the colours mean, shown beside the legend swatch when `colourScale` is set. */
   colourScaleLabel?: string;
+  /** What the end of the line is. `"now"` marks the last reading with a rule, a dot and "<value> now": right for a live reading, where the last point is the present. `"none"` leaves it unmarked: right for a series whose x is not time running up to now (an elevation profile, where the last point is the finish). Default `"now"`, or `"none"` when `current` is set, since `current` already says where now is. The peak label stays either way. */
+  end?: "now" | "none";
   /** The current x, supplied by the app and drawn as a rule with its value ("now" in a replay, a playhead). Cheap to update often. */
   current?: number;
   /** The value at the rule, as a sentence part. Default: `formatX` and the value read off the line. */
@@ -171,6 +173,7 @@ export function LineChart({
   colourScale,
   colourScaleLabel,
   current,
+  end,
   formatCurrent,
   readout,
   onPick,
@@ -205,6 +208,7 @@ export function LineChart({
   const path = (pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
 
   const last = series[series.length - 1];
+  const showEnd = (end ?? (current === undefined ? "now" : "none")) === "now";
   const peak = series.reduce((a, b) => (b.y > a.y ? b : a), series[0]);
   const stops = colourScale ? [...colourScale].sort((a, b) => a.at - b.at) : [];
   /** The colour a value lands on: the highest stop at or below it. Used for the labelled points. */
@@ -261,19 +265,18 @@ export function LineChart({
             <text x={sx(peak.x) + 8} y={sy(peak.y) - 8} className="fill-foreground type-caption tabular-nums">
               {formatY(peak.y)} peak
             </text>
-            <line x1={sx(last.x)} x2={sx(last.x)} y1={pad.top} y2={pad.top + h} stroke="var(--foreground)" strokeWidth={1} />
-            <circle cx={sx(last.x)} cy={sy(last.y)} r={3.5} fill={colourAt(last.y)} />
-            <text
-              x={sx(last.x) - 8}
-              y={sy(last.y) - 10}
-              textAnchor="end"
-              className="fill-foreground type-label tabular-nums"
-            >
-              {formatY(last.y)} now
-            </text>
+            {showEnd && (
+              <>
+                <line x1={sx(last.x)} x2={sx(last.x)} y1={pad.top} y2={pad.top + h} stroke="var(--foreground)" strokeWidth={1} />
+                <circle cx={sx(last.x)} cy={sy(last.y)} r={3.5} fill={colourAt(last.y)} />
+                <text x={sx(last.x) - 8} y={sy(last.y) - 10} textAnchor="end" className="fill-foreground type-label tabular-nums">
+                  {formatY(last.y)} now
+                </text>
+              </>
+            )}
       </>
     ),
-    [width, height, series, planned, band, xTicks, yMin, yMax, colour, colourScale, formatX, formatY, area],
+    [width, height, series, planned, band, xTicks, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 

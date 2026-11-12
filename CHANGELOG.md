@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+**LineChart: say what the end of the line is (issue #138)** (branch `claude/linechart-end-138`). `LineChart` always drew a rule, dot and "<value> now" at the last point, which is wrong for a series whose x is not time running up to now: strata-vid's elevation profile said "216 m now" at the finish while its `current` rule was elsewhere. Added `end`, and made the default follow `current`.
+
+- `src/components/line-chart.tsx`: `end?: "now" | "none"`. Default `"now"`, or `"none"` when `current` is set, because then two rules compete and the one called "now" is not now; the peak label stays either way. The marker is part of the memoised plot, so `showEnd` is in its dependencies.
+- `tests/unit/line-chart-follow.test.tsx`: five tests (default, current set, `end="none"`, `end="now"` with `current`, changing `end`). `stories/line-chart.stories.tsx`: `ProfileWithoutEndMarker`; the four existing stories with `current` change by losing the marker, and their baselines are updated.
+- `UPGRADING.md`: the default change.
+
 **Media player: MediaPlayer and useMediaElement (issue #134)** (branch `claude/media-134`). strata-listory kept two `<audio controls>` because the parts of #78 take state in and requests out, which is 60 lines of event glue for "play this file". Added the glue once, and the 90% case on top; the parts are unchanged and still for editors.
 
 - `src/components/media-player.tsx` **new**: `useMediaElement(ref)` follows an element's events and returns plain values (`playing`, `time`, `duration` as `null` until known, `buffered`, `volume` with 0 as muted, `rate`, `ended`, `loading`, `error`) and requests (`play`, `pause`, `toggle`, `seek`, `setVolume`, `setRate`, `retry`). It catches a refused `play()` into `error`, applies a seek made before the metadata loaded once it has, treats `NaN` and `Infinity` as not known, and works with the browser's own controls. `MediaPlayer` is the element, the hook, `SeekBar`, `TimeReadout`, `Transport`, `RateChoice` and `VolumeControl`, with `controls` as `"auto"` (the browser's bar on `(pointer: coarse)`), `"native"` or `"strata"`; keys (Space or K, J and L for 10 s, M); a load failure as an `Alert` with Try again and a refused autoplay as a status sentence; `session` for `navigator.mediaSession` metadata and actions. `sources` is a sequence: ending changes `src` on the same element and keeps playing, and when every source gives a `duration` the seek bar spans the whole sequence with a mark at each chapter. `SPEECH_RATES` is the 0.75 to 3 set; `rates` was already a prop.
