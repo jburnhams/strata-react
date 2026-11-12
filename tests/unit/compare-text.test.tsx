@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
-import { CompareText, diffWords, type Candidate, type TextMedia } from "../../src";
+import { CompareText, PairJudge, diffWords, type Candidate, type TextMedia } from "../../src";
 import { MAX_CELLS } from "../../src/lib/text-diff";
 
 const text = (id: string, label: string, t: string, note?: string): Candidate<TextMedia> => ({ id, label, note, media: { kind: "text", text: t } });
@@ -66,10 +66,42 @@ describe("CompareText", () => {
   it("diffs against a reference when there is one", async () => {
     renderWithStrata(<CompareText label="T" a={a} b={b} blind defaultDiff reference={{ label: "What was said", text: "The cat sat on the mat." }} />);
     expect(screen.getByRole("radio", { name: "What was said" })).toBeChecked();
-    expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ. B: 2 words differ.");
+    expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 0 missing. B: 2 words differ, 2 missing.");
     await userEvent.click(screen.getByRole("radio", { name: "The other text" }));
     expect(screen.getByRole("status")).toHaveTextContent("A: 2 words differ. B: 2 words differ.");
     expect(screen.getByText("What was said", { selector: "figcaption" })).toBeInTheDocument();
+  });
+
+  it("counts the reference's words a candidate leaves out, so a model that drops content is not a match", () => {
+    renderWithStrata(<CompareText label="T" a={text("x", "A", "the cat")} b={text("y", "B", "")} blind defaultDiff reference={{ label: "What was said", text: "the cat sat" }} />);
+    expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 1 missing. B: 0 words differ, 3 missing.");
+    expect(screen.getByRole("status")).not.toHaveTextContent("word for word");
+  });
+
+  it("marks the differences from the keyboard with d, listed in its legend", async () => {
+    renderWithStrata(<CompareText label="T" a={a} b={b} blind />);
+    expect(screen.getByText("Mark the differences")).toBeInTheDocument();
+    await userEvent.keyboard("d");
+    expect(screen.getByRole("switch", { name: "Mark the words that differ" })).toBeChecked();
+    expect(screen.getByText("Hide the differences")).toBeInTheDocument();
+  });
+
+  it("takes a screen's keys into its legend and a vote bar into its footer, and is judged through PairJudge", async () => {
+    const answers: string[] = [];
+    renderWithStrata(
+      <PairJudge
+        pair={{ status: "ready", data: { label: "Pair 1", a, b } }}
+        skeleton={<p>Loading</p>}
+        empty={<p>None</p>}
+        onAnswer={(x) => answers.push(x.answer)}
+        pending={false}
+        view={(slot, p) => <CompareText {...p} {...slot} blind />}
+      />,
+    );
+    await userEvent.keyboard("a");
+    await userEvent.click(screen.getByRole("button", { name: "Prefer B" }));
+    expect(answers).toEqual(["a", "b"]);
+    expect(screen.getAllByText("Prefer A")).toHaveLength(2); // the button and its key in the one legend
   });
 
   it("scrolls the two panes together, to the same share of their length", () => {

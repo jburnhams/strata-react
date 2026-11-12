@@ -2,6 +2,7 @@ import * as React from "react";
 import { cn } from "../lib/utils";
 import { diffWords, type TextSegment } from "../lib/text-diff";
 import type { Candidate, TextMedia } from "./compare";
+import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { ToggleGroup } from "./toggle";
 import { Switch } from "./switch";
 
@@ -20,6 +21,9 @@ import { Switch } from "./switch";
 // the two, labelled, and the diff can be taken against it instead of against the other candidate:
 // "which is closer to what was said" is the question a transcription judge asks, so with a reference
 // the diff starts against it.
+//
+// Keys: `d` marks the differences; a screen's own keys (a `PairJudge`'s answers) join the same legend
+// through `extraShortcuts`, and its vote bar goes in `footer`.
 //
 // Blind: only the label names a text; the id and note are never written, and `reference` is a
 // separate, labelled thing the caller chooses to show. Text is data, never markup: it is rendered as
@@ -45,6 +49,12 @@ export type CompareTextProps = {
   tooLong?: string;
   /** Scroll the two panes together. Default true. */
   linkedScroll?: boolean;
+  /** Bind the keys (`d` marks the differences) on the window. Default true. */
+  keys?: boolean;
+  /** Shortcuts of the surrounding screen (a `PairJudge`'s answer keys), bound with these and listed first in the same legend. */
+  extraShortcuts?: Shortcut[];
+  /** Drawn under the texts, above the legend: where a vote bar goes. */
+  footer?: React.ReactNode;
   className?: string;
 };
 
@@ -65,7 +75,7 @@ function Words({ segments, changed }: { segments: TextSegment[]; changed: boolea
 }
 
 /** Two texts side by side with scrolling together, an optional reference, and a word diff on request. */
-export function CompareText({ label, a, b, blind, reference, defaultDiff = false, tooLong = "These texts are too long to compare word by word.", linkedScroll = true, className }: CompareTextProps) {
+export function CompareText({ label, a, b, blind, reference, defaultDiff = false, tooLong = "These texts are too long to compare word by word.", linkedScroll = true, keys = true, extraShortcuts = [], footer, className }: CompareTextProps) {
   const [diff, setDiff] = React.useState(defaultDiff);
   const [against, setAgainst] = React.useState<"other" | "reference">(reference ? "reference" : "other");
   const boxA = React.useRef<HTMLDivElement>(null);
@@ -77,9 +87,11 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
     if (against === "reference" && reference) {
       const ra = diffWords(a.media.text, reference.text);
       const rb = diffWords(b.media.text, reference.text);
-      return ra && rb ? { a: ra.a, b: rb.a, changedA: ra.changedA, changedB: rb.changedA } : "long";
+      // `changedB` of each is the reference's words the candidate lacks: a model that drops words must not score as a match.
+      return ra && rb ? { a: ra.a, b: rb.a, changedA: ra.changedA, changedB: rb.changedA, missingA: ra.changedB, missingB: rb.changedB } : "long";
     }
-    return diffWords(a.media.text, b.media.text) ?? "long";
+    const r = diffWords(a.media.text, b.media.text);
+    return r ? { ...r, missingA: 0, missingB: 0 } : "long";
   }, [diff, against, reference, a.media.text, b.media.text]);
 
   // Keep the two panes at the same share of their scroll range: texts differ in length, so the
@@ -112,6 +124,11 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
   );
 
   const counts = result && result !== "long" ? result : null;
+  const words = (n: number) => `${n} ${n === 1 ? "word" : "words"}`;
+  const ref = against === "reference" && reference;
+  const say = (who: string, differ: number, missing: number) => (ref ? `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}, ${missing} missing.` : `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}.`);
+  const shortcuts: Shortcut[] = [...extraShortcuts, { keys: ["d"], label: diff ? "Hide the differences" : "Mark the differences", run: () => setDiff((d) => !d) }];
+  useHotkeys(shortcuts, { enabled: keys });
   return (
     <section aria-label={label} className={cn("grid gap-3", className)}>
       <div className="flex flex-wrap items-center gap-3">
@@ -143,15 +160,17 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
         <p role="status" className="type-body-sm text-muted-foreground">
           {result === "long"
             ? tooLong
-            : counts && counts.changedA === 0 && counts.changedB === 0
-              ? against === "reference" && reference
+            : counts && counts.changedA + counts.missingA + counts.changedB + counts.missingB === 0
+              ? ref && reference
                 ? `Both match ${reference.label} word for word.`
                 : "The texts are the same word for word."
               : counts
-                ? `${a.label}: ${counts.changedA} ${counts.changedA === 1 ? "word differs" : "words differ"}. ${b.label}: ${counts.changedB} ${counts.changedB === 1 ? "word differs" : "words differ"}.`
+                ? `${say(a.label, counts.changedA, counts.missingA)} ${say(b.label, counts.changedB, counts.missingB)}`
                 : null}
         </p>
       )}
+      {footer}
+      {keys && <KeysLegend shortcuts={shortcuts} />}
     </section>
   );
 }
