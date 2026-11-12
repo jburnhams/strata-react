@@ -13,6 +13,7 @@ import {
   InfiniteList,
   JobStatus,
   LoadMore,
+  type LoadMoreProps,
   Meter,
   Skeleton,
   Thumbnail,
@@ -457,5 +458,66 @@ describe("JobStatus and useJob (#45)", () => {
     act(() => poll());
     await waitFor(() => expect(polls).toBe(2));
     expect(readingsReads).toBe(1);
+  });
+});
+
+describe("LoadMore's rows in a second look (#210)", () => {
+  let io: ReturnType<typeof installFakeIntersectionObserver>;
+  beforeEach(() => {
+    io = installFakeIntersectionObserver();
+  });
+  afterEach(() => io.uninstall());
+
+  function Cards(props: Partial<Omit<LoadMoreProps<Firing>, "state">>) {
+    const load = useInfiniteLoad({
+      queryKey: ["firings", "second-look"],
+      queryFn: ({ cursor, signal }) => fetchJson<FiringPage>(`${api.firings}?limit=6${cursor ? `&after=${cursor}` : ""}`, { signal }),
+      items: (page) => page.firings,
+      itemKey: (f: Firing) => f.id,
+      hasMore: (page) => page.hasMore,
+    });
+    return (
+      <div>
+        <ul aria-label="Cards">
+          {load.status === "ready" && load.data.map((f, i) => <li key={f.id} data-index={i}>Firing {f.id}</li>)}
+        </ul>
+        <LoadMore state={load} moreLabel="Show older firings" moreSkeleton={<Skeleton className="h-24" />} end="That is every firing." {...props} />
+      </div>
+    );
+  }
+
+  it("draws the row the app's way, and what it presses still loads and still moves focus to the first new item", async () => {
+    renderWithStrata(<Cards more={({ label, load }) => <button type="button" className="mx-auto rounded-pill" onClick={load}>{label} ›</button>} />);
+    await screen.findByText("Firing f-0412");
+    expect(screen.queryByRole("button", { name: "Show older firings" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings ›" }));
+    await waitFor(() => expect(document.activeElement).toHaveAttribute("data-index", "6"));
+  });
+
+  it("draws the row with a hairline above it by default, and none with ruled off", async () => {
+    const { container, rerender } = renderWithStrata(<Cards />);
+    await screen.findByText("Firing f-0412");
+    const row = () => screen.getByRole("button", { name: "Show older firings" }).parentElement!;
+    expect(row()).toHaveClass("border-t");
+    rerender(<Cards ruled={false} />);
+    expect(row()).not.toHaveClass("border-t");
+    expect(container).toBeTruthy();
+  });
+
+  it("lets the app wrap the skeleton of a page on its way, hidden from assistive technology, and says it is loading", async () => {
+    const { http, HttpResponse, delay } = await import("msw");
+    server.use(
+      http.get(api.firings, async ({ request }) => {
+        if (new URL(request.url).searchParams.has("after")) await delay("infinite");
+        return HttpResponse.json({ firings: Array.from({ length: 6 }, (_, i) => ({ id: `f-${i}` })), hasMore: true });
+      }),
+    );
+    renderWithStrata(<Cards loading={(skeleton) => <div data-testid="mine">{skeleton}</div>} ruled={false} />);
+    await screen.findByText("Firing f-0");
+    await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
+    const mine = await screen.findByTestId("mine");
+    expect(mine.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(mine.parentElement).not.toHaveClass("border-t");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading more");
   });
 });

@@ -79,6 +79,10 @@
     /* Density: control heights move together (button, input, select). */
     --control-h: 2.5rem;
     --control-h-sm: 2rem;
+    /* A button's side padding and icon size, a role like its height (issue #210): a second look scopes them on a class. */
+    --control-px: 1rem;
+    --control-px-sm: 0.75rem;
+    --control-icon: 1rem;
 
     --motion-effects: 200ms;
     --motion-spatial: 350ms;
@@ -118,20 +122,23 @@
 /* Type steps as utilities, not --text-* keys: a compound of size, line height and weight that
    cn() can tell apart from text colours. Operate scale, ratio about 1.2, fixed rem; nothing above
    28px except `type-display`, which is for Persuade surfaces only. */
-@utility type-caption { font-size: 0.75rem; line-height: 1rem; font-weight: 400; }
-@utility type-label { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
-@utility type-body-sm { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
-@utility type-body { font-size: 1rem; line-height: 1.5rem; font-weight: 400; }
-@utility type-heading { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; }
+/* Each step reads its own variables and falls back to today's value, so a product with another scale (or a
+   region with a second look) sets `--type-body-size`, `--type-body-leading`, `--type-heading-weight`… on a
+   class and every component with that step follows (issue #210). Names: --type-<step>-size, -leading, -weight. */
+@utility type-caption { font-size: var(--type-caption-size, 0.75rem); line-height: var(--type-caption-leading, 1rem); font-weight: var(--type-caption-weight, 400); }
+@utility type-label { font-size: var(--type-label-size, 0.875rem); line-height: var(--type-label-leading, 1.25rem); font-weight: var(--type-label-weight, 500); }
+@utility type-body-sm { font-size: var(--type-body-sm-size, 0.875rem); line-height: var(--type-body-sm-leading, 1.25rem); font-weight: var(--type-body-sm-weight, 400); }
+@utility type-body { font-size: var(--type-body-size, 1rem); line-height: var(--type-body-leading, 1.5rem); font-weight: var(--type-body-weight, 400); }
+@utility type-heading { font-size: var(--type-heading-size, 1.125rem); line-height: var(--type-heading-leading, 1.5rem); font-weight: var(--type-heading-weight, 600); }
 @utility type-title {
   font-family: var(--font-display);
-  font-size: 1.75rem;
-  line-height: 2.25rem;
+  font-size: var(--type-title-size, 1.75rem);
+  line-height: var(--type-title-leading, 2.25rem);
   font-weight: var(--title-weight);
   font-stretch: var(--title-stretch);
   letter-spacing: var(--title-tracking);
 }
-@utility type-figure { font-size: 1.75rem; line-height: 2.25rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+@utility type-figure { font-size: var(--type-figure-size, 1.75rem); line-height: var(--type-figure-leading, 2.25rem); font-weight: var(--type-figure-weight, 500); font-variant-numeric: tabular-nums; }
 @utility type-display {
   font-family: var(--font-display);
   font-size: clamp(2.25rem, 1.5rem + 3vw, 4rem);
