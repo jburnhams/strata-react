@@ -38,7 +38,7 @@ export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checke
 export type CheckboxGesture = { shiftKey: boolean };
 
 /** A checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
-export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, ...props }: CheckboxProps) {
+export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, required, ...props }: CheckboxProps) {
   const shift = useShiftNote();
   // Shift is noted in the capture phase on a wrapper, because React Aria's press handling stops the
   // events it uses before they bubble. `contents` keeps the wrapper out of layout.
@@ -48,6 +48,7 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
         isSelected={checked === true}
         isIndeterminate={checked === "mixed"}
         isDisabled={disabled}
+        isRequired={required}
         onChange={(selected) => onCheckedChange(selected, shift.take())}
         aria-label={hideLabel ? label : undefined}
         {...(props as object)}
