@@ -1,7 +1,10 @@
 import * as React from "react";
 import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
 import { useSliderState } from "react-stately";
+import { Button as AriaButton } from "react-aria-components";
 import { cn } from "../lib/utils";
+import { CursorScope, useSharedCursor, type CursorMapping } from "./cursor";
+import { Tooltip } from "./tooltip";
 
 // A line chart with the defaults real product screens use: one measured series in one hue, a 2px
 // straight line with no fill and no markers, 3 to 5 faint gridlines, no y-axis line, no legend for a
@@ -38,7 +41,40 @@ import { cn } from "../lib/utils";
 // on the input that moves between readings; the hooks' own arrow handling is stopped. Hover is drawn
 // by the plot itself, since a hook has no notion of a pointer that is only resting.
 //
+//
+// Spans, marks, a log axis and stacked charts (strata-react issue #183, from strata-360's elevation
+// and pace charts, where stops are shaded and every clip is marked on both). The decisions:
+// - `spans` are shaded behind the line in a tone's subtle role, named in the key and in the
+//   screen-reader text: a shade is never the only way to know a stop is a stop.
+// - `marks` are real controls on the line, one tab stop with arrows between them (roving), because
+//   twelve clips must not be twelve tab stops; each is named by its label and x, pressing one is
+//   `onMarkSelect`, `renderMarkCard` is the words a tooltip shows, and each is listed for screen readers.
+// - `yScale="log"` chooses its own 1, 2, 5 ticks per decade; a reading at or below zero cannot be
+//   drawn, so the line breaks there and the chart says how many were left out. `yInvert` puts the
+//   smaller value at the top (pace: faster is up).
+// - `xTicks` may be a function of the visible range, so labels switch between clock time and distance
+//   as the range changes, and `xDomain` fixes the range for charts that share an axis.
+// - `LineChartGroup` stacks charts on one x axis: one shared range, one `CursorScope` (see cursor.tsx),
+//   so hovering or arrowing in any chart puts a rule and its own reading in every chart, and one
+//   `current` and `onPick` for all.
 export type Point = { x: number; y: number };
+
+/** Shading tones for `spans`: the role's subtle fill. */
+export type SpanTone = "neutral" | "info" | "success" | "warning" | "danger";
+const TONE_FILL: Record<SpanTone, string> = { neutral: "var(--muted)", info: "var(--info-subtle)", success: "var(--success-subtle)", warning: "var(--warning-subtle)", danger: "var(--danger-subtle)" };
+
+/** A stretch of x shaded behind the line (stops, usable footage, a chosen stretch). */
+export type ChartSpan = { from: number; to: number; label: string; tone?: SpanTone };
+
+/** A labelled point on the line, as a control. */
+export type ChartMark = {
+  x: number;
+  /** Its name: "Clip 4". Said with its x, listed for screen readers and shown on hover and focus. */
+  label: string;
+  /** Any CSS colour, normally a role. Default the foreground. */
+  colour?: string;
+  selected?: boolean;
+};
 
 export type LineChartProps = {
   /** What the chart shows, as a sentence. Used as the accessible name and the table caption. */
@@ -52,8 +88,26 @@ export type LineChartProps = {
   /** What x is, as the screen-reader table's first column heading: "Distance", "Day". Default "Time". */
   xLabel?: string;
   formatY: (y: number) => string;
-  /** Where to put x labels, in x units. The chart drops every other one (and so on) when they would overlap at its width. */
-  xTicks: number[];
+  /** Where to put x labels, in x units, or a function of the visible range (so labels can switch between clock time and distance). The chart drops every other one (and so on) when they would overlap at its width. */
+  xTicks: number[] | ((range: { min: number; max: number }) => number[]);
+  /** A fixed x range, for charts that share one axis (`LineChartGroup` sets it). Default: the series' own. */
+  xDomain?: readonly [number, number];
+  /** `"none"` draws no x labels: the upper charts of a stack. Default `"labels"`. */
+  xAxis?: "labels" | "none";
+  /** `"log"` for a quantity that spans decades (pace, a magnitude). Ticks are 1, 2, 5 steps chosen here; a reading at or below zero is not drawn and is counted under the chart. Default `"linear"`. */
+  yScale?: "linear" | "log";
+  /** The smaller value at the top (pace: faster is up). */
+  yInvert?: boolean;
+  /** Stretches shaded behind the line, named in the key and the text for screen readers. */
+  spans?: readonly ChartSpan[];
+  /** Labelled points on the line. One tab stop; arrows move between them. */
+  marks?: readonly ChartMark[];
+  /** A mark was pressed (a click, Enter or Space). */
+  onMarkSelect?: (mark: ChartMark) => void;
+  /** What shows beside a mark on hover and focus: words, as in `Tooltip`. Default the mark's label and x. */
+  renderMarkCard?: (mark: ChartMark) => React.ReactNode;
+  /** Join the nearest `CursorScope`: hovering or arrowing here puts a rule and this chart's reading in every member, and theirs shows here. `true` when x is the scope's unit; a mapping when it is not (time here, distance there). */
+  cursor?: boolean | CursorMapping;
   /** Pin the bottom of the y-axis (default: 0, or lower if a reading is negative). A reading below it still shows. */
   yMin?: number;
   /** Pin the top of the y-axis, for a bounded quantity such as a percentage (`yMax={100}`), so a low reading looks low. Choose a range that divides into four steps. A reading above it still shows. */
@@ -137,6 +191,61 @@ export function yScale(values: number[], pin: { min?: number; max?: number } = {
   return { min, max, ticks: [0, 1, 2, 3, 4].map((i) => min + ((max - min) * i) / 4) };
 }
 
+/** What a y scale gives the chart: its ends, ticks and where a value falls between them (0 at `min`, 1 at `max`). */
+export type YScale = { min: number; max: number; ticks: number[]; at: (v: number) => number; log: boolean };
+
+const linearScale = (values: number[], pin: { min?: number; max?: number }): YScale => {
+  const y = yScale(values, pin);
+  return { ...y, at: (v) => (v - y.min) / (y.max - y.min), log: false };
+};
+
+/** The 1, 2, 5 × 10ⁿ values in `[lo, hi]`. */
+function decadeTicks(lo: number, hi: number, mantissas = [1, 2, 5]) {
+  const out: number[] = [];
+  for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)) + 1; e++) for (const m of mantissas) out.push(Number((m * 10 ** e).toPrecision(12)));
+  return out;
+}
+
+/**
+ * A logarithmic y axis over the positive values: the ends are the nearest 1, 2, 5 steps outside the
+ * data, the ticks are those steps, thinned to whole decades and then every k-th decade when there are
+ * more than seven. Values at or below zero are ignored (the chart reports them). A pinned end is used as
+ * given when it is positive and does not cut a reading off.
+ */
+export function logScale(values: number[], pin: { min?: number; max?: number } = {}): YScale {
+  const positive = values.filter((v) => Number.isFinite(v) && v > 0);
+  const dMin = positive.length ? Math.min(...positive) : 1;
+  const dMax = positive.length ? Math.max(...positive) : 10;
+  const grid = decadeTicks(dMin, dMax);
+  const pinMin = pin.min !== undefined && pin.min > 0 && pin.min <= dMin ? pin.min : undefined;
+  const pinMax = pin.max !== undefined && pin.max > 0 && pin.max >= dMax ? pin.max : undefined;
+  let min = pinMin ?? Math.max(...grid.filter((t) => t <= dMin * (1 + 1e-9)));
+  let max = pinMax ?? Math.min(...grid.filter((t) => t >= dMax * (1 - 1e-9)));
+  if (!(max > min)) max = min * 10;
+  let ticks = decadeTicks(min, max).filter((t) => t >= min * (1 - 1e-9) && t <= max * (1 + 1e-9));
+  if (ticks.length > 7) ticks = decadeTicks(min, max, [1]).filter((t) => t >= min * (1 - 1e-9) && t <= max * (1 + 1e-9));
+  if (ticks.length > 7) {
+    const k = Math.ceil(ticks.length / 6);
+    ticks = ticks.filter((_, i) => i % k === 0);
+  }
+  const span = Math.log10(max) - Math.log10(min);
+  return { min, max, ticks, at: (v) => (Math.log10(v) - Math.log10(min)) / span, log: true };
+}
+
+/** The value of a series at x, read between the two readings either side (flat beyond the ends). Series need not be sorted. */
+export function valueAt(series: readonly Point[], x: number): number {
+  const sorted = [...series].sort((p, q) => p.x - q.x);
+  if (!sorted.length) return 0;
+  if (x <= sorted[0].x) return sorted[0].y;
+  for (let i = 1; i < sorted.length; i++) {
+    if (x <= sorted[i].x) {
+      const [p0, p1] = [sorted[i - 1], sorted[i]];
+      return p0.y + ((p1.y - p0.y) * (x - p0.x)) / (p1.x - p0.x || 1);
+    }
+  }
+  return sorted[sorted.length - 1].y;
+}
+
 /** Roughly how wide a 12px caption label is, in px. jsdom cannot measure text, so the chart estimates. */
 const labelWidth = (text: string) => text.length * 7;
 
@@ -167,6 +276,15 @@ export function LineChart({
   xLabel = "Time",
   formatY,
   xTicks,
+  xDomain,
+  xAxis = "labels",
+  yScale: yMode = "linear",
+  yInvert = false,
+  spans,
+  marks,
+  onMarkSelect,
+  renderMarkCard,
+  cursor: cursorProp,
   yMin,
   yMax,
   colour = "var(--chart-1)",
@@ -182,20 +300,34 @@ export function LineChart({
   className,
 }: LineChartProps) {
   const [ref, width] = useWidth<HTMLDivElement>();
+  const shared = useSharedCursor();
+  const joined = Boolean(cursorProp) && shared !== null;
+  const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
   const gradientId = `heat-${React.useId().replace(/[^\w-]/g, "")}`;
   const all = [...series, ...(planned ?? [])];
-  const xMin = Math.min(...all.map((p) => p.x));
-  const xMax = Math.max(...all.map((p) => p.x));
-  const y = yScale(
-    all.map((p) => p.y),
-    { min: yMin, max: yMax },
-  );
+  const xMin = xDomain ? xDomain[0] : Math.min(...all.map((p) => p.x));
+  const xMax = xDomain ? xDomain[1] : Math.max(...all.map((p) => p.x));
+  const log = yMode === "log";
+  const y = log
+    ? logScale(
+        all.map((p) => p.y),
+        { min: yMin, max: yMax },
+      )
+    : linearScale(
+        all.map((p) => p.y),
+        { min: yMin, max: yMax },
+      );
+  const undrawn = log ? series.filter((p) => !(p.y > 0)).length : 0;
 
-  const pad = { top: 16, right: 16, bottom: 28, left: 56 };
+  const pad = { top: 16, right: 16, bottom: xAxis === "none" ? 8 : 28, left: 56 };
   const w = Math.max(0, width - pad.left - pad.right);
   const h = height - pad.top - pad.bottom;
   const sx = (x: number) => pad.left + ((x - xMin) / (xMax - xMin || 1)) * w;
-  const sy = (v: number) => pad.top + h - ((v - y.min) / (y.max - y.min)) * h;
+  // 0 at the bottom, 1 at the top (swapped when inverted); a value off a log scale has no place and is not drawn.
+  const sy = (v: number) => {
+    const f = y.at(v);
+    return pad.top + (yInvert ? f : 1 - f) * h;
+  };
   const xLabelWidth = (t: number) => labelWidth(formatX(t));
   // Keep the first and last labels inside the chart instead of centring them past its edge.
   const xLabelAt = (t: number) => {
@@ -204,12 +336,28 @@ export function LineChart({
   };
   // Fit against where the labels are drawn, so pulling an end label in cannot make it collide.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const shownXTicks = React.useMemo(() => fitTicks(xTicks, xLabelAt, xLabelWidth), [xTicks, width, xMin, xMax, formatX]);
-  const path = (pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
+  const tickList = React.useMemo(() => (typeof xTicks === "function" ? xTicks({ min: xMin, max: xMax }) : xTicks), [xTicks, xMin, xMax]);
+  const shownXTicks = React.useMemo(() => (xAxis === "none" ? [] : fitTicks(tickList, xLabelAt, xLabelWidth)), [tickList, width, xMin, xMax, formatX, xAxis]);
+  // A reading a log axis cannot place breaks the line instead of drawing a false point.
+  const path = (pts: Point[]) => {
+    let pen = false;
+    return pts
+      .map((p) => {
+        if (log && !(p.y > 0)) {
+          pen = false;
+          return "";
+        }
+        const cmd = `${pen ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`;
+        pen = true;
+        return cmd;
+      })
+      .join("");
+  };
 
   const last = series[series.length - 1];
   const showEnd = (end ?? (current === undefined ? "now" : "none")) === "now";
   const peak = series.reduce((a, b) => (b.y > a.y ? b : a), series[0]);
+  const peakShown = !log || peak.y > 0;
   const stops = colourScale ? [...colourScale].sort((a, b) => a.at - b.at) : [];
   /** The colour a value lands on: the highest stop at or below it. Used for the labelled points. */
   const colourAt = (y: number) => (stops.length ? [...stops].reverse().find((s) => s.at <= y)?.colour ?? stops[0].colour : colour);
@@ -226,15 +374,19 @@ export function LineChart({
               <defs>
                 <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={sy(y.min)} y2={sy(y.max)}>
                   {stops.map((s) => (
-                    <stop key={s.at} offset={Math.min(1, Math.max(0, (s.at - y.min) / (y.max - y.min)))} stopColor={s.colour} />
+                    <stop key={s.at} offset={Math.min(1, Math.max(0, s.at > 0 || !log ? y.at(s.at) : 0))} stopColor={s.colour} />
                   ))}
                 </linearGradient>
               </defs>
             )}
+            {spans?.map((sp) => {
+              const [a, b] = [Math.max(sx(Math.min(sp.from, sp.to)), pad.left), Math.min(sx(Math.max(sp.from, sp.to)), pad.left + w)];
+              return b > a ? <rect key={`${sp.from}-${sp.to}-${sp.label}`} x={a} y={pad.top} width={b - a} height={h} fill={TONE_FILL[sp.tone ?? "neutral"]} /> : null;
+            })}
             {band && band.below > y.min && (
               <g>
-                <rect x={pad.left} y={sy(Math.min(band.below, y.max))} width={w} height={sy(y.min) - sy(Math.min(band.below, y.max))} fill="var(--success-subtle)" />
-                <text x={pad.left + 8} y={sy(Math.min(band.below, y.max)) + 16} className="fill-success type-caption">
+                <rect x={pad.left} y={Math.min(sy(y.min), sy(Math.min(band.below, y.max)))} width={w} height={Math.abs(sy(y.min) - sy(Math.min(band.below, y.max)))} fill="var(--success-subtle)" />
+                <text x={pad.left + 8} y={Math.min(sy(y.min), sy(Math.min(band.below, y.max))) + 16} className="fill-success type-caption">
                   {band.label}
                 </text>
               </g>
@@ -261,11 +413,15 @@ export function LineChart({
             )}
             <path d={path(series)} fill="none" stroke={stroke} strokeWidth={stops.length ? 2.5 : 2} strokeLinejoin="round" strokeLinecap="round" />
             {/* Direct labels instead of a legend and a tooltip. */}
-            <circle cx={sx(peak.x)} cy={sy(peak.y)} r={3} fill={colourAt(peak.y)} />
-            <text x={sx(peak.x) + 8} y={sy(peak.y) - 8} className="fill-foreground type-caption tabular-nums">
-              {formatY(peak.y)} peak
-            </text>
-            {showEnd && (
+            {peakShown && (
+              <>
+                <circle cx={sx(peak.x)} cy={sy(peak.y)} r={3} fill={colourAt(peak.y)} />
+                <text x={sx(peak.x) + 8} y={sy(peak.y) - 8} className="fill-foreground type-caption tabular-nums">
+                  {formatY(peak.y)} peak
+                </text>
+              </>
+            )}
+            {showEnd && (!log || last.y > 0) && (
               <>
                 <line x1={sx(last.x)} x2={sx(last.x)} y1={pad.top} y2={pad.top + h} stroke="var(--foreground)" strokeWidth={1} />
                 <circle cx={sx(last.x)} cy={sy(last.y)} r={3.5} fill={colourAt(last.y)} />
@@ -276,7 +432,7 @@ export function LineChart({
             )}
       </>
     ),
-    [width, height, series, planned, band, xTicks, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
+    [width, height, series, planned, band, tickList, xMin, xMax, yMode, yInvert, xAxis, spans, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -303,15 +459,29 @@ export function LineChart({
             ))}
           </tbody>
         </table>
-        </div>
+        {spans && spans.length > 0 && (
+          <ul aria-label="Shaded stretches">
+            {spans.map((sp) => (
+              <li key={`${sp.from}-${sp.to}-${sp.label}`}>{`${sp.label}: ${formatX(sp.from)} to ${formatX(sp.to)}`}</li>
+            ))}
+          </ul>
+        )}
+        {marks && marks.length > 0 && (
+          <ul aria-label="Marks">
+            {marks.map((m) => (
+              <li key={`${m.x}-${m.label}`}>{`${m.label}: ${formatX(m.x)}${m.selected ? ", selected" : ""}`}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     ),
-    [label, seriesLabel, series, formatX, formatY, xLabel],
+    [label, seriesLabel, series, formatX, formatY, xLabel, spans, marks],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
   // --- tied to the rest of the screen: the current rule, a readout, picking a reading --------
   const sorted = React.useMemo(() => [...series].sort((p, q) => p.x - q.x), [series]);
-  const interactive = Boolean(readout || onPick);
+  const interactive = Boolean(readout || onPick || joined);
   const [hover, setHover] = React.useState<number | null>(null);
   const [kbd, setKbd] = React.useState<number | null>(null);
   const [focused, setFocused] = React.useState(false);
@@ -342,6 +512,17 @@ export function LineChart({
   const heldIdx = kbd === null ? fallbackIdx : Math.min(kbd, Math.max(sorted.length - 1, 0));
   const selectedIdx = hover === null ? heldIdx : Math.min(hover, Math.max(sorted.length - 1, 0));
   const active = (hover !== null || focused) && sorted.length ? sorted[selectedIdx] : null;
+  // The shared cursor: this chart's pointer or key position goes out in the scope's unit; another
+  // member's comes in as a rule with this chart's own reading there. A position this chart wrote is never drawn back.
+  const setPointer = shared?.setPointer;
+  const writeAt = active ? (mapping?.toCursor ?? ((x: number) => x))(active.x) : null;
+  React.useEffect(() => {
+    if (!joined || !setPointer) return;
+    setPointer(writeAt);
+  }, [joined, setPointer, writeAt]);
+  React.useEffect(() => () => setPointer?.(null), [setPointer]);
+  const otherX = joined && shared!.other !== null ? (mapping?.fromCursor ?? ((c: number) => c))(shared!.other) : null;
+  const otherAt = otherX !== null && otherX >= xMin && otherX <= xMax ? { x: otherX, y: yAt(otherX) } : null;
   const onKey = (e: React.KeyboardEvent) => {
     const at = selectedIdx;
     let next = at;
@@ -375,6 +556,21 @@ export function LineChart({
                   const at = flip(sx(currentAt.x), text);
                   return (
                     <text x={at.x} y={pad.top + 12} textAnchor={at.anchor} className="fill-foreground type-caption tabular-nums">
+                      {text}
+                    </text>
+                  );
+                })()}
+              </g>
+            )}
+            {otherAt && (!log || otherAt.y > 0) && (
+              <g aria-hidden>
+                <line x1={sx(otherAt.x)} x2={sx(otherAt.x)} y1={pad.top} y2={pad.top + h} stroke="var(--muted-foreground)" strokeWidth={1} strokeDasharray="2 3" />
+                <circle cx={sx(otherAt.x)} cy={sy(otherAt.y)} r={4} fill="var(--background)" stroke="var(--foreground)" strokeWidth={2} />
+                {(() => {
+                  const text = `${formatX(otherAt.x)}: ${formatY(otherAt.y)}`;
+                  const at = flip(sx(otherAt.x), text);
+                  return (
+                    <text x={at.x} y={sy(otherAt.y) - 10} textAnchor={at.anchor} className="fill-foreground type-caption tabular-nums" paintOrder="stroke" stroke="var(--background)" strokeWidth={3}>
                       {text}
                     </text>
                   );
@@ -415,6 +611,15 @@ export function LineChart({
             box={{ left: pad.left, top: pad.top, width: w, height: h }}
           />
         )}
+        {width > 0 && marks && marks.length > 0 && (
+          <MarkButtons
+            marks={marks.filter((m) => m.x >= xMin && m.x <= xMax && (!log || yAt(m.x) > 0))}
+            place={(m) => ({ left: sx(m.x), top: sy(yAt(m.x)) })}
+            formatX={formatX}
+            onSelect={onMarkSelect}
+            card={renderMarkCard}
+          />
+        )}
       </div>
       <figcaption className="flex flex-wrap gap-x-5 gap-y-1 type-caption text-muted-foreground">
         <span className="inline-flex items-center gap-2">
@@ -432,6 +637,15 @@ export function LineChart({
           {seriesLabel}
           {stops.length > 0 && colourScaleLabel && <span>({colourScaleLabel})</span>}
         </span>
+        {spans?.map((sp) => (
+          <span key={`${sp.from}-${sp.to}-${sp.label}`} className="inline-flex items-center gap-2">
+            <svg width="14" height="10" aria-hidden>
+              <rect width="14" height="10" rx="2" fill={TONE_FILL[sp.tone ?? "neutral"]} stroke="var(--border)" />
+            </svg>
+            {sp.label}
+          </span>
+        ))}
+        {undrawn > 0 && <span>{undrawn === 1 ? "1 reading at or below zero is not drawn" : `${undrawn} readings at or below zero are not drawn`}</span>}
         {planned && plannedLabel && (
           <span className="inline-flex items-center gap-2">
             <svg width="16" height="2" aria-hidden>
@@ -446,6 +660,64 @@ export function LineChart({
   );
 }
 
+
+type MarkButtonsProps = {
+  marks: readonly ChartMark[];
+  place: (m: ChartMark) => { left: number; top: number };
+  formatX: (x: number) => string;
+  onSelect?: (m: ChartMark) => void;
+  card?: (m: ChartMark) => React.ReactNode;
+};
+
+/** The marks as controls: one tab stop for the group, arrows, Home and End between them, each named by its label and x. */
+function MarkButtons({ marks, place, formatX, onSelect, card }: MarkButtonsProps) {
+  const [active, setActive] = React.useState(0);
+  const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const at = Math.min(active, marks.length - 1);
+  const move = (i: number) => {
+    const next = Math.max(0, Math.min(marks.length - 1, i));
+    setActive(next);
+    refs.current[next]?.focus();
+  };
+  return (
+    <div
+      role="group"
+      aria-label="Marks"
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") move(at + 1);
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") move(at - 1);
+        else if (e.key === "Home") move(0);
+        else if (e.key === "End") move(marks.length - 1);
+        else return;
+        e.preventDefault();
+      }}
+    >
+      {marks.map((m, i) => {
+        const pos = place(m);
+        const name = `${m.label}, ${formatX(m.x)}`;
+        return (
+          <Tooltip key={`${m.x}-${m.label}`} label={card ? card(m) : name} side="top">
+            <AriaButton
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              aria-label={name}
+              aria-pressed={m.selected ?? false}
+              excludeFromTabOrder={i !== at}
+              onFocus={() => setActive(i)}
+              onPress={() => onSelect?.(m)}
+              className={cn(
+                "absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-pill border-2 border-background outline-offset-2 transition-state focus-visible:outline-2 focus-visible:outline-ring",
+                m.selected ? "size-4 ring-2 ring-foreground" : "size-3",
+              )}
+              style={{ left: pos.left, top: pos.top, background: m.colour ?? "var(--foreground)" }}
+            />
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
 
 type ReadingSliderProps = {
   label: string;
@@ -514,4 +786,67 @@ function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyD
       </div>
     </div>
   );
+}
+
+
+/** One chart of a `LineChartGroup`: the props that differ per chart. The group owns the x axis, the cursor, `current` and `onPick`. */
+export type GroupedChart = Omit<LineChartProps, "formatX" | "xLabel" | "xTicks" | "xDomain" | "xAxis" | "current" | "onPick" | "cursor" | "readout" | "label"> & {
+  /** Names this chart in the group's reading and its own accessible name. Default `seriesLabel`. */
+  label?: string;
+};
+
+export type LineChartGroupProps = {
+  /** What the stack shows, as a sentence. */
+  label: string;
+  charts: readonly GroupedChart[];
+  formatX: (x: number) => string;
+  xLabel?: string;
+  xTicks: LineChartProps["xTicks"];
+  /** Drawn on every chart (a chart's own `spans` and `marks` replace them). */
+  spans?: readonly ChartSpan[];
+  marks?: readonly ChartMark[];
+  onMarkSelect?: (mark: ChartMark) => void;
+  renderMarkCard?: (mark: ChartMark) => React.ReactNode;
+  /** The current x, drawn on every chart. */
+  current?: number;
+  onPick?: (x: number) => void;
+  className?: string;
+};
+
+/**
+ * Charts stacked on one x axis: one shared range, labels on the last chart only, and one cursor, so
+ * hovering or arrowing in any chart puts a rule and that chart's own reading in all of them (read
+ * together, and announced as one sentence, politely, at most once a second). Inside a `CursorScope`
+ * already, it joins that scope (a map beside the charts moves with them); otherwise it makes its own.
+ */
+export function LineChartGroup({ label, charts, formatX, xLabel, xTicks, spans, marks, onMarkSelect, renderMarkCard, current, onPick, className }: LineChartGroupProps) {
+  const inScope = useSharedCursor() !== null;
+  const xs = charts.flatMap((c) => [...c.series, ...(c.planned ?? [])].map((p) => p.x));
+  const domain: [number, number] = [Math.min(...xs), Math.max(...xs)];
+  const say = (x: number) => `${formatX(x)}: ${charts.map((c) => `${c.label ?? c.seriesLabel} ${c.formatY(valueAt(c.series, x))}`).join(", ")}`;
+  const stack = (
+    <div role="group" aria-label={label} className={cn("grid min-w-0 gap-1", className)}>
+      {charts.map((c, i) => (
+        <LineChart
+          key={c.label ?? c.seriesLabel}
+          spans={spans}
+          marks={marks}
+          onMarkSelect={onMarkSelect}
+          renderMarkCard={renderMarkCard}
+          {...c}
+          label={c.label ?? c.seriesLabel}
+          formatX={formatX}
+          xLabel={xLabel}
+          xTicks={xTicks}
+          xDomain={domain}
+          xAxis={i === charts.length - 1 ? "labels" : "none"}
+          current={current}
+          onPick={onPick}
+          cursor
+          readout
+        />
+      ))}
+    </div>
+  );
+  return inScope ? stack : <CursorScope format={say}>{stack}</CursorScope>;
 }

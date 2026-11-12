@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 import { IconButton } from "./button";
 import { NativeSelect } from "./field";
 import type { Shortcut } from "./hotkeys";
+import { useSharedCursor, type CursorMapping } from "./cursor";
 import { Toolbar } from "./toolbar";
 import { Slider } from "./value-controls";
 import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
@@ -81,17 +82,33 @@ export type SeekBarProps = TimeProps & {
   bigStep?: number;
   label?: string;
   disabled?: boolean;
+  /** Join the nearest `CursorScope` (strata-react issue #184): a pointer over the bar puts its time in every member, another member's position shows as a faint tick, and the bar's own time is the scope's playback position (`playback: false` to leave that to the app). A mapping when the scope's unit is not seconds (a route's metres). */
+  cursor?: boolean | (CursorMapping & { playback?: boolean });
   className?: string;
 };
 
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
-export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, className }: SeekBarProps) {
+export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, cursor: cursorProp, className }: SeekBarProps) {
   const duration = known && Number.isFinite(known) && known > 0 ? known : 0;
   const disabled = off || duration === 0;
   const track = React.useRef<HTMLDivElement>(null);
   const input = React.useRef<HTMLInputElement>(null);
   const frac = duration > 0 ? clamp(time / duration, 0, 1) : 0;
   const seekTo = (t: number) => onSeek(clamp(t, 0, duration));
+  // The shared cursor: a pointer over the bar writes its time, the bar's own time is the playback
+  // position, and another member's position is a faint tick (never drawn back at its writer).
+  const shared = useSharedCursor();
+  const joined = Boolean(cursorProp) && shared !== null;
+  const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
+  const toCursor = mapping?.toCursor ?? ((t: number) => t);
+  const setPlayback = shared?.setPlayback;
+  const playbackAt = joined && mapping?.playback !== false && duration > 0 ? toCursor(time) : null;
+  React.useEffect(() => {
+    if (!joined) return;
+    setPlayback?.(playbackAt);
+  }, [joined, setPlayback, playbackAt]);
+  React.useEffect(() => () => setPlayback?.(null), [setPlayback]);
+  const otherTime = joined && shared!.other !== null && duration > 0 ? (mapping?.fromCursor ?? ((c: number) => c))(shared!.other) : null;
   // React Aria's state with a formatter that says "1:23" (it only needs `format`, `formatRange` and
   // `resolvedOptions`, which is all `useSliderState` calls) and a fine step, so a drag lands on any
   // moment and not on every 5 s.
@@ -119,10 +136,22 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress
   };
   return (
     <div {...groupProps} className={cn("relative flex h-(--control-h) min-w-0 flex-1 items-center", disabled && "cursor-not-allowed opacity-50", className)}>
-      <div {...trackProps} ref={track} className={cn("relative flex h-full w-full cursor-pointer touch-none items-center", disabled && "cursor-not-allowed")}>
+      <div
+        {...mergeProps(trackProps, {
+          onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+            if (!joined || duration === 0) return;
+            const box = e.currentTarget.getBoundingClientRect();
+            shared!.setPointer(toCursor(clamp(((e.clientX - box.left) / (box.width || 1)) * duration, 0, duration)));
+          },
+          onPointerLeave: () => shared?.setPointer(null),
+        })}
+        ref={track}
+        className={cn("relative flex h-full w-full cursor-pointer touch-none items-center", disabled && "cursor-not-allowed")}
+      >
         <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
         {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
         <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
+        {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
         {duration > 0 &&
           marks.map((m) => (
             <button

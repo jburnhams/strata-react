@@ -109,7 +109,8 @@ export {
 } from "./components/selectable-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
-export { LineChart, type LineChartProps, type Point } from "./components/line-chart";
+export { LineChart, LineChartGroup, logScale, valueAt, type ChartMark, type ChartSpan, type GroupedChart, type LineChartGroupProps, type LineChartProps, type Point, type SpanTone, type YScale } from "./components/line-chart";
+export { CursorScope, useSharedCursor, type CursorMapping, type CursorOwner, type CursorScopeProps, type SharedCursor } from "./components/cursor";
 export { PageHeader } from "./components/page-header";
 export {
   UndoBar,

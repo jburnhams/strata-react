@@ -122,5 +122,28 @@ export function nearest(points: readonly LatLng[], position: LatLng): number {
   return best;
 }
 
-/** Route geometry helpers: `geo.distance`, `bearing`, `length`, `cumulative`, `bounds`, `pointAlong`, `arrows`, `ends`, `nearest`. */
-export const geo = { distance, bearing, cumulative, length, bounds, pointAlong, arrows, ends, nearest };
+/**
+ * The nearest point on a route to `position`, not only its vertices: where it lies, how far along the
+ * route that is, and how far `position` is from the route. The inverse of `pointAlong` (a cursor on a
+ * map is a distance on a chart). Each leg is flattened around its own latitude, which is exact enough
+ * for any leg a recording has; `index` is the leg's first point. Null for fewer than one point.
+ */
+export function snap(points: readonly LatLng[], position: LatLng, along: readonly number[] = cumulative(points)): { position: LatLng; metres: number; offset: number; index: number } | null {
+  if (!points.length) return null;
+  if (points.length === 1) return { position: points[0], metres: 0, offset: distance(points[0], position), index: 0 };
+  let best: { position: LatLng; metres: number; offset: number; index: number } | null = null;
+  for (let i = 1; i < points.length; i++) {
+    const [p, q] = [points[i - 1], points[i]];
+    const k = Math.cos((((p[0] + q[0]) / 2) * Math.PI) / 180);
+    const [dx, dy] = [(q[1] - p[1]) * k, q[0] - p[0]];
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, (((position[1] - p[1]) * k) * dx + (position[0] - p[0]) * dy) / len2));
+    const at: LatLng = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    const offset = distance(at, position);
+    if (!best || offset < best.offset) best = { position: at, metres: along[i - 1] + (along[i] - along[i - 1]) * t, offset, index: i - 1 };
+  }
+  return best;
+}
+
+/** Route geometry helpers: `geo.distance`, `bearing`, `length`, `cumulative`, `bounds`, `pointAlong`, `snap` (its inverse), `arrows`, `ends`, `nearest`. */
+export const geo = { distance, bearing, cumulative, length, bounds, pointAlong, snap, arrows, ends, nearest };
