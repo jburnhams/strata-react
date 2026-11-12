@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+**Consumer upgrade guide** (branch `claude/project-thread-hjs97b`). Jonathan asked for a changelog consumers can use to see what to change when updating, concise and pointing at the code rather than repeating it. This file is the development log, so the guide is separate.
+
+- `UPGRADING.md` (**new**): breaking and observable changes since 0.1.x began, newest first, written from this log and the release dates (the 0.1.x tag for a given change is not recorded in the log, so sections are by date).
+- `CLAUDE.md`: the Changelog section now requires a line in `UPGRADING.md` in the same PR for anything an app or its tests can observe.
+- `package.json`: `UPGRADING.md` added to `files`, so it ships on npm. `README.md`: links to it.
+
 **Toolbar, toggles and Switch (issue #69)** (branch `claude/toolbar-69`, stacked on `claude/overlays-70`). The issue asked for the controls `components.md` §3.3 specifies and a toolbar to hold them. Built on React Aria's `Toolbar`, `ToggleButton`, `ToggleButtonGroup` and `Switch`.
 
 - `src/components/toolbar.tsx` (**new**): `Toolbar` (required `label`; one tab stop, arrow keys from React Aria, and Home and End added here because React Aria's toolbar does not do them, left alone in a typing target) and `ToolbarSeparator`. It wraps onto more lines when it runs out of width; an overflow menu waits for `Menu` (#71).

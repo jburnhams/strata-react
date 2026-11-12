@@ -38,7 +38,8 @@
   "files": [
     "dist",
     "bin",
-    "README.md"
+    "README.md",
+    "UPGRADING.md"
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
