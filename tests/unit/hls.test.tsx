@@ -205,3 +205,44 @@ describe("a stream that is still being made", () => {
     expect(ended).toBe(1);
   });
 });
+
+describe("where an HLS stream starts, and what its failures say (issue #208)", () => {
+  it("starts a growing source at its beginning, not at the newest part hls.js would choose", () => {
+    const { Engine, log } = fakeHlsEngine();
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} growing={{}} />);
+    expect(log.created[0].config.startPosition).toBe(0);
+  });
+
+  it("lets hls.js choose for a source that is not growing", () => {
+    const { Engine, log } = fakeHlsEngine();
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
+    expect(log.created[0].config.startPosition).toBe(-1);
+  });
+
+  it("honours the app's own startPosition on a first load, growing or not, and the time reached on a reload", async () => {
+    const user = userEvent.setup();
+    const { Engine, log } = fakeHlsEngine();
+    const { container } = render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine, { config: { startPosition: 15 } })} growing={{}} controls="strata" />);
+    expect(log.created[0].config.startPosition).toBe(15);
+    act(() => media.loaded(video(container), 120));
+    act(() => media.tick(video(container), 42));
+    act(() => log.created[0].fail("otherError"));
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(log.created[1].config.startPosition).toBe(42);
+  });
+
+  it("says a failure in the app's words", () => {
+    const { Engine, log } = fakeHlsEngine();
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine, { words: { other: "Open it in an up-to-date Chrome." } })} />);
+    act(() => log.created[0].fail("otherError"));
+    expect(screen.getByText("Open it in an up-to-date Chrome.")).toBeInTheDocument();
+  });
+
+  it("keeps the default words for the failures the app did not reword", () => {
+    const { Engine, log } = fakeHlsEngine();
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine, { words: { other: "x" } })} />);
+    act(() => log.created[0].fail("mediaError"));
+    for (let i = 0; i < 3; i++) act(() => log.created[0].fail("mediaError"));
+    expect(screen.getByText("The stream could not be decoded.")).toBeInTheDocument();
+  });
+});
