@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-12
+
+**Rule: consult Jonathan before changing dependencies** (branch `claude/dependency-rule-rebased`, PR #84). Jonathan asked, while the open issues were being planned, for a firm rule that dependency changes are put to him first.
+
+- `CLAUDE.md`: **new** section "Dependencies: consult Jonathan first", placed before the stack table.
+
 ## 2026-11-11
 
 **TypeScript 7, TanStack Table 9 and lucide-react 1.70** (branch `claude/project-thread-d1q9sc`). Dependabot's three major bumps (#63, #64, #65) failed CI. Jonathan asked for them to be migrated, so this branch does all three and replaces those PRs.
