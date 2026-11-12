@@ -17,8 +17,19 @@ import { cn } from "../lib/utils";
 // button is not described by them. Field messages for a form come from `useAsyncAction`'s
 // `fieldErrors` (its `validate`, or the server's 422), so no `problem` state is kept by hand.
 
-type FieldState = { id: string; describedBy?: string; invalid: boolean };
+type FieldState = { id: string; label: string; describedBy?: string; invalid: boolean; report: (message: string | undefined) => void };
 const FieldContext = React.createContext<FieldState | null>(null);
+
+// A control that checks what was typed (a number field, a colour field) reports its own message to
+// the Field it sits in, which draws it as the field's error, so a value outside the limits is
+// explained in the same place and way as a server's 422, with nothing for the screen to wire.
+// `error` from the screen wins over the control's own. Outside a Field `report` does nothing and
+// the control marks itself invalid without a message.
+/** @internal The surrounding Field, and where a control reports its own message. */
+export function useFieldControl() {
+  const field = React.useContext(FieldContext);
+  return { field, report: field?.report ?? noReport };
+}
 
 function useField(id?: string) {
   const field = React.useContext(FieldContext);
@@ -30,6 +41,8 @@ function useField(id?: string) {
     "aria-invalid": field?.invalid || undefined,
   };
 }
+
+const noReport = () => {};
 
 export type FieldProps = {
   label: string;
@@ -50,11 +63,13 @@ export function Field({ label, id: idProp, hint, error, action, children, classN
   const generated = React.useId();
   const id = idProp ?? generated;
   const hintId = hint ? `${id}-hint` : undefined;
-  const errorId = error ? `${id}-error` : undefined;
+  const [reported, report] = React.useState<string>();
+  const shown = error ?? reported;
+  const errorId = shown ? `${id}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <FieldContext.Provider value={{ id, describedBy, invalid: Boolean(error) }}>
+    <FieldContext.Provider value={{ id, label, describedBy, invalid: Boolean(shown), report }}>
       <div className={cn("grid min-w-0 content-start gap-1.5", className)}>
         <label htmlFor={id} className="type-label text-foreground">
           {label}
@@ -67,10 +82,10 @@ export function Field({ label, id: idProp, hint, error, action, children, classN
         ) : (
           children
         )}
-        {error && (
+        {shown && (
           <p id={errorId} className="flex items-start gap-1.5 type-body-sm text-danger">
             <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-            {error}
+            {shown}
           </p>
         )}
         {hint && (

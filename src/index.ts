@@ -72,6 +72,7 @@ export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from ".
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type LoadFailure, type Stale } from "./components/data-view";
+export { NumberField, Slider, ColorField, type NumberFieldProps, type SliderProps, type ColorFieldProps, type RangeProps } from "./components/value-controls";
 export { Alert, type AlertProps } from "./components/alert";
 export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type StrataToastRegionProps } from "./components/toast";
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";

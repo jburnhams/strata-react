@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**Value controls: number field, slider and colour field (issue #73)** (branch `claude/value-controls-73`). The issue asked for controls for setting a number or colour precisely, with units, from moving strata-vid onto Strata. `NumberField` and `Slider` are built on React Aria's number field and slider; the colour field keeps its own text box. A first version used native inputs on the mistaken ground that React Aria's number field always clamps a typed value; it has `commitBehavior="validate"`, which does not, so the controls were rebuilt on React Aria (Jonathan's stack rule).
+
+- `src/components/value-controls.tsx` (**new**): `NumberField` (React Aria number field with `commitBehavior="validate"`: a typed value outside `min`/`max` stays on screen, is explained in the surrounding `Field` and is never passed to `onChange`; empty is `null` and shows an en dash; `required` refuses empty; the unit sits inside the control and is announced through the description). `Slider` (React Aria slider; value printed beside it, spoken with the unit when `Intl` has it: %, °, ms, s, kB, MB, GB, kbps, Mbps; `editable` adds a `NumberField`). `ColorField` (platform picker, typed hex normalised to `#rrggbb`, suggestions, contrast note against `against`; the text box is ours because React Aria's colour field puts the old colour back on bad text instead of saying so). No new dependency.
+- Behaviour that is React Aria's, and so a change from a hand-written field: it drops characters the format cannot hold (no "." in a whole-number field, no "-" when `min` is 0 or more), reads "12,5" in an en-GB field as 125 (its parser ignores group marks), and has no Shift step (arrows step, Home and End jump to the limits).
+- `src/lib/number-input.ts` (**new**): `parseHex` and `contrastRatio`.
+- `src/components/field.tsx`: `Field` accepts a message from the control inside it (`useFieldControl`, internal) and draws it as its error; a screen's `error` still wins.
+- `src/index.ts`, `README.md` (Value controls row), `stories/value-controls.stories.tsx` (**new**), `tests/unit/value-controls.test.tsx` (**new**, 19 tests), baselines for the new stories.
+- Not done: drag-to-scrub on the label (optional in the issue).
+
 **Feedback: Alert, toasts and client-side work (issue #72)** (branch `claude/feedback-72`). The issue asked for toasts, inline alerts and progress for work the browser does. Toasts and alerts are new; progress reuses `JobStatus`, so a server job and an export the browser runs are one idea with one look, instead of a second progress component.
 
 - `src/components/alert.tsx` (**new**): `Alert`, four tones each with an icon and words, a pale tint (no coloured side stripe), one optional `action`, `role="alert"` only with `announce`.
