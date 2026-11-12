@@ -67,9 +67,23 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
   const [muted, setMuted] = React.useState(false);
   const [behind, setBehind] = React.useState<ReadonlySet<number>>(new Set());
   const chosenRate = React.useRef(1);
+  // True while the group is held for a video that has not got its frames; a cell that comes into view then waits with the rest.
+  const holdRef = React.useRef(false);
   const lead = useMediaElement(leaderRef);
 
   const active = () => [...els.current.entries()].filter(([i]) => i === 0 || !hidden.current.has(i)).sort((a, b) => a[0] - b[0]).map(([, el]) => el);
+
+  // A play() the browser refuses (autoplay policy) or that a pause or a hold interrupts rejects; an interruption is ours and ignored, a refusal means nothing is playing, so the transport must not say it is.
+  const start = (el: HTMLVideoElement) => {
+    void el.play().catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setWanted(false);
+    });
+  };
+  // Pause reaches every attached element, hidden ones too, so none can go on after the transport says paused.
+  const pauseAll = () => {
+    for (const el of els.current.values()) el.pause();
+  };
 
   // ---- the loop ----
   const [ownLoop, setOwnLoop] = React.useState<VideoLoop>({ start: null, end: null });
@@ -87,12 +101,14 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     const list = active();
     if (wantedRef.current && start !== null && end !== null) {
       for (const el of list) el.currentTime = start;
-      for (const el of list) void el.play();
+      for (const el of list) startRef.current(el);
       return;
     }
     setWanted(false);
-    for (const el of list) el.pause();
+    pauseAll();
   };
+  const startRef = React.useRef(start);
+  startRef.current = start;
   const onEndedRef = React.useRef(onEnded);
   onEndedRef.current = onEnded;
 
@@ -146,11 +162,11 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
   const play = () => {
     setWanted(true);
     setStarted(true);
-    for (const el of active()) void el.play();
+    for (const el of active()) start(el);
   };
   const pause = () => {
     setWanted(false);
-    for (const el of active()) el.pause();
+    pauseAll();
   };
   const toggle = () => (wanted ? pause() : play());
   const seek = (time: number) => {
@@ -192,7 +208,7 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     if (!hidden.current.delete(index) || !el) return;
     el.currentTime = now();
     el.playbackRate = chosenRate.current;
-    if (wantedRef.current) void el.play();
+    if (wantedRef.current && !holdRef.current) start(el);
   };
 
   React.useEffect(() => {
@@ -203,13 +219,14 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
       const [L, ...followers] = list;
       if (L && list.every((el) => !el.ended)) {
         if (!list.every((el) => el.readyState >= 3)) {
-          if (!held) {
-            held = true;
-            for (const el of list) el.pause();
-          }
+          held = true;
+          holdRef.current = true;
+          // Every tick, so a cell that came into view during the hold is stopped too.
+          for (const el of list) if (!el.paused) el.pause();
         } else if (held) {
           held = false;
-          for (const el of list) void el.play();
+          holdRef.current = false;
+          for (const el of list) startRef.current(el);
         } else if (!L.paused) {
           const { start, end } = loopRef.current;
           if (start !== null && end !== null && L.currentTime >= end) {
@@ -231,7 +248,10 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
       }
       frame = requestAnimationFrame(tick);
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      holdRef.current = false;
+    };
   }, [wanted, fps]);
   // Nothing is behind when nothing runs.
   React.useEffect(() => {
@@ -246,7 +266,8 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     el.defaultPlaybackRate = chosenRate.current;
     el.playbackRate = chosenRate.current;
     if (resume.current.time > 0) el.currentTime = resume.current.time;
-    if (resume.current.playing) void el.play();
+    const index = [...els.current.entries()].find(([, e]) => e === el)?.[0];
+    if (resume.current.playing && (index === undefined || !hidden.current.has(index))) start(el);
   };
 
   // One sound: the chosen video at the volume, the rest muted.

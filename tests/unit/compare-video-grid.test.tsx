@@ -160,4 +160,32 @@ describe("CompareVideoGrid", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Face" }));
     for (const l of ["A", "B", "C"]) expect(el(l).style.imageRendering).toBe("pixelated");
   });
+  it("goes back to Play when the browser refuses to start", async () => {
+    renderWithStrata(<Harness />);
+    load(["A", "B", "C"]);
+    media.refuseNextPlay();
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(await screen.findByRole("button", { name: "Play" })).toBeInTheDocument();
+  });
+
+  it("keeps a cell that scrolls into view during a hold paused with the rest", async () => {
+    renderWithStrata(<Harness />);
+    load(["A", "B"]);
+    act(() => io.intersect(el("C").closest("figure")!, false));
+    act(() => media.loaded(el("C"), 10));
+    await userEvent.keyboard(" ");
+    act(() => media.stall(el("B")));
+    await waitFor(() => expect(el("A").paused).toBe(true));
+    act(() => io.intersect(el("C").closest("figure")!, true));
+    expect(el("C").paused).toBe(true);
+  });
+
+  it("does not start a hidden cell that finishes loading after play, and Pause stops it anyway", async () => {
+    renderWithStrata(<Harness />);
+    load(["A", "B"]);
+    act(() => io.intersect(el("C").closest("figure")!, false));
+    await userEvent.keyboard(" ");
+    act(() => media.loaded(el("C"), 10));
+    expect(el("C").paused).toBe(true);
+  });
 });
