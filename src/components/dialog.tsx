@@ -80,7 +80,7 @@ function Overlay({ trigger, open, onOpenChange, children }: { trigger?: React.Re
 function Driven({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>> }) {
   const opener = React.useRef<Element | null>(null);
   const wasOpen = React.useRef(false);
-  if (open && !wasOpen.current) opener.current = document.activeElement;
+  if (open && !wasOpen.current) opener.current = typeof document === "undefined" ? null : document.activeElement;
   wasOpen.current = Boolean(open);
   React.useEffect(() => {
     if (!open) return;
