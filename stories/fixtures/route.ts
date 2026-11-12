@@ -32,3 +32,21 @@ export const speedScale = [
 
 /** Where the runner is `share` of the way along the river run. */
 export const riverRunAt = (share: number): LatLng => riverRun[Math.min(riverRun.length - 1, Math.round(share * (riverRun.length - 1)))];
+
+// The run as charts (issues #183 and #184): elevation and pace by distance, stops, and clips cut along it.
+import { geo } from "../../src";
+
+/** Metres along the river run at each of its points. */
+export const riverRunMetres = geo.cumulative(riverRun);
+/** Elevation in metres at each point, by distance. */
+export const riverElevation = riverRun.map((_, i) => ({ x: riverRunMetres[i], y: Math.round(18 + 22 * Math.sin(i / 38) + 7 * Math.sin(i / 9)) }));
+/** Pace in seconds per km at each point, by distance: 3600 over the speed, so slower is higher (a log axis, faster at the top). */
+export const riverPace = riverRun.map((_, i) => ({ x: riverRunMetres[i], y: Math.round(3600 / riverRunSpeed[i]) }));
+/** Stretches where the runner stopped. */
+export const riverStops = [
+  { from: riverRunMetres[60], to: riverRunMetres[72], label: "Stopped at the lights", tone: "warning" as const },
+  { from: riverRunMetres[170], to: riverRunMetres[178], label: "Stopped to tie a lace", tone: "warning" as const },
+];
+const total = riverRunMetres[riverRunMetres.length - 1];
+/** Twelve clips along the run: where each one is, as a distance. */
+export const riverClips = Array.from({ length: 12 }, (_, i) => ({ x: Math.round((total * (i + 0.5)) / 12), label: `Clip ${i + 1}` }));

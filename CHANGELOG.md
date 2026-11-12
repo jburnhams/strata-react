@@ -16,6 +16,18 @@
 - `tests/visual/baselines/`: 36 new, none changed.
 - `src/index.ts`, `README.md`: exports and component table.
 
+**Maps and charts for a media review screen: markers, shared cursor, spans, log axis, picking (issues #181 to #184)** (branch `claude/maps-and-charts`). One batch: a cursor shared by every view of the same run, items on the map, richer line charts and a place picker.
+
+- `src/components/cursor.tsx` (**new**): `CursorScope`, `useSharedCursor`, `CursorMapping`. One canonical unit, a mapping per member, `source` ids so a member never reacts to its own writes, pointer and playback owners (the pointer wins, playback is the fallback), one throttled polite live region.
+- `src/components/line-chart.tsx`: `spans` (shaded stretches with a word), `marks` (a roving group of buttons with `renderMarkCard`), `yScale="log"`, `yInvert`, `xTicks`, `xDomain`, `cursor`; `LineChartGroup` stacks charts on one x axis with one set of labels and one shared reading. `logScale` and `valueAt` exported.
+- `src/components/media.tsx`: `SeekBar` `cursor`.
+- `src/lib/geo.ts`: `snap` (nearest point on a route, with how far off) and `slice`.
+- `src/map/fan.ts`, `src/map/markers.tsx` (**new**): `fanOut` (single linkage in world pixels, circle for 2 to 6, rings beyond), `MapMarker` and the marker layer and key.
+- `src/map/route-map.tsx`, `map-styles.ts`, `index.ts`: `markers`, `onMarkerSelect`, `renderMarkerCard`, `markerKey`, `cursor`, `onViewChange`, `view`, a "Reset view" control, `picking`/`onPick`/`onPickCancel`/`pickBanner`.
+- Tests (**new**): `geo`, `fan-out`, `line-chart-spans`, `route-map-instrument`, `cursor-seekbar`. Stories: `SpansAndMarks`, `LogAxisFasterAtTheTop`, `StackedWithSharedReading`, `StackedPhone`, `LiveGroup`; `Markers`, `MarkersZoomedIn`, `MarkersPhone`, `Picking`, `PickAPlace`; **new** baselines, and every `RouteMap` baseline moved because the reset control is now drawn in the top-start corner.
+- Review fixes (Codex on #194): `useSyncExternalStore` gets a server snapshot (so `LineChart` and `SeekBar` still render on the server); the chart's pointer track maps onto the displayed `xDomain`, not the series extent; `SeekBar` clears its pointer entry as well as playback when it unmounts. Tests for each.
+- `UPGRADING.md` line for the reset control. Not changed: the media playback and layout baselines differ slightly on this machine (select glyph anti-aliasing), so they were not rewritten.
+
 **Timed media: windows, groups, waveform, transcript, streams and a 360 viewer (issues #178, #179, #180, #185, #186)** (branch `claude/media`). One batch for strata-360's review screens. `hls.js` is a new optional peer (approved by Jonathan, 2026-11-12).
 
 - `src/components/media-player.tsx`: `useMediaElement(ref, options)` takes `window`, `loop`, `group`, `onTimeUpdate`, `onWindowEnd`, `growing` and `onRetry`; the state gains `window`, `playWindow`, `ready`, `waitingForMore` and `reportProblem`. A window stops or loops at its end by a frame loop (and on `timeupdate`), starts at its start from outside, and the element keeps its pitch whenever the rate changes. `MediaPlayer` gains `window`, `loop`, `showFull`, `group`, `onTimeUpdate`, `onWindowEnd`, `attach` and `growing`. `useAttachedSource` and the `SourceAttacher` types are the engine interface.
