@@ -5,6 +5,8 @@ import { cn } from "../lib/utils";
 import { format } from "../lib/format";
 import { geo, type LatLng } from "../lib/geo";
 import { installMapStyles } from "./map-styles";
+import { useSharedCursor } from "../components/cursor";
+import { MarkerKey, MarkerLayer, alongOf, placeMarkers, type MapMarker, type MarkerKeyWords } from "./markers";
 
 // A themed map of routes with a position that moves along them (strata-react issue #80, from
 // strata-vid's MapPanel and jonathanburnhams.com's activity maps). It is behind its own entry,
@@ -56,6 +58,23 @@ import { installMapStyles } from "./map-styles";
 // Fractional zoom needs `zoomSnap: 0`, which is set only while `zoom` is controlled, so a page map still
 // snaps to half steps. Each marker is one `L.CircleMarker` kept by id and moved with `setLatLng`.
 //
+// The map as an instrument, not only a picture (strata-react issues #181, #182, #184):
+// - `markers`: items on the route as controls with cards, fanned apart (markers.tsx).
+// - `onViewChange`: the visible bounds and zoom, once when movement settles (debounced `settle` ms), and
+//   not for a move the app made through its own props (`zoom`, `view`, `follow`, the first fit), which it
+//   already knows about: every move the component makes itself runs inside `silently`, and Leaflet's events
+//   are synchronous with animation off, so the flag cannot leak. `reportAppMoves` turns that off.
+// - `view` restores a saved view; the person's own moves go out through `onViewChange`. A reset control
+//   in Leaflet's own control group fits the routes again (or sets the zoom, when one is controlled).
+// - `picking` + `onPick`: choose a place. Pointer: a click. Keyboard: arrows move a crosshair (Shift for
+//   bigger steps), Enter chooses, Escape asks to cancel; Leaflet's own arrow handling is switched off for
+//   the time, since both would move. The result is announced with the nearest route, how far along it and
+//   how far off (`geo.snap`). Route lines stop taking clicks while picking, or a pick near the route would
+//   select the route instead. A click when not picking does nothing new.
+// - `cursor`: joins a `CursorScope` (cursor.tsx). The scope's unit here is metres along one route; a
+//   pointer near the route (within 24 px of it) writes the distance of the nearest point on it, and
+//   another member's distance is drawn as a ring on the route. Never drawn back at its own writer.
+//
 // No animation: zoom, fade and inertia are off, because a map is panned all the time and a tile
 // fade makes a screenshot depend on timing (character by frequency, and strata-visual).
 //
@@ -105,6 +124,22 @@ export type MapPosition = {
   colour?: string;
 };
 
+/** The view the map settled on. */
+export type MapView = { bounds: [LatLng, LatLng]; zoom: number; center: LatLng };
+
+/** The route nearest a picked place. */
+export type PickNearest = {
+  routeId: string;
+  /** The leg of the route (its first point's index) the place is nearest. */
+  index: number;
+  /** How far the place is from the route, in metres. */
+  distanceM: number;
+  /** How far along the route the nearest point is, in metres. */
+  alongM: number;
+  /** The nearest point on the route. */
+  position: LatLng;
+};
+
 export type RouteMapProps = {
   /** Names the map ("Route of Wednesday's run"). */
   label: string;
@@ -123,6 +158,32 @@ export type RouteMapProps = {
   follow?: boolean | "centre";
   /** The zoom level, any number (12, 14.5): it may change every frame without redrawing routes. Unset, the map fits its routes and the person zooms. */
   zoom?: number;
+  /** Items on the map: places, or stretches of a route. Keep the array stable between renders. */
+  markers?: readonly MapMarker[];
+  /** A marker was pressed (click, Enter or Space). */
+  onMarkerSelect?: (id: string) => void;
+  /** The words shown beside a marker on hover and focus (as `Tooltip`; not interactive). Default its label. */
+  renderMarkerCard?: (marker: MapMarker) => React.ReactNode;
+  /** The words of the marker key; `false` leaves the key out. */
+  markerKey?: MarkerKeyWords | false;
+  /** Join the nearest `CursorScope`: a pointer near a route puts its distance along it in every member, and another member's distance shows as a ring on the route. `{ routeId }` picks the route (default the first). */
+  cursor?: boolean | { routeId?: string };
+  /** The view settled after the person moved or zoomed it: bounds, zoom and centre. Not called for moves the app caused through props. */
+  onViewChange?: (view: MapView) => void;
+  /** Milliseconds the view must be still before `onViewChange`. Default 250. */
+  settle?: number;
+  /** Also call `onViewChange` for moves the app caused through props (the first fit, `zoom`, `view`, `follow`). */
+  reportAppMoves?: boolean;
+  /** A view to show: centre and zoom, as a saved view or the app's own. The person can still move away from it; set it again to go back. Wins over fitting the routes. */
+  view?: { center: LatLng; zoom: number };
+  /** Choose a place on the map. While set, a click or Enter picks and route lines do not take clicks. */
+  picking?: boolean;
+  /** A place was chosen, with the nearest route to it when there is one. */
+  onPick?: (at: LatLng, info: { nearest: PickNearest | null }) => void;
+  /** Escape was pressed while picking: the app turns `picking` off. */
+  onPickCancel?: () => void;
+  /** The banner for pick mode ("Click the map to set the point; Escape cancels"), shown top centre. */
+  pickBanner?: React.ReactNode;
   /** The route drawn heavier, with the others lighter. */
   selectedId?: string | null;
   /** A route line was pressed. Give the app's own list of routes the same action for the keyboard. */
@@ -173,6 +234,67 @@ function useSlow<T>(value: T, ms = 1000): T {
   return slow;
 }
 
+/** How many moves of the map the component itself is making right now (see `onViewChange`). */
+const quiet = new WeakMap<L.Map, number>();
+/** Run a move the component makes itself, so `onViewChange` does not report it. Leaflet's events are synchronous with animation off. */
+function silently<T>(map: L.Map, fn: () => T): T {
+  quiet.set(map, (quiet.get(map) ?? 0) + 1);
+  try {
+    return fn();
+  } finally {
+    quiet.set(map, (quiet.get(map) ?? 1) - 1);
+  }
+}
+
+/** The route nearest a place, by distance from it to the route (not to a vertex). */
+function nearestRoute(routes: readonly MapRoute[], at: LatLng): PickNearest | null {
+  let best: PickNearest | null = null;
+  for (const r of routes) {
+    const s = geo.snap(r.points, at, alongOf(r.points));
+    if (s && (!best || s.offset < best.distanceM)) best = { routeId: r.id, index: s.index, distanceM: s.offset, alongM: s.metres, position: s.position };
+  }
+  return best;
+}
+
+const RESET_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>';
+const CROSS_ICON = '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke-linecap="round"><path d="M16 4v24M4 16h24" stroke="var(--background)" stroke-width="5"/><path d="M16 4v24M4 16h24" stroke="var(--foreground)" stroke-width="2"/></svg>';
+
+/** Leaflet's control group gets a reset: fit the routes again. A link with a button role, as Leaflet's own zoom buttons are. */
+function resetControl(onReset: () => void): L.Control {
+  const control = new L.Control({ position: "topleft" });
+  control.onAdd = () => {
+    const bar = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+    const a = L.DomUtil.create("a", "strata-map-reset", bar);
+    a.href = "#";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "Reset view");
+    a.title = "Reset view";
+    a.innerHTML = RESET_ICON;
+    L.DomEvent.disableClickPropagation(bar);
+    L.DomEvent.on(a, "click", (e) => {
+      L.DomEvent.preventDefault(e);
+      onReset();
+    });
+    L.DomEvent.on(a, "keydown", (e) => {
+      if ((e as KeyboardEvent).key === " ") {
+        L.DomEvent.preventDefault(e);
+        onReset();
+      }
+    });
+    return bar;
+  };
+  return control;
+}
+
+/** Put the routes in view (or, with a zoom set, centre the routes at it). */
+function showRoutes(map: L.Map, routes: readonly MapRoute[], zoom: number | undefined) {
+  const box = geo.bounds(routes.flatMap((r) => r.points));
+  if (!box) return false;
+  if (zoom !== undefined) map.setView([(box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2], zoom, { animate: false });
+  else map.fitBounds([tuple(box[0]), tuple(box[1])], { padding: [24, 24], animate: false, maxZoom: 17 });
+  return true;
+}
+
 const SINGLE = "\u0000position";
 const PALETTE = [1, 2, 3, 4, 5].map((n) => `var(--chart-${n})`);
 
@@ -185,11 +307,13 @@ const PALETTE = [1, 2, 3, 4, 5].map((n) => `var(--chart-${n})`);
  * call, which flickers when the position changes every frame.
  */
 function centre(map: L.Map, target: LatLng, z: number) {
-  if (map.getZoom() !== z) map.setView(tuple(target), z, { animate: false });
-  const want = map.project(tuple(target), z).subtract(map.getSize().divideBy(2)).round();
-  const have = map.getPixelBounds().min!.round();
-  const move = want.subtract(have);
-  if (move.x || move.y) map.panBy(move, { animate: false, noMoveStart: true });
+  silently(map, () => {
+    if (map.getZoom() !== z) map.setView(tuple(target), z, { animate: false });
+    const want = map.project(tuple(target), z).subtract(map.getSize().divideBy(2)).round();
+    const have = map.getPixelBounds().min!.round();
+    const move = want.subtract(have);
+    if (move.x || move.y) map.panBy(move, { animate: false, noMoveStart: true });
+  });
 }
 
 /** The colour a CSS value (a `var()`, a role) resolves to on `el`, so an SVG attribute gets a real one. Falls back to the value itself. */
@@ -230,6 +354,19 @@ export function RouteMap({
   followId,
   follow = false,
   zoom,
+  markers,
+  onMarkerSelect,
+  renderMarkerCard,
+  markerKey,
+  cursor: cursorProp,
+  onViewChange,
+  settle = 250,
+  reportAppMoves = false,
+  view,
+  picking = false,
+  onPick,
+  onPickCancel,
+  pickBanner,
   selectedId = null,
   onSelect,
   colourScale,
@@ -247,11 +384,14 @@ export function RouteMap({
   const root = React.useRef<HTMLDivElement>(null);
   const [map, setMap] = React.useState<L.Map | null>(null);
   const summaryId = React.useId();
-  const latest = React.useRef({ onSelect });
-  latest.current = { onSelect };
+  const latest = React.useRef({ onSelect, onViewChange, reportAppMoves, settle, picking, onPick, onPickCancel, routes, units, view, zoom });
+  latest.current = { onSelect, onViewChange, reportAppMoves, settle, picking, onPick, onPickCancel, routes, units, view, zoom };
+  const [announced, setAnnounced] = React.useState("");
+  // True once the map has a view (the first fit has happened): before that Leaflet cannot say what is near.
+  const [ready, setReady] = React.useState(false);
   const selectable = Boolean(onSelect);
   // One marker per position, by id, with the style last applied so a moving marker is not restyled every frame.
-  const markers = React.useRef(new Map<string, { marker: L.CircleMarker; style: string }>());
+  const posMarkers = React.useRef(new Map<string, { marker: L.CircleMarker; style: string }>());
 
   const darkTiles = scheme === "dark" ? tiles.dark : undefined;
   const source = darkTiles ?? tiles.light;
@@ -272,9 +412,10 @@ export function RouteMap({
     setMap(m);
     return () => {
       ro.disconnect();
-      markers.current.clear();
+      posMarkers.current.clear();
       m.remove();
       setMap(null);
+      setReady(false);
     };
     // The wheel setting is applied below, so the map is not rebuilt for it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,8 +457,9 @@ export function RouteMap({
       if (stops.length && r.values?.length) range = ` ${colourScaleLabel ?? "Value"} from ${formatValue(extent(r.values)[0])} to ${formatValue(extent(r.values)[1])}.`;
       return `${r.label}: ${format.distance(total, units)}${shape}.${range}${here}`;
     });
-    return `Map with ${routes.length === 1 ? "one route" : `${routes.length} routes`}. ${parts.join(" ")}`;
-  }, [summary, routes, spoken, units, stops.length, colourScaleLabel, formatValue]);
+    const items = markers?.length ? ` ${markers.length === 1 ? "One marker" : `${markers.length} markers`}${markers.some((m) => m.selected) ? `, selected: ${markers.filter((m) => m.selected).map((m) => m.label).join(", ")}` : ""}.` : "";
+    return `Map with ${routes.length === 1 ? "one route" : `${routes.length} routes`}. ${parts.join(" ")}${items}`;
+  }, [summary, routes, spoken, units, stops.length, colourScaleLabel, formatValue, markers]);
 
   React.useEffect(() => {
     if (!map) return;
@@ -355,7 +497,7 @@ export function RouteMap({
       const selected = route.id === selectedId;
       const dim = selectedId !== null && !selected;
       const weight = (route.weight ?? 4) + (selected ? 2 : 0);
-      const style = { weight, opacity: dim ? 0.55 : 1, lineCap: "round" as const, lineJoin: "round" as const, interactive: selectable, bubblingMouseEvents: false };
+      const style = { weight, opacity: dim ? 0.55 : 1, lineCap: "round" as const, lineJoin: "round" as const, interactive: selectable && !picking, bubblingMouseEvents: false };
       const lines: L.Polyline[] = [];
       if (stops.length && route.values?.length) {
         for (const run of stepRuns(route.points, route.values, stepOf)) {
@@ -395,9 +537,9 @@ export function RouteMap({
       }
     });
     // Redrawn routes are new layers: keep the positions above them.
-    for (const { marker } of markers.current.values()) marker.bringToFront();
+    for (const { marker } of posMarkers.current.values()) marker.bringToFront();
     return () => void group.remove();
-  }, [map, routes, scheme, selectedId, stops, selectable]);
+  }, [map, routes, scheme, selectedId, stops, selectable, picking]);
 
   // The position a followed view is held on: read by the fit (a map shown for the first time starts
   // centred on it) and by the position effect.
@@ -419,14 +561,16 @@ export function RouteMap({
     const fit = () => {
       const size = map.getSize();
       if (fitted.current === routeKey || size.x === 0 || size.y === 0) return;
-      const box = geo.bounds(routes.flatMap((r) => r.points));
-      if (!box) return;
+      if (!geo.bounds(routes.flatMap((r) => r.points)) && !latest.current.view) return;
       fitted.current = routeKey;
-      const view = latestView.current;
-      if (view.zoom !== undefined) {
-        const centre: LatLng = (view.centred && view.target) || [(box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2];
-        map.setView(tuple(centre), view.zoom, { animate: false });
-      } else map.fitBounds([tuple(box[0]), tuple(box[1])], { padding: [24, 24], animate: false, maxZoom: 17 });
+      const v = latestView.current;
+      setReady(true);
+      // A given view wins, then a set zoom (on the followed position, or the routes' middle), then the routes.
+      silently(map, () => {
+        if (latest.current.view) map.setView(tuple(latest.current.view.center), latest.current.view.zoom, { animate: false });
+        else if (v.zoom !== undefined && v.centred && v.target) map.setView(tuple(v.target), v.zoom, { animate: false });
+        else showRoutes(map, latest.current.routes, v.zoom);
+      });
     };
     fit();
     map.on("resize", fit);
@@ -437,14 +581,14 @@ export function RouteMap({
 
   // A zoom that changes after the first view (an animation) moves the zoom about the view's centre.
   React.useEffect(() => {
-    if (map && zoom !== undefined && fitted.current !== null && map.getZoom() !== zoom) map.setZoom(zoom, { animate: false });
+    if (map && zoom !== undefined && fitted.current !== null && map.getZoom() !== zoom) silently(map, () => map.setZoom(zoom, { animate: false }));
   }, [map, zoom]);
 
   // The positions: one marker each, kept by id and moved with `setLatLng`. No route is touched.
   React.useEffect(() => {
     if (!map) return;
     const el = map.getContainer();
-    const live = markers.current;
+    const live = posMarkers.current;
     const seen = new Set<string>();
     for (const p of all) {
       if (!p.at) continue;
@@ -472,8 +616,190 @@ export function RouteMap({
       // Before the first fit with no zoom set there is no zoom to hold; the fit places the view.
       const z = zoom ?? (fitted.current === null ? undefined : map.getZoom());
       if (z !== undefined) centre(map, target, z);
-    } else if (!map.getBounds().pad(-0.2).contains(tuple(target))) map.panTo(tuple(target), { animate: false });
+    } else if (!map.getBounds().pad(-0.2).contains(tuple(target))) silently(map, () => map.panTo(tuple(target), { animate: false }));
   }, [map, all, routes, scheme, follow, target, zoom]);
+
+  // The reset control: fit the routes again, as the person's own move (so it is reported).
+  React.useEffect(() => {
+    if (!map) return;
+    const control = resetControl(() => {
+      const view = latest.current.view;
+      if (view) map.setView(tuple(view.center), view.zoom, { animate: false });
+      else showRoutes(map, latest.current.routes, latest.current.zoom);
+    });
+    control.addTo(map);
+    return () => void control.remove();
+  }, [map]);
+
+  // The view, reported once it settles: the person's moves, not the app's own (unless asked).
+  React.useEffect(() => {
+    if (!map) return;
+    let timer: number | undefined;
+    const send = () => {
+      timer = undefined;
+      const b = map.getBounds();
+      const c = map.getCenter();
+      latest.current.onViewChange?.({ bounds: [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]], zoom: map.getZoom(), center: [c.lat, c.lng] });
+    };
+    const moved = () => {
+      if (!latest.current.onViewChange) return;
+      if (!latest.current.reportAppMoves && (quiet.get(map) ?? 0) > 0) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(send, latest.current.settle);
+    };
+    map.on("moveend zoomend", moved);
+    // The first fit ran before this listener was there: with `reportAppMoves`, it is reported too.
+    if (fitted.current !== null && latest.current.reportAppMoves) moved();
+    return () => {
+      map.off("moveend zoomend", moved);
+      window.clearTimeout(timer);
+    };
+  }, [map]);
+
+  // A view the app sets (a saved one): the map goes there when it changes, silently.
+  const [viewLat, viewLng, viewZoom] = view ? [view.center[0], view.center[1], view.zoom] : [null, null, null];
+  React.useEffect(() => {
+    if (!map || viewLat === null || viewLng === null || viewZoom === null || fitted.current === null) return;
+    const c = map.getCenter();
+    if (map.getZoom() === viewZoom && Math.abs(c.lat - viewLat) < 1e-7 && Math.abs(c.lng - viewLng) < 1e-7) return;
+    silently(map, () => map.setView([viewLat, viewLng], viewZoom, { animate: false }));
+  }, [map, viewLat, viewLng, viewZoom]);
+
+  // The shared cursor: metres along one route.
+  const shared = useSharedCursor();
+  const cursorOn = Boolean(cursorProp) && shared !== null;
+  const cursorRouteId = typeof cursorProp === "object" && cursorProp.routeId ? cursorProp.routeId : routes[0]?.id;
+  const cursorRoute = routes.find((r) => r.id === cursorRouteId) ?? null;
+  const setPointer = shared?.setPointer;
+  React.useEffect(() => {
+    if (!map || !cursorOn || !cursorRoute || !setPointer) return;
+    const along = alongOf(cursorRoute.points);
+    const onMove = (e: L.LeafletMouseEvent) => {
+      if (latest.current.picking) return;
+      const snap = geo.snap(cursorRoute.points, [e.latlng.lat, e.latlng.lng], along);
+      if (!snap) return;
+      const apart = map.latLngToContainerPoint(e.latlng).distanceTo(map.latLngToContainerPoint(tuple(snap.position)));
+      setPointer(apart <= 24 ? snap.metres : null);
+    };
+    const onOut = () => setPointer(null);
+    map.on("mousemove", onMove);
+    map.on("mouseout", onOut);
+    return () => {
+      map.off("mousemove", onMove);
+      map.off("mouseout", onOut);
+      setPointer(null);
+    };
+  }, [map, cursorOn, cursorRoute, setPointer]);
+  const otherAlong = cursorOn ? (shared?.other ?? null) : null;
+  const ring = React.useRef<L.CircleMarker | null>(null);
+  React.useEffect(() => {
+    if (!map) return;
+    const at = otherAlong !== null && cursorRoute ? geo.pointAlong(cursorRoute.points, otherAlong, alongOf(cursorRoute.points)) : null;
+    if (!at) {
+      ring.current?.remove();
+      ring.current = null;
+      return;
+    }
+    if (!ring.current) {
+      const el = map.getContainer();
+      ring.current = L.circleMarker(tuple(at), { radius: 9, weight: 3, fillOpacity: 0, interactive: false, color: resolveColour(el, "var(--foreground)") }).addTo(map);
+    } else ring.current.setLatLng(tuple(at));
+  }, [map, otherAlong, cursorRoute]);
+  React.useEffect(() => () => void (ring.current = null), [map]);
+
+  // Item markers: those near the view, laid out again each time it settles.
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!map || !markers?.length) return;
+    const again = () => setTick((t) => t + 1);
+    map.on("moveend zoomend resize", again);
+    return () => void map.off("moveend zoomend resize", again);
+  }, [map, markers?.length]);
+  const placed = React.useMemo(() => (map && ready && markers?.length ? placeMarkers(map, markers, routes) : []), [map, ready, markers, routes, tick]);
+  // A stretch is its route's part drawn heavier, and a fanned marker has a leader line back to its true place.
+  React.useEffect(() => {
+    if (!map || !markers?.length) return;
+    const group = L.featureGroup().addTo(map);
+    const el = map.getContainer();
+    for (const m of markers) {
+      if (Array.isArray(m.at)) continue;
+      const at = m.at as { routeId: string; from: number; to: number };
+      const index = routes.findIndex((r) => r.id === at.routeId);
+      if (index < 0) continue;
+      const route = routes[index];
+      const part = geo.slice(route.points, at.from, at.to, alongOf(route.points));
+      if (part.length < 2) continue;
+      const colour = m.colour ?? (m.highlighted ? "var(--success)" : m.selected ? "var(--foreground)" : (route.colour ?? PALETTE[index % PALETTE.length]));
+      L.polyline(part.map(tuple), { color: resolveColour(el, colour), weight: (route.weight ?? 4) + (m.selected ? 5 : 3), opacity: m.selected ? 1 : 0.8, lineCap: "round", interactive: false }).addTo(group);
+    }
+    for (const p of placed) if (p.fanned) L.polyline([tuple(p.at), tuple(p.shown)], { color: resolveColour(el, "var(--muted-foreground)"), weight: 1, dashArray: "2 3", interactive: false }).addTo(group);
+    for (const { marker } of posMarkers.current.values()) marker.bringToFront();
+    return () => void group.remove();
+  }, [map, markers, routes, placed, scheme]);
+
+  // Choosing a place.
+  React.useEffect(() => {
+    if (!map || !picking) return;
+    const el = map.getContainer();
+    el.classList.add("strata-map-picking");
+    map.keyboard.disable();
+    setAnnounced("Choose a place on the map. Arrow keys move the crosshair, Shift for bigger steps, Enter chooses, Escape cancels.");
+    let cross: L.Marker | null = null;
+    const showCross = (at: L.LatLng) => {
+      if (!cross) cross = L.marker(at, { interactive: false, keyboard: false, icon: L.divIcon({ className: "strata-map-crosshair", html: CROSS_ICON, iconSize: [32, 32], iconAnchor: [16, 16] }) }).addTo(map);
+      else cross.setLatLng(at);
+    };
+    const choose = (ll: L.LatLng) => {
+      const at: LatLng = [ll.lat, ll.lng];
+      const nearest = nearestRoute(latest.current.routes, at);
+      const route = nearest ? latest.current.routes.find((r) => r.id === nearest.routeId) : undefined;
+      setAnnounced(`Picked ${at[0].toFixed(5)}, ${at[1].toFixed(5)}.${nearest && route ? ` Nearest: ${route.label}, ${format.distance(nearest.alongM, latest.current.units)} along, ${format.distance(nearest.distanceM, latest.current.units)} from the route.` : ""}`);
+      latest.current.onPick?.(at, { nearest });
+    };
+    const onClick = (e: L.LeafletMouseEvent) => {
+      cross?.remove();
+      cross = null;
+      choose(e.latlng);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        latest.current.onPickCancel?.();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        choose(cross ? cross.getLatLng() : map.getCenter());
+        return;
+      }
+      const step = e.shiftKey ? 50 : 10;
+      const d = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[e.key];
+      if (!d) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const from = map.latLngToContainerPoint(cross ? cross.getLatLng() : map.getCenter());
+      let to = from.add(d);
+      const size = map.getSize();
+      // Past the edge, the map moves and the crosshair stays at the edge.
+      const inside = L.point(Math.min(Math.max(to.x, 16), size.x - 16), Math.min(Math.max(to.y, 16), size.y - 16));
+      if (!inside.equals(to)) {
+        map.panBy(to.subtract(inside), { animate: false });
+        to = inside;
+      }
+      showCross(map.containerPointToLatLng(to));
+    };
+    map.on("click", onClick);
+    el.addEventListener("keydown", onKey);
+    return () => {
+      map.off("click", onClick);
+      el.removeEventListener("keydown", onKey);
+      cross?.remove();
+      el.classList.remove("strata-map-picking");
+      map.keyboard.enable();
+    };
+  }, [map, picking]);
 
   return (
     <div ref={root} data-dark-treatment={treated ? "" : undefined} className={cn("strata-map relative isolate aspect-video min-h-64 overflow-hidden rounded-surface border border-border", className)}>
@@ -481,10 +807,16 @@ export function RouteMap({
       <p id={summaryId} className="sr-only">
         {text}
       </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {announced}
+      </p>
+      {map && placed.length > 0 && <MarkerLayer map={map} placed={placed} onSelect={onMarkerSelect} card={renderMarkerCard} />}
       {topEnd && <div className="absolute top-2 right-2 z-1000">{topEnd}</div>}
-      {(stops.length > 0 || bottomStart) && (
+      {picking && pickBanner && <div className="absolute top-2 left-1/2 z-1000 max-w-[60%] -translate-x-1/2">{pickBanner}</div>}
+      {(stops.length > 0 || bottomStart || (markers?.length && markerKey !== false)) && (
         <div className="absolute bottom-6 left-2 z-1000 grid max-w-[60%] gap-2">
           {stops.length > 0 && <ColourKey stops={stops} label={colourScaleLabel} formatValue={formatValue} />}
+          {markers && markers.length > 0 && markerKey !== false && <MarkerKey markers={markers} words={markerKey} />}
           {bottomStart}
         </div>
       )}
