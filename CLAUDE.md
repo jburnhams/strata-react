@@ -189,8 +189,9 @@ Native elements stay where the platform does it better and the stack table says 
 9. A document edited over a session (an editor, a form builder) uses `useHistory` (or `useHistoryState`): name each step, group a drag with `begin`/`end`, pass `history.commands` to `useCommands` and a `Menu`, and show `SaveStatus` from `useAutoSave`. `useUndoable` stays for one removal that commits to a server; never a `window.confirm` on leaving a document that saves itself (`useLeaveGuard` while unsaved).
 10. A screen of panes for a tool (library, stage, inspector, timeline) is a `Workspace` of `Split`s and `Pane`s with `useWorkspaceState("name")`, never a fixed CSS grid: every pane gets the same header, side and bottom panes are `collapsible`, the stage is `grow`, and a View menu calls `state.toggle(id)`.
 11. A map of routes is `RouteMap` from `strata-react/map` (Leaflet, an optional peer the app installs only for this): the app supplies `tiles` (light and, if it has one, dark, each with its attribution), keeps `routes` in one stable array (state or `useMemo`), colours by `values` + `colourScale` only where the colour is a fact of the subject (the key is built in), moves the position with the `position` prop (never by rebuilding routes), and lists its routes beside the map for the keyboard (`onSelect` is the pointer's path). Route geometry (`geo`, `format.distance`) comes from the main entry.
-12. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-13. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+12. Playing a file or a sequence of chapters is `MediaPlayer` (the browser's own bar on a touch device by default, `controls="native"` to keep it everywhere); the parts (`Transport`, `SeekBar`…) with `useMediaElement(ref)` are for an editor or a screen that draws its own layout, and the hook reads a native-controls element too. Never hand-write the `timeupdate`/`durationchange`/`play()`-rejection glue.
+13. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+14. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`. Export the app's
    `RouteObject[]` from its own module (as `examples/kiln-app/src/routes.tsx` does), give the same
    array to `createBrowserRouter` and to `renderRoutes(routes, { route, basename })` in tests, and
@@ -201,7 +202,7 @@ Native elements stay where the platform does it better and the stack table says 
    `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`. Check the
    one-filled-button rule with `expectOneFilledButton()` (after an interaction too), and read an
    `AsyncButton`'s phase with `asyncButtonPhase(el)`, never with class names or its text.
-14. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+15. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
    version and commit `tests/visual/baselines/`. See the README for the config and the CI job.

@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `SeekBar` with a `duration` of 0, `NaN` or `Infinity` (or `null`, now allowed) is drawn disabled; before it was enabled with the thumb at 0. Nothing to change unless a test seeks a bar with no duration.
 - Arrows and macOS modifiers in `KeysLegend`, `CommandLegend`, menu shortcuts and tooltip hints are drawn as icons, each followed by a screen-reader name (`←` reads "left arrow", `⌘` "Command"), so the text no longer contains the symbol: a test that queries `"j or ↓"` queries `"j or down arrow"`, and `"⌘Z"` is `"Command Z"`. Their baselines change a little.
 - The dim behind a `Dialog`, `AlertDialog`, `CommandMenu` and full-screen view is black at an alpha (the `scrim` utility), not `foreground`: in a dark theme it now dims the page instead of brightening it. Dark baselines of anything with an open overlay change.
 - `strata-visual` stores each shot's theme under `strata-color-scheme` before the page loads, so a shot is in the theme it is named for even in an app whose `ThemeProvider` defaults to dark. An app that worked around it by clicking the theme in a `setup` can drop that; its baselines for the light shots change. New: `dropFiles` in `strata-react/visual`; a system-font failure now names the CSS `font-family` stack.

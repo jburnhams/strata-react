@@ -65,7 +65,8 @@ export function TimeReadout({ time, duration, precision = "seconds", fps = 30, c
 
 export type SeekBarProps = TimeProps & {
   time: number;
-  duration: number;
+  /** Seconds; null, NaN or 0 while it is not known (a stream before its metadata): the bar is drawn disabled, with no thumb. */
+  duration: number | null;
   /** The viewer asked for this time (drag, click or key). */
   onSeek: (time: number) => void;
   /** Named points on the bar (chapters, markers). Pressing one seeks to it. */
@@ -82,7 +83,9 @@ export type SeekBarProps = TimeProps & {
 };
 
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
-export function SeekBar({ time, duration, onSeek, marks = [], buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled, className }: SeekBarProps) {
+export function SeekBar({ time, duration: known, onSeek, marks = [], buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, className }: SeekBarProps) {
+  const duration = known && Number.isFinite(known) && known > 0 ? known : 0;
+  const disabled = off || duration === 0;
   const track = React.useRef<HTMLDivElement>(null);
   const input = React.useRef<HTMLInputElement>(null);
   const frac = duration > 0 ? clamp(time / duration, 0, 1) : 0;

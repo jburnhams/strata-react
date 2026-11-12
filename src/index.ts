@@ -91,6 +91,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { MediaPlayer, useMediaElement, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
 export { Transport, TimeReadout, SeekBar, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
