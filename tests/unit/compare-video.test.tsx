@@ -117,6 +117,72 @@ describe("CompareVideo", () => {
     expect(el("B").playbackRate).toBe(0.5);
   });
 
+  it("steps one frame at a time to the centre of the frame, pausing, and holds at the start", async () => {
+    renderWithStrata(<Harness />);
+    load();
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard(".");
+    expect(el("A").paused).toBe(true);
+    expect(el("A").currentTime).toBeCloseTo(1.5 / 25); // 25 fps: the middle of frame 1
+    expect(el("B").currentTime).toBeCloseTo(1.5 / 25);
+    await userEvent.keyboard(".");
+    expect(el("A").currentTime).toBeCloseTo(2.5 / 25);
+    await userEvent.keyboard(",,,");
+    expect(el("A").currentTime).toBe(0);
+    await userEvent.click(screen.getByRole("button", { name: "Forward one frame" }));
+    expect(el("B").currentTime).toBeCloseTo(1.5 / 25);
+  });
+
+  it("loops a range in both videos and clears it", async () => {
+    renderWithStrata(<Harness />);
+    load();
+    act(() => {
+      media.tick(el("A"), 2);
+      media.tick(el("B"), 2);
+    });
+    await userEvent.keyboard("i");
+    act(() => media.tick(el("A"), 5));
+    await userEvent.keyboard("o");
+    expect(screen.getByText("Looping 0:00:02:00 to 0:00:05:00")).toBeInTheDocument();
+    await userEvent.keyboard(" ");
+    act(() => {
+      media.tick(el("A"), 5.1);
+      media.tick(el("B"), 5.1);
+    });
+    await waitFor(() => expect(el("A").currentTime).toBe(2));
+    expect(el("B").currentTime).toBe(2);
+    await userEvent.keyboard("c");
+    expect(screen.getByText("No loop")).toBeInTheDocument();
+  });
+
+  it("keeps a loop the app holds, so it survives a change of pair", async () => {
+    const seen: unknown[] = [];
+    const { rerender } = renderWithStrata(<Harness loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);
+    expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
+    rerender(<Harness a={clip("x2", "A", [1440, 1080])} loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);
+    expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
+    await userEvent.keyboard("c");
+    expect(seen).toEqual([{ start: null, end: null }]);
+  });
+
+  it("offers slow motion down to 0.1 and sets it on both", async () => {
+    renderWithStrata(<Harness />);
+    load();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.1×");
+    expect(el("A").playbackRate).toBe(0.1);
+    expect(el("B").playbackRate).toBe(0.1);
+  });
+
+  it("goes to a named moment and pauses", async () => {
+    renderWithStrata(<Harness moments={[{ time: 3.2, label: "Fast motion" }]} />);
+    load();
+    await userEvent.keyboard(" ");
+    await userEvent.click(screen.getByRole("button", { name: /Fast motion/ }));
+    expect(el("A").paused).toBe(true);
+    expect(el("A").currentTime).toBeCloseTo(3.2);
+    expect(el("B").currentTime).toBeCloseTo(3.2);
+  });
+
   it("plays one soundtrack: A by default, the other muted, none or B on request", () => {
     const { rerender } = renderWithStrata(<Harness />);
     expect(el("A").muted).toBe(false);

@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Slider as AriaSlider, SliderThumb, SliderTrack } from "react-aria-components";
 import { cn } from "../lib/utils";
+import { format } from "../lib/format";
+import { Button } from "./button";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
@@ -45,6 +47,14 @@ import { ViewportFrame, useViewport } from "./viewport";
 // description are never written. `src` and `poster` reach the DOM, so a blind caller serves them
 // under neutral addresses.
 //
+// Looking at a moment: `,` and `.` step one frame (to the centre of the next frame, so a step cannot
+// land on a boundary and show the wrong one; they repeat when held), `i` and `o` set a loop's start
+// and end at the playhead and `c` clears it, kept in seconds because both videos show the same
+// moments; the app may hold the range (`loop`, `onLoopChange`) so it survives a change of pair.
+// Speeds go down to 0.1. `moments` are the app's named points on the seek bar; pressing one goes
+// there and pauses. Not done: dragging the loop's ends on the seek bar (the marks show them, the keys
+// and buttons set them) and confirming a step with requestVideoFrameCallback's `mediaTime`.
+//
 // Keys: `1` to `4` views, `x` flips in blink, Space and `k` play, `j` and `l` go back and forward a
 // second, `m` mutes, `+` `-` `0` `f` zoom and full screen. `a`, `b`, `t` and `s` are left to a
 // `PairVote`; arrows are left to the picture (they pan once zoomed). One list for the keys and the
@@ -60,6 +70,11 @@ export type VideoMode = Exclude<CompareMode, "difference">;
 const MODES: readonly VideoMode[] = ["side", "swipe", "fade", "blink"];
 const MODE_LABEL: Record<VideoMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink" };
 
+/** A range to loop, in seconds of the clip; the same seconds in both videos. */
+export type VideoLoop = { start: number | null; end: number | null };
+
+const SLOW_RATES = [0.1, 0.25, 0.5, 1, 1.25, 1.5, 2] as const;
+
 /** Props for `CompareVideo`. */
 export type CompareVideoProps = {
   /** Names the comparison for screen readers. Required. */
@@ -72,6 +87,13 @@ export type CompareVideoProps = {
   missing: string;
   mode: VideoMode;
   onModeChange: (mode: VideoMode) => void;
+  /** Speeds offered. Default 0.1, 0.25, 0.5, 1, 1.25, 1.5, 2: slow motion for sitting on a moment. */
+  rates?: readonly number[];
+  /** Moments the app names ("fast motion"), drawn on the seek bar; pressing one goes there and pauses. */
+  moments?: readonly { time: number; label: string }[];
+  /** The looped range in seconds, `null` for an end not set. Give it (with `onLoopChange`) to keep the range when the pair changes to another of the same item. Without it the component keeps its own. */
+  loop?: VideoLoop;
+  onLoopChange?: (loop: VideoLoop) => void;
   /** Which video's sound is heard; the other is muted. Default "a". */
   audio?: "a" | "b" | "none";
   /** Draw nearest-neighbour when shown larger than the video's own pixels (`zoomed`, default), always, or never. */
@@ -104,7 +126,7 @@ function useWidth(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
-export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
+export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, moments = [], loop: loopProp, onLoopChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
   const refA = React.useRef<HTMLVideoElement>(null);
   const refB = React.useRef<HTMLVideoElement>(null);
   const sa = useMediaElement(refA);
@@ -143,6 +165,30 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     sa.seek(t);
     sb.seek(t);
   };
+  // Frame by frame: the centre of the next or previous frame, so a step cannot land on a boundary and show the wrong one.
+  const step = (direction: 1 | -1) => {
+    pause();
+    const frame = Math.floor(sa.time * fps + 1e-6);
+    seek(Math.max(0, (frame + direction + 0.5) / fps));
+  };
+  // The loop is the app's when it gives one, so it survives a change of pair; otherwise ours.
+  const [ownLoop, setOwnLoop] = React.useState<VideoLoop>({ start: null, end: null });
+  const loop = loopProp ?? ownLoop;
+  const setLoop = (next: VideoLoop) => {
+    setOwnLoop(next);
+    onLoopChange?.(next);
+  };
+  const loopRef = React.useRef(loop);
+  loopRef.current = loop;
+  const setPoint = (point: "start" | "end") => {
+    const t = sa.time;
+    const other = point === "start" ? loop.end : loop.start;
+    // A start after the end (or an end before the start) replaces the other point.
+    const clash = other !== null && (point === "start" ? t >= other : t <= other);
+    setLoop(clash ? { start: point === "start" ? t : null, end: point === "end" ? t : null } : { ...loop, [point]: t });
+  };
+  const clearLoop = () => setLoop({ start: null, end: null });
+  const looping = loop.start !== null && loop.end !== null;
   // Kept here, not read back from an element, so a view change's new elements get it too.
   const chosenRate = React.useRef(1);
   const setRate = (rate: number) => {
@@ -179,6 +225,13 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           void A.play();
           void B.play();
         } else if (!A.paused) {
+          const { start, end } = loopRef.current;
+          if (start !== null && end !== null && A.currentTime >= end) {
+            A.currentTime = start;
+            B.currentTime = start;
+            frame = requestAnimationFrame(tick);
+            return;
+          }
           const drift = B.currentTime - A.currentTime;
           const one = 1 / fps;
           if (Math.abs(drift) > 0.3) B.currentTime = A.currentTime;
@@ -248,10 +301,22 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     { keys: [" ", "k"], label: "Play or pause", run: toggle },
     { keys: ["j"], label: "Back 1 s", run: () => seek(sa.time - 1), repeat: true },
     { keys: ["l"], label: "Forward 1 s", run: () => seek(sa.time + 1), repeat: true },
+    { keys: [","], label: "Back one frame", run: () => step(-1), repeat: true },
+    { keys: ["."], label: "Forward one frame", run: () => step(1), repeat: true },
+    { keys: ["i"], label: "Loop starts here", run: () => setPoint("start") },
+    { keys: ["o"], label: "Loop ends here", run: () => setPoint("end") },
+    { keys: ["c"], label: "Clear the loop", run: clearLoop, disabled: loop.start === null && loop.end === null },
     ...(audio === "none" ? [] : [{ keys: ["m"], label: "Mute", run: () => setMuted((m) => !m) }]),
     ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });
+
+  const at = (t: number | null) => (t === null ? format.missing : format.timecode(t, { precision: "frames", fps }));
+  const marks = [
+    ...moments,
+    ...(loop.start !== null ? [{ time: loop.start, label: "Loop start" }] : []),
+    ...(loop.end !== null ? [{ time: loop.end, label: "Loop end" }] : []),
+  ];
 
   let body: React.ReactNode;
   if (mode === "side") {
@@ -326,12 +391,26 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           </p>
         )}
         {body}
-        <Transport playing={wanted} onPlayPause={toggle}>
-          <TimeReadout time={sa.time} duration={duration} />
-          <SeekBar time={sa.time} duration={duration} onSeek={seek} buffered={sa.buffered} label="Position" step={1} precision="frames" fps={fps} />
-          <RateChoice rate={sa.rate} onRateChange={setRate} />
+        <Transport playing={wanted} onPlayPause={toggle} onStepBack={() => step(-1)} onStepForward={() => step(1)}>
+          <TimeReadout time={sa.time} duration={duration} precision="frames" fps={fps} />
+          <SeekBar time={sa.time} duration={duration} onSeek={seek} marks={marks} onMarkPress={(m) => (pause(), seek(m.time))} buffered={sa.buffered} label="Position" step={1} precision="frames" fps={fps} />
+          <RateChoice rate={sa.rate} onRateChange={setRate} rates={rates} />
           {audio !== "none" && <VolumeControl volume={muted ? 0 : volume} onVolumeChange={(v) => (setMuted(false), setVolume(v))} />}
         </Transport>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onPress={() => setPoint("start")} disabled={duration === null}>
+            Loop starts here
+          </Button>
+          <Button size="sm" onPress={() => setPoint("end")} disabled={duration === null}>
+            Loop ends here
+          </Button>
+          <Button size="sm" variant="ghost" onPress={clearLoop} disabled={loop.start === null && loop.end === null}>
+            Clear the loop
+          </Button>
+          <span role="status" className="type-caption tabular-nums text-muted-foreground">
+            {looping ? `Looping ${at(loop.start)} to ${at(loop.end)}` : loop.start !== null ? `Loop starts at ${at(loop.start)}` : loop.end !== null ? `Loop ends at ${at(loop.end)}` : "No loop"}
+          </span>
+        </div>
         {footer}
         {keys && <KeysLegend shortcuts={shortcuts} />}
       </section>
