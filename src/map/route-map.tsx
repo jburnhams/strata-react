@@ -48,9 +48,11 @@ import { installMapStyles } from "./map-styles";
 // changes a page map: `zoom` sets the zoom from outside (any number, so an animation is a prop that
 // changes every frame; unset keeps fit-to-routes), `follow="centre"` holds the view on a position at that
 // zoom, and `positions` draws several moving positions, each tied to a route and drawn in its colour.
-// Centred follow uses `setView(..., { reset: true })` with no animation: a pan accumulates Leaflet's
-// whole-pixel truncation, so where the view ends up would depend on the path it took; a reset depends
-// only on the position and zoom, which is what makes frame N the same picture however it was reached.
+// Centred follow pans to a whole-pixel view worked out from the position and zoom alone (`centre`), with
+// no animation: Leaflet's own centred pan truncates each step, so where the view ended up would depend
+// on the path it took; this depends only on the position and zoom, which is what makes frame N the same
+// picture however it was reached. A `reset` would give the same view but empties the tile layer on every
+// call, which flickers at one update per frame.
 // Fractional zoom needs `zoomSnap: 0`, which is set only while `zoom` is controlled, so a page map still
 // snaps to half steps. Each marker is one `L.CircleMarker` kept by id and moved with `setLatLng`.
 //
@@ -171,10 +173,24 @@ function useSlow<T>(value: T, ms = 1000): T {
   return slow;
 }
 
-// `reset` is read by Leaflet's setView (it skips the pan and zoom paths) but is missing from its typings.
-const RESET: L.ZoomPanOptions = Object.assign({ animate: false }, { reset: true });
 const SINGLE = "\u0000position";
 const PALETTE = [1, 2, 3, 4, 5].map((n) => `var(--chart-${n})`);
+
+/**
+ * Put `target` in the exact middle of the view at zoom `z`, with no animation and without throwing the
+ * loaded tiles away. A zoom change goes through `setView` (Leaflet redraws its tiles then anyway). The
+ * position is then set by panning to a whole-pixel top-left worked out from the target and the zoom
+ * alone, so where the view ends up does not depend on the path taken (Leaflet's own centred pan
+ * truncates each step and drifts); a `reset` would be exact too but empties the tile layer on every
+ * call, which flickers when the position changes every frame.
+ */
+function centre(map: L.Map, target: LatLng, z: number) {
+  if (map.getZoom() !== z) map.setView(tuple(target), z, { animate: false });
+  const want = map.project(tuple(target), z).subtract(map.getSize().divideBy(2)).round();
+  const have = map.getPixelBounds().min!.round();
+  const move = want.subtract(have);
+  if (move.x || move.y) map.panBy(move, { animate: false, noMoveStart: true });
+}
 
 /** The colour a CSS value (a `var()`, a role) resolves to on `el`, so an SVG attribute gets a real one. Falls back to the value itself. */
 function resolveColour(el: HTMLElement, value: string): string {
@@ -455,7 +471,7 @@ export function RouteMap({
     if (follow === "centre") {
       // Before the first fit with no zoom set there is no zoom to hold; the fit places the view.
       const z = zoom ?? (fitted.current === null ? undefined : map.getZoom());
-      if (z !== undefined) map.setView(tuple(target), z, RESET);
+      if (z !== undefined) centre(map, target, z);
     } else if (!map.getBounds().pad(-0.2).contains(tuple(target))) map.panTo(tuple(target), { animate: false });
   }, [map, all, routes, scheme, follow, target, zoom]);
 

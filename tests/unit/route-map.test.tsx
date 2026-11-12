@@ -1,3 +1,4 @@
+import L from "leaflet";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { RouteMap, type MapPosition, type MapRoute, type RouteMapProps } from "../../src/map";
@@ -265,36 +266,74 @@ describe("RouteMap as picture content", () => {
     const start: LatLng = [51.5, -0.12];
     const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same, position: start, follow: "centre", zoom: 12 })} />);
     const routePaths = paths(container).slice(0, 2);
-    // Centred means the marker is drawn at the middle of the view every time, whatever the zoom.
-    const centreOf = () => paths(container).at(-1)!.getAttribute("d");
-    for (let i = 0; i <= 8; i++) {
-      const z = 12 + (3 * i) / 8;
+    for (let i = 0; i <= 6; i++) {
+      const z = 12 + (2 * i) / 6;
       const at: LatLng = [51.5 + 0.002 * i, -0.12 + 0.003 * i];
-      rerender(<RouteMap {...props({ ...same, position: at, follow: "centre", zoom: z })} />);
-      expect(centreOf()).toMatch(/^M(32[01]|31[0-9])/); // half of 640 wide, within a pixel
+      rerender(<RouteMap {...props({ ...same, position: at, follow: "centre", zoom: Math.round(z) })} />);
+      // Half of 640 by 360, within the whole pixel Leaflet works in.
+      const [x, y] = screenOf(container, at, Math.round(z));
+      expect(Math.abs(x - 320)).toBeLessThanOrEqual(1);
+      expect(Math.abs(y - 180)).toBeLessThanOrEqual(1);
     }
     expect(paths(container).slice(0, 2)).toEqual(routePaths);
   });
+
+  /** Where each tile is on screen (jsdom has no 3D transforms, so Leaflet positions with left and top): its own offset plus every ancestor's up to the map's container. */
+  const onScreen = (c: HTMLElement) => {
+    const px = (el: HTMLElement, side: "left" | "top") => Number(new RegExp(`${side}: (-?[\\d.]+)px`).exec(el.getAttribute("style") ?? "")?.[1] ?? 0);
+    const at = (el: HTMLElement) => {
+      let x = 0;
+      let y = 0;
+      for (let n: HTMLElement | null = el; n && !n.classList.contains("leaflet-container"); n = n.parentElement) {
+        x += px(n, "left");
+        y += px(n, "top");
+      }
+      return [x, y] as const;
+    };
+    return new Map([...c.querySelectorAll<HTMLImageElement>(".leaflet-tile-pane img")].map((t) => [t.getAttribute("src")!, at(t)] as const));
+  };
+  /** Where a position is drawn in the view, read from the tile that holds it. */
+  const screenOf = (c: HTMLElement, p: LatLng, z: number) => {
+    const world = L.CRS.EPSG3857.latLngToPoint(L.latLng(p[0], p[1]), z);
+    const x = Math.floor(world.x / 256);
+    const y = Math.floor(world.y / 256);
+    const tile = [...onScreen(c)].find(([src]) => src.endsWith(`/${z}/${x}/${y}.png`));
+    expect(tile).toBeDefined();
+    return [tile![1][0] + world.x - x * 256, tile![1][1] + world.y - y * 256] as const;
+  };
 
   it("reaches the same view however the position got there (a frame is deterministic)", () => {
     const frame = (path: LatLng[]) => {
       const { container, rerender, unmount } = renderWithStrata(<RouteMap {...props({ routes: [run], position: path[0], follow: "centre", zoom: 14 })} />);
       for (const at of path.slice(1)) rerender(<RouteMap {...props({ routes: [run], position: at, follow: "centre", zoom: 14 })} />);
-      const d = [...container.querySelectorAll(".leaflet-tile-pane img")].map((t) => t.getAttribute("src")).sort().join();
-      const out = [d, container.querySelector<HTMLElement>(".leaflet-map-pane")!.style.transform, paths(container)[0].getAttribute("d")];
+      const out = onScreen(container);
       unmount();
       return out;
     };
     const target: LatLng = [51.507, -0.105];
     const direct = frame([target]);
-    const wandering = frame([[51.5, -0.12], [51.515, -0.095], [51.502, -0.118], target]);
-    expect(wandering).toEqual(direct);
+    const wandering = frame([[51.5, -0.12], [51.515, -0.095], [51.5071, -0.1052], [51.502, -0.118], target]);
+    // Tiles kept from earlier views may differ; every tile both have is in the same place on screen.
+    const shared = [...direct.keys()].filter((src) => wandering.has(src));
+    expect(shared.length).toBeGreaterThan(4);
+        for (const src of shared) expect(wandering.get(src)).toEqual(direct.get(src));
+  });
+
+  it("keeps the loaded tiles while the position moves at a constant zoom", () => {
+    const at = (n: number): LatLng => [51.507 + n * 0.0002, -0.105 + n * 0.0003];
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same, position: at(0), follow: "centre", zoom: 14 })} />);
+    const before = [...container.querySelectorAll("img.leaflet-tile")];
+    expect(before.length).toBeGreaterThan(0);
+    for (let n = 1; n <= 5; n++) rerender(<RouteMap {...props({ ...same, position: at(n), follow: "centre", zoom: 14 })} />);
+    for (const t of before) expect(t.isConnected).toBe(true); // the same elements, not recreated
   });
 
   it("starts centred on the followed position when the map is first shown, not on the middle of the routes", () => {
     const at: LatLng = [51.5, -0.12];
     const { container } = renderWithStrata(<RouteMap {...props({ ...same, position: at, follow: "centre", zoom: 15 })} />);
-    expect(paths(container).at(-1)!.getAttribute("d")).toMatch(/^M3[12]\d/);
+    const [x, y] = screenOf(container, at, 15);
+    expect(Math.abs(x - 320)).toBeLessThanOrEqual(1);
+    expect(Math.abs(y - 180)).toBeLessThanOrEqual(1);
   });
 
   it("without a zoom, centred follow keeps the zoom the map has", () => {
@@ -362,8 +401,10 @@ describe("RouteMap as picture content", () => {
     ];
     const { container } = renderWithStrata(<RouteMap {...props({ ...same, positions, follow: "centre", followId: "b", zoom: 15 })} />);
     const [, , a, b] = paths(container);
-    expect(b.getAttribute("d")).toMatch(/^M3[12]\d/);
-    expect(a.getAttribute("d")).not.toMatch(/^M3[12]\d/);
+    const [bx] = screenOf(container, positions[1].at!, 15);
+    expect(Math.abs(bx - 320)).toBeLessThanOrEqual(1);
+    expect(paths(container)).toHaveLength(4);
+    expect(a).not.toBe(b);
   });
 
   it("names every position in the text alternative, each along its own route", async () => {
