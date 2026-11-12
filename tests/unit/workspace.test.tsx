@@ -109,6 +109,54 @@ describe("Workspace", () => {
     expect(screen.getByText("Clips")).toBeVisible();
   });
 
+  it("opens a pane that starts folded on the first press, from its button and from outside", async () => {
+    const user = userEvent.setup();
+    function Folded() {
+      const ws = useWorkspaceState();
+      return (
+        <>
+          <Button onClick={() => ws.toggle("inspector")}>View inspector</Button>
+          <Workspace label="Editor" state={ws} narrowBelow={0}>
+            <Split direction="row">
+              <Pane id="stage" name="Preview" grow>
+                <p>Frame</p>
+              </Pane>
+              <Pane id="inspector" name="Inspector" collapsible defaultCollapsed>
+                <p>Properties</p>
+              </Pane>
+            </Split>
+          </Workspace>
+        </>
+      );
+    }
+    renderWithStrata(<Folded />);
+    expect(screen.getByText("Properties")).not.toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Show Inspector" }));
+    expect(screen.getByText("Properties")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Hide Inspector" }));
+    await user.click(screen.getByRole("button", { name: "View inspector" }));
+    expect(screen.getByText("Properties")).toBeVisible();
+  });
+
+  it("starts a resize from the size drawn when the window has squeezed a pane", async () => {
+    const user = userEvent.setup();
+    const original = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      const rect = original.call(this);
+      return this.getAttribute("data-pane") === "library" ? { ...rect, width: 220, height: 220 } : rect;
+    };
+    try {
+      renderWithStrata(<Editor />);
+      expect(sep("Library")).toHaveAttribute("aria-valuenow", "220");
+      sep("Library").focus();
+      await user.keyboard("{ArrowRight}");
+      // The step is from the drawn 220, not the saved 300 (which would clamp to 310).
+      expect(document.querySelector('[data-pane="library"]')).toHaveAttribute("data-size", "230");
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
+    }
+  });
+
   it("remembers sizes and folded panes across a reload, and Reset forgets them", async () => {
     const user = userEvent.setup();
     const first = renderWithStrata(<Editor persist="editor" />);

@@ -84,6 +84,8 @@ export type WorkspaceState = {
   /** @internal */
   setSize: (id: string, size: number | null) => void;
   /** @internal */
+  register: (id: string, defaultCollapsed: boolean) => void;
+  /** @internal */
   narrow: boolean;
   /** @internal */
   setNarrow: (narrow: boolean) => void;
@@ -94,6 +96,8 @@ export function useWorkspaceState(persist?: string): WorkspaceState {
   const [saved, setSaved] = React.useState<Persisted>(() => readPersisted(persist));
   const [narrow, setNarrow] = React.useState(false);
   const [narrowOpen, setNarrowOpen] = React.useState<Record<string, boolean>>({});
+  // Each pane's `defaultCollapsed`, so a toggle from outside (a View menu) acts on what is on screen.
+  const defaults = React.useRef(new Map<string, boolean>());
 
   React.useEffect(() => {
     if (!persist) return;
@@ -105,7 +109,7 @@ export function useWorkspaceState(persist?: string): WorkspaceState {
   }, [persist, saved]);
 
   return React.useMemo<WorkspaceState>(() => {
-    const isCollapsed = (id: string, fallback = false) => (narrow ? !narrowOpen[id] : (saved.collapsed[id] ?? fallback));
+    const isCollapsed = (id: string, fallback = defaults.current.get(id) ?? false) => (narrow ? !narrowOpen[id] : (saved.collapsed[id] ?? fallback));
     const setCollapsed = (id: string, collapsed: boolean) => {
       if (narrow) setNarrowOpen((o) => ({ ...o, [id]: !collapsed }));
       else setSaved((s) => ({ ...s, collapsed: { ...s.collapsed, [id]: collapsed } }));
@@ -113,7 +117,7 @@ export function useWorkspaceState(persist?: string): WorkspaceState {
     return {
       isCollapsed,
       setCollapsed,
-      toggle: (id) => setCollapsed(id, !isCollapsed(id, undefined)),
+      toggle: (id) => setCollapsed(id, !isCollapsed(id)),
       reset: () => setSaved({ sizes: {}, collapsed: {} }),
       sizeOf: (id) => saved.sizes[id],
       setSize: (id, size) =>
@@ -123,6 +127,7 @@ export function useWorkspaceState(persist?: string): WorkspaceState {
           else sizes[id] = Math.round(size);
           return { ...s, sizes };
         }),
+      register: (id, defaultCollapsed) => void defaults.current.set(id, defaultCollapsed),
       narrow,
       setNarrow,
     };
@@ -212,7 +217,9 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
   const state = useState_();
   const { direction, edge, stacked } = React.useContext(SlotContext);
   const headingId = React.useId();
-  const folded = Boolean(collapsible) && state.isCollapsed(id, defaultCollapsed);
+  const { register } = state;
+  React.useLayoutEffect(() => register(id, Boolean(defaultCollapsed)), [register, id, defaultCollapsed]);
+  const folded = Boolean(collapsible) && state.isCollapsed(id, Boolean(defaultCollapsed));
   const rail = folded && direction === "row" && !stacked;
   const least = min ?? (grow ? (direction === "row" ? 240 : 120) : 160);
   const current = state.sizeOf(id) ?? size;
@@ -290,6 +297,31 @@ function Separator({
   const latest = React.useRef(size);
   latest.current = size;
 
+  // A window smaller than the layout squeezes a pane under its saved size (flex shrink). Resizing and
+  // the value reported start from what is drawn, or the next step would jump. Only where the layout
+  // has been measured (jsdom has none).
+  const measure = () => {
+    const kids = Array.from(container.current?.children ?? []) as HTMLElement[];
+    const own = kids.find((el) => el.dataset.pane === pane.id);
+    return own ? Math.round(own.getBoundingClientRect()[direction === "row" ? "width" : "height"]) : 0;
+  };
+  const current = () => {
+    const drawn = measure();
+    return drawn > 0 && drawn < latest.current ? drawn : latest.current;
+  };
+  const [drawn, setDrawn] = React.useState(0);
+  // A passive effect: the split's ref is attached after its children's layout effects have run.
+  React.useEffect(() => {
+    const root = container.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setDrawn(measure()));
+    observer.observe(root);
+    setDrawn(measure());
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size, direction]);
+  const shown = drawn > 0 && drawn < size ? drawn : size;
+
   // How far the controlled pane can grow before the stage falls under its own minimum. Only when the
   // layout has been measured (jsdom has none), and never under `min`.
   const room = () => {
@@ -312,7 +344,7 @@ function Separator({
     onMove: ({ deltaX, deltaY, pointerType, shiftKey }) => {
       const delta = (direction === "row" ? deltaX : deltaY) * (pointerType === "keyboard" ? (shiftKey ? 50 : 10) : 1);
       if (!delta) return;
-      const next = clamp(latest.current + sign * delta, min, upper());
+      const next = clamp(current() + sign * delta, min, upper());
       latest.current = next;
       apply(next);
     },
@@ -339,7 +371,7 @@ function Separator({
       aria-orientation={vertical ? "vertical" : "horizontal"}
       aria-label={`Resize ${pane.name}`}
       aria-controls={`pane-${pane.id}`}
-      aria-valuenow={Math.round(size)}
+      aria-valuenow={Math.round(shown)}
       aria-valuemin={min}
       aria-valuemax={Number.isFinite(pane.max ?? Infinity) ? pane.max : undefined}
       data-moving={moving || undefined}
