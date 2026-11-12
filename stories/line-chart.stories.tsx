@@ -77,6 +77,9 @@ const routeArgs = {
 /** A profile with a flat area and the current position as a rule with its value. */
 export const ProfileWithCurrentPosition: Story = { args: { ...routeArgs, current: 2300 } };
 
+/** `end`: with `current` set the last point is not marked "now" (a profile's last point is its finish); `end="now"` brings it back, `end="none"` removes it where there is no `current`. */
+export const ProfileWithoutEndMarker: Story = { args: { ...routeArgs, end: "none" } };
+
 /** Keyboard mode: focus the plot and the arrows move a reading along x; the reading is also its spoken value. */
 export const ReadoutAtAPoint: Story = {
   args: { ...routeArgs, current: 2300, readout: (p) => `Dist: ${(p.x / 1000).toFixed(1)} km, Ele: ${p.y} m` },
