@@ -211,6 +211,25 @@ describe("mute: a stretch whose picture is wanted but whose sound is not", () =>
     act(() => media.tick(el, 15));
     expect(el.muted).toBe(false);
   });
+
+  it("stays muted through a pause and resume inside the stretch", async () => {
+    const { el, user } = await start(<Player spans={spans} />);
+    act(() => media.tick(el, 11));
+    await user.click(screen.getByRole("button", { name: "Pause" }));
+    expect(el.muted).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    expect(el.muted).toBe(true);
+    act(() => media.tick(el, 21));
+    expect(el.muted).toBe(false);
+  });
+
+  it("gives the sound back when the spans change or go away while it is muted", async () => {
+    const { el, rerender } = await start(<Player spans={spans} />);
+    act(() => media.tick(el, 11));
+    expect(el.muted).toBe(true);
+    rerender(<Player spans={[]} />);
+    expect(el.muted).toBe(false);
+  });
 });
 
 describe("the app's hold on the player (issue #211)", () => {

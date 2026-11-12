@@ -9,6 +9,7 @@
 - `src/components/media-player.tsx`: `spans`, `spanKinds`, `onSpan`, `spanWords`, `mediaRef`, `overlay`, `aspect`; a video sits in a box of its own shape so the overlay has a stable place and the page does not jump when metadata arrives; `StreamContext.growing`.
 - `src/hls/index.ts`: a growing source starts at 0, `config.startPosition` is honoured, `words` rewords the four failures (#208).
 - `tests/unit/media-spans.test.tsx` (**new**), `tests/unit/hls.test.tsx`: the rules above, including inline spans, a paused seek into a stretch, and a growing source.
+- Review fixes (Codex, P2): a pause inside a muted stretch no longer ends the mute (the stretch is found by position, `playing` only gates new actions), and changed or removed `spans` give the held volume back before the state is reset. Two tests in `tests/unit/media-spans.test.tsx` fail without the fix.
 - `stories/media-player.stories.tsx`: `Spans`, `VideoPhone` (visual; 320 px wide), `SpanBehaviours` and `OverlayAndState` (interactive, `no-visual`). Baselines: `actions-media-player--spans--*` and `--video-phone--*` are new; written on this machine, whose media shots differ from CI's by the same 40 pixels as before, so they are replaced from CI's images if the visual job disagrees.
 - `README.md`, `UPGRADING.md`: the component row and the behaviour changes.
 - Not done: spans per source for `sources` (spans are on the player's one timeline, which is the whole sequence when every source gives a duration); a legend for the kinds beyond the tooltip and the name.

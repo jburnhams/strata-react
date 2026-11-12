@@ -146,7 +146,10 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
     acted.current.clear();
     undone.current.clear();
     inside.current = null;
+    // Changed spans must not strand a mute: give the sound back first (unless the person already moved the volume).
+    const held = muteHold.current;
     muteHold.current = null;
+    if (held && latest.current.volume === 0) latest.current.setVolume(held.volume);
     setNotice(null);
   }, [content]);
 
@@ -156,7 +159,8 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
     return () => clearTimeout(t);
   }, [notice]);
 
-  const current = playing ? (list.find((s) => time >= s.start && time < s.end) ?? null) : null;
+  // Where the position is, paused or not: a pause inside a muted stretch keeps it muted. `playing` only gates new actions.
+  const current = list.find((s) => time >= s.start && time < s.end) ?? null;
 
   const act = React.useCallback((s: Entry, from: number) => {
     const l = latest.current;
@@ -215,11 +219,11 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
       }
     }
     inside.current = now;
-    if (current && current.def.behaviour === "auto" && !acted.current.has(current.id) && !undone.current.has(current.id) && current.end <= limit) act(current, time);
+    if (playing && current && current.def.behaviour === "auto" && !acted.current.has(current.id) && !undone.current.has(current.id) && current.end <= limit) act(current, time);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.id, list, limit, act]);
+  }, [current?.id, list, limit, act, playing]);
 
-  const offered = current && current.def.behaviour === "ask" && !acted.current.has(current.id) && current.end <= limit ? current : null;
+  const offered = playing && current && current.def.behaviour === "ask" && !acted.current.has(current.id) && current.end <= limit ? current : null;
   const offer = React.useMemo(() => (offered ? { label: (offered.action === "mute" ? w.mute : w.skip)(offered.def.label), run: () => act(offered, time) } : null), [offered?.id, time, act, w.mute, w.skip]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { bars, offer, notice: notice ? { text: notice.text, undoLabel: w.undo, undo: notice.undo } : null };
