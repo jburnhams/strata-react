@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { EmptyState, IconButton, Input, Inspector, InspectorSection, NativeSelect, NumberField, PropertyList, PropertyRow, Slider, Status } from "../src";
+import { Button, EmptyState, IconButton, Input, Inspector, InspectorSection, NativeSelect, NumberField, PropertyList, PropertyRow, Slider, Status } from "../src";
 
 // An inspector for what is selected on a kiln-room screen: a piece, or a firing. Same pieces as a
 // video editor's clip panel (issue #74): a panel, collapsible sections, editable rows, and a
@@ -138,6 +138,29 @@ export const MissingValues: Story = {
 };
 
 /** Compact density: rows and toggles follow `--control-h`, the panel sets no sizes of its own. */
+/** A 280px panel with a long button label, an input beside a button and a modified slider (issue #116): nothing is wider than the panel, and Reset sits beside its value. */
+export const NarrowPanel: Story = {
+  render: () => {
+    const [shrink, setShrink] = React.useState(15);
+    return (
+      <div className="w-70">
+        <Inspector title="Moonbeam bowl" kind="Piece" selectionKey="narrow" empty={emptyState}>
+          <InspectorSection id="sync" title="Sync">
+            <Button>Auto-sync to the kiln log's firing metadata</Button>
+            <div className="flex gap-2">
+              <Input aria-label="Shelf" defaultValue="Top shelf, left of the kiln door" />
+              <Button>Find</Button>
+            </div>
+            <PropertyRow label="Shrinkage" modified onReset={() => setShrink(12)}>
+              <Slider value={shrink} onChange={setShrink} min={0} max={20} unit="%" />
+            </PropertyRow>
+          </InspectorSection>
+        </Inspector>
+      </div>
+    );
+  },
+};
+
 export const Compact: Story = { args: { compact: true } };
 
 /** At phone width the panel is the whole screen and its rows stack. */

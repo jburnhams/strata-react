@@ -114,6 +114,10 @@ function KilnRoom() {
 }
 ```
 
+### Testing with Vitest, or with Jest
+
+strata-react is ESM-only (`exports` has only `import`), as is its peer `react-router`. **Vitest is the supported runner**: it needs no configuration beyond the `strata-react/testing` helpers. An app on Jest has to do the work itself (strata-vid's `jest.base.config.js` is a working example): transform `.mjs` along with `.js`; leave `strata-react`, `react-router`, `@remix-run`, `cookie-es`, `@tanstack` and `pixelmatch` out of `transformIgnorePatterns` so Babel compiles them; and replace `import.meta` for CommonJS with a small Babel plugin (react-router reads it). Strata's own suite runs on Vitest only, so a Jest setup is the app's to keep working.
+
 ## Components
 
 | Group | Exports | Notes |

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import * as React from "react";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button, IconButton, Tooltip } from "../../src";
@@ -105,6 +106,42 @@ describe("Dialog", () => {
     render(<Dialog title="Details" open placement="end" />);
     const dialog = await screen.findByRole("dialog", { name: "Details" });
     expect(dialog.parentElement).toHaveClass("rounded-r-none", "h-full");
+  });
+});
+
+describe("controlled dialogs without a trigger (issue #116)", () => {
+  function Driven({ alert }: { alert?: boolean }) {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Open from a command</button>
+        {alert ? (
+          <AlertDialog title="Delete 3 firings?" confirm="Delete 3 firings" onConfirm={() => undefined} open={open} onOpenChange={setOpen} />
+        ) : (
+          <Dialog title="Export video" open={open} onOpenChange={setOpen} actions={(close) => <Button onPress={close}>Done</Button>} />
+        )}
+      </>
+    );
+  }
+
+  it.each([["Dialog", false], ["AlertDialog", true]])("%s mounts, opens, closes and returns focus without a console warning", async (_name, alert) => {
+    const user = userEvent.setup();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      render(<Driven alert={alert} />);
+      const opener = screen.getByRole("button", { name: "Open from a command" });
+      await user.click(opener);
+      const dialog = await screen.findByRole(alert ? "alertdialog" : "dialog");
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole(alert ? "alertdialog" : "dialog")).toBeNull());
+      await waitFor(() => expect(opener).toHaveFocus());
+      expect([...logged.mock.calls, ...warned.mock.calls]).toEqual([]);
+    } finally {
+      logged.mockRestore();
+      warned.mockRestore();
+    }
   });
 });
 
