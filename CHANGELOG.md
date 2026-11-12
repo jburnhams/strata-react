@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**PairVote: answering a blind pairwise judgment beside Compare (issue #144)** (branch `claude/project-thread-reaene`). strata-models' judge and the stills arena each drew their own answer bar next to `Compare`: two legends, answer keys nobody could guess because the natural ones were taken, and no click-to-choose once a click panned. Issue #144 offered an `answers` prop or exported shortcut lists; this takes both halves: `Compare` accepts `extraShortcuts` and `footer`, and `PairVote` is the wrapper that uses them.
+
+- `src/components/pair-vote.tsx` (new): `PairVote`. The pair is a `Load<Pair | null>` through `DataView` (`skeleton` and `empty` required, failure with Try again). Answers are `a`, `b`, `tie`, `skip` and `flag` with a reason (a React Aria `Menu`, only when `flagReasons` are given). Keys `a` `b` `t` `s` join Compare's legend as one list. Arrow keys are not answer keys: a judge who zooms in and presses an arrow to pan must not cast a vote. Choosing is a button under the pictures (a click on a picture pans). No button is filled. `pending` disables buttons and keys and says so. `progress` is a line above, `preload` warms the next pair's pictures, `last` offers Undo and an after-the-fact `reveal`. Checked: React Aria has no pairwise-choice part, so the bar is `Button`s and `Menu`.
+- `src/components/compare.tsx`: `extraShortcuts` (bound with Compare's own and listed first in its legend) and `footer` (kept in full screen). Additive.
+- `src/index.ts`: exports `PairVote` and its types.
+- `tests/unit/pair-vote.test.tsx` (new, 10 tests), `stories/pair-vote.stories.tsx` (new, 6 stories) with baselines.
+- `README.md`: the Compare row names `PairVote`.
+- Not done yet from the issue's list: a `RatingTable` for server-side results, and the media kinds beyond pictures (issue #146).
+
 **MediaPlayer: several players share the keys sensibly (issue #147)** (branch `claude/media-keys-147`). Every `MediaPlayer` bound Space, K, J, L and M, so two on a page both toggled on one press. Now one player owns the keys at a time.
 
 - `src/components/media-player.tsx`: a module-level store (`useSyncExternalStore`) tracks players with shortcuts on; with more than one, the keys go to the one last played, focused or pressed, and a development warning says so once. The media element is labelled "<label>, audio|video" so it differs from its group.
