@@ -76,7 +76,15 @@ export function useClientWork<T>(run: (ctx: WorkContext) => Promise<T>): ClientW
     if (!controller.current) setState({ phase: "idle" });
   }, []);
 
-  React.useEffect(() => () => controller.current?.abort(), []);
+  // Unmounting aborts the run and forgets it, so a remount (Strict Mode's setup, cleanup, setup) can
+  // start again and the aborted run can no longer write state.
+  React.useEffect(
+    () => () => {
+      controller.current?.abort();
+      controller.current = null;
+    },
+    [],
+  );
 
   return { ...state, start, cancel, dismiss };
 }
