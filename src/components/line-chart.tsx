@@ -1,4 +1,6 @@
 import * as React from "react";
+import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import { useSliderState } from "react-stately";
 import { cn } from "../lib/utils";
 
 // A line chart with the defaults real product screens use: one measured series in one hue, a 2px
@@ -25,7 +27,17 @@ import { cn } from "../lib/utils";
 // 1% CPU gives a 0 to 8% axis that makes it look busy (strata-react issue #23). A pin is a floor on
 // the extent, never a crop: a reading outside it widens the axis, because a chart that hides a
 // reading is worse than one with an untidy scale.
-
+//
+// Reading a value (`readout`, `onPick`) is React Aria's slider hooks (`useSlider`, `useSliderThumb`,
+// `useSliderState`) laid over the plot as `ReadingSlider`: the pointer press, the thumb's ARIA and the
+// hidden range input come from them. Two things are ours on top, checked in the hooks' source. The value
+// text: `useSliderState` formats through an object with `format`, `formatRange` and `resolvedOptions`, so
+// it is given one that says "300 m: 60 m up" instead of an `Intl.NumberFormat`. The stepping: the
+// state steps a continuous number by a fixed step, and a series has uneven readings, so a drag or a
+// press is snapped to the nearest reading and the keys (arrows, Home, End, Enter) are a capture handler
+// on the input that moves between readings; the hooks' own arrow handling is stopped. Hover is drawn
+// by the plot itself, since a hook has no notion of a pointer that is only resting.
+//
 export type Point = { x: number; y: number };
 
 export type LineChartProps = {
@@ -51,6 +63,16 @@ export type LineChartProps = {
   colourScale?: { at: number; colour: string }[];
   /** Says what the colours mean, shown beside the legend swatch when `colourScale` is set. */
   colourScaleLabel?: string;
+  /** The current x, supplied by the app and drawn as a rule with its value ("now" in a replay, a playhead). Cheap to update often. */
+  current?: number;
+  /** The value at the rule, as a sentence part. Default: `formatX` and the value read off the line. */
+  formatCurrent?: (at: { x: number; y: number }) => string;
+  /** Read values at the pointer, and by keyboard on the plot (arrows, Home, End). `readout` words the reading; default `formatX: formatY`. */
+  readout?: boolean | ((p: Point) => string);
+  /** The viewer chose a reading (a click, or Enter on the plot): its x, so the app can seek or select. */
+  onPick?: (x: number) => void;
+  /** One flat, pale tint under the line. Only where the area carries the meaning (a profile, a running total). */
+  area?: boolean;
   height?: number;
   className?: string;
 };
@@ -145,6 +167,11 @@ export function LineChart({
   colour = "var(--chart-1)",
   colourScale,
   colourScaleLabel,
+  current,
+  formatCurrent,
+  readout,
+  onPick,
+  area,
   height = 280,
   className,
 }: LineChartProps) {
@@ -170,7 +197,8 @@ export function LineChart({
     return Math.min(Math.max(sx(t), half), Math.max(half, width - half));
   };
   // Fit against where the labels are drawn, so pulling an end label in cannot make it collide.
-  const shownXTicks = fitTicks(xTicks, xLabelAt, xLabelWidth);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const shownXTicks = React.useMemo(() => fitTicks(xTicks, xLabelAt, xLabelWidth), [xTicks, width, xMin, xMax, formatX]);
   const path = (pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
 
   const last = series[series.length - 1];
@@ -180,12 +208,12 @@ export function LineChart({
   const colourAt = (y: number) => (stops.length ? [...stops].reverse().find((s) => s.at <= y)?.colour ?? stops[0].colour : colour);
   const stroke = stops.length ? `url(#${gradientId})` : colour;
 
-  return (
-    <figure className={cn("grid min-w-0 gap-2", className)}>
-      <div ref={ref} className="min-w-0">
-        {width > 0 && (
-          <svg width={width} height={height} role="img" aria-label={label} className="block overflow-visible">
-            {stops.length > 0 && (
+  // The plot itself, memoised: moving `current` or a pointer readout redraws only the overlay below.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const plot = React.useMemo(
+    () => (
+      <>
+        {stops.length > 0 && (
               // A vertical gradient in chart space, so a colour sits at a temperature, not at a
               // point along the line: the line is the same red wherever it crosses 600 °C.
               <defs>
@@ -220,6 +248,10 @@ export function LineChart({
             {planned && (
               <path d={path(planned)} fill="none" stroke="var(--muted-foreground)" strokeWidth={1.5} strokeDasharray="4 4" />
             )}
+            {area && series.length > 1 && (
+              // One flat pale tint, never a gradient: the area is the meaning, so it is a plain fill.
+              <path d={`${path(series)}L${sx(series[series.length - 1].x).toFixed(1)},${sy(y.min).toFixed(1)}L${sx(series[0].x).toFixed(1)},${sy(y.min).toFixed(1)}Z`} fill={colour} fillOpacity={0.12} stroke="none" />
+            )}
             <path d={path(series)} fill="none" stroke={stroke} strokeWidth={stops.length ? 2.5 : 2} strokeLinejoin="round" strokeLinecap="round" />
             {/* Direct labels instead of a legend and a tooltip. */}
             <circle cx={sx(peak.x)} cy={sy(peak.y)} r={3} fill={colourAt(peak.y)} />
@@ -236,7 +268,146 @@ export function LineChart({
             >
               {formatY(last.y)} now
             </text>
+      </>
+    ),
+    [width, height, series, planned, band, xTicks, yMin, yMax, colour, colourScale, formatX, formatY, area],
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  // The screen-reader table is memoised with the plot: a moving rule must not rebuild every row.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const tableEl = React.useMemo(
+    () => (
+      // sr-only on a wrapper: a table ignores width: 1px and would widen the page.
+      <div className="sr-only">
+        <table>
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Time</th>
+              <th scope="col">{seriesLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {series.map((p) => (
+              <tr key={p.x}>
+                <td>{formatX(p.x)}</td>
+                <td>{formatY(p.y)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+    ),
+    [label, seriesLabel, series, formatX, formatY],
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  // --- tied to the rest of the screen: the current rule, a readout, picking a reading --------
+  const sorted = React.useMemo(() => [...series].sort((p, q) => p.x - q.x), [series]);
+  const interactive = Boolean(readout || onPick);
+  const [hover, setHover] = React.useState<number | null>(null);
+  const [kbd, setKbd] = React.useState<number | null>(null);
+  const [focused, setFocused] = React.useState(false);
+  const readoutText = (pt: Point) => (typeof readout === "function" ? readout(pt) : `${formatX(pt.x)}: ${formatY(pt.y)}`);
+  const nearest = (px: number) => {
+    const target = xMin + ((px - pad.left) / (w || 1)) * (xMax - xMin || 1);
+    let best = 0;
+    for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].x - target) < Math.abs(sorted[best].x - target)) best = i;
+    return best;
+  };
+  /** The value of the line at x, read between the two readings either side (flat beyond the ends). */
+  const yAt = (x: number) => {
+    if (!sorted.length) return 0;
+    if (x <= sorted[0].x) return sorted[0].y;
+    for (let i = 1; i < sorted.length; i++) {
+      if (x <= sorted[i].x) {
+        const [p0, p1] = [sorted[i - 1], sorted[i]];
+        return p0.y + ((p1.y - p0.y) * (x - p0.x)) / (p1.x - p0.x || 1);
+      }
+    }
+    return sorted[sorted.length - 1].y;
+  };
+  const currentAt = current === undefined ? null : { x: Math.min(Math.max(current, xMin), xMax), y: yAt(current) };
+  // One reading is "the" selection for the announced value, the drawn marker and Enter: the pointer's
+  // while it is over the plot, else the keyboard's (clamped, since `series` can be replaced by a shorter
+  // one), else where the current rule is, else the last reading.
+  const fallbackIdx = sorted.length ? (currentAt ? nearest(sx(currentAt.x)) : sorted.length - 1) : 0;
+  const heldIdx = kbd === null ? fallbackIdx : Math.min(kbd, Math.max(sorted.length - 1, 0));
+  const selectedIdx = hover === null ? heldIdx : Math.min(hover, Math.max(sorted.length - 1, 0));
+  const active = (hover !== null || focused) && sorted.length ? sorted[selectedIdx] : null;
+  const onKey = (e: React.KeyboardEvent) => {
+    const at = selectedIdx;
+    let next = at;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(at + 1, sorted.length - 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = Math.max(at - 1, 0);
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = sorted.length - 1;
+    else if ((e.key === "Enter" || e.key === " ") && onPick) {
+      e.preventDefault();
+      onPick(sorted[at].x);
+      return;
+    } else return;
+    e.preventDefault();
+    setHover(null); // the key takes over from a pointer left resting on the plot
+    setKbd(next);
+  };
+  const flip = (px: number, text: string) => (px + labelWidth(text) + 16 > width ? { x: px - 8, anchor: "end" as const } : { x: px + 8, anchor: "start" as const });
+
+  return (
+    <figure className={cn("grid min-w-0 gap-2", className)}>
+      <div ref={ref} className="relative min-w-0">
+        {width > 0 && (
+          <svg width={width} height={height} role="img" aria-label={label} className="block overflow-visible">
+            {plot}
+            {currentAt && (
+              <g aria-hidden>
+                <line x1={sx(currentAt.x)} x2={sx(currentAt.x)} y1={pad.top} y2={pad.top + h} stroke="var(--primary)" strokeWidth={1.5} />
+                <circle cx={sx(currentAt.x)} cy={sy(currentAt.y)} r={4} fill="var(--background)" stroke="var(--primary)" strokeWidth={2} />
+                {(() => {
+                  const text = formatCurrent ? formatCurrent(currentAt) : `${formatX(currentAt.x)}: ${formatY(currentAt.y)}`;
+                  const at = flip(sx(currentAt.x), text);
+                  return (
+                    <text x={at.x} y={pad.top + 12} textAnchor={at.anchor} className="fill-foreground type-caption tabular-nums">
+                      {text}
+                    </text>
+                  );
+                })()}
+              </g>
+            )}
+            {active && (
+              <g aria-hidden>
+                <line x1={sx(active.x)} x2={sx(active.x)} y1={pad.top} y2={pad.top + h} stroke="var(--muted-foreground)" strokeWidth={1} strokeDasharray="2 3" />
+                <circle cx={sx(active.x)} cy={sy(active.y)} r={4} fill="var(--foreground)" />
+                {(() => {
+                  const text = readoutText(active);
+                  const at = flip(sx(active.x), text);
+                  return (
+                    <text x={at.x} y={sy(active.y) - 10} textAnchor={at.anchor} className="fill-foreground type-label tabular-nums" paintOrder="stroke" stroke="var(--background)" strokeWidth={3}>
+                      {text}
+                    </text>
+                  );
+                })()}
+              </g>
+            )}
           </svg>
+        )}
+        {width > 0 && interactive && sorted.length > 0 && (
+          <ReadingSlider
+            label={`${label}: read values`}
+            sorted={sorted}
+            selected={selectedIdx}
+            text={readoutText}
+            onSelect={(i) => {
+              setHover(null);
+              setKbd(i);
+            }}
+            onPick={onPick}
+            onKeyDownCapture={onKey}
+            onHover={(px) => setHover(px === null ? null : nearest(px))}
+            onFocusChange={setFocused}
+            box={{ left: pad.left, top: pad.top, width: w, height: h }}
+          />
         )}
       </div>
       <figcaption className="flex flex-wrap gap-x-5 gap-y-1 type-caption text-muted-foreground">
@@ -264,26 +435,77 @@ export function LineChart({
           </span>
         )}
       </figcaption>
-      {/* sr-only on a wrapper: a table ignores width: 1px and would widen the page. */}
-      <div className="sr-only">
-      <table>
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Time</th>
-            <th scope="col">{seriesLabel}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((p) => (
-            <tr key={p.x}>
-              <td>{formatX(p.x)}</td>
-              <td>{formatY(p.y)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
+      {tableEl}
     </figure>
+  );
+}
+
+
+type ReadingSliderProps = {
+  label: string;
+  sorted: readonly Point[];
+  selected: number;
+  text: (p: Point) => string;
+  onSelect: (index: number) => void;
+  onPick?: (x: number) => void;
+  onKeyDownCapture: (e: React.KeyboardEvent) => void;
+  /** The pointer's x in the plot's own pixels, or null when it leaves. */
+  onHover: (px: number | null) => void;
+  onFocusChange: (focused: boolean) => void;
+  box: { left: number; top: number; width: number; height: number };
+};
+
+/** The slider over the plot: React Aria's hooks, snapped to the readings, with the reading as its spoken value. */
+function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyDownCapture, onHover, onFocusChange, box }: ReadingSliderProps) {
+  const track = React.useRef<HTMLDivElement>(null);
+  const input = React.useRef<HTMLInputElement>(null);
+  const lo = sorted[0].x;
+  const hi = Math.max(sorted[sorted.length - 1].x, lo + 1e-9);
+  const indexAt = (x: number) => {
+    let best = 0;
+    for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].x - x) < Math.abs(sorted[best].x - x)) best = i;
+    return best;
+  };
+  const spoken = React.useMemo(() => {
+    const say = (x: number) => text(sorted[indexAt(x)]);
+    return { format: say, formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`, resolvedOptions: () => ({ locale: "en-US" }) } as unknown as Intl.NumberFormat;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted, text]);
+  const state = useSliderState({
+    minValue: lo,
+    maxValue: hi,
+    step: (hi - lo) / 10000,
+    value: [sorted[selected].x],
+    onChange: ([x]) => onSelect(indexAt(x)),
+    onChangeEnd: ([x]) => onPick?.(sorted[indexAt(x)].x),
+    numberFormatter: spoken,
+  });
+  const { groupProps, trackProps } = useSlider({ "aria-label": label }, state, track);
+  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label }, state);
+  const { focusProps, isFocusVisible } = useFocusRing();
+  return (
+    <div {...groupProps} className="absolute" style={box}>
+      <div
+        {...trackProps}
+        ref={track}
+        onPointerMove={(e) => onHover(e.clientX - e.currentTarget.getBoundingClientRect().left + box.left)}
+        onPointerLeave={() => onHover(null)}
+        className={cn("relative size-full cursor-crosshair touch-none", isFocusVisible && "outline-2 outline-offset-2 outline-ring")}
+      >
+        <div {...thumbProps} className="absolute inset-y-0 w-0" style={{ left: `${state.getThumbPercent(0) * 100}%` }}>
+          <VisuallyHidden>
+            <input
+              ref={input}
+              {...mergeProps(inputProps, focusProps, { onFocus: () => onFocusChange(true), onBlur: () => onFocusChange(false) })}
+              aria-labelledby={undefined}
+              onKeyDownCapture={(e) => {
+                onKeyDownCapture(e);
+                if (e.defaultPrevented) e.stopPropagation();
+              }}
+            />
+          </VisuallyHidden>
+        </div>
+      </div>
+    </div>
   );
 }
