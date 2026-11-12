@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+**Release: bump the version through a pull request** (branch `claude/project-thread-dnygsz`). The release workflow failed on every run since main became pull-request-only (`push declined due to repository rule violations`), so no version was bumped or published. Jonathan asked for the pattern `leaflet-node` uses.
+
+- `.github/workflows/release.yml`: replaces `phips28/gh-action-bump-version` with the `leaflet-node` flow. After a green push CI on main it works out the bump from commit messages since the last `v*` tag (same wording: major/breaking, minor/feat/feature, else patch), pushes `release/vX.Y.Z`, opens a PR with `RELEASE_TOKEN`, merges it (retrying while GitHub computes mergeability), then tags and releases the merge commit so `npm-publish.yml` still fires. The bump commit carries `[skip ci]`; a `release` concurrency group stops two runs racing. It no longer builds, since `npm-publish.yml` builds and tests. Only the PR-merge step needs `RELEASE_TOKEN` to have pull-requests write as well as contents write; no secret or setting was changed from here and the workflow could not be run before merging.
+
 **Overlays: Dialog, AlertDialog, Popover (issue #70)** (branch `claude/overlays-70`, stacked on `claude/adopt-react-aria-2`). The issue asked for the overlay family from ux-research `components.md` §3.11, not built until now. All three are React Aria (Modal, Popover) with one shared surface, so Menu, Toast and the rest can reuse it.
 
 - `src/components/dialog.tsx` (**new**): `Dialog` (required `title`, optional `description`, `hideTitle`, `actions` as nodes or a `(close) => node` render prop, `closable={false}` for work that cannot be interrupted, `placement="end"` for a sheet, three sizes) and `AlertDialog` (required `confirm` verb, `cancel` focused first, outside press ignored, `tone`, and an async `onConfirm` that shows the button busy and stays open with the server's reason, through `describeActionError`, when it fails).
