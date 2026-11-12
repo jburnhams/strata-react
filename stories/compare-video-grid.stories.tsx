@@ -4,15 +4,15 @@ import aSrc from "./fixtures/video/a.webm?url";
 import bSrc from "./fixtures/video/b.webm?url";
 
 // The same two fixture clips (360×270 soft, 720×540 sharp) reused for several cells under different
-// ids, standing in for the candidates of a video eval. Fixtures: fixtures/video, VP9, 80 KB together.
+// ids (and addresses, since a browser shares one load between elements with the same address), standing in for the candidates of a video eval. Fixtures: fixtures/video, VP9, 80 KB together.
 
 const clip = (id: string, label: string, src: string, size: [number, number], note?: string): Candidate<VideoMedia> => ({ id, label, note, media: { kind: "video", src, width: size[0], height: size[1], fps: 25 } });
 const source = clip("source", "Source", aSrc, [360, 270], "Original, 360×270");
 const items = [
   clip("lanczos", "A", aSrc, [360, 270], "Lanczos"),
   clip("seedvr2", "B", bSrc, [720, 540], "SeedVR2"),
-  clip("esrgan", "C", bSrc, [720, 540], "Real-ESRGAN"),
-  clip("bicubic", "D", aSrc, [360, 270], "Bicubic"),
+  clip("esrgan", "C", `${bSrc}?c`, [720, 540], "Real-ESRGAN"),
+  clip("bicubic", "D", `${aSrc}?d`, [360, 270], "Bicubic"),
 ];
 
 const meta = {

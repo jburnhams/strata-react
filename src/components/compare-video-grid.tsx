@@ -152,7 +152,12 @@ export function CompareVideoGrid({ label, items, reference, blind, missing, catc
                         preload={clock.started ? "auto" : "metadata"}
                         playsInline
                         aria-label={`Video ${c.label}`}
-                        onLoadedMetadata={clock.restore}
+                        onLoadedMetadata={(e) => {
+                          clock.restore(e);
+                          // With only the metadata loaded a browser may draw no frame, so a cell would sit blank until the first play: a seek into the first frame makes it decode that one.
+                          const v = e.currentTarget;
+                          if (v.currentTime === 0 && v.readyState < 2) v.currentTime = 0.001;
+                        }}
                         style={sharp(c, isReference) ? { imageRendering: "pixelated" } : undefined}
                         className="absolute inset-0 size-full object-contain"
                       />
