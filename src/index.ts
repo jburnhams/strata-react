@@ -90,6 +90,8 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange } from "./components/timeline";
+export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
 export {
