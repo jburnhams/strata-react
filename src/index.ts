@@ -90,6 +90,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { Transport, TimeReadout, SeekBar, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
