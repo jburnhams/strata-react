@@ -47,11 +47,11 @@ async function render(colour: (i: number) => string) {
   const map = L.map(document.createElement("div"), { zoomControl: false, attributionControl: false, fadeAnimation: false, zoomAnimation: false });
   map.setView([51.5, -0.12], 13, { animate: false });
   map.setSize(512, 384);
-  L.tileLayer(`${base}/{z}/{x}/{y}.png`, { attribution: "© Fixture" }).addTo(map);
+  const tiles = L.tileLayer(`${base}/{z}/{x}/{y}.png`, { attribution: "© Fixture" }).addTo(map);
   const box = geo.bounds(route)!;
   map.fitBounds([[box[0][0], box[0][1]], [box[1][0], box[1][1]]], { padding: [24, 24], animate: false });
   for (let i = 1; i < route.length; i++) L.polyline([[route[i - 1][0], route[i - 1][1]], [route[i][0], route[i][1]]], { color: colour(i), weight: 6, lineCap: "round" }).addTo(map);
-  await waitForTiles(map);
+  await waitForTiles(tiles);
   await new Promise((r) => setTimeout(r, 200));
   return PNG.sync.read(await map.toBuffer("png"));
 }
