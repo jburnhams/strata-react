@@ -13,6 +13,9 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- Arrows and macOS modifiers in `KeysLegend`, `CommandLegend`, menu shortcuts and tooltip hints are drawn as icons, each followed by a screen-reader name (`←` reads "left arrow", `⌘` "Command"), so the text no longer contains the symbol: a test that queries `"j or ↓"` queries `"j or down arrow"`, and `"⌘Z"` is `"Command Z"`. Their baselines change a little.
+- The dim behind a `Dialog`, `AlertDialog`, `CommandMenu` and full-screen view is black at an alpha (the `scrim` utility), not `foreground`: in a dark theme it now dims the page instead of brightening it. Dark baselines of anything with an open overlay change.
+- `strata-visual` stores each shot's theme under `strata-color-scheme` before the page loads, so a shot is in the theme it is named for even in an app whose `ThemeProvider` defaults to dark. An app that worked around it by clicking the theme in a `setup` can drop that; its baselines for the light shots change. New: `dropFiles` in `strata-react/visual`; a system-font failure now names the CSS `font-family` stack.
 - `Timeline`'s lane header column is content-sized (at least `w-40`, at most `w-80`) instead of a fixed `w-40`; a screen with a long lane name or several header controls is now wider there. Lane height is `--lane-h` (one `--control-h` by default).
 - `format.timecode` with `precision: "frames"` now returns four parts (`0:04:05:15`, was `4:05:15`); update tests that read it. `MissingFile`'s markup changed (the name wraps; status and Relink may sit on a second row).
 React Aria Components is now the primitives layer (`react-aria-components`, installed with the

@@ -170,6 +170,15 @@
 @utility layer-overlay { z-index: 60; }
 @utility layer-tip { z-index: 70; }
 
+/* The dim behind a dialog or full-screen view. Black at an alpha, not the foreground role: in a dark
+   theme `foreground` is light, so a foreground scrim brightened the page instead of dimming it
+   (strata-react issue #136). Not a theme role, so no app has anything to add; darker in the dark
+   scheme, where the same alpha would barely show. */
+@utility scrim {
+  background-color: rgb(0 0 0 / 0.4);
+  :where(.dark) & { background-color: rgb(0 0 0 / 0.65); }
+}
+
 /* An overlay's entrance: an ordinary effect (fade and 2% scale), CSS only, once on mount. Overlays
    are occasional (character.md), so the effects duration and no overshoot; they close at once.
    Reduced motion collapses it in the rule below. */

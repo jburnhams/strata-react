@@ -12,6 +12,7 @@
 export { runVisual, defineVisualConfig, formatReport, pinWarnings, type RunOptions } from "./run";
 export { storybookShots, routeShots, defaultThemes } from "./targets";
 export { capture, resolveShotUrl, toFetchRequest, type CaptureOptions, type Capture } from "./capture";
+export { dropFiles, DROPPED_FILE_MODIFIED, type DroppedFile } from "./drop";
 export { serveStatic, type StaticServer } from "./serve";
 export { compare, decode, encode, boxBlur, THRESHOLD, BLUR, MAX_DIFF_PIXELS, type CompareOptions, type Image, type CompareResult } from "./compare";
 export {
