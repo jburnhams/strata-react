@@ -16,6 +16,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 React Aria Components is now the primitives layer (`react-aria-components`, installed with the
 package). `@radix-ui/react-slot` is gone.
 
+- **State classes are the `tailwindcss-react-aria-components` variants** (`selected:`, `focus-visible:`, `hover:`, `disabled:`), loaded by `strata.css` (the plugin is installed with the package). A test that matched a class such as `data-[selected]:border-foreground` now matches `selected:border-foreground`; hover colours no longer apply on touch screens.
 - **`Button` has no `asChild`.** A button that navigates is a link: use a router `Link`.
   Do not rely on `@radix-ui/react-slot` arriving through Strata.
 - **`IconButton` shows `label` as a tooltip**, not a `title` attribute. New optional `hint`

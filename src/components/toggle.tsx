@@ -18,9 +18,9 @@ import { Tooltip } from "./tooltip";
 
 const base =
   "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control border type-label transition-state press [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 " +
-  "border-input bg-background text-muted-foreground data-[hovered]:bg-muted data-[hovered]:text-foreground " +
-  "data-[selected]:border-foreground data-[selected]:bg-muted data-[selected]:text-foreground " +
-  "data-[disabled]:pointer-events-none data-[disabled]:opacity-50";
+  "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground " +
+  "selected:border-foreground selected:bg-muted selected:text-foreground " +
+  "disabled:pointer-events-none disabled:opacity-50";
 
 const sizes = { default: "h-(--control-h)", sm: "h-(--control-h-sm)" } as const;
 type Size = keyof typeof sizes;
@@ -104,7 +104,7 @@ export function ToggleGroup({ label, options, value, onChange, size = "default",
               base,
               // Inside the group the segments are 4px, the outer 6px less its 2px padding; the group's own
               // hairline replaces each segment's, and the chosen one keeps the ink border.
-              "border-transparent bg-transparent data-[selected]:border-foreground",
+              "border-transparent bg-transparent selected:border-foreground",
               sizes[size],
               iconOnly ? (size === "sm" ? "size-(--control-h-sm)" : "size-(--control-h)") : "px-3",
             )}
