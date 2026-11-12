@@ -67,6 +67,13 @@ describe("Compare", () => {
     for (const leak of ["lightroom-final", "auto2", "Lightroom", "14 s", "Celadon"]) expect(html).not.toContain(leak);
   });
 
+  it("names the flip key after the candidates' own labels, not A and B", () => {
+    const side = (label: string) => ({ id: label, label, media: { kind: "image" as const, src: `/img/${label}`, alt: label, size: [400, 300] as const } });
+    render(<Compare label="Which is better?" blind missing="Gone" mode="blink" onModeChange={() => undefined} a={side("X")} b={side("Y")} />);
+    expect(screen.getByText("Flip X and Y")).toBeInTheDocument();
+    expect(screen.queryByText(/Flip A and B/)).toBeNull();
+  });
+
   it("zooms both sides together with the buttons, the keys and the 1:1 button", async () => {
     const user = userEvent.setup();
     render(<Harness />);

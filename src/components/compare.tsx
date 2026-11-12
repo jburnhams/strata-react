@@ -111,7 +111,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   const offered = modes.includes(mode) ? modes : [mode, ...modes];
   const shortcuts: Shortcut[] = [
     ...offered.map((m, i): Shortcut => ({ keys: [String(i + 1)], label: MODE_LABEL[m], run: () => onModeChange(m) })),
-    { keys: ["x"], label: "Flip A and B", run: flip, disabled: mode !== "blink" },
+    { keys: ["x"], label: `Flip ${a.label} and ${b.label}`, run: flip, disabled: mode !== "blink" },
     ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });

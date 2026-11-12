@@ -7,6 +7,12 @@
 - `src/components/media-player.tsx`: a module-level store (`useSyncExternalStore`) tracks players with shortcuts on; with more than one, the keys go to the one last played, focused or pressed, and a development warning says so once. The media element is labelled "<label>, audio|video" so it differs from its group.
 - `tests/unit/media-player.test.tsx`: five tests (labels, key ownership across two players, the single warning, `shortcuts={false}` left out, and an opted-out player cannot take the keys when focused).
 
+**Compare: the flip shortcut uses the candidates' labels (issue #145)** (branch `claude/project-thread-reaene`). The legend said "Flip A and B" for a blind comparison labelled X and Y. It now says "Flip X and Y". The other strings (captions, frame names, blend and divider sliders, blink toggle) already used the labels; checked by reading every string in `compare.tsx` and `compare-grid.tsx`.
+
+- `src/components/compare.tsx`: the flip shortcut's label is built from `a.label` and `b.label`.
+- `tests/unit/compare.test.tsx`: a blind X and Y comparison shows "Flip X and Y".
+- **Visible change:** the legend line is longer for most comparisons ("Flip Your final and auto2"), so every Compare story's baseline that shows the legend was rewritten; `UPGRADING.md` says so.
+
 **LineChart: say what the end of the line is (issue #138)** (branch `claude/linechart-end-138`). `LineChart` always drew a rule, dot and "<value> now" at the last point, which is wrong for a series whose x is not time running up to now: strata-vid's elevation profile said "216 m now" at the finish while its `current` rule was elsewhere. Added `end`, and made the default follow `current`.
 
 - `src/components/line-chart.tsx`: `end?: "now" | "none"`. Default `"now"`, or `"none"` when `current` is set, because then two rules compete and the one called "now" is not now; the peak label stays either way. The marker is part of the memoised plot, so `showEnd` is in its dependencies.
