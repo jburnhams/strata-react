@@ -13,4 +13,11 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
 });
-afterAll(() => server.close());
+afterAll(async () => {
+  server.close();
+  // React Aria's live announcer, when asked to speak while no `act` is open (a `waitFor`), delays
+  // the message by 100ms with a timer. A file that ends inside that window lets it fire after
+  // jsdom is torn down ("document is not defined", an uncaught error that fails the whole run, seen
+  // once in the release job). Let the timer run out first.
+  await new Promise((resolve) => setTimeout(resolve, 150));
+});

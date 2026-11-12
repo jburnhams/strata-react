@@ -137,17 +137,36 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     }
     let png: Buffer;
     if (shot.clip === "page") {
-      png = await page.screenshot({ fullPage: true, animations: "disabled" });
+      png = await stable(() => page.screenshot({ fullPage: true, animations: "disabled" }));
     } else {
       const clip = await page.evaluate(paintedBox, { root: shot.root, margin: 8 });
       if (!clip) throw new Error("rendered nothing visible");
-      png = await page.screenshot({ fullPage: true, clip, animations: "disabled" });
+      png = await stable(() => page.screenshot({ fullPage: true, clip, animations: "disabled" }));
     }
     const systemFonts = options.checkFonts === false ? [] : await platformFonts(page);
     return { png, problems, systemFonts };
   } finally {
     await context.close();
   }
+}
+
+/**
+ * A picture that two shots in a row agree on. The DOM being complete is not the picture being: with a
+ * dozen shots running at once the compositor can present a frame before it has rasterised a layer, and
+ * a map's pins (all in the DOM, visible, opacity 1) were missing from the PNG in about one run in ten
+ * (the flaky RouteMap shots; a pixel read at each pin's centre gave the map's background). A second
+ * shot a moment later has them. So a shot is taken again until two in a row are the same, at most
+ * five times; a page that never stops changing gives the last one and the comparison decides.
+ */
+async function stable(take: () => Promise<Buffer>): Promise<Buffer> {
+  let last = await take();
+  for (let i = 0; i < 4; i++) {
+    await new Promise((done) => setTimeout(done, 100));
+    const next = await take();
+    if (next.equals(last)) return next;
+    last = next;
+  }
+  return last;
 }
 
 async function settle(page: Page) {

@@ -170,6 +170,9 @@ describe("moving between lists", () => {
     renderWithStrata(<TwoLists inserted={inserted} />);
     screen.getByRole("button", { name: "Drag run-02.mp4" }).focus();
     await user.keyboard("{Enter}");
+    // React Aria puts focus on the first drop target a moment after the drag starts; a Tab sent
+    // before that lands on the wrong one (a flake on slow runners), so wait for it first.
+    await waitFor(() => expect(document.activeElement).toHaveAccessibleName(/^(Insert|Drop)/));
     // Tab moves between the lists that accept the item; stop on the empty timeline's drop target.
     await user.keyboard("{Tab}");
     expect(document.activeElement).toHaveAccessibleName("Drop on Timeline");
