@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Check, CircleAlert, LoaderCircle, TriangleAlert } from "lucide-react";
+import { Check, CircleAlert, LoaderCircle, TriangleAlert, Ban } from "lucide-react";
 import { format } from "../lib/format";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
+import { Button } from "./button";
 import { Status, type Tone } from "./status";
 
 // A job the server runs for a while (syncing sources one after another, an import, a re-index),
@@ -24,7 +25,13 @@ import { Status, type Tone } from "./status";
 // It is announced, politely, only when something a person waits for happens: the item changes
 // (`current`) or the job ends. A poll every two seconds that rewrites "42 new videos so far" in
 // a live region would talk over everything else, so the visible sentence is not the live region;
-// a separate one carries the word and the sentence at those moments. The spinner turns only
+// a separate one carries the word and the sentence at those moments.
+//
+// Work the browser does (an export, an upload, a render; issue #72) uses the same component, so one
+// idea of "a job" covers both: `onCancel` shows a Cancel button while it runs (work the person can
+// stop is stoppable), `cancelled` is a fourth ending in neutral ("Cancelled": not a failure, nothing
+// to retry), and `onDismiss` shows Dismiss once it has ended so the result does not linger. With no
+// `total` there is no bar, only the turning mark and the sentence, which is the indeterminate case. The spinner turns only
 // while running, the one case where a status mark's data is live. Polling and re-reading what
 // the job changed is `useJob`'s.
 
@@ -32,7 +39,7 @@ import { Status, type Tone } from "./status";
 export type JobFailure = { key: string; label: string; reason: string };
 
 /** A job's three states as words, all required: "Syncing", "Finished", "Finished with failures". */
-export type JobWords = { running: string; finished: string; failed: string };
+export type JobWords = { running: string; finished: string; failed: string; /** Shown when `cancelled`. Default "Cancelled". */ cancelled?: string };
 
 /** The job status's props. */
 export type JobStatusProps = {
@@ -53,6 +60,14 @@ export type JobStatusProps = {
   failed?: boolean;
   /** Names the list of failures for screen readers. Default "Failures". */
   failuresLabel?: string;
+  /** The person stopped it. A neutral ending, not a failure. */
+  cancelled?: boolean;
+  /** Stops the job. Shows a Cancel button while it runs. */
+  onCancel?: () => void;
+  /** Label of the cancel button. Default "Cancel". */
+  cancelLabel?: string;
+  /** Clears the result. Shows a Dismiss button once the job has ended. */
+  onDismiss?: () => void;
   className?: string;
 };
 
@@ -71,9 +86,15 @@ export function JobStatus({
   failures = [],
   failed = false,
   failuresLabel = "Failures",
+  cancelled = false,
+  onCancel,
+  cancelLabel = "Cancel",
+  onDismiss,
   className,
 }: JobStatusProps) {
-  const ended: { tone: Tone; icon: IconComponent; word: string } = failed
+  const ended: { tone: Tone; icon: IconComponent; word: string } = cancelled
+    ? { tone: "neutral", icon: Ban, word: words.cancelled ?? "Cancelled" }
+    : failed
     ? { tone: "danger", icon: CircleAlert, word: words.failed }
     : failures.length
       ? { tone: "warning", icon: TriangleAlert, word: words.failed }
@@ -95,6 +116,16 @@ export function JobStatus({
           {word}
         </Status>
         <p className="min-w-0 flex-1 type-body-sm text-foreground">{summary}</p>
+        {running && onCancel && (
+          <Button size="sm" onPress={onCancel}>
+            {cancelLabel}
+          </Button>
+        )}
+        {!running && onDismiss && (
+          <Button size="sm" variant="ghost" onPress={onDismiss}>
+            Dismiss
+          </Button>
+        )}
       </div>
       {bar && (
         <div

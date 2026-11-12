@@ -2,6 +2,14 @@
 
 ## 2026-11-12
 
+**Feedback: Alert, toasts and client-side work (issue #72)** (branch `claude/feedback-72`). The issue asked for toasts, inline alerts and progress for work the browser does. Toasts and alerts are new; progress reuses `JobStatus`, so a server job and an export the browser runs are one idea with one look, instead of a second progress component.
+
+- `src/components/alert.tsx` (**new**): `Alert`, four tones each with an icon and words, a pale tint (no coloured side stripe), one optional `action`, `role="alert"` only with `announce`.
+- `src/components/toast.tsx` (**new**): `toast.show/close/clear`, `toastTimeout`, `StrataToastRegion` on React Aria's toast queue (its API is marked unstable, so it is used only in this file). No danger tone by type. Bottom end on wide screens, top on phones, on the `layer-bar` layer.
+- `src/lib/client-work.ts` (**new**): `useClientWork`: phase, progress, `cancel` (aborts the signal, ends `cancelled`), `dismiss`, a second start ignored while running, a cancelled run cannot write over a newer one.
+- `src/components/job-status.tsx`: `onCancel`/`cancelLabel`, `cancelled` (neutral ending with `words.cancelled`, default "Cancelled"), `onDismiss`. No total still means no bar.
+- `src/index.ts`, `README.md` (Feedback row), `stories/feedback.stories.tsx` (**new**), `tests/unit/feedback.test.tsx` (**new**, MSW for the abortable request), baselines for the new stories.
+
 **React Aria first: the rule for choosing a primitive** (branch `claude/aria-first-rule`). Jonathan asked for the rules to say: use a React Aria component, extend it if needed, make our own only if strictly needed. #73's first version built native inputs on an unchecked belief that React Aria's number field clamps; it does not, so the rule asks for the claim to be checked and written down.
 
 - `CLAUDE.md`: new section "React Aria first" (use as is, extend, own only when strictly needed with the verified reason in the file's opening comment); the Primitives row points to it.
