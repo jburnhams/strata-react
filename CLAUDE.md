@@ -45,7 +45,7 @@ is his decision; do not change it on your own. Same rule in ux-research's `CLAUD
 | Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
 | Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
-| Primitives | React Aria Components | Jonathan's choice (2026-11-12): behaviour and accessibility of every interactive control come from `react-aria-components` (press, focus, keyboard models, overlays, menus, number and colour fields, drag and drop), styled with our tokens through its `data-*` state attributes (`data-[selected]:`, `data-[focus-visible]:`). Not Radix; `@radix-ui/react-slot` and `asChild` are gone. Native elements stay where the platform does it better (`Input`, `Textarea`, `NativeSelect`); `DataTable` stays on TanStack Table and long lists on TanStack Virtual. When a component needs behaviour, look for the React Aria part first |
+| Primitives | React Aria Components | Jonathan's choice (2026-11-12): behaviour and accessibility of every interactive control come from `react-aria-components` (press, focus, keyboard models, overlays, menus, number and colour fields, drag and drop), styled with our tokens through its `data-*` state attributes (`data-[selected]:`, `data-[focus-visible]:`). Not Radix; `@radix-ui/react-slot` and `asChild` are gone. Native elements stay where the platform does it better (`Input`, `Textarea`, `NativeSelect`); `DataTable` stays on TanStack Table and long lists on TanStack Virtual. When a component needs behaviour, follow "React Aria first" below |
 | Icons | lucide-react | Components accept any `IconComponent` |
 | Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset; a long-running server job is `useJob(...)` → `JobStatus`. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` with the response body and the server's reason |
 | Tables | TanStack Table | Behind `DataTable`'s small column API (`key`, `header`, `cell`, `numeric`, `sort`) |
@@ -80,6 +80,16 @@ examples/kiln-app/      the kiln-room screen run as an app (router, base path, n
 bin/                    strata-visual, a thin wrapper over dist/visual-cli.js
 scripts/                copy-css, clean, build-site
 ```
+
+## React Aria first
+
+Jonathan (2026-11-12): "use an aria component, extend it if needed, make our own only if strictly needed." For every interactive control, in this order:
+
+1. **Use the React Aria Components part as it is** (`NumberField`, `Slider`, `Menu`, `Dialog`, `Tabs`, …), styled with tokens through its `data-*` attributes.
+2. **Extend it.** Wrap it, compose parts, control its state, use its render props and contexts, add our rule on top (our `Field` message, a `null` for "not known", a unit). Most gaps are closed here: `NumberField` ships `commitBehavior="validate"`, so "refuse out-of-range instead of clamping" is a prop plus a wrapper, not a new control. Reach for the lower-level hooks (`react-aria`, `react-stately`) before leaving the library; they ship with it.
+3. **Make our own only when strictly needed**, meaning there is a behaviour the part and its hooks cannot give, and you have **checked** that in its props, hooks and source, not assumed it. The file's opening comment names the part you considered, the exact behaviour it cannot do and where you looked, and the control still takes keyboard, focus and ARIA from React Aria's hooks where they apply. An unverified claim ("it clamps", "it can't speak a unit") is how issue #73's first version went native for a reason that was wrong.
+
+Native elements stay where the platform does it better and the stack table says so (`Input`, `Textarea`, `NativeSelect`). A gap you find is worth a line in the file comment and, if React Aria could close it, an issue upstream.
 
 ## Writing a component
 
