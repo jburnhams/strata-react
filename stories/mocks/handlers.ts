@@ -89,6 +89,23 @@ export function piecePhotoSvg(file: string): string | null {
 </svg>`;
 }
 
+/** Two renderings of the same shelf photo, for comparing: `final` is the person's version, `auto` a machine's
+ *  (a cooler glaze, a darker shelf and a speck on the rim to find). Same SVG, so they differ only where drawn. */
+export function renderingSvg(variant: string): string | null {
+  const base = piecePhotoSvg("p-301.svg");
+  if (!base || (variant !== "final" && variant !== "auto")) return null;
+  if (variant === "final") return base;
+  return base
+    .replaceAll("#8fb3a1", "#7fa6b3")
+    .replace('fill="#cfc6b8"', 'fill="#b8b2a8"')
+    .replace("</svg>", '<circle cx="236" cy="86" r="3" fill="#2a2a2a"/></svg>');
+}
+
+const rendering = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
+  const svg = renderingSvg(String(params.variant).replace(/\.svg$/, ""));
+  return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
+};
+
 const photo = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
   const svg = piecePhotoSvg(String(params.id));
   return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
@@ -97,6 +114,7 @@ const photo = ({ params }: { params: Record<string, string | readonly string[] |
 export const handlers = [
   http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
   http.get(`${api.photos}/:id`, photo),
+  http.get("/api/renderings/:variant", rendering),
   http.get(api.bookings, ({ request }) => {
     const size = new URL(request.url).searchParams.get("size");
     return HttpResponse.json(size === "large" ? manyBookings : bookings);
@@ -210,3 +228,9 @@ export const firingWorkEmpty = http.get("/api/firings/:id/work", () => HttpRespo
 export const firingWorkServerError = http.get("/api/firings/:id/work", () =>
   HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" }),
 );
+
+/** Renderings that never arrive, for Compare's loading state. */
+export const renderingsLoading = http.get("/api/renderings/:variant", async () => {
+  await delay("infinite");
+  return new HttpResponse(null, { status: 404 });
+});

@@ -92,6 +92,7 @@ export {
 } from "./components/data-table";
 export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./components/file-intake";
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
+export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
 export {
@@ -151,3 +152,8 @@ export {
   type More,
 } from "./query";
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
+
+export { Compare, type CompareProps, type CompareMode, type Candidate, type ImageMedia } from "./components/compare";
+export { ViewportFrame, useViewport, type ViewportFrameProps, type ViewportState } from "./components/viewport";
+export { FullscreenFrame, canFullscreen, type FullscreenFrameProps } from "./components/fullscreen-frame";
+export { FIT, MIN_SCALE, MAX_SCALE, clampViewport, zoomAt, actualPixelsScale, type Viewport } from "./lib/viewport";
