@@ -2,7 +2,7 @@ import * as React from "react";
 import { Flag } from "lucide-react";
 import { Button } from "./button";
 import { Menu } from "./commands";
-import { Compare, type Candidate, type CompareProps } from "./compare";
+import { Compare, type Candidate, type CompareProps, type ImageMedia } from "./compare";
 import { DataView, type Load } from "./data-view";
 import type { Shortcut } from "./hotkeys";
 import { cn } from "../lib/utils";
@@ -29,6 +29,8 @@ import { cn } from "../lib/utils";
 //   their own words (`skeleton`, `empty` required, the failure with Try again).
 // - Blind is Compare's: `blind` stays required here, and the buttons are named with the labels
 //   only ("Prefer A"), never the id.
+// - `PairVote` draws the pair with `Compare`; `PairJudge` is the same answering around any `view`
+//   (`CompareAudio`, `CompareText`), because the answers are the same whatever is judged.
 // - Statistics (ratings, confidence, which pair comes next) stay on the server; this draws the
 //   question and reports the answer.
 // Checked: React Aria has no vote or pairwise-choice part; the bar is `Button`s and a `Menu`
@@ -37,8 +39,11 @@ import { cn } from "../lib/utils";
 /** One answer to a pair: a side, "about the same", "can't tell", or a flag with its reason. */
 export type PairAnswer = { answer: "a" | "b" | "tie" | "skip" } | { answer: "flag"; reason: string };
 
-/** A pair to judge. */
-export type Pair = { label: string; a: Candidate; b: Candidate };
+/** A pair to judge: pictures by default, or any media a `view` draws (`CompareAudio`, `CompareText`). */
+export type Pair<M = ImageMedia> = { label: string; a: Candidate<M>; b: Candidate<M> };
+
+/** What `PairVote` hands a `view`: the answer keys for the view's legend and the vote bar for its footer. Pass both to `CompareAudio`, `CompareText` or your own. */
+export type PairVoteSlot = { extraShortcuts: Shortcut[]; footer: React.ReactNode };
 
 /** Words for the vote bar, all in the product's voice. */
 export type PairVoteWords = {
@@ -54,10 +59,10 @@ export type PairVoteWords = {
   flag?: string;
 };
 
-/** Props for `PairVote`. */
-export type PairVoteProps = Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer"> & {
+/** What every pair judgment takes, whatever it draws. */
+export type PairJudgeProps<M> = {
   /** The pair now being judged, as a read. */
-  pair: Load<Pair | null>;
+  pair: Load<Pair<M> | null>;
   /** Mirrors the pictures and the bar while the pair loads. Required. */
   skeleton: React.ReactNode;
   /** What to show when there is nothing left to judge, and what to do next. Required. */
@@ -70,15 +75,30 @@ export type PairVoteProps = Omit<CompareProps, "label" | "a" | "b" | "extraShort
   progress?: React.ReactNode;
   /** Reasons the judge can give for setting a pair aside ("Picture missing", "Not the same scene"); no flag menu without them. */
   flagReasons?: readonly string[];
-  /** Addresses of the next pairs' pictures, fetched ahead so the next pair is on screen the moment this one is answered. */
+  /** Addresses of the next pairs' pictures or clips, fetched ahead so the next pair is ready the moment this one is answered. */
   preload?: readonly string[];
   /** The answer just given: what it was, how to take it back, and what to show of the pair after (`reveal`, never during the judgment). */
   last?: { text: string; onUndo: () => void; reveal?: React.ReactNode };
   words?: PairVoteWords;
+  /** Draws the pair: `(slot, pair) => <CompareAudio {...pair} {...slot} blind missing=… />`. Pass the whole `slot` through so the answer keys share the view's legend and the bar sits in its footer. */
+  view: (slot: PairVoteSlot, pair: Pair<M>) => React.ReactNode;
 };
 
-/** A blind pairwise judgment: two pictures in `Compare`, answer keys in its legend, and a vote bar that never leans on either side. */
-export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words = {}, ...compare }: PairVoteProps) {
+/** Props for `PairVote`: the pair judgment, drawn with `Compare`. */
+export type PairVoteProps = Omit<PairJudgeProps<ImageMedia>, "view"> & Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer">;
+
+/** A blind pairwise judgment of two pictures: `Compare`, answer keys in its legend, and a vote bar that never leans on either side. */
+export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words, ...compare }: PairVoteProps) {
+  return (
+    <PairJudge
+      {...{ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words }}
+      view={(slot, p) => <Compare {...compare} label={p.label} a={p.a} b={p.b} {...slot} />}
+    />
+  );
+}
+
+/** A blind pairwise judgment of anything: the answer keys, vote bar, pending, flag menu, progress, preload and Undo around a `view` that draws the pair (`CompareAudio`, `CompareText`, your own). */
+export function PairJudge<M>({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words = {}, view }: PairJudgeProps<M>) {
   React.useEffect(() => {
     // Warm the cache only; the elements are dropped at once.
     for (const src of preload ?? []) new Image().src = src;
@@ -88,11 +108,7 @@ export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, f
     <div className="grid gap-3">
       {progress && <p className="type-body-sm text-muted-foreground">{progress}</p>}
       <DataView state={pair} isEmpty={(p) => p === null} skeleton={skeleton} empty={empty}>
-        {(p) =>
-          p && (
-            <Judged pair={p} onAnswer={onAnswer} pending={pending} flagReasons={flagReasons} words={w} last={last} compare={compare} />
-          )
-        }
+        {(p) => p && <Judged pair={p} onAnswer={onAnswer} pending={pending} flagReasons={flagReasons} words={w} last={last} view={view} />}
       </DataView>
       {/* With no pair on screen (the queue just ran out) the last answer can still be taken back. */}
       {last && !(pair.status === "ready" && pair.data) && <LastAnswer last={last} />}
@@ -100,7 +116,7 @@ export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, f
   );
 }
 
-function LastAnswer({ last }: { last: NonNullable<PairVoteProps["last"]> }) {
+function LastAnswer({ last }: { last: NonNullable<PairJudgeProps<unknown>["last"]> }) {
   return (
     <div role="status" className="flex flex-wrap items-center gap-3 type-body-sm text-muted-foreground">
       <span>{last.text}</span>
@@ -112,7 +128,7 @@ function LastAnswer({ last }: { last: NonNullable<PairVoteProps["last"]> }) {
   );
 }
 
-function Judged({ pair, onAnswer, pending, flagReasons, words, last, compare }: { pair: Pair; last?: PairVoteProps["last"]; onAnswer: (a: PairAnswer) => void; pending: boolean; flagReasons?: readonly string[]; words: Required<PairVoteWords>; compare: Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer"> }) {
+function Judged<M>({ pair, onAnswer, pending, flagReasons, words, last, view }: { pair: Pair<M>; last?: PairJudgeProps<M>["last"]; onAnswer: (a: PairAnswer) => void; pending: boolean; flagReasons?: readonly string[]; words: Required<PairVoteWords>; view: PairJudgeProps<M>["view"] }) {
   const { a, b } = pair;
   const answer = (x: PairAnswer) => !pending && onAnswer(x);
   const shortcuts: Shortcut[] = [
@@ -145,5 +161,5 @@ function Judged({ pair, onAnswer, pending, flagReasons, words, last, compare }: 
       {last && <LastAnswer last={last} />}
     </div>
   );
-  return <Compare {...compare} label={pair.label} a={a} b={b} extraShortcuts={shortcuts} footer={footer} />;
+  return <>{view({ extraShortcuts: shortcuts, footer }, pair)}</>;
 }

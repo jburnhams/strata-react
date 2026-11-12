@@ -131,7 +131,31 @@ const tile: Parameters<typeof http.get>[1] = ({ params }) => {
   return new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } });
 };
 
+/** Two readings of one three-second phrase for the audio stories: the same tone, one louder. `/api/clips/:variant` (`a.wav` is the louder). A real WAV, so the browser decodes it and the loudness measure runs. */
+const clip = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
+  const loud = String(params.variant).startsWith("a");
+  const rate = 8000;
+  const frames = rate * 3;
+  const bytes = new DataView(new ArrayBuffer(44 + frames * 2));
+  const write = (at: number, text: string) => [...text].forEach((c, i) => bytes.setUint8(at + i, c.charCodeAt(0)));
+  write(0, "RIFF");
+  bytes.setUint32(4, 36 + frames * 2, true);
+  write(8, "WAVEfmt ");
+  bytes.setUint32(16, 16, true);
+  bytes.setUint16(20, 1, true);
+  bytes.setUint16(22, 1, true);
+  bytes.setUint32(24, rate, true);
+  bytes.setUint32(28, rate * 2, true);
+  bytes.setUint16(32, 2, true);
+  bytes.setUint16(34, 16, true);
+  write(36, "data");
+  bytes.setUint32(40, frames * 2, true);
+  for (let i = 0; i < frames; i++) bytes.setInt16(44 + i * 2, Math.round(Math.sin((2 * Math.PI * (loud ? 440 : 523) * i) / rate) * (loud ? 0.5 : 0.25) * 32767), true);
+  return new HttpResponse(bytes.buffer, { headers: { "Content-Type": "audio/wav" } });
+};
+
 export const handlers = [
+  http.get("/api/clips/:variant", clip),
   http.get("https://tiles.example.test/:set/:z/:x/:file", tile),
   http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
   http.get(`${api.photos}/:id`, photo),
