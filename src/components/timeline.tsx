@@ -1,4 +1,6 @@
 import * as React from "react";
+import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import { useSliderState } from "react-stately";
 import { Ban, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { clamp, snapTo, tickLabel, tickStep, ticksBetween, tidy } from "../lib/timeline";
 import { cn } from "../lib/utils";
@@ -21,7 +23,10 @@ import { IconButton } from "./button";
 // Space selects (with Ctrl or Shift, adds to the selection). On the focused item: Ctrl+Left/Right
 // nudge it by `step` (Shift: ten steps), Ctrl+Up/Down move it a lane, Alt+Left/Right trim the end,
 // Alt+Shift+Left/Right trim the start, Delete asks the app to remove the selection. The current time
-// is its own slider (arrows `step`, Shift ten steps, Page keys ten, Home and End the limits).
+// is React Aria's slider hooks, with the ruler as its track and the marker as its thumb (a press or
+// drag on the ruler moves it; arrows `step`, Shift ten steps, Page keys ten, Home and End the limits
+// are a capture handler on its input, because the hooks have one step and a drag needs a fine one; the
+// value is spoken through `formatTime`, which `Intl.NumberFormat` options cannot do).
 // `+`, `-` and `0` zoom in, out and to fit when `onZoomChange` is given. Every change is announced
 // politely in words: "run-02.mp4 moved to 0:14, Track 1".
 //
@@ -433,21 +438,27 @@ export function Timeline({
   const stepSize = tickStep(zoom);
   const ticks = React.useMemo(() => ticksBetween(from, to, stepSize), [from, to, stepSize]);
   const setPosition = (t: number) => onPositionChange?.(clamp(tidy(t), from, to));
-  const onRulerPointer = (e: React.PointerEvent) => {
-    if (!onPositionChange || e.button !== 0) return;
-    const el = e.currentTarget as HTMLElement;
-    const rect = el.getBoundingClientRect();
-    const at = (clientX: number) => setPosition(from + (clientX - rect.left) / zoom);
-    at(e.clientX);
-    el.setPointerCapture?.(e.pointerId);
-    const move = (ev: PointerEvent) => at(ev.clientX);
-    const up = () => {
-      el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerup", up);
-    };
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", up);
-  };
+  // The current time is React Aria's slider: the ruler is its track (a press or drag on it moves the
+  // time), and the marker is its thumb. The value text goes through `formatTime`, and the keys are a
+  // capture handler on the input (see `onSliderKey`), for the reasons in the opening comment.
+  const scrubTrack = React.useRef<HTMLDivElement>(null);
+  const scrubInput = React.useRef<HTMLInputElement>(null);
+  const spokenTime = React.useMemo(
+    () => ({ format: formatTime, formatRange: (a: number, b: number) => `${formatTime(a)} to ${formatTime(b)}`, resolvedOptions: () => ({ locale: "en-US" }) }) as unknown as Intl.NumberFormat,
+    [formatTime],
+  );
+  const scrubState = useSliderState({
+    minValue: from,
+    maxValue: Math.max(to, from + 1e-9),
+    step: 0.001,
+    value: [clamp(position ?? from, from, to)],
+    onChange: ([t]) => setPosition(t),
+    numberFormatter: spokenTime,
+    isDisabled: position === undefined || !onPositionChange,
+  });
+  const { trackProps: rulerProps } = useSlider({ "aria-label": "Current time", isDisabled: position === undefined || !onPositionChange }, scrubState, scrubTrack);
+  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: scrubTrack, inputRef: scrubInput, "aria-label": "Current time", isDisabled: position === undefined || !onPositionChange }, scrubState);
+  const { focusProps, isFocusVisible } = useFocusRing();
   const onSliderKey = (e: React.KeyboardEvent) => {
     if (position === undefined) return;
     const big = e.shiftKey ? 10 : 1;
@@ -457,6 +468,7 @@ export function Timeline({
     else if (e.key === "End") setPosition(to);
     else return;
     e.preventDefault();
+    e.stopPropagation();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -510,7 +522,7 @@ export function Timeline({
         <div ref={scroller} className="relative min-w-0 flex-1 overflow-x-auto">
           <div className="relative" style={{ width }}>
             {/* The ruler: ticks and labels on a ladder of steps, thinned so they never collide, the end labels kept inside the axis. */}
-            <div className="relative h-8 border-b border-border" onPointerDown={onRulerPointer} data-ruler>
+            <div {...rulerProps} ref={scrubTrack} className="relative h-8 touch-none border-b border-border" data-ruler>
               {ticks.map((t) => {
                 const px = x(t);
                 const last = px > width - 40;
@@ -525,6 +537,8 @@ export function Timeline({
                   key={m.id}
                   type="button"
                   aria-label={`Marker: ${m.label}, ${formatTime(m.time)}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={() => setPosition(m.time)}
                   className="absolute bottom-0 max-w-32 -translate-x-px truncate rounded-control border-l-2 border-foreground bg-muted px-1 type-caption"
                   style={{ left: x(m.time) }}
@@ -533,20 +547,11 @@ export function Timeline({
                 </button>
               ))}
               {position !== undefined && (
-                <div
-                  role="slider"
-                  tabIndex={0}
-                  aria-label="Current time"
-                  aria-orientation="horizontal"
-                  aria-valuemin={from}
-                  aria-valuemax={to}
-                  aria-valuenow={position}
-                  aria-valuetext={formatTime(position)}
-                  onKeyDown={onSliderKey}
-                  className="absolute top-0 -ml-2 h-full w-4 cursor-ew-resize outline-offset-2"
-                  style={{ left: x(position) }}
-                >
+                <div {...thumbProps} className={cn("absolute top-0 -ml-2 h-full w-4 cursor-ew-resize", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: x(position) }}>
                   <span aria-hidden className="mx-auto block size-3 rounded-pill bg-primary" />
+                  <VisuallyHidden>
+                    <input ref={scrubInput} {...mergeProps(inputProps, focusProps)} aria-labelledby={undefined} onKeyDownCapture={onSliderKey} />
+                  </VisuallyHidden>
                 </div>
               )}
             </div>

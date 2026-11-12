@@ -229,10 +229,11 @@ describe("Timeline review fixes", () => {
     const seen: number[] = [];
     renderWithStrata(<Harness onPositionChange={(t) => seen.push(t)} />);
     const slider = screen.getByRole("slider", { name: "Current time" });
-    const ruler = slider.parentElement!;
+    const ruler = slider.closest("[data-ruler]") as HTMLElement;
     ruler.getBoundingClientRect = () => new DOMRect(0, 0, 1200, 32);
-    fireEvent.pointerDown(slider, { button: 0, clientX: 300 });
-    expect(seen.at(-1)).toBe(30);
+    fireEvent.pointerDown(ruler, { button: 0, clientX: 300, pointerId: 1 });
+    fireEvent.pointerUp(ruler, { button: 0, clientX: 300, pointerId: 1 });
+    expect(seen.at(-1)).toBeCloseTo(30, 1);
   });
 
   it("keeps the tab-stop item mounted when the view is scrolled far from it", () => {
