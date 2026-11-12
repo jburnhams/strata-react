@@ -6,6 +6,7 @@
 
 - `src/components/switch.tsx`, `src/components/checkbox.tsx`: the label span names the control (`aria-labelledby`) and the detail is `aria-describedby`, ids from `React.useId`. The hidden-label checkbox is unchanged.
 - `tests/unit/controls.test.tsx`: two tests, exact-name query and accessible description, for each. `UPGRADING.md` has the line.
+
 **testing: a toast region in `renderWithStrata` and `renderRoutes` (issue #153)** (branch `claude/project-thread-reaene`). An app that rendered `StrataToastRegion` beside `RouterProvider`, as the README says, could not test a toast: the helpers render only the route tree, so `toast.show` went nowhere. The queue is also module state, so a toast could carry into the next test.
 
 - `src/testing/index.tsx`: both helpers render a `StrataToastRegion` (option `toasts`, default true, `false` when the route tree has its own) and call `toast.clear()` before each render.
