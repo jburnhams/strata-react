@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useDensityOn, type DensityName } from "./density";
 import { Radio, RadioGroup } from "react-aria-components";
 import { Tooltip } from "./tooltip";
 import { Monitor, Moon, Sun } from "lucide-react";
@@ -105,6 +106,7 @@ export function ThemeProvider({
   defaultPreference = "system",
   storageKey = COLOR_SCHEME_STORAGE_KEY,
   target,
+  density,
 }: {
   children: React.ReactNode;
   /** The preference before a person has chosen one. */
@@ -119,6 +121,11 @@ export function ThemeProvider({
    * means it has not mounted yet, and nothing is set until it has.
    */
   target?: HTMLElement | null;
+  /**
+   * How much the screen packs in, set on the same element as the colour scheme (the root, so
+   * overlays are reached): `compact` for a tool screen. See `Density`. Left out, nothing is set.
+   */
+  density?: DensityName;
 }) {
   // The first render uses the default, as the server does, so a server-rendered tree hydrates
   // without a mismatch; the stored choice is read in a layout effect, which re-renders before the
@@ -157,6 +164,8 @@ export function ThemeProvider({
     element.classList.toggle("dark", scheme === "dark");
     return () => element.classList.remove("dark");
   }, [scheme, target]);
+
+  useDensityOn(density, target);
 
   const value = React.useMemo(() => ({ preference, scheme, setPreference }), [preference, scheme, setPreference]);
   return <Context.Provider value={value}>{children}</Context.Provider>;

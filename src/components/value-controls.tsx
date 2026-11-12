@@ -12,6 +12,7 @@ import { useFieldControl } from "./field";
 import { NBSP, format } from "../lib/format";
 import { contrastRatio, parseHex } from "../lib/number-input";
 import { cn } from "../lib/utils";
+import { controlHeight, type ControlSize } from "../lib/control";
 
 // Controls for setting a number or a colour precisely (strata-react issue #73, from moving
 // strata-vid onto Strata: opacity, rotation, volume, bitrate, a line colour). The native ones fail
@@ -39,7 +40,7 @@ import { cn } from "../lib/utils";
 //   platform picker.
 
 const box =
-  "flex h-(--control-h) w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
+  "flex w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
 
 /** A number with its unit joined by a non-breaking space; `%` and `°` stay attached. */
 function withUnit(text: string, unit?: string) {
@@ -106,6 +107,8 @@ export type NumberFieldProps = RangeProps & {
   "aria-label"?: string;
   id?: string;
   name?: string;
+  /** `sm` is --control-h-sm, the height of a small `Toggle` or `IconButton` beside it. Default --control-h. */
+  size?: ControlSize;
   className?: string;
 };
 
@@ -132,6 +135,7 @@ export function NumberField({
   disabled,
   id: idProp,
   name,
+  size = "default",
   className,
   "aria-label": ariaLabel,
 }: NumberFieldProps) {
@@ -186,7 +190,7 @@ export function NumberField({
         isInvalid={invalid || undefined}
         name={name}
         aria-label={ariaLabel ?? field?.label}
-        className={cn(box, className)}
+        className={cn(box, controlHeight[size], className)}
       >
         <AriaInput
           id={idProp ?? field?.id}
@@ -339,7 +343,7 @@ export function ColorField({ value, onChange, suggestions, against, againstLabel
   const invalid = field?.invalid || own;
   return (
     <div className={cn("grid min-w-0 gap-2", className)}>
-      <div className={cn(box, "gap-2 px-2")} aria-invalid={invalid || undefined}>
+      <div className={cn(box, controlHeight.default, "gap-2 px-2")} aria-invalid={invalid || undefined}>
         <span className="relative size-6 shrink-0 overflow-hidden rounded-control border border-input">
           {/* The swatch is the chosen colour itself: user content, not a theme role. */}
           <span aria-hidden className={cn("absolute inset-0", value === null && "bg-muted")} style={value ? { background: value } : undefined} />

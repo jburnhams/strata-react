@@ -95,13 +95,19 @@
   .dark {
     --surface-sunken: var(--neutral-1);
   }
+  /* `default` exists so a region can step back to ordinary density inside a compact page. */
+  [data-density="default"] {
+    --control-h: 2.5rem;
+    --control-h-sm: 2rem;
+  }
   [data-density="compact"] {
     --control-h: 2rem;
     --control-h-sm: 1.75rem;
   }
-  /* After the compact rule, so a coarse pointer always wins: every control stays a 44px target. */
+  /* After the density rules, so a coarse pointer always wins: every control stays a 44px target. */
   @media (pointer: coarse) {
     :root,
+    [data-density="default"],
     [data-density="compact"] {
       --control-h: 2.75rem;
       --control-h-sm: 2.75rem;
