@@ -155,6 +155,18 @@ describe("CompareVideo", () => {
     expect(screen.getByText("No loop")).toBeInTheDocument();
   });
 
+  it("loops from the clip's natural end when the range ends there", async () => {
+    renderWithStrata(<Harness loop={{ start: 4, end: 10 }} />);
+    load();
+    await userEvent.keyboard(" ");
+    act(() => media.end(el("A")));
+    await waitFor(() => expect(el("A").currentTime).toBe(4));
+    expect(el("B").currentTime).toBe(4);
+    expect(el("A").paused).toBe(false);
+    expect(el("B").paused).toBe(false);
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+  });
+
   it("keeps a loop the app holds, so it survives a change of pair", async () => {
     const seen: unknown[] = [];
     const { rerender } = renderWithStrata(<Harness loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);

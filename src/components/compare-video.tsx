@@ -166,9 +166,11 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     sb.seek(t);
   };
   // Frame by frame: the centre of the next or previous frame, so a step cannot land on a boundary and show the wrong one.
+  // The leader's own time, not the snapshot: that is only as fresh as the last media event, and a step during playback would jump back.
+  const now = () => refA.current?.currentTime ?? sa.time;
   const step = (direction: 1 | -1) => {
     pause();
-    const frame = Math.floor(sa.time * fps + 1e-6);
+    const frame = Math.floor(now() * fps + 1e-6);
     seek(Math.max(0, (frame + direction + 0.5) / fps));
   };
   // The loop is the app's when it gives one, so it survives a change of pair; otherwise ours.
@@ -181,7 +183,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   const loopRef = React.useRef(loop);
   loopRef.current = loop;
   const setPoint = (point: "start" | "end") => {
-    const t = sa.time;
+    const t = now();
     const other = point === "start" ? loop.end : loop.start;
     // A start after the end (or an end before the start) replaces the other point.
     const clash = other !== null && (point === "start" ? t >= other : t <= other);
@@ -198,12 +200,22 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   };
 
   // Either video reaching its end ends the play for both: the clock runs to the shorter one's end, which is the length shown.
+  // Unless a loop is set: then the end is where the loop goes back from (a range that ends at the clip's end never gets another frame to be caught on).
   React.useEffect(() => {
-    if (sa.ended || sb.ended) {
-      setWanted(false);
-      refA.current?.pause();
-      refB.current?.pause();
+    if (!(sa.ended || sb.ended)) return;
+    const { start, end } = loopRef.current;
+    const A = refA.current;
+    const B = refB.current;
+    if (wanted && start !== null && end !== null && A && B) {
+      A.currentTime = start;
+      B.currentTime = start;
+      void A.play();
+      void B.play();
+      return;
     }
+    setWanted(false);
+    A?.pause();
+    B?.pause();
   }, [sa.ended, sb.ended]);
 
   React.useEffect(() => {
