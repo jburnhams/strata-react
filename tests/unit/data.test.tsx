@@ -28,13 +28,13 @@ function Bookings() {
   );
 }
 
-const bodyRows = () => within(screen.getByRole("table")).getAllByRole("row").slice(1);
+const bodyRows = () => within(screen.getByRole("grid")).getAllByRole("row").slice(1);
 
 describe("DataView fed by TanStack Query (served by MSW)", () => {
   it("shows the skeleton, then the rows", async () => {
     const { container } = renderWithStrata(<Bookings />);
     expect(container.querySelector("[aria-busy=true]")).not.toBeNull();
-    expect(await screen.findByRole("table", { name: "Work in the kilns" })).toBeInTheDocument();
+    expect(await screen.findByRole("grid", { name: "Work in the kilns" })).toBeInTheDocument();
     expect(bodyRows()).toHaveLength(bookings.length);
   });
 
@@ -58,7 +58,7 @@ describe("DataView fed by TanStack Query (served by MSW)", () => {
 describe("a refresh that fails after a good read (issue #26)", () => {
   it("keeps the rows, says why and how old they are, and clears on Try again", async () => {
     const { client } = renderWithStrata(<Bookings />);
-    await screen.findByRole("table", { name: "Work in the kilns" });
+    await screen.findByRole("grid", { name: "Work in the kilns" });
     const readAt = new Date(client.getQueryState(["bookings"])!.dataUpdatedAt);
 
     server.use(bookingsServerError);
@@ -81,7 +81,7 @@ describe("a refresh that fails after a good read (issue #26)", () => {
     server.use(bookingsServerError);
     renderWithStrata(<Bookings />);
     expect(await screen.findByRole("alert")).toHaveTextContent("The server could not answer (503).");
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByRole("grid")).toBeNull();
   });
 
   it("shows the notice over an empty state too, and takes the product's words", () => {
@@ -115,14 +115,14 @@ describe("a refresh that fails after a good read (issue #26)", () => {
 });
 
 describe("DataTable", () => {
-  it("sorts by a header button and says which way with aria-sort", async () => {
+  it("sorts by clicking a header and says which way with aria-sort", async () => {
     renderWithStrata(<DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
     const header = screen.getByRole("columnheader", { name: /Pieces/ });
-    expect(header).not.toHaveAttribute("aria-sort");
-    await userEvent.click(within(header).getByRole("button"));
+    expect(header).toHaveAttribute("aria-sort", "none");
+    await userEvent.click(header);
     expect(header).toHaveAttribute("aria-sort", "ascending");
     expect(within(bodyRows()[0]).getByText("2")).toBeInTheDocument();
-    await userEvent.click(within(header).getByRole("button"));
+    await userEvent.click(header);
     expect(header).toHaveAttribute("aria-sort", "descending");
     expect(within(bodyRows()[0]).getByText("11")).toBeInTheDocument();
   });
@@ -140,16 +140,16 @@ describe("DataTable", () => {
     );
     expect(screen.getByRole("columnheader", { name: /Member/ })).toHaveAttribute("aria-sort", "descending");
     expect(within(bodyRows()[0]).getByText("Tom Ellery")).toBeInTheDocument();
-    await userEvent.click(within(screen.getByRole("columnheader", { name: /Pieces/ })).getByRole("button"));
+    await userEvent.click(screen.getByRole("columnheader", { name: /Pieces/ }));
     expect(screen.getByTestId("search")).toHaveTextContent("?sort=pieces.asc");
   });
 
-  it("renders only the visible rows of a long table (TanStack Virtual)", () => {
+  it("renders only the visible rows of a long table (React Aria's Virtualizer)", () => {
     renderWithStrata(<DataTable caption="Many" columns={columns} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />);
     const rendered = bodyRows().filter((r) => r.getAttribute("aria-hidden") !== "true");
     expect(rendered.length).toBeGreaterThan(0);
     expect(rendered.length).toBeLessThan(40);
-    expect(screen.getByRole("table")).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
   });
 
   it("renders every row of a short table", () => {
