@@ -158,6 +158,29 @@ async function settle(page: Page) {
   await page
     .waitForFunction(() => [...document.querySelectorAll("video")].every((v) => v.readyState >= 2 || v.error !== null), undefined, { timeout: 5_000 })
     .catch(() => undefined);
+  // Decoded is not painted: on a loaded runner Chromium can hold a decoded first frame back from the
+  // compositor, and a shot then shows an empty cell for good (it stays empty for seconds; this was the
+  // flaky CompareVideoGrid shots). A seek to the time a video is already at presents a fresh frame, and
+  // its callback says when it was handed to the compositor, so each shot waits for that, per video.
+  await page
+    .evaluate(() =>
+      Promise.all(
+        [...document.querySelectorAll("video")]
+          .filter((v) => v.readyState >= 2 && !v.error && "requestVideoFrameCallback" in v)
+          .map(
+            (v) =>
+              new Promise<void>((done) => {
+                const stop = window.setTimeout(done, 2_000);
+                v.requestVideoFrameCallback(() => {
+                  window.clearTimeout(stop);
+                  done();
+                });
+                v.currentTime = v.currentTime;
+              }),
+          ),
+      ),
+    )
+    .catch(() => undefined);
   await page.waitForTimeout(250);
 }
 
