@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+**Switch and Checkbox: `detail` is a description, not part of the name (issue #152)** (branch `claude/project-thread-reaene`). React Aria puts all the text inside a switch into its label, so "Show 1 video" plus its detail was the accessible name and an exact-name query missed it.
+
+- `src/components/switch.tsx`, `src/components/checkbox.tsx`: the label span names the control (`aria-labelledby`) and the detail is `aria-describedby`, ids from `React.useId`. The hidden-label checkbox is unchanged.
+- `tests/unit/controls.test.tsx`: two tests, exact-name query and accessible description, for each. `UPGRADING.md` has the line.
+
 **PairVote: answering a blind pairwise judgment beside Compare (issue #144)** (branch `claude/project-thread-reaene`). strata-models' judge and the stills arena each drew their own answer bar next to `Compare`: two legends, answer keys nobody could guess because the natural ones were taken, and no click-to-choose once a click panned. Issue #144 offered an `answers` prop or exported shortcut lists; this takes both halves: `Compare` accepts `extraShortcuts` and `footer`, and `PairVote` is the wrapper that uses them.
 
 - `src/components/pair-vote.tsx` (new): `PairVote`. The pair is a `Load<Pair | null>` through `DataView` (`skeleton` and `empty` required, failure with Try again). Answers are `a`, `b`, `tie`, `skip` and `flag` with a reason (a React Aria `Menu`, only when `flagReasons` are given). Keys `a` `b` `t` `s` join Compare's legend as one list. Arrow keys are not answer keys: a judge who zooms in and presses an arrow to pan must not cast a vote. Choosing is a button under the pictures (a click on a picture pans). No button is filled. `pending` disables buttons and keys and says so. `progress` is a line above, `preload` warms the next pair's pictures, `last` offers Undo and an after-the-fact `reveal`. Checked: React Aria has no pairwise-choice part, so the bar is `Button`s and `Menu`.

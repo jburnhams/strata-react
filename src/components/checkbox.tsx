@@ -40,6 +40,7 @@ export type CheckboxGesture = { shiftKey: boolean };
 /** A checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
 export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, required, ...props }: CheckboxProps) {
   const shift = useShiftNote();
+  const id = React.useId();
   // Shift is noted in the capture phase on a wrapper, because React Aria's press handling stops the
   // events it uses before they bubble. `contents` keeps the wrapper out of layout.
   return (
@@ -51,6 +52,8 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
         isRequired={required}
         onChange={(selected) => onCheckedChange(selected, shift.take())}
         aria-label={hideLabel ? label : undefined}
+        aria-labelledby={hideLabel ? undefined : `${id}-label`}
+        aria-describedby={!hideLabel && detail ? `${id}-detail` : undefined}
         {...(props as object)}
         className={cn(
           "group inline-flex min-h-6 min-w-6 items-start gap-3",
@@ -64,8 +67,8 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
             <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel={hideLabel} />
             {!hideLabel && (
               <span className="grid">
-                <span className="type-body">{label}</span>
-                {detail && <span className="type-body-sm text-muted-foreground">{detail}</span>}
+                <span id={`${id}-label`} className="type-body">{label}</span>
+                {detail && <span id={`${id}-detail`} className="type-body-sm text-muted-foreground">{detail}</span>}
               </span>
             )}
           </>
