@@ -149,3 +149,8 @@ export {
   type More,
 } from "./query";
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
+
+export { Compare, type CompareProps, type CompareMode, type Candidate, type ImageMedia } from "./components/compare";
+export { ViewportFrame, useViewport, type ViewportFrameProps, type ViewportState } from "./components/viewport";
+export { FullscreenFrame, canFullscreen, type FullscreenFrameProps } from "./components/fullscreen-frame";
+export { FIT, MIN_SCALE, MAX_SCALE, clampViewport, zoomAt, actualPixelsScale, type Viewport } from "./lib/viewport";
