@@ -166,3 +166,13 @@ export { FIT, MIN_SCALE, MAX_SCALE, clampViewport, zoomAt, actualPixelsScale, ty
 export { CompareGrid, type CompareGridProps } from "./components/compare-grid";
 export { useDifference, type DifferenceState, type ReadPixels } from "./components/difference";
 export { differences, readPixels, resample, MAX_SIDE, DEFAULT_TOLERANCE, type Difference, type Pixels } from "./lib/image-diff";
+export {
+  useHistory,
+  useHistoryState,
+  type History,
+  type HistoryOptions,
+  type HistoryStep,
+  type HistoryStateOptions,
+  type SetOptions,
+} from "./components/history";
+export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
