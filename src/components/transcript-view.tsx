@@ -20,9 +20,10 @@ import { VisuallyHidden } from "react-aria";
 //   reader reads the transcript in DOM order as text, and `announce` adds one polite sentence per
 //   phrase, off by default (a person reading along with a screen reader hears the speech already).
 // - **Follow** scrolls the heard phrase to the middle, but only while the person has not scrolled
-//   away: any scroll they make (wheel, touch, keys, scrollbar) switches it off and "Jump to now"
-//   appears; pressing it, or seeking, switches it back on. Our own scrolls are told apart by a short
-//   window after we make one.
+//   away: a scroll that follows something they did (wheel, touch, a key, a press on a scrollbar)
+//   switches it off and "Jump to now" appears; pressing it, or seeking, switches it back on. A scroll
+//   nothing of theirs caused (our own, a layout shift) does not count. With `follow` off there is
+//   nothing to jump back to, so no button.
 // - **Words are buttons**, so a click or Enter seeks to the word (`onSeek(time, { phraseId,
 //   wordIndex })`). They are not tab stops one by one: a row is a grid row (React Aria's `GridList`
 //   through `VirtualList`), arrows move between rows and into a row's words, as in every Strata list.
@@ -141,16 +142,25 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
   React.useEffect(() => {
     if (following && heardId) scrollToHeard(heardId);
   }, [heardId, following, scrollToHeard]);
+  // A scroll is the person's when they just did something that scrolls (wheel, touch, a key, a press on
+  // a scrollbar): a scroll nothing of theirs caused (our own, a layout shift, a test runner's) is not.
   React.useEffect(() => {
+    let intent = 0;
+    const meant = () => void (intent = Date.now());
     const onScroll = (e: Event) => {
       const el = root.current;
       const target = e.target as Node | null;
       if (!el || !target || !(target === document || (target as Node).contains?.(el) || el.contains(target))) return;
-      if (Date.now() - ours.current < 400) return;
+      if (Date.now() - ours.current < 400 || Date.now() - intent > 1000) return;
       setFollowing(false);
     };
+    const gestures = ["wheel", "touchstart", "touchmove", "keydown", "pointerdown"] as const;
+    for (const g of gestures) document.addEventListener(g, meant, { capture: true, passive: true });
     document.addEventListener("scroll", onScroll, true);
-    return () => document.removeEventListener("scroll", onScroll, true);
+    return () => {
+      for (const g of gestures) document.removeEventListener(g, meant, true);
+      document.removeEventListener("scroll", onScroll, true);
+    };
   }, []);
 
   // One polite sentence per phrase, when asked for.
@@ -207,7 +217,7 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
             )
           }
         </VirtualList>
-        {!following && heardPhrase && (
+        {follow && !following && heardPhrase && (
           <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
             <Button className="pointer-events-auto max-w-full shadow-overlay" onPress={() => setFollowing(true)}>
               <span className="truncate">Jump to now: {heardText}</span>

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -116,6 +115,7 @@ describe("follow and Jump to now", () => {
       await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
       // The person scrolls: a scroll we did not make.
       await new Promise((r) => setTimeout(r, 450));
+      fireEvent.wheel(screen.getByRole("grid", { name: "Transcript" }));
       fireEvent.scroll(screen.getByRole("grid", { name: "Transcript" }));
       rerender(<Host time={10.1} />);
       expect(scroll).toHaveBeenCalledTimes(2);
@@ -129,10 +129,17 @@ describe("follow and Jump to now", () => {
     }
   });
 
+  it("a scroll that nothing of the person's caused does not turn following off", () => {
+    renderWithStrata(<Host time={3.1} />);
+    fireEvent.scroll(screen.getByRole("grid", { name: "Transcript" }));
+    expect(screen.queryByRole("button", { name: /Jump to now/ })).not.toBeInTheDocument();
+  });
+
   it("a seek from the transcript turns following back on", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Host time={3.1} />);
     await new Promise((r) => setTimeout(r, 450));
+    fireEvent.wheel(screen.getByRole("grid", { name: "Transcript" }));
     fireEvent.scroll(screen.getByRole("grid", { name: "Transcript" }));
     expect(screen.getByRole("button", { name: /Jump to now/ })).toBeInTheDocument();
     await user.click(within(row("p1")).getByRole("button", { name: "good" }));
@@ -141,7 +148,7 @@ describe("follow and Jump to now", () => {
 });
 
 describe("a long transcript", () => {
-  it("renders only the rows near the top of 2000 phrases, and still names the heard phrase when it is far away", async () => {
+  it("renders only the rows near the top of 2000 phrases", async () => {
     // React Aria's Virtualizer measures a row of unknown height by its scroll size, which jsdom reports as 0.
     const before = Object.getOwnPropertyDescriptor(Element.prototype, "scrollHeight");
     Object.defineProperty(Element.prototype, "scrollHeight", { configurable: true, get: () => 72 });
@@ -152,6 +159,7 @@ describe("a long transcript", () => {
     const many: TranscriptGroup[] = [{ id: "g", title: "Everything", phrases: Array.from({ length: 2000 }, (_, i) => phrase(`q${i}`, i * 3, `phrase number ${i}`)) }];
     renderWithStrata(<TranscriptView label="Transcript" groups={many} time={3000} onSeek={() => {}} follow={false} />);
     expect(document.querySelectorAll("[data-phrase]").length).toBeLessThan(60);
-    expect(screen.getByRole("button", { name: /Jump to now: phrase number 1000/ })).toBeInTheDocument();
+    // Not following (the app turned it off): the heard phrase is far away and nothing offers to go there.
+    expect(screen.queryByRole("button", { name: /Jump to now/ })).not.toBeInTheDocument();
   });
 });

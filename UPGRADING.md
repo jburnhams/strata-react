@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `MediaElementState` has new members (`window`, `playWindow`, `ready`, `waitingForMore`, `reportProblem`): code that builds one by hand (a stand-in for `Transport`, say) must add them. `useMediaElement` and `MediaPlayer` now keep the pitch whenever the rate changes (`preservesPitch`).
 - `MediaPlayer`: the `<audio>`/`<video>` element is now labelled "<label>, audio" (or "video") and the group keeps "<label>"; a test that queried the element by the bare label queries the group or the longer name. With several players on a page, Space, K, J, L and M go to the one last played, focused or pressed (a single player is unchanged); `shortcuts={false}` still opts out.
 - `Switch` and `Checkbox` `detail` is now the control's accessible description, not part of its name: `getByRole("switch", { name: "Show 1 video" })` finds it, and a test that matched the name with a regex to include the detail should query the exact label (and `toHaveAccessibleDescription` for the detail).
 - `renderWithStrata` and `renderRoutes` render a `StrataToastRegion` and clear the toast queue before each render. A test whose route tree already renders the region (a root layout route) passes `toasts: false`, or finds every toast twice.

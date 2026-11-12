@@ -91,7 +91,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
-export { MediaPlayer, useMediaElement, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
+export { MediaPlayer, useMediaElement, useAttachedSource, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type StreamContext, type StreamAttachment, type SourceAttacher, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
 export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from "./components/transcript-view";
 export { phraseAt, wordAt, type TranscriptGroup, type TranscriptPhrase, type TranscriptWord } from "./lib/transcript";
 export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";

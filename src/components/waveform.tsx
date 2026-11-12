@@ -62,7 +62,7 @@ const TONE: Record<WaveformTone, { fill: string; edge: string }> = {
 };
 
 const MARK_LINE: Record<WaveformMarkKind, { width: number; opacity: number; dash?: string }> = {
-  beat: { width: 1, opacity: 0.3 },
+  beat: { width: 1, opacity: 0.16 },
   bar: { width: 1.5, opacity: 0.55 },
   downbeat: { width: 2.5, opacity: 1 },
   chapter: { width: 1.5, opacity: 0.9, dash: "4 3" },
@@ -88,6 +88,8 @@ type Common = {
   step?: number;
   /** Seconds Shift or a Page key moves. Default 30. */
   bigStep?: number;
+  /** The part of the file shown at first, seconds (zoomed in). The component keeps the view after that. */
+  defaultView?: readonly [number, number];
   /** How many peaks a decoded file is reduced to. Default 2000. */
   buckets?: number;
   /** Turns a decoded file into samples. Default: the browser's `AudioContext.decodeAudioData`. */
@@ -118,7 +120,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), h
 const clock = (t: number) => format.runningTime(t);
 
 /** An audio waveform with marks, spans and a playhead: one slider you click, drag or key to seek, zoom, and a range to select. */
-export function Waveform({ label, peaks, source, duration: given, time, onSeek, marks = [], spans = [], underlay, range: controlledRange, onRangeChange, step = 5, bigStep = 30, buckets = 2000, decode = defaultDecode, words = WORDS, disabled, className }: WaveformProps) {
+export function Waveform({ label, peaks, source, duration: given, time, onSeek, marks = [], spans = [], underlay, range: controlledRange, onRangeChange, step = 5, bigStep = 30, defaultView, buckets = 2000, decode = defaultDecode, words = WORDS, disabled, className }: WaveformProps) {
   // Peaks: given, or read from the file.
   const work = useClientWork<{ pair: PeakPair; duration: number }>(async ({ signal, progress }) => {
     const data = typeof source === "string" ? await (await fetch(source, { signal })).arrayBuffer() : await (source as Blob).arrayBuffer();
@@ -143,7 +145,7 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const ready = pair !== null && duration > 0;
 
   // The view: the part of the file in the plot.
-  const [view, setView] = React.useState<[number, number] | null>(null);
+  const [view, setView] = React.useState<[number, number] | null>(defaultView ? [defaultView[0], defaultView[1]] : null);
   const [v0, v1] = view ? clampView(view[0], view[1] - view[0], duration || 1) : [0, duration];
   const zoomed = ready && v1 - v0 < duration - 1e-6;
   const span = Math.max(v1 - v0, 1e-6);
@@ -296,8 +298,8 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const clipId = React.useId();
   const px = (t: number) => ((t - v0) / span) * width;
   const visibleMarks = marks.filter((m) => m.time >= v0 && m.time <= v1);
-  // Past one line per three pixels, beats are noise: draw the bars and the rest.
-  const thin = visibleMarks.length > width / 3;
+  // Past one line per eight pixels, beats are noise: draw the bars and the rest.
+  const thin = visibleMarks.length > width / 8;
   const listedMarks = marks.filter((m) => m.label && (m.listed ?? m.kind !== "beat"));
   const counts = marks.reduce<Record<string, number>>((c, m) => ((c[m.kind ?? "mark"] = (c[m.kind ?? "mark"] ?? 0) + 1), c), {});
   const summary = ready

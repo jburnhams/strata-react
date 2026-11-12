@@ -19,6 +19,8 @@ export default defineConfig({
         index: resolve(__dirname, "src/index.ts"),
         testing: resolve(__dirname, "src/testing/index.tsx"),
         map: resolve(__dirname, "src/map/index.ts"),
+        hls: resolve(__dirname, "src/hls/index.ts"),
+        panorama: resolve(__dirname, "src/panorama/index.ts"),
         visual: resolve(__dirname, "src/visual/index.ts"),
         "visual-cli": resolve(__dirname, "src/visual/cli.ts"),
       },

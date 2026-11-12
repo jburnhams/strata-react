@@ -38,7 +38,17 @@
       "style": "./dist/strata.css",
       "default": "./dist/strata.css"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./hls": {
+      "types": "./dist/hls/index.d.ts",
+      "import": "./dist/hls.js",
+      "default": "./dist/hls.js"
+    },
+    "./panorama": {
+      "types": "./dist/panorama/index.d.ts",
+      "import": "./dist/panorama.js",
+      "default": "./dist/panorama.js"
+    }
   },
   "files": [
     "dist",
@@ -78,6 +88,7 @@
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
     "@testing-library/react": "^16.0.0",
+    "hls.js": "^1.6.0",
     "leaflet": "^1.9.4",
     "msw": "^2.7.0 || ^3.0.0",
     "playwright": ">=1.49.0",
@@ -88,10 +99,13 @@
     "vite": ">=6.1.0"
   },
   "peerDependenciesMeta": {
-    "leaflet": {
+    "@testing-library/react": {
       "optional": true
     },
-    "@testing-library/react": {
+    "hls.js": {
+      "optional": true
+    },
+    "leaflet": {
       "optional": true
     },
     "msw": {
@@ -137,6 +151,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
+    "hls.js": "^1.7.4",
     "jsdom": "^31.0.0",
     "leaflet": "^1.9.4",
     "leaflet-node": "^3.0.2",

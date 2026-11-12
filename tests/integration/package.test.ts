@@ -94,6 +94,7 @@ describe("peer contract", () => {
   it("keeps each optional peer behind the entry that needs it", () => {
     const reached = (key: string) => packagesReached(entries.find(([k]) => k === key)![1]);
     expect([...reached("./map")].filter((p) => optional.has(p))).toEqual(["leaflet"]);
+    expect([...reached("./hls")].filter((p) => optional.has(p))).toEqual(["hls.js"]);
     expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual(["@testing-library/react"]);
     expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual(["msw", "playwright"]);
   });
