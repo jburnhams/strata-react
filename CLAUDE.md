@@ -50,7 +50,7 @@ is his decision; do not change it on your own. Same rule in ux-research's `CLAUD
 | Icons | lucide-react | Components accept any `IconComponent` |
 | Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset; a long-running server job is `useJob(...)` → `JobStatus`. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` with the response body and the server's reason |
 | Tables | TanStack Table | Behind `DataTable`'s small column API (`key`, `header`, `cell`, `numeric`, `sort`) |
-| Long lists | TanStack Virtual | `DataTable`, `VirtualList` and `InfiniteList` virtualise from 100 rows automatically |
+| Long lists | React Aria `GridList` + `Virtualizer` (`ListLayout`) | `VirtualList` and `InfiniteList` (Jonathan, 2026-11-12): rows are a labelled grid's rows, virtualised from 100 items (an `InfiniteList` from its first row, so its scroll box is never remounted); the next-page row is one more row. `DataTable` and `SelectableGrid` still use TanStack Virtual until they move (the DataTable split) |
 | Routing | React Router | `AppShell`/`SideNav` use `NavLink`; tabs (`Tabs param=`), table sort (`sortParam`), filters and open panels live in the URL |
 | Unit tests | Vitest + Testing Library + jsdom | `tests/unit/`; query by role and name, as a person would |
 | Network in tests and stories | MSW | `stories/mocks/handlers.ts` serves both. **Never** `vi.mock` a module or stub `fetch`; put the server into the state with `server.use(...)` (tests) or `beforeEach: ({ msw }) => msw.use(...)` (stories) |
