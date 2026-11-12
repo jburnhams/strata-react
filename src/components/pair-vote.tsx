@@ -21,6 +21,8 @@ import { cn } from "../lib/utils";
 //   The bar is part of Compare's footer so it stays on screen in full screen.
 // - No button is filled: while either side can win, nothing is the default (ux-research
 //   `patterns.md` §2, one filled button, and a filled "A" would lean on the judge).
+// - The last answer's Undo sits in the same footer, so it is inside full screen too: a judge who answers
+//   there must be able to take it back without leaving.
 // - `pending` disables the buttons and the keys, and says so in words, because an answer
 //   that is still being saved must not be answered twice.
 // - The pair is a `Load` so a pair that is on its way, an empty queue and a failed read each have
@@ -88,24 +90,29 @@ export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, f
       <DataView state={pair} isEmpty={(p) => p === null} skeleton={skeleton} empty={empty}>
         {(p) =>
           p && (
-            <Judged pair={p} onAnswer={onAnswer} pending={pending} flagReasons={flagReasons} words={w} compare={compare} />
+            <Judged pair={p} onAnswer={onAnswer} pending={pending} flagReasons={flagReasons} words={w} last={last} compare={compare} />
           )
         }
       </DataView>
-      {last && (
-        <div role="status" className="flex flex-wrap items-center gap-3 type-body-sm text-muted-foreground">
-          <span>{last.text}</span>
-          <Button size="sm" variant="ghost" onPress={last.onUndo}>
-            Undo
-          </Button>
-          {last.reveal}
-        </div>
-      )}
+      {/* With no pair on screen (the queue just ran out) the last answer can still be taken back. */}
+      {last && !(pair.status === "ready" && pair.data) && <LastAnswer last={last} />}
     </div>
   );
 }
 
-function Judged({ pair, onAnswer, pending, flagReasons, words, compare }: { pair: Pair; onAnswer: (a: PairAnswer) => void; pending: boolean; flagReasons?: readonly string[]; words: Required<PairVoteWords>; compare: Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer"> }) {
+function LastAnswer({ last }: { last: NonNullable<PairVoteProps["last"]> }) {
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-3 type-body-sm text-muted-foreground">
+      <span>{last.text}</span>
+      <Button size="sm" variant="ghost" onPress={last.onUndo}>
+        Undo
+      </Button>
+      {last.reveal}
+    </div>
+  );
+}
+
+function Judged({ pair, onAnswer, pending, flagReasons, words, last, compare }: { pair: Pair; last?: PairVoteProps["last"]; onAnswer: (a: PairAnswer) => void; pending: boolean; flagReasons?: readonly string[]; words: Required<PairVoteWords>; compare: Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer"> }) {
   const { a, b } = pair;
   const answer = (x: PairAnswer) => !pending && onAnswer(x);
   const shortcuts: Shortcut[] = [
@@ -135,6 +142,7 @@ function Judged({ pair, onAnswer, pending, flagReasons, words, compare }: { pair
         )}
       </div>
       {pending && <p role="status" className="type-body-sm text-muted-foreground">{words.pending}</p>}
+      {last && <LastAnswer last={last} />}
     </div>
   );
   return <Compare {...compare} label={pair.label} a={a} b={b} extraShortcuts={shortcuts} footer={footer} />;

@@ -102,6 +102,15 @@ describe("PairVote", () => {
     expect(screen.getByText("A was model-x")).toBeInTheDocument();
   });
 
+  it("keeps Undo inside full screen, and shows it when the queue has just run out", async () => {
+    const { container, rerender } = renderWithStrata(<Harness last={{ text: "You preferred A.", onUndo: () => undefined }} />);
+    // It is in the footer Compare keeps in full screen: inside the comparison's own section.
+    expect(within(screen.getByRole("region", { name: "Pair 1 of 12" })).getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    rerender(<Harness pair={{ status: "ready", data: null }} last={{ text: "You preferred A.", onUndo: () => undefined }} />);
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  });
+
   it("fetches the next pictures ahead", () => {
     const made: string[] = [];
     const Real = globalThis.Image;
