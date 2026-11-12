@@ -90,6 +90,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
 export {
