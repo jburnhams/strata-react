@@ -205,6 +205,46 @@ describe("Timeline keyboard", () => {
   });
 });
 
+describe("Timeline review fixes", () => {
+  it("adds to the selection with Ctrl+Enter", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Harness />);
+    screen.getByRole("button", { name: /run-02.mp4/ }).focus();
+    await user.keyboard("{Enter}");
+    screen.getByRole("button", { name: /run-03.mp4/ }).focus();
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("button", { name: /run-02.mp4/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /run-03.mp4/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps focus on an item moved to another lane", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Harness />);
+    screen.getByRole("button", { name: /run-03.mp4/ }).focus();
+    await user.keyboard("{Control>}{ArrowDown}{/Control}");
+    expect(screen.getByRole("button", { name: "run-03.mp4, 1:00 to 1:20, Track 2" })).toHaveFocus();
+  });
+
+  it("drags the current-time slider as well as the ruler", () => {
+    const seen: number[] = [];
+    renderWithStrata(<Harness onPositionChange={(t) => seen.push(t)} />);
+    const slider = screen.getByRole("slider", { name: "Current time" });
+    const ruler = slider.parentElement!;
+    ruler.getBoundingClientRect = () => new DOMRect(0, 0, 1200, 32);
+    fireEvent.pointerDown(slider, { button: 0, clientX: 300 });
+    expect(seen.at(-1)).toBe(30);
+  });
+
+  it("keeps the tab-stop item mounted when the view is scrolled far from it", () => {
+    const many: TimelineItem[] = Array.from({ length: 500 }, (_, i) => ({ id: `i${i}`, lane: "t1", start: i * 10, length: 8, label: `Clip ${i}` }));
+    const { container } = renderWithStrata(<Timeline label="Many" lanes={lanes} items={many} to={5000} zoom={10} />);
+    const scroller = container.querySelector<HTMLElement>(".overflow-x-auto")!;
+    Object.defineProperty(scroller, "scrollLeft", { value: 40000, configurable: true });
+    fireEvent.scroll(scroller);
+    expect(screen.getAllByRole("button").some((b) => b.tabIndex === 0)).toBe(true);
+  });
+});
+
 describe("Timeline pointer and size", () => {
   it("selects on a click and does not report a change", () => {
     const changes: unknown[] = [];

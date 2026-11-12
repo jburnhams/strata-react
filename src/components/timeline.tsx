@@ -187,6 +187,7 @@ export function Timeline({
   const dragRef = React.useRef<Drag | null>(null);
   const [focusId, setFocusId] = React.useState<string | null>(null);
   const [said, setSaid] = React.useState("");
+  const refocus = React.useRef<string | null>(null);
   const selected = selectedIds ?? new Set<string>();
   const laneIndex = React.useMemo(() => new Map(lanes.map((l, i) => [l.id, i])), [lanes]);
   const laneLabel = (id: string) => lanes.find((l) => l.id === id)?.label ?? id;
@@ -218,6 +219,14 @@ export function Timeline({
     if (px < el.scrollLeft || px > el.scrollLeft + el.clientWidth - 24) el.scrollLeft = Math.max(px - el.clientWidth * 0.25, 0);
   }, [follow, position, zoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  React.useEffect(() => {
+    const id = refocus.current;
+    if (!id) return;
+    refocus.current = null;
+    const el = scroller.current?.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"]`);
+    if (el && document.activeElement !== el && (!document.activeElement || document.activeElement === document.body || !scroller.current?.contains(document.activeElement))) el.focus();
+  }, [items]);
+
   const sorted = React.useMemo(() => {
     const byLane = new Map<string, TimelineItem[]>();
     for (const l of lanes) byLane.set(l.id, []);
@@ -239,6 +248,8 @@ export function Timeline({
       setSaid(reason);
       return reason;
     }
+    // A change of lane remounts the item's element in the new lane; put focus back on it once the app has applied the change.
+    refocus.current = item.id;
     onItemChange?.(item.id, next);
     const where = next.lane !== item.lane ? `, ${laneLabel(next.lane)}` : "";
     setSaid(
@@ -288,8 +299,10 @@ export function Timeline({
         handled();
         const target = lanes[(laneIndex.get(item.lane) ?? 0) + (k === "ArrowUp" ? -1 : 1)];
         if (target) commit(item, { start: item.start, length: item.length, lane: target.id });
+        return;
       }
-      return;
+      // Ctrl or Cmd with Enter or Space adds to the selection; the switch below handles it.
+      if (k !== "Enter" && k !== " ") return;
     }
     if (e.altKey && (k === "ArrowLeft" || k === "ArrowRight")) {
       handled();
@@ -469,11 +482,11 @@ export function Timeline({
     return () => el.removeEventListener("wheel", onWheel);
   }, [onZoomChange, zoom]);
 
+  const rovingId = focusId && items.some((i) => i.id === focusId) ? focusId : (sorted.get(lanes[0]?.id ?? "")?.[0]?.id ?? items[0]?.id ?? null);
   // Only items near the view are drawn, and always the focused one so focus is never lost.
   const lo = view.left - view.width;
   const hi = view.left + 2 * view.width;
-  const visible = (i: TimelineItem) => i.id === focusId || (x(i.start + i.length) >= lo && x(i.start) <= hi);
-  const rovingId = focusId && items.some((i) => i.id === focusId) ? focusId : (sorted.get(lanes[0]?.id ?? "")?.[0]?.id ?? items[0]?.id ?? null);
+  const visible = (i: TimelineItem) => i.id === focusId || i.id === rovingId || (x(i.start + i.length) >= lo && x(i.start) <= hi);
 
   const itemLabel = (i: TimelineItem) => `${i.label}, ${formatTime(i.start)} to ${formatTime(i.start + i.length)}, ${laneLabel(i.lane)}`;
 
@@ -530,7 +543,6 @@ export function Timeline({
                   aria-valuenow={position}
                   aria-valuetext={formatTime(position)}
                   onKeyDown={onSliderKey}
-                  onPointerDown={(e) => e.stopPropagation()}
                   className="absolute top-0 -ml-2 h-full w-4 cursor-ew-resize outline-offset-2"
                   style={{ left: x(position) }}
                 >
