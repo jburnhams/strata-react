@@ -101,6 +101,23 @@ describe("Compare regions", () => {
     expect(container.querySelector(".border-foreground.ring-1")).toBeNull();
   });
 
+  it("works the region out again when the frame changes size", async () => {
+    const saved = Element.prototype.getBoundingClientRect;
+    let width = 400;
+    Element.prototype.getBoundingClientRect = () => ({ width, height: width * 0.75, top: 0, left: 0, right: width, bottom: width * 0.75, x: 0, y: 0, toJSON: () => ({}) });
+    try {
+      render(<Harness regions={[{ id: "r", label: "Corner", box: [0.25, 0.25, 0.25, 0.25] }]} />);
+      await userEvent.keyboard("q");
+      expect(transformOf("Picture A")).toContain("translate(200px, 150px)");
+      width = 800; // swipe has one frame, the full width
+      await userEvent.keyboard("2");
+      expect(transformOf("A over B")).toContain("translate(400px, 300px)");
+      expect(screen.getByRole("radio", { name: "Corner" })).toBeChecked();
+    } finally {
+      Element.prototype.getBoundingClientRect = saved;
+    }
+  });
+
   it("never writes a candidate's id, alt or note when blind, with regions", async () => {
     const { container } = render(<Harness />);
     await userEvent.keyboard("q");

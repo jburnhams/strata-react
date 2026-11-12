@@ -66,7 +66,8 @@ export function useRegions({ regions = [], viewport, setViewport, frame, reset }
       setViewport({ scale: 1, x: 0, y: 0 });
       return;
     }
-    setViewport(boxViewport(regionShares(region), size()));
+    applied.current = size();
+    setViewport(boxViewport(regionShares(region), applied.current));
     setActive(region.id);
     setPeek(null);
   };
@@ -77,9 +78,30 @@ export function useRegions({ regions = [], viewport, setViewport, frame, reset }
     if (box[2] <= 0 || box[3] <= 0) return;
     const region: Region = { id: `region-${all.length + 1}`, label: `Region ${all.length + 1}`, box };
     setDrawn({ key: reset, list: [...hand, region] });
-    setViewport(boxViewport(box, size()));
+    applied.current = size();
+    setViewport(boxViewport(box, applied.current));
     setActive(region.id);
   };
+  // The viewport is pixels, so it is only right for the frame it was worked out for. A change of view (side by side to swipe, full screen, a window resize, a picture's size learned) changes the frame, and the chosen region is worked out again for it. `applied` is the size it was last right for.
+  const applied = React.useRef({ width: 0, height: 0 });
+  const [, bump] = React.useState(0);
+  React.useLayoutEffect(() => {
+    const now = size();
+    if (now.width === applied.current.width && now.height === applied.current.height) return;
+    applied.current = now;
+    const region = all.find((r) => r.id === active);
+    if (region && now.width > 0) setViewport(boxViewport(regionShares(region), now));
+  });
+  React.useLayoutEffect(() => {
+    const el = frame.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      if (r.width !== applied.current.width || r.height !== applied.current.height) bump((n) => n + 1);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
   const peekRegion = all.find((r) => r.id === peekId);
   return {
     regions: all,
