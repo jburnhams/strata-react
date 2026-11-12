@@ -102,12 +102,19 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress
   const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
   const toCursor = mapping?.toCursor ?? ((t: number) => t);
   const setPlayback = shared?.setPlayback;
+  const setPointer = shared?.setPointer;
   const playbackAt = joined && mapping?.playback !== false && duration > 0 ? toCursor(time) : null;
   React.useEffect(() => {
     if (!joined) return;
     setPlayback?.(playbackAt);
   }, [joined, setPlayback, playbackAt]);
-  React.useEffect(() => () => setPlayback?.(null), [setPlayback]);
+  React.useEffect(
+    () => () => {
+      setPlayback?.(null);
+      setPointer?.(null);
+    },
+    [setPlayback, setPointer],
+  );
   const otherTime = joined && shared!.other !== null && duration > 0 ? (mapping?.fromCursor ?? ((c: number) => c))(shared!.other) : null;
   // React Aria's state with a formatter that says "1:23" (it only needs `format`, `formatRange` and
   // `resolvedOptions`, which is all `useSliderState` calls) and a fine step, so a drag lands on any

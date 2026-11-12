@@ -94,3 +94,25 @@ describe("SeekBar in a CursorScope", () => {
     void act;
   });
 });
+
+describe("review fixes", () => {
+  it("renders on the server: a seek bar and a chart without a scope need no browser store", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { LineChart } = await import("../../src");
+    expect(() => renderToString(<SeekBar time={1} duration={10} onSeek={() => {}} cursor />)).not.toThrow();
+    expect(() => renderToString(<CursorScope><LineChart label="L" series={[{ x: 0, y: 1 }, { x: 1, y: 2 }]} seriesLabel="L" formatX={String} formatY={String} xTicks={[0, 1]} cursor /></CursorScope>)).not.toThrow();
+  });
+  it("lets go of the pointer when a bar that was being pointed at unmounts", () => {
+    const reads: { at: number | null; owner: string | null }[] = [];
+    const ui = (bar: boolean) => (
+      <CursorScope>
+        {bar && <SeekBar time={5} duration={60} onSeek={() => {}} cursor />}
+        <Probe onRead={(r) => reads.push(r)} />
+      </CursorScope>
+    );
+    const { container, rerender } = renderWithStrata(ui(true));
+    fireEvent.pointerMove(track(container), { clientX: 0, clientY: 0 });
+    rerender(ui(false));
+    expect(reads.at(-1)).toEqual({ at: null, owner: null });
+  });
+});

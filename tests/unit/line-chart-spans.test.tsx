@@ -309,3 +309,12 @@ describe("the cursor's rules", () => {
     }
   });
 });
+
+describe("a shared x domain", () => {
+  it("maps the pointer track onto the displayed range, not the series extent", () => {
+    renderWithStrata(<LineChart {...props} xDomain={[0, 1000]} readout />);
+    const slider = screen.getByRole("slider", { name: /read values/ });
+    expect(slider).toHaveAttribute("max", "1000");
+    expect(slider).toHaveAttribute("min", "0");
+  });
+});

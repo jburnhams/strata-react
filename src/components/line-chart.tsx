@@ -608,6 +608,7 @@ export function LineChart({
             onKeyDownCapture={onKey}
             onHover={(px) => setHover(px === null ? null : nearest(px))}
             onFocusChange={setFocused}
+            domain={[xMin, xMax]}
             box={{ left: pad.left, top: pad.top, width: w, height: h }}
           />
         )}
@@ -730,15 +731,17 @@ type ReadingSliderProps = {
   /** The pointer's x in the plot's own pixels, or null when it leaves. */
   onHover: (px: number | null) => void;
   onFocusChange: (focused: boolean) => void;
+  /** The x range the plot shows: the slider's track maps onto it, as the hover does. */
+  domain: readonly [number, number];
   box: { left: number; top: number; width: number; height: number };
 };
 
 /** The slider over the plot: React Aria's hooks, snapped to the readings, with the reading as its spoken value. */
-function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyDownCapture, onHover, onFocusChange, box }: ReadingSliderProps) {
+function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyDownCapture, onHover, onFocusChange, domain, box }: ReadingSliderProps) {
   const track = React.useRef<HTMLDivElement>(null);
   const input = React.useRef<HTMLInputElement>(null);
-  const lo = sorted[0].x;
-  const hi = Math.max(sorted[sorted.length - 1].x, lo + 1e-9);
+  const lo = domain[0];
+  const hi = Math.max(domain[1], lo + 1e-9);
   const indexAt = (x: number) => {
     let best = 0;
     for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].x - x) < Math.abs(sorted[best].x - x)) best = i;
