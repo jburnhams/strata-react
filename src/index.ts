@@ -167,6 +167,7 @@ export { FullscreenFrame, canFullscreen, type FullscreenFrameProps } from "./com
 export { FIT, MIN_SCALE, MAX_SCALE, clampViewport, zoomAt, actualPixelsScale, regionShares, boxViewport, type Viewport, type Region, type ShareBox } from "./lib/viewport";
 export { PairVote, PairJudge, type PairVoteProps, type PairJudgeProps, type PairVoteSlot, type PairVoteWords, type PairAnswer, type Pair } from "./components/pair-vote";
 export { CompareAudio, type CompareAudioProps } from "./components/compare-audio";
+export { CompareVideoGrid, type CompareVideoGridProps } from "./components/compare-video-grid";
 export { CompareVideo, type CompareVideoProps, type VideoMode, type VideoLoop } from "./components/compare-video";
 export { CompareText, type CompareTextProps } from "./components/compare-text";
 export { diffWords, type TextDifference, type TextSegment } from "./lib/text-diff";

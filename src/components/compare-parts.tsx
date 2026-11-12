@@ -109,3 +109,21 @@ export function ZoomControls({ viewport, zoom, natural }: { viewport: Viewport; 
 export function FullscreenButton({ full, setFull }: { full: boolean; setFull: (f: boolean) => void }) {
   return <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />;
 }
+
+// Width of an element, kept current, for "is this shown larger than its pixels".
+/** The width of an element, kept current: for "is this shown larger than its own pixels". */
+export function useWidth(ref: React.RefObject<HTMLElement | null>) {
+  const [width, setWidth] = React.useState(0);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setWidth(el.getBoundingClientRect().width);
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+  return width;
+}
+

@@ -1,15 +1,12 @@
 import * as React from "react";
 import { Slider as AriaSlider, SliderThumb, SliderTrack } from "react-aria-components";
 import { cn } from "../lib/utils";
-import { format } from "../lib/format";
-import { Button } from "./button";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, useZoom, zoomShortcuts } from "./compare-parts";
+import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, useWidth, useZoom, zoomShortcuts } from "./compare-parts";
 import type { Candidate, CompareMode, VideoMedia } from "./compare";
-import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
-import { useMediaElement } from "./media-player";
+import { SLOW_RATES, VideoControls, useVideoClock, type VideoLoop } from "./video-clock";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
@@ -72,10 +69,7 @@ export type VideoMode = Exclude<CompareMode, "difference">;
 const MODES: readonly VideoMode[] = ["side", "swipe", "fade", "blink"];
 const MODE_LABEL: Record<VideoMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink" };
 
-/** A range to loop, in seconds of the clip; the same seconds in both videos. */
-export type VideoLoop = { start: number | null; end: number | null };
-
-const SLOW_RATES = [0.1, 0.25, 0.5, 1, 1.25, 1.5, 2] as const;
+export type { VideoLoop };
 
 /** Props for `CompareVideo`. */
 export type CompareVideoProps = {
@@ -113,172 +107,17 @@ export type CompareVideoProps = {
   className?: string;
 };
 
-// Width of an element, kept current, for "is this shown larger than its pixels".
-function useWidth(ref: React.RefObject<HTMLElement | null>) {
-  const [width, setWidth] = React.useState(0);
-  React.useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const read = () => setWidth(el.getBoundingClientRect().width);
-    read();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
-  });
-  return width;
-}
-
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
 export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
-  const refA = React.useRef<HTMLVideoElement>(null);
-  const refB = React.useRef<HTMLVideoElement>(null);
-  const sa = useMediaElement(refA);
-  const sb = useMediaElement(refB);
+  const clock = useVideoClock({ fps: a.media.fps ?? 30, loop: loopProp, onLoopChange, audio: audio === "none" ? null : audio === "a" ? 0 : 1 });
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const [divider, setDivider] = React.useState(50);
   const [blend, setBlend] = React.useState(50);
   const [showing, setShowing] = React.useState<"a" | "b">("a");
-  const [volume, setVolume] = React.useState(100);
-  const [muted, setMuted] = React.useState(false);
-  // What the person asked for, which can differ from what the elements are doing while one waits for the other.
-  const [wanted, setWanted] = React.useState(false);
   const frameRef = React.useRef<HTMLDivElement>(null);
   const frameWidth = useWidth(frameRef);
-
-  const fps = a.media.fps ?? 30;
-  const known = [sa.duration, sb.duration].filter((d): d is number => d !== null);
-  const duration = known.length ? Math.min(...known) : null;
-  const failed = sa.error || sb.error;
-
-  // ---- the clock ----
-  const play = () => {
-    setWanted(true);
-    void sa.play();
-    void sb.play();
-  };
-  const pause = () => {
-    setWanted(false);
-    sa.pause();
-    sb.pause();
-  };
-  const toggle = () => (wanted ? pause() : play());
-  const seek = (time: number) => {
-    const t = Math.max(0, duration === null ? time : Math.min(time, duration));
-    sa.seek(t);
-    sb.seek(t);
-  };
-  // Frame by frame: the centre of the next or previous frame, so a step cannot land on a boundary and show the wrong one.
-  // The leader's own time, not the snapshot: that is only as fresh as the last media event, and a step during playback would jump back.
-  const now = () => refA.current?.currentTime ?? sa.time;
-  const step = (direction: 1 | -1) => {
-    pause();
-    const frame = Math.floor(now() * fps + 1e-6);
-    seek(Math.max(0, (frame + direction + 0.5) / fps));
-  };
-  // The loop is the app's when it gives one, so it survives a change of pair; otherwise ours.
-  const [ownLoop, setOwnLoop] = React.useState<VideoLoop>({ start: null, end: null });
-  const loop = loopProp ?? ownLoop;
-  const setLoop = (next: VideoLoop) => {
-    setOwnLoop(next);
-    onLoopChange?.(next);
-  };
-  const loopRef = React.useRef(loop);
-  loopRef.current = loop;
-  const setPoint = (point: "start" | "end") => {
-    const t = now();
-    const other = point === "start" ? loop.end : loop.start;
-    // A start after the end (or an end before the start) replaces the other point.
-    const clash = other !== null && (point === "start" ? t >= other : t <= other);
-    setLoop(clash ? { start: point === "start" ? t : null, end: point === "end" ? t : null } : { ...loop, [point]: t });
-  };
-  const clearLoop = () => setLoop({ start: null, end: null });
-  const looping = loop.start !== null && loop.end !== null;
-  // Kept here, not read back from an element, so a view change's new elements get it too.
-  const chosenRate = React.useRef(1);
-  const setRate = (rate: number) => {
-    chosenRate.current = rate;
-    sa.setRate(rate);
-    sb.setRate(rate);
-  };
-
-  // Either video reaching its end ends the play for both: the clock runs to the shorter one's end, which is the length shown.
-  // Unless a loop is set: then the end is where the loop goes back from (a range that ends at the clip's end never gets another frame to be caught on).
-  React.useEffect(() => {
-    if (!(sa.ended || sb.ended)) return;
-    const { start, end } = loopRef.current;
-    const A = refA.current;
-    const B = refB.current;
-    if (wanted && start !== null && end !== null && A && B) {
-      A.currentTime = start;
-      B.currentTime = start;
-      void A.play();
-      void B.play();
-      return;
-    }
-    setWanted(false);
-    A?.pause();
-    B?.pause();
-  }, [sa.ended, sb.ended]);
-
-  React.useEffect(() => {
-    if (!wanted) return;
-    let held = false;
-    let frame = requestAnimationFrame(function tick() {
-      const A = refA.current;
-      const B = refB.current;
-      if (A && B && !A.ended && !B.ended) {
-        const ready = A.readyState >= 3 && B.readyState >= 3;
-        if (!ready) {
-          if (!held) {
-            held = true;
-            A.pause();
-            B.pause();
-          }
-        } else if (held) {
-          held = false;
-          void A.play();
-          void B.play();
-        } else if (!A.paused) {
-          const { start, end } = loopRef.current;
-          if (start !== null && end !== null && A.currentTime >= end) {
-            A.currentTime = start;
-            B.currentTime = start;
-            frame = requestAnimationFrame(tick);
-            return;
-          }
-          const drift = B.currentTime - A.currentTime;
-          const one = 1 / fps;
-          if (Math.abs(drift) > 0.3) B.currentTime = A.currentTime;
-          else if (Math.abs(drift) > one) B.playbackRate = A.playbackRate * (drift > 0 ? 0.97 : 1.03);
-          else if (Math.abs(drift) < one / 2 && B.playbackRate !== A.playbackRate) B.playbackRate = A.playbackRate;
-        }
-      }
-      frame = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [wanted, fps]);
-
-  // New elements (a view change) come back to where the old ones were.
-  const resume = React.useRef({ time: 0, playing: false });
-  if (sa.duration !== null) resume.current = { time: sa.time, playing: wanted };
-  const restore = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const el = e.currentTarget;
-    el.defaultPlaybackRate = chosenRate.current;
-    el.playbackRate = chosenRate.current;
-    if (resume.current.time > 0) el.currentTime = resume.current.time;
-    if (resume.current.playing) void el.play();
-  };
-
-  // One sound: the chosen video at the volume, the rest muted.
-  React.useEffect(() => {
-    [[refA.current, "a"], [refB.current, "b"]].forEach(([el, side]) => {
-      if (!(el instanceof HTMLVideoElement)) return;
-      el.muted = audio !== side || muted || volume === 0;
-      el.volume = volume / 100;
-    });
-  });
+  const { wanted, failed } = clock;
 
   // ---- the picture ----
   const aspect = a.media.width / a.media.height;
@@ -295,20 +134,20 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: frameRef, natural });
   const flip = () => setShowing((s) => (s === "a" ? "b" : "a"));
 
-  const video = (c: Candidate<VideoMedia>, ref: React.RefObject<HTMLVideoElement | null>) => (
+  const video = (c: Candidate<VideoMedia>, index: number) => (
     <video
-      ref={ref}
+      ref={clock.attach(index)}
       src={c.media.src}
       poster={c.media.poster}
       preload="auto"
       playsInline
       aria-label={`Video ${c.label}`}
-      onLoadedMetadata={restore}
+      onLoadedMetadata={clock.restore}
       style={sharpFor(c) ? { imageRendering: "pixelated" } : undefined}
       className="absolute inset-0 size-full object-contain"
     />
   );
-  const loading = !failed && (sa.duration === null || sb.duration === null);
+  const loading = !failed && !clock.loaded;
   const skeleton = loading && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />;
   const frameProps = { viewport, setViewport: rg.setViewport, onBox: wanted ? undefined : rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
 
@@ -316,37 +155,22 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     ...extraShortcuts,
     ...MODES.map((m, i): Shortcut => ({ keys: [String(i + 1)], label: MODE_LABEL[m], run: () => onModeChange(m) })),
     { keys: ["x"], label: `Flip ${a.label} and ${b.label}`, run: flip, disabled: mode !== "blink" },
-    { keys: [" ", "k"], label: "Play or pause", run: toggle },
-    { keys: ["j"], label: "Back 1 s", run: () => seek(sa.time - 1), repeat: true },
-    { keys: ["l"], label: "Forward 1 s", run: () => seek(sa.time + 1), repeat: true },
-    { keys: [","], label: "Back one frame", run: () => step(-1), repeat: true },
-    { keys: ["."], label: "Forward one frame", run: () => step(1), repeat: true },
-    { keys: ["i"], label: "Loop starts here", run: () => setPoint("start") },
-    { keys: ["o"], label: "Loop ends here", run: () => setPoint("end") },
-    { keys: ["c"], label: "Clear the loop", run: clearLoop, disabled: loop.start === null && loop.end === null },
-    ...(audio === "none" ? [] : [{ keys: ["m"], label: "Mute", run: () => setMuted((m) => !m) }]),
+    ...clock.shortcuts(),
     ...rg.shortcuts,
     ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });
 
-  const at = (t: number | null) => (t === null ? format.missing : format.timecode(t, { precision: "frames", fps }));
-  const marks = [
-    ...moments,
-    ...(loop.start !== null ? [{ time: loop.start, label: "Loop start" }] : []),
-    ...(loop.end !== null ? [{ time: loop.end, label: "Loop end" }] : []),
-  ];
-
   let body: React.ReactNode;
   if (mode === "side") {
     body = (
       <div className="grid gap-3 sm:grid-cols-2">
-        {([[a, refA], [b, refB]] as const).map(([c, ref], i) => (
+        {([a, b] as const).map((c, i) => (
           <figure key={i} className="grid gap-1.5">
             <Caption c={c} blind={blind} />
             <ViewportFrame {...frameProps} label={`Frame ${c.label}`} ref={i === 0 ? frameRef : undefined}>
               {i === 0 && skeleton}
-              {video(c, ref)}
+              {video(c, i)}
             </ViewportFrame>
           </figure>
         ))}
@@ -363,7 +187,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
         <ViewportFrame
           {...frameProps}
           ref={frameRef}
-          cover={mode === "swipe" ? { content: video(a, refA), shown: divider } : undefined}
+          cover={mode === "swipe" ? { content: video(a, 0), shown: divider } : undefined}
           label={mode === "blink" ? `Frame ${(showing === "a" ? a : b).label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
@@ -379,8 +203,8 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           }
         >
           {skeleton}
-          {video(b, refB)}
-          {mode !== "swipe" && <div className="absolute inset-0" style={mode === "fade" ? { opacity: 1 - blend / 100 } : mode === "blink" ? { opacity: showing === "a" ? 1 : 0 } : undefined}>{video(a, refA)}</div>}
+          {video(b, 1)}
+          {mode !== "swipe" && <div className="absolute inset-0" style={mode === "fade" ? { opacity: 1 - blend / 100 } : mode === "blink" ? { opacity: showing === "a" ? 1 : 0 } : undefined}>{video(a, 0)}</div>}
         </ViewportFrame>
       </figure>
     );
@@ -411,26 +235,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           </p>
         )}
         {body}
-        <Transport playing={wanted} onPlayPause={toggle} onStepBack={() => step(-1)} onStepForward={() => step(1)}>
-          <TimeReadout time={sa.time} duration={duration} precision="frames" fps={fps} />
-          <SeekBar time={sa.time} duration={duration} onSeek={seek} marks={marks} onMarkPress={(m) => (pause(), seek(m.time))} buffered={sa.buffered} label="Position" step={1} precision="frames" fps={fps} />
-          <RateChoice rate={sa.rate} onRateChange={setRate} rates={rates} />
-          {audio !== "none" && <VolumeControl volume={muted ? 0 : volume} onVolumeChange={(v) => (setMuted(false), setVolume(v))} />}
-        </Transport>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onPress={() => setPoint("start")} disabled={duration === null}>
-            Loop starts here
-          </Button>
-          <Button size="sm" onPress={() => setPoint("end")} disabled={duration === null}>
-            Loop ends here
-          </Button>
-          <Button size="sm" variant="ghost" onPress={clearLoop} disabled={loop.start === null && loop.end === null}>
-            Clear the loop
-          </Button>
-          <span role="status" className="type-caption tabular-nums text-muted-foreground">
-            {looping ? `Looping ${at(loop.start)} to ${at(loop.end)}` : loop.start !== null ? `Loop starts at ${at(loop.start)}` : loop.end !== null ? `Loop ends at ${at(loop.end)}` : "No loop"}
-          </span>
-        </div>
+        <VideoControls clock={clock} rates={rates} moments={moments} />
         {footer}
         {keys && <KeysLegend shortcuts={shortcuts} />}
       </section>
