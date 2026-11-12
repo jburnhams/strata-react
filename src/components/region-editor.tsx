@@ -215,6 +215,7 @@ export function RegionEditor({
     if (e.key === "Enter") {
       if (draft?.id === r.id) {
         e.preventDefault();
+        e.stopPropagation();
         keep(r.id, draft.rect);
         say({ ...r, ...draft.rect });
       }
@@ -223,6 +224,7 @@ export function RegionEditor({
     const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
     if (!dir || e.altKey || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
+    e.stopPropagation(); // a zoomed ViewportFrame around the editor pans on arrows; these keys edit the region instead
     const next = e.shiftKey ? resizeRect(now, dir[0] ? "e" : "s", dir[0] * stride, dir[1] * stride, limits) : moveRect(now, dir[0] * stride, dir[1] * stride, limits.bounds);
     setDraft({ id: r.id, rect: next });
     say({ ...r, ...next });

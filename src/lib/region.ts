@@ -91,8 +91,10 @@ export function resizeRect(r: Rect, handle: Handle, dx: number, dy: number, { bo
 }
 
 /** A rectangle drawn by dragging from one corner point to another, ordered and fitted to the limits. */
-export function drawRect(a: { x: number; y: number }, b: { x: number; y: number }, limits: RectLimits): Rect {
+export function drawRect(start: { x: number; y: number }, b: { x: number; y: number }, limits: RectLimits): Rect {
   const { bounds, aspect } = limits;
+  // Both ends are held inside the bounds: a drag that starts outside them starts at their edge.
+  const a = { x: Math.min(Math.max(start.x, bounds.x), bounds.x + bounds.w), y: Math.min(Math.max(start.y, bounds.y), bounds.y + bounds.h) };
   const px = Math.min(Math.max(b.x, bounds.x), bounds.x + bounds.w);
   const py = Math.min(Math.max(b.y, bounds.y), bounds.y + bounds.h);
   let w = Math.abs(px - a.x);

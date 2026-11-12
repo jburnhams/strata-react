@@ -71,6 +71,10 @@ describe("drawRect", () => {
     expect(drawRect({ x: 300, y: 300 }, { x: 100, y: 200 }, { bounds })).toEqual({ x: 100, y: 200, w: 200, h: 100 });
     expect(drawRect({ x: 900, y: 400 }, { x: 5000, y: 5000 }, { bounds })).toEqual({ x: 900, y: 400, w: 100, h: 100 });
   });
+  it("starts a drag that began outside the bounds at their edge", () => {
+    const inner = { x: 100, y: 100, w: 300, h: 300 };
+    expect(drawRect({ x: 0, y: 0 }, { x: 200, y: 200 }, { bounds: inner })).toEqual({ x: 100, y: 100, w: 100, h: 100 });
+  });
   it("keeps the aspect and stays inside", () => {
     const out = drawRect({ x: 900, y: 400 }, { x: 990, y: 410 }, { bounds, aspect: 2 });
     expect(out.w / out.h).toBeCloseTo(2);

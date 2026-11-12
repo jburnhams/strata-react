@@ -91,6 +91,19 @@ describe("RegionEditor", () => {
     expect(onDraw).toHaveBeenCalledTimes(1);
   });
 
+  it("does not let a handled arrow key reach an ancestor that pans", async () => {
+    const user = userEvent.setup();
+    const outer = vi.fn();
+    renderWithStrata(
+      <div onKeyDown={outer}>
+        <Editor />
+      </div>,
+    );
+    box().focus();
+    await user.keyboard("{ArrowRight}");
+    expect(outer).not.toHaveBeenCalled();
+  });
+
   it("moves with arrows, resizes with Shift+arrows, keeps on Enter and announces in words", async () => {
     const user = userEvent.setup();
     const onKept = vi.fn();

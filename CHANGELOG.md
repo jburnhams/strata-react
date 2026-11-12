@@ -7,6 +7,7 @@
 - `src/components/conversation.tsx`, `src/lib/rich-text.ts` (**new**, #192): `Conversation`, `Composer`, `RichText`, `matchEntities`, `parseRichText`, `safeHref`, `plainText`.
 - `src/components/lightbox.tsx` (**new**, #189): `Lightbox` on `Dialog`, which gains `size="full"`.
 - `src/components/region-editor.tsx`, `src/lib/region.ts` (**new**, #190): `RegionEditor` and the rectangle maths (`moveRect`, `resizeRect` with aspect lock, `drawRect`, `lerpRect`, `ease`).
+  - Review fixes: `drawRect` now clamps the drag's start point to the bounds as well as its end (a drag that began outside a smaller `bounds` could produce a rectangle outside it), and `RegionEditor` stops propagation of the arrow keys it handles, so a zoomed `ViewportFrame` around it no longer pans at the same time. Tests added in `region-lib` and `region-editor`.
 - `src/components/sequence-timeline.tsx`, `src/lib/sequence.ts` (**new**, #191): `SequenceTimeline`, grid and room helpers.
 - `src/components/tree.tsx`, `src/components/folder-picker.tsx` (**new**, #188): `Tree`, `FolderPicker`.
 - `src/components/markable-text.tsx`, `src/lib/marks.ts` (**new**, #187): `MarkableText`, `Mark`, `MarkSummary`. The selection bar is a bar, not a `Popover`: a selection can start in an unmounted row, and `Popover` takes focus from the text.
