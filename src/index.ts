@@ -91,7 +91,12 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
-export { MediaPlayer, useMediaElement, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
+export { MediaPlayer, useMediaElement, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
+export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from "./components/transcript-view";
+export { phraseAt, wordAt, type TranscriptGroup, type TranscriptPhrase, type TranscriptWord } from "./lib/transcript";
+export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";
+export { resamplePeaks, toPeakPair, peaksFromAudio, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
+export { MediaGroup, PlayWindowButton, joinMediaGroup, type PlayWindowButtonProps } from "./components/media-group";
 export { Transport, TimeReadout, SeekBar, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
