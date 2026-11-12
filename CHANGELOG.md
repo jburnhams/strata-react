@@ -5,7 +5,7 @@
 **MediaPlayer: several players share the keys sensibly (issue #147)** (branch `claude/media-keys-147`). Every `MediaPlayer` bound Space, K, J, L and M, so two on a page both toggled on one press. Now one player owns the keys at a time.
 
 - `src/components/media-player.tsx`: a module-level store (`useSyncExternalStore`) tracks players with shortcuts on; with more than one, the keys go to the one last played, focused or pressed, and a development warning says so once. The media element is labelled "<label>, audio|video" so it differs from its group.
-- `tests/unit/media-player.test.tsx`: four tests (labels, key ownership across two players, the single warning, `shortcuts={false}` left out).
+- `tests/unit/media-player.test.tsx`: five tests (labels, key ownership across two players, the single warning, `shortcuts={false}` left out, and an opted-out player cannot take the keys when focused).
 
 **LineChart: say what the end of the line is (issue #138)** (branch `claude/linechart-end-138`). `LineChart` always drew a rule, dot and "<value> now" at the last point, which is wrong for a series whose x is not time running up to now: strata-vid's elevation profile said "216 m now" at the finish while its `current` rule was elsewhere. Added `end`, and made the default follow `current`.
 

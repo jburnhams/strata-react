@@ -190,6 +190,22 @@ describe("MediaPlayer", () => {
       expect(el(container, 0).paused).toBe(true);
     });
 
+    it("does not let a player with shortcuts off take the keys from the others", async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <div>
+          <MediaPlayer label="First" src="/a.mp3" controls="strata" />
+          <MediaPlayer label="Second" src="/b.mp3" controls="strata" />
+          <MediaPlayer label="Third" src="/c.mp3" controls="strata" shortcuts={false} />
+        </div>,
+      );
+      act(() => media.loaded(el(container, 0), 100));
+      await user.click(within(screen.getByRole("group", { name: "First" })).getByRole("button", { name: /^play/i }));
+      await user.click(within(screen.getByRole("group", { name: "Third" })).getByRole("slider", { name: /seek/i }));
+      await user.keyboard(" ");
+      expect(el(container, 0).paused).toBe(true);
+    });
+
     it("leaves a player with shortcuts off out of it", async () => {
       const user = userEvent.setup();
       const { container } = render(

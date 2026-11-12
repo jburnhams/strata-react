@@ -292,7 +292,8 @@ const keyPlayers = (() => {
       emit();
     },
     use(id: string) {
-      if (active === id) return;
+      // A player with shortcuts off is not registered and must not take the keys from the others.
+      if (active === id || !ids.has(id)) return;
       active = id;
       emit();
     },
