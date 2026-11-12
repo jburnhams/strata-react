@@ -5,6 +5,7 @@
 **Toolbar, toggles and Switch (issue #69)** (branch `claude/toolbar-69`, stacked on `claude/overlays-70`). The issue asked for the controls `components.md` §3.3 specifies and a toolbar to hold them. Built on React Aria's `Toolbar`, `ToggleButton`, `ToggleButtonGroup` and `Switch`.
 
 - `src/components/toolbar.tsx` (**new**): `Toolbar` (required `label`; one tab stop, arrow keys from React Aria, and Home and End added here because React Aria's toolbar does not do them, left alone in a typing target) and `ToolbarSeparator`. It wraps onto more lines when it runs out of width; an overflow menu waits for `Menu` (#71).
+- Review fix: Home and End are only taken for events from inside the toolbar's own DOM, so a `Popover` opened from a toolbar control (portalled, but in the React tree) keeps its own keys; tested.
 - `src/components/toggle.tsx` (**new**): `Toggle` (`aria-pressed`) and `ToggleGroup` (single choice, one always chosen, a `radiogroup` of radios). Chosen is an ink border on a neutral tint, so it shows without colour and never looks like `variant="default"`; `label` is always required and is the name and tooltip of an icon-only toggle.
 - `src/components/switch.tsx` (**new**): `Switch`, label and control one target, on shown by position and a dot in the thumb as well as colour.
 - `src/index.ts`, `README.md`: exports and a component-table row.
