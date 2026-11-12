@@ -37,6 +37,10 @@
 - `tests/visual/baselines/`: 8 new tooltip baselines; 27 changed. The checkbox, selectable grid and radio ones changed because the controls are drawn, not native (checked by eye: same layout, a tick and dash in the theme's roles); data tables lose 4px of height per selection table, and choice groups gain 8px. The baselines were written with Chromium 158.0.8127.18 (Playwright 1.65.0); `.strata-visual.json` now says so, where it said 153. Every other baseline matched on 158.
 - Checks run on Node 26.13: `npm run typecheck`, `npm run test:unit` (277 tests), `npm run build`, `npm run test:integration` (20 tests), `npm run test:visual` (324 of 324 after the update).
 
+**Rule: consult Jonathan before changing dependencies** (branch `claude/dependency-rule-rebased`, PR #84). Jonathan asked, while the open issues were being planned, for a firm rule that dependency changes are put to him first.
+
+- `CLAUDE.md`: **new** section "Dependencies: consult Jonathan first", placed before the stack table.
+
 ## 2026-11-11
 
 **TypeScript 7, TanStack Table 9 and lucide-react 1.70** (branch `claude/project-thread-d1q9sc`). Dependabot's three major bumps (#63, #64, #65) failed CI. Jonathan asked for them to be migrated, so this branch does all three and replaces those PRs.
