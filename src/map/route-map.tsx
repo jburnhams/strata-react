@@ -343,6 +343,28 @@ const arrowHtml = (bearing: number, colour: string, halo: string) =>
   `<path d="M6 17 L13 9 L20 17" fill="none" stroke="${halo}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>` +
   `<path d="M6 17 L13 9 L20 17" fill="none" stroke="${colour}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+
+// A tile layer that always covers the whole container. Leaflet 1.9.4 picks the tiles to load from
+// `floor(centre) ± size / 2` (`GridLayer._getTiledPixelBounds`) but places the map pane at
+// `round(centre - size / 2)`, so when the two differ by a pixel the last pixel column of the map has no
+// tile under it. The centre is a whole pixel plus or minus the float noise of projecting it back from the
+// pane's position, so `floor` lands a pixel low about half the time, and whether a stray tile from an
+// earlier view happens to cover that column (`keepBuffer` keeps them) depends on the path the view took:
+// the same map at the same view could be drawn two ways. A visual shot of a centred follow differed by
+// that one column in about one run in two under load.
+// One pixel more on every side makes the tiles under the container depend on the view alone. The method
+// is Leaflet's private one; a test fails if a Leaflet update removes it.
+/** @internal Exported for its test, not part of the package's API. */
+export function coveringTiles(url: string, options: L.TileLayerOptions): L.TileLayer {
+  const Covering = L.TileLayer.extend({
+    _getTiledPixelBounds(this: L.TileLayer, centre: L.LatLng): L.Bounds {
+      const base = (L.GridLayer.prototype as unknown as { _getTiledPixelBounds(c: L.LatLng): L.Bounds })._getTiledPixelBounds.call(this, centre);
+      return L.bounds(base.min!.subtract([1, 1]), base.max!.add([1, 1]));
+    },
+  });
+  return new (Covering as unknown as new (u: string, o: L.TileLayerOptions) => L.TileLayer)(url, options);
+}
+
 /** A map of one or more routes with a position that moves along them, on tiles the app supplies, themed from its roles. Leaflet, behind `strata-react/map`. */
 export function RouteMap({
   label,
@@ -471,7 +493,7 @@ export function RouteMap({
   // Tiles: the light set, or the dark one in the dark scheme.
   React.useEffect(() => {
     if (!map) return;
-    const layer = L.tileLayer(source.url, { attribution: source.attribution, subdomains: source.subdomains ?? "abc", minZoom: source.minZoom, maxZoom: source.maxZoom ?? 19, keepBuffer: 1 });
+    const layer = coveringTiles(source.url, { attribution: source.attribution, subdomains: source.subdomains ?? "abc", minZoom: source.minZoom, maxZoom: source.maxZoom ?? 19, keepBuffer: 1 });
     layer.addTo(map);
     return () => void layer.remove();
   }, [map, source.url, source.attribution, source.subdomains, source.minZoom, source.maxZoom]);

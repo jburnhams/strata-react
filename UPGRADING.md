@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `RouteMap` now always has a tile under the last pixel column of the map (Leaflet could leave one bare, depending on the path the view took). A `RouteMap` baseline in a centred follow may gain one column of tile at the right edge.
 - `PairVote` and `Compare`/`CompareVideo` with `onPick` now choose on a click (after a 300 ms wait for a double click), so a screen that passes `onPick` or uses `PairVote` sees clicks answer; `pick={false}` keeps a click for panning only. `PairVoteSlot` gains an optional `onPick`: a custom `view` that spreads the whole slot onto `Compare` or `CompareVideo` gets it, and one that picks fields by hand adds it. `CompareVideo` and `CompareVideoGrid` now go back to 0, paused, when the pair's sources change (before, the position carried over). New props `autoPlay` and `loopWhole` are off by default.
 - `MediaElementState` has new members (`window`, `playWindow`, `ready`, `waitingForMore`, `reportProblem`): code that builds one by hand (a stand-in for `Transport`, say) must add them. `useMediaElement` and `MediaPlayer` now keep the pitch whenever the rate changes (`preservesPitch`).
 - `RouteMap` draws a "Reset view" button under the zoom control; a test that counts the map's buttons, and any `RouteMap` visual baseline, will see it.
