@@ -128,7 +128,7 @@ export function Inspector({ title, kind, empty, selectionKey, storageKey, action
         {title === null ? (
           empty
         ) : (
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <header className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <Heading level={2} id={headingId} ref={heading} tabIndex={-1} title={title} className="truncate type-heading outline-offset-2">
@@ -139,7 +139,7 @@ export function Inspector({ title, kind, empty, selectionKey, storageKey, action
               {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
             </header>
             {summary}
-            <div key={selectionKey} className="grid">
+            <div key={selectionKey} className="grid grid-cols-1 *:min-w-0">
               {children}
             </div>
           </div>
@@ -184,7 +184,7 @@ export function InspectorSection({ id, title, defaultOpen = true, actions, child
             </Heading>
             {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
           </div>
-          <DisclosurePanel>{isExpanded && <div className="grid gap-4 pt-2 pb-4 pl-6">{children}</div>}</DisclosurePanel>
+          <DisclosurePanel>{isExpanded && <div className="grid grid-cols-1 gap-4 pt-2 pb-4 pl-6 *:min-w-0">{children}</div>}</DisclosurePanel>
         </>
       )}
     </Disclosure>

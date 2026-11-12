@@ -16,6 +16,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 React Aria Components is now the primitives layer (`react-aria-components`, installed with the
 package). `@radix-ui/react-slot` is gone.
 
+- **A `ColorField` inside a `Field` has its picker named after the field** ("Route colour, picker"), not "Colour picker"; query it by that name. A `Dialog` or `AlertDialog` with `open` and no `trigger` no longer renders a `DialogTrigger`.
 - **`VirtualList` and `InfiniteList` (region mode) are a `grid` of `row`s**, not a `list` of `listitem`s in a `region`: query `getByRole("grid", { name })` and count items with `[data-index]` (the next-page row is a row too). Arrow keys move between rows. New `rowHeight` prop for fixed-height rows. `scroll="page"` is unchanged.
 - **State classes are the `tailwindcss-react-aria-components` variants** (`selected:`, `focus-visible:`, `hover:`, `disabled:`), loaded by `strata.css` (the plugin is installed with the package). A test that matched a class such as `data-[selected]:border-foreground` now matches `selected:border-foreground`; hover colours no longer apply on touch screens.
 - **`Compare`'s default view switch has a fifth view, `difference`** (key `5`). An app that renders `Compare` without `modes` sees one more toggle (and its visual baselines move); pass `modes={["side", "swipe", "fade", "blink"]}` to keep the previous four.
