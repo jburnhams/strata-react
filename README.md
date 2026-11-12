@@ -36,7 +36,7 @@ it against the built files:
 | Import | Needs | Why |
 |---|---|---|
 | `strata-react` | `react`, `react-dom`, `react-router`, `@tanstack/react-query`, `tailwindcss` | The stack is fixed: `DataTable` and `Tabs` keep sort and tab in the URL, `AppShell` links with `NavLink`, every remote read is `useLoad`. The barrel imports both libraries, so an app that uses only a `Button` still installs them (both are needed for anything past a static page) |
-| `strata-react/testing` | the above, plus `@testing-library/react` | `renderWithStrata` and `renderRoutes` wrap Testing Library's `render` |
+| `strata-react/testing` | the above, plus `@testing-library/react` | `renderWithStrata` and `renderRoutes` wrap Testing Library's `render`, with a `StrataToastRegion` (so a toast can be found; `toasts: false` if your route tree renders the region, which a root layout route is the best place for) and the toast queue cleared first |
 | `strata-react/map` | `leaflet` (optional peer, `^1.9.4`) | `RouteMap`: themed routes and a moving position on the tiles an app supplies |
 | `strata-react/visual`, `strata-visual` | `playwright` (exact version), `msw`, `vite` | The screenshot runner; see [Visual regression for apps](#visual-regression-for-apps) |
 

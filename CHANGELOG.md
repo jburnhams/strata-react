@@ -6,6 +6,10 @@
 
 - `src/components/switch.tsx`, `src/components/checkbox.tsx`: the label span names the control (`aria-labelledby`) and the detail is `aria-describedby`, ids from `React.useId`. The hidden-label checkbox is unchanged.
 - `tests/unit/controls.test.tsx`: two tests, exact-name query and accessible description, for each. `UPGRADING.md` has the line.
+**testing: a toast region in `renderWithStrata` and `renderRoutes` (issue #153)** (branch `claude/project-thread-reaene`). An app that rendered `StrataToastRegion` beside `RouterProvider`, as the README says, could not test a toast: the helpers render only the route tree, so `toast.show` went nowhere. The queue is also module state, so a toast could carry into the next test.
+
+- `src/testing/index.tsx`: both helpers render a `StrataToastRegion` (option `toasts`, default true, `false` when the route tree has its own) and call `toast.clear()` before each render.
+- `tests/unit/testing.test.tsx`: four tests (found with either helper, nothing carried over, `toasts: false` with the app's own region shows one toast). `README.md` says where the region is best placed (a root layout route, so tests see it) and what the helpers do; `UPGRADING.md` has the line, since an app that already moved the region into its tree must pass `toasts: false`.
 
 **PairVote: answering a blind pairwise judgment beside Compare (issue #144)** (branch `claude/project-thread-reaene`). strata-models' judge and the stills arena each drew their own answer bar next to `Compare`: two legends, answer keys nobody could guess because the natural ones were taken, and no click-to-choose once a click panned. Issue #144 offered an `answers` prop or exported shortcut lists; this takes both halves: `Compare` accepts `extraShortcuts` and `footer`, and `PairVote` is the wrapper that uses them.
 
