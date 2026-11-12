@@ -95,6 +95,28 @@ describe("CompareVideo", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
   });
 
+  it("ends the play for both when the shorter video ends, not only the first", async () => {
+    renderWithStrata(<Harness />);
+    act(() => {
+      media.loaded(el("A"), 10);
+      media.loaded(el("B"), 6);
+    });
+    await userEvent.keyboard(" ");
+    act(() => media.end(el("B")));
+    await waitFor(() => expect(el("A").paused).toBe(true));
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+  });
+
+  it("keeps the chosen speed when a view change makes new elements", async () => {
+    renderWithStrata(<Harness />);
+    load();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.5×");
+    await userEvent.keyboard("2");
+    load();
+    expect(el("A").playbackRate).toBe(0.5);
+    expect(el("B").playbackRate).toBe(0.5);
+  });
+
   it("plays one soundtrack: A by default, the other muted, none or B on request", () => {
     const { rerender } = renderWithStrata(<Harness />);
     expect(el("A").muted).toBe(false);
@@ -155,6 +177,19 @@ describe("CompareVideo", () => {
     expect(el("B").style.imageRendering).toBe("pixelated");
     rerender(<Harness pixelated="never" />);
     expect(el("A").style.imageRendering).toBe("");
+  });
+
+  it("decides nearest-neighbour for each video against its own pixels", () => {
+    // jsdom has no layout: give the frame a 1000 px width, as a browser would measure.
+    const saved = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = () => ({ width: 1000, height: 750, top: 0, left: 0, right: 1000, bottom: 750, x: 0, y: 0, toJSON: () => ({}) });
+    try {
+      renderWithStrata(<Harness a={clip("x", "A", [1440, 1080])} b={clip("y", "B", [720, 540])} initial="fade" />);
+      expect(el("A").style.imageRendering).toBe(""); // 1000 px for 1440 px of picture: smaller than its pixels
+      expect(el("B").style.imageRendering).toBe("pixelated"); // 1000 px for 720 px: enlarged
+    } finally {
+      Element.prototype.getBoundingClientRect = saved;
+    }
   });
 
   it("never writes the id or the note of a blind pair, and shows the note when it is not blind", () => {

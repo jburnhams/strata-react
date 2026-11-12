@@ -143,18 +143,22 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     sa.seek(t);
     sb.seek(t);
   };
+  // Kept here, not read back from an element, so a view change's new elements get it too.
+  const chosenRate = React.useRef(1);
   const setRate = (rate: number) => {
+    chosenRate.current = rate;
     sa.setRate(rate);
     sb.setRate(rate);
   };
 
-  // The leader reaching its end ends the play for both.
+  // Either video reaching its end ends the play for both: the clock runs to the shorter one's end, which is the length shown.
   React.useEffect(() => {
-    if (sa.ended) {
+    if (sa.ended || sb.ended) {
       setWanted(false);
+      refA.current?.pause();
       refB.current?.pause();
     }
-  }, [sa.ended]);
+  }, [sa.ended, sb.ended]);
 
   React.useEffect(() => {
     if (!wanted) return;
@@ -162,7 +166,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     let frame = requestAnimationFrame(function tick() {
       const A = refA.current;
       const B = refB.current;
-      if (A && B && !A.ended) {
+      if (A && B && !A.ended && !B.ended) {
         const ready = A.readyState >= 3 && B.readyState >= 3;
         if (!ready) {
           if (!held) {
@@ -192,6 +196,8 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   if (sa.duration !== null) resume.current = { time: sa.time, playing: wanted };
   const restore = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const el = e.currentTarget;
+    el.defaultPlaybackRate = chosenRate.current;
+    el.playbackRate = chosenRate.current;
     if (resume.current.time > 0) el.currentTime = resume.current.time;
     if (resume.current.playing) void el.play();
   };
@@ -208,7 +214,13 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   // ---- the picture ----
   const aspect = a.media.width / a.media.height;
   const natural = [a.media.width, a.media.height] as const;
-  const sharp = pixelated === "always" || (pixelated === "zoomed" && frameWidth > 0 && (viewport.scale * frameWidth) / natural[0] > 1);
+  // Each video against its own pixels: the one drawn larger than its pixels is nearest-neighbour, the other not.
+  const frameHeight = frameWidth / aspect;
+  const sharpFor = (c: Candidate<VideoMedia>) => {
+    if (pixelated !== "zoomed") return pixelated === "always";
+    const drawn = Math.min(frameWidth, frameHeight * (c.media.width / c.media.height));
+    return drawn > 0 && (viewport.scale * drawn) / c.media.width > 1;
+  };
   const zoom = useZoom({ viewport, setViewport, frame: frameRef, natural });
   const flip = () => setShowing((s) => (s === "a" ? "b" : "a"));
 
@@ -221,7 +233,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
       playsInline
       aria-label={`Video ${c.label}`}
       onLoadedMetadata={restore}
-      style={sharp ? { imageRendering: "pixelated" } : undefined}
+      style={sharpFor(c) ? { imageRendering: "pixelated" } : undefined}
       className="absolute inset-0 size-full object-contain"
     />
   );
