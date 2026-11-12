@@ -191,6 +191,32 @@ describe("moving between lists", () => {
     expect(inserted).toEqual([]);
   });
 
+  it("does not take an item of a kind it already holds when that kind is not in accepts", async () => {
+    const user = userEvent.setup();
+    const inserted: unknown[] = [];
+    function Pair() {
+      const vids: Asset[] = [{ id: "v9", name: "other.mp4", kind: "video" }];
+      return (
+        <div>
+          <SortableList label="Library" items={assets} getKey={(a) => a.id} getLabel={(a) => a.name} getKind={(a) => a.kind} empty={<p>none</p>} onReorder={() => {}}>
+            {(a) => <span>{a.name}</span>}
+          </SortableList>
+          {/* Holds a video already, but takes nothing from other lists. */}
+          <SortableList label="Closed" items={vids} getKey={(a) => a.id} getLabel={(a) => a.name} getKind={(a) => a.kind} empty={<p>none</p>} onReorder={() => {}} onInsert={(...a) => inserted.push(a)}>
+            {(a) => <span>{a.name}</span>}
+          </SortableList>
+        </div>
+      );
+    }
+    renderWithStrata(<Pair />);
+    screen.getByRole("button", { name: "Drag run-02.mp4" }).focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Tab}{Tab}{Tab}");
+    expect(document.activeElement?.closest('[aria-label="Closed"]')).toBeNull();
+    await user.keyboard("{Enter}");
+    expect(inserted).toEqual([]);
+  });
+
   it("says why a kind is refused while it is dragged over the list, in words with an icon", () => {
     renderWithStrata(<TwoLists inserted={[]} />);
     const timeline = screen.getByRole("grid", { name: "Timeline" });

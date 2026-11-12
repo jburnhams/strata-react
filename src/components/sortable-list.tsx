@@ -34,6 +34,7 @@ import { cn } from "../lib/utils";
 
 const KIND = "strata-kind/";
 const ID = "strata-item/id";
+const LIST = "strata-list/";
 
 /** Where a drop landed, relative to the item with `key`. */
 export type DropTarget = { key: string; position: "before" | "after" | "on" } | { key: null; position: "root" };
@@ -86,6 +87,7 @@ export function SortableList<T>({
   onSelectionChange,
   className,
 }: SortableListProps<T>) {
+  const listId = React.useId();
   const byKey = React.useMemo(() => new Map(items.map((i) => [getKey(i), i])), [items, getKey]);
   // The reason a drag over this list is refused, while one is. Cleared when the drag ends or leaves.
   const [refused, setRefused] = React.useState<string | null>(null);
@@ -108,13 +110,14 @@ export function SortableList<T>({
     getItems: (keys) =>
       [...keys].map((k) => {
         const item = byKey.get(String(k));
-        return { [`${KIND}${item ? getKind(item) : "item"}`]: "", [ID]: String(k), "text/plain": item ? getLabel(item) : String(k) };
+        return { [`${KIND}${item ? getKind(item) : "item"}`]: "", [`${LIST}${listId}`]: "", [ID]: String(k), "text/plain": item ? getLabel(item) : String(k) };
       }),
     // React Aria filters on this before `getDropOperation`: a refused kind must still reach it, to be explained.
     acceptedDragTypes: "all",
     getDropOperation: (_target, types) => {
-      const ownKinds = new Set(items.map(getKind));
-      const accepted = accepts.some((k) => types.has(`${KIND}${k}`)) || [...ownKinds].some((k) => types.has(`${KIND}${k}`));
+      // Reordering is allowed for what came from this list; anything else must be a kind in `accepts`,
+      // even if this list happens to hold an item of the same kind.
+      const accepted = types.has(`${LIST}${listId}`) || accepts.some((k) => types.has(`${KIND}${k}`));
       if (accepted) {
         setRefused(null);
         return "move";
