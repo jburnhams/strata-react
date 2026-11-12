@@ -221,6 +221,18 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
       const scaled = value / BYTE_SIZE[chosen];
       return withUnit(scaled, chosen, Math.abs(scaled) < 10 && chosen !== "B" ? decimal : integer);
     },
+    /**
+     * A distance in metres as a person says it: metres under a kilometre ("850 m"), then
+     * kilometres, one decimal below 100 ("12.4 km"), whole above; `"imperial"` is feet under a
+     * tenth of a mile ("320 ft"), then miles ("7.7 mi").
+     */
+    distance: (metres: number, system: "metric" | "imperial" = "metric") => {
+      if (system === "imperial") {
+        const miles = metres / 1609.344;
+        return miles < 0.1 ? withUnit(metres * 3.28084, "ft") : withUnit(miles, "mi", miles < 100 ? decimal : integer);
+      }
+      return Math.abs(metres) < 1000 ? withUnit(metres, "m") : withUnit(metres / 1000, "km", Math.abs(metres) < 100_000 ? decimal : integer);
+    },
     /** The unit `bytes` would choose for a value, to share it across a set of figures. */
     byteUnit: (value: number): ByteUnit => [...BYTE_UNITS].reverse().find((u) => Math.abs(value) >= BYTE_SIZE[u]) ?? "B",
     /**

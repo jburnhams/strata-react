@@ -29,6 +29,11 @@
       "import": "./dist/visual.js",
       "default": "./dist/visual.js"
     },
+    "./map": {
+      "types": "./dist/map/index.d.ts",
+      "import": "./dist/map.js",
+      "default": "./dist/map.js"
+    },
     "./strata.css": {
       "style": "./dist/strata.css",
       "default": "./dist/strata.css"
@@ -73,6 +78,7 @@
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
     "@testing-library/react": "^16.0.0",
+    "leaflet": "^1.9.4",
     "msw": "^2.7.0 || ^3.0.0",
     "playwright": ">=1.49.0",
     "react": "^19.0.0",
@@ -82,6 +88,9 @@
     "vite": ">=6.1.0"
   },
   "peerDependenciesMeta": {
+    "leaflet": {
+      "optional": true
+    },
     "@testing-library/react": {
       "optional": true
     },
@@ -121,6 +130,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^26.6.6",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^19.3.0",
@@ -128,6 +138,8 @@
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "jsdom": "^31.0.0",
+    "leaflet": "^1.9.4",
+    "leaflet-node": "^3.0.2",
     "msw": "^3.0.4",
     "msw-storybook-addon": "^3.0.3",
     "playwright": "1.65.0",

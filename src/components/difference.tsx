@@ -46,7 +46,10 @@ export function DifferenceMarks({ difference }: { difference: Difference }) {
     if (!canvas || !ctx) return;
     canvas.width = difference.width;
     canvas.height = difference.height;
-    ctx.putImageData(new ImageData(difference.marks as Uint8ClampedArray<ArrayBuffer>, difference.width, difference.height), 0, 0);
+    // createImageData, not `new ImageData`: the same in a browser, and it works where the page has a canvas but no ImageData global (jsdom with @napi-rs/canvas installed).
+    const image = ctx.createImageData(difference.width, difference.height);
+    image.data.set(difference.marks);
+    ctx.putImageData(image, 0, 0);
   }, [difference]);
   return <canvas ref={ref} aria-hidden className="absolute inset-0 size-full object-contain" />;
 }

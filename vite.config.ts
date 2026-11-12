@@ -18,6 +18,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, "src/index.ts"),
         testing: resolve(__dirname, "src/testing/index.tsx"),
+        map: resolve(__dirname, "src/map/index.ts"),
         visual: resolve(__dirname, "src/visual/index.ts"),
         "visual-cli": resolve(__dirname, "src/visual/cli.ts"),
       },
