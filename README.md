@@ -46,6 +46,8 @@ The last three are optional peers: an app that never imports those entries never
 dev dependency and builds the package, so it is slow and also needs Node 26.
 Use it to try a fix before it is released, then move back to the npm version.
 
+**Updating:** [`UPGRADING.md`](./UPGRADING.md) lists what an app has to change between versions (breaking and test-visible changes only); [`CHANGELOG.md`](./CHANGELOG.md) is the development log.
+
 ## Set up an app
 
 ```css
