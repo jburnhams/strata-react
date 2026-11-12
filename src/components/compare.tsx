@@ -59,6 +59,8 @@ export type Candidate<M = ImageMedia> = {
 export type CompareMode = "side" | "swipe" | "fade" | "blink" | "difference";
 
 const MODE_LABEL: Record<CompareMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink", difference: "Difference" };
+// 100svh less the toolbar (about 3rem), captions (2rem), a vote bar (4rem), the legend (4rem) and gaps.
+const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
 const ALL_MODES: readonly CompareMode[] = ["side", "swipe", "fade", "blink", "difference"];
 
 /** Props for `Compare`. */
@@ -81,6 +83,8 @@ export type CompareProps = {
   readPixels?: ReadPixels;
   /** Which views are offered. Default all five. Must include `mode`. */
   modes?: readonly CompareMode[];
+  /** How tall a frame may be, so the pair and the answer fit on one screen: a CSS length (`"60svh"`) or `"viewport"` (the window's height less room for the toolbar, captions, a vote bar and the key legend). The frame narrows to keep the picture's shape. Default: as tall as the width makes it. */
+  maxHeight?: string;
   /** Bind the view, zoom and full-screen keys on the window. Default true; turn off when a surrounding screen binds the same keys. */
   keys?: boolean;
   /** Shortcuts of the surrounding screen (the answer keys of a `PairVote`), bound with Compare's own and drawn in the same legend, so there is one list and the two cannot clash unseen. Listed first. */
@@ -91,7 +95,7 @@ export type CompareProps = {
 };
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, extraShortcuts = [], footer, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -125,7 +129,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
     <Picture c={c} blind={blind} missing={missing} imgRef={ref} onNatural={onNatural} />
   );
   const learn = (w: number, h: number) => setLearned({ key: pairKey, size: [w, h] });
-  const frameProps = { viewport, setViewport, aspect };
+  const frameProps = { viewport, setViewport, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
 
   let body: React.ReactNode;
   if (mode === "side") {

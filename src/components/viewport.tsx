@@ -36,12 +36,14 @@ export type ViewportFrameProps = ViewportState & {
   cover?: { content: React.ReactNode; shown: number };
   /** Drawn over the frame, not zoomed with it: a divider to drag, a corner label. Its pointer, key and double-click events do not reach the frame, so using it never pans the picture. */
   overlay?: React.ReactNode;
+  /** The tallest the frame may be, as a CSS length (`"60svh"`). The width follows, narrower than the space it has and centred, so the picture keeps its shape. Default: no limit, the frame is as tall as its width and aspect make it. */
+  maxHeight?: string;
   className?: string;
 };
 
 /** A clipped frame whose children zoom and pan together; the viewport is the caller's, so frames can share one. */
 export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps>(function ViewportFrame(
-  { label, aspect, viewport, setViewport, children, cover, overlay, className },
+  { label, aspect, viewport, setViewport, children, cover, overlay, maxHeight, className },
   forwardedRef,
 ) {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -119,7 +121,7 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
         const v = latest.current;
         setViewport(v.scale > 1 ? FIT : zoomAt(v, 2, fromCentre(e.clientX, e.clientY), size()));
       }}
-      style={{ aspectRatio: String(aspect), touchAction: zoomed ? "none" : "pan-y" }}
+      style={{ aspectRatio: String(aspect), ...(maxHeight ? { maxWidth: `calc(${maxHeight} * ${aspect})`, marginInline: "auto" } : {}), touchAction: zoomed ? "none" : "pan-y" }}
       className={cn(
         "relative w-full overflow-hidden rounded-surface border border-border bg-muted select-none",
         zoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in",
