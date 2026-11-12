@@ -9,6 +9,8 @@ import { renderWithStrata } from "../../src/testing";
 const profile: Point[] = [0, 100, 200, 300, 400, 500].map((x, i) => ({ x, y: [20, 45, 87, 60, 30, 55][i] }));
 const formatX = (x: number) => `${x} m`;
 const formatY = (y: number) => `${y} m up`;
+// The slider is a range input inside a track; the pointer acts on the track, which has the plot's box.
+const trackOf = (plot: HTMLElement) => plot.closest("[style*='touch-action']") as HTMLElement;
 const props: LineChartProps = { label: "Elevation along the route", series: profile, seriesLabel: "Elevation", formatX, formatY, xTicks: [0, 250, 500], yMin: 0, yMax: 100 };
 
 describe("LineChart without the new options", () => {
@@ -51,8 +53,8 @@ describe("reading a value", () => {
   it("is one slider on the plot, named for what it reads, with the reading as its value text", () => {
     renderWithStrata(<LineChart {...props} readout />);
     const plot = screen.getByRole("slider", { name: "Elevation along the route: read values" });
-    expect(plot).toHaveAttribute("aria-valuemin", "0");
-    expect(plot).toHaveAttribute("aria-valuemax", "500");
+    expect(plot).toHaveAttribute("min", "0");
+    expect(plot).toHaveAttribute("max", "500");
     expect(plot).toHaveAttribute("aria-valuetext", "500 m: 55 m up");
   });
 
@@ -85,10 +87,11 @@ describe("reading a value", () => {
     renderWithStrata(<LineChart {...props} readout />);
     const plot = screen.getByRole("slider");
     // The layout shim gives the plot a 640 px box; the plot runs from 56 px, so x of 56 + 0.4 of its width is 200 m.
-    plot.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
-    fireEvent.pointerMove(plot, { clientX: 56 + 568 * 0.4 });
+    const track = trackOf(plot);
+    track.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
+    fireEvent.pointerMove(track, { clientX: 56 + 568 * 0.4 });
     expect(plot).toHaveAttribute("aria-valuetext", "200 m: 87 m up");
-    fireEvent.pointerLeave(plot);
+    fireEvent.pointerLeave(track);
     expect(plot).toHaveAttribute("aria-valuetext", "500 m: 55 m up");
   });
 });
@@ -113,8 +116,9 @@ describe("one selection for what is announced, drawn and picked", () => {
     const picked: number[] = [];
     renderWithStrata(<LineChart {...props} readout onPick={(x) => picked.push(x)} />);
     const plot = screen.getByRole("slider");
-    plot.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
-    fireEvent.pointerMove(plot, { clientX: 56 + 568 * 0.4 }); // 200 m, and the pointer stays
+    const track = trackOf(plot);
+    track.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
+    fireEvent.pointerMove(track, { clientX: 56 + 568 * 0.4 }); // 200 m, and the pointer stays
     plot.focus();
     await user.keyboard("{ArrowRight}");
     expect(plot).toHaveAttribute("aria-valuetext", "300 m: 60 m up");
@@ -145,8 +149,10 @@ describe("picking a reading", () => {
     plot.focus();
     await user.keyboard("{Home}{ArrowRight}{ArrowRight}{ArrowRight}{Enter}");
     expect(picked).toEqual([300]);
-    plot.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
-    fireEvent.click(plot, { clientX: 56 + 568 * 0.2 });
+    const track = trackOf(plot);
+    track.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
+    fireEvent.pointerDown(track, { button: 0, clientX: 56 + 568 * 0.2, pointerId: 1 });
+    fireEvent.pointerUp(track, { button: 0, clientX: 56 + 568 * 0.2, pointerId: 1 });
     expect(picked).toEqual([300, 100]);
   });
 

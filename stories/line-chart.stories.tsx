@@ -84,7 +84,7 @@ export const ReadoutAtAPoint: Story = {
     React.useEffect(() => {
       // The plot mounts once the chart has measured its width, so wait for it.
       const timer = setInterval(() => {
-        const plot = ref.current?.querySelector<HTMLElement>("[role=slider]");
+        const plot = ref.current?.querySelector<HTMLElement>("input[type=range]");
         if (!plot) return;
         clearInterval(timer);
         plot.focus();

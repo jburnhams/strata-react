@@ -1,4 +1,6 @@
 import * as React from "react";
+import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import { useSliderState } from "react-stately";
 import { cn } from "../lib/utils";
 
 // A line chart with the defaults real product screens use: one measured series in one hue, a 2px
@@ -26,15 +28,16 @@ import { cn } from "../lib/utils";
 // the extent, never a crop: a reading outside it widens the axis, because a chart that hides a
 // reading is worse than one with an untidy scale.
 //
-// Reading a value (`readout`, `onPick`) is a slider laid over the plot, and it is our own, by the
-// "React Aria first" rule's last step. Part considered: React Aria's `Slider`. What it cannot do,
-// checked in `useSliderThumb` and `useSliderState`: it steps a continuous number by a fixed step,
-// and speaks its value only through `Intl.NumberFormat` options, so it cannot say "300 m: 60 m up"
-// and cannot step between the readings of an uneven series. A formatter can be given to
-// `useSliderState`, but `react-stately` is not a direct dependency, which is Jonathan's decision to
-// make (issue #103 asks him). Until then the keys (arrows, Home, End), `role="slider"` and its
-// `aria-valuetext` follow the same contract as React Aria's.
-
+// Reading a value (`readout`, `onPick`) is React Aria's slider hooks (`useSlider`, `useSliderThumb`,
+// `useSliderState`) laid over the plot as `ReadingSlider`: the pointer press, the thumb's ARIA and the
+// hidden range input come from them. Two things are ours on top, checked in the hooks' source. The value
+// text: `useSliderState` formats through an object with `format`, `formatRange` and `resolvedOptions`, so
+// it is given one that says "300 m: 60 m up" instead of an `Intl.NumberFormat`. The stepping: the
+// state steps a continuous number by a fixed step, and a series has uneven readings, so a drag or a
+// press is snapped to the nearest reading and the keys (arrows, Home, End, Enter) are a capture handler
+// on the input that moves between readings; the hooks' own arrow handling is stopped. Hover is drawn
+// by the plot itself, since a hook has no notion of a pointer that is only resting.
+//
 export type Point = { x: number; y: number };
 
 export type LineChartProps = {
@@ -333,7 +336,6 @@ export function LineChart({
   const heldIdx = kbd === null ? fallbackIdx : Math.min(kbd, Math.max(sorted.length - 1, 0));
   const selectedIdx = hover === null ? heldIdx : Math.min(hover, Math.max(sorted.length - 1, 0));
   const active = (hover !== null || focused) && sorted.length ? sorted[selectedIdx] : null;
-  const selected = sorted[selectedIdx];
   const onKey = (e: React.KeyboardEvent) => {
     const at = selectedIdx;
     let next = at;
@@ -391,23 +393,20 @@ export function LineChart({
           </svg>
         )}
         {width > 0 && interactive && sorted.length > 0 && (
-          <div
-            role="slider"
-            tabIndex={0}
-            aria-label={`${label}: read values`}
-            aria-orientation="horizontal"
-            aria-valuemin={sorted[0].x}
-            aria-valuemax={sorted[sorted.length - 1].x}
-            aria-valuenow={selected.x}
-            aria-valuetext={readoutText(selected)}
-            onKeyDown={onKey}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onPointerMove={(e) => setHover(nearest(e.clientX - e.currentTarget.getBoundingClientRect().left + pad.left))}
-            onPointerLeave={() => setHover(null)}
-            onClick={(e) => onPick?.(sorted[nearest(e.clientX - e.currentTarget.getBoundingClientRect().left + pad.left)].x)}
-            className="absolute cursor-crosshair outline-offset-2"
-            style={{ left: pad.left, top: pad.top, width: w, height: h }}
+          <ReadingSlider
+            label={`${label}: read values`}
+            sorted={sorted}
+            selected={selectedIdx}
+            text={readoutText}
+            onSelect={(i) => {
+              setHover(null);
+              setKbd(i);
+            }}
+            onPick={onPick}
+            onKeyDownCapture={onKey}
+            onHover={(px) => setHover(px === null ? null : nearest(px))}
+            onFocusChange={setFocused}
+            box={{ left: pad.left, top: pad.top, width: w, height: h }}
           />
         )}
       </div>
@@ -438,5 +437,75 @@ export function LineChart({
       </figcaption>
       {tableEl}
     </figure>
+  );
+}
+
+
+type ReadingSliderProps = {
+  label: string;
+  sorted: readonly Point[];
+  selected: number;
+  text: (p: Point) => string;
+  onSelect: (index: number) => void;
+  onPick?: (x: number) => void;
+  onKeyDownCapture: (e: React.KeyboardEvent) => void;
+  /** The pointer's x in the plot's own pixels, or null when it leaves. */
+  onHover: (px: number | null) => void;
+  onFocusChange: (focused: boolean) => void;
+  box: { left: number; top: number; width: number; height: number };
+};
+
+/** The slider over the plot: React Aria's hooks, snapped to the readings, with the reading as its spoken value. */
+function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyDownCapture, onHover, onFocusChange, box }: ReadingSliderProps) {
+  const track = React.useRef<HTMLDivElement>(null);
+  const input = React.useRef<HTMLInputElement>(null);
+  const lo = sorted[0].x;
+  const hi = Math.max(sorted[sorted.length - 1].x, lo + 1e-9);
+  const indexAt = (x: number) => {
+    let best = 0;
+    for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].x - x) < Math.abs(sorted[best].x - x)) best = i;
+    return best;
+  };
+  const spoken = React.useMemo(() => {
+    const say = (x: number) => text(sorted[indexAt(x)]);
+    return { format: say, formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`, resolvedOptions: () => ({ locale: "en-US" }) } as unknown as Intl.NumberFormat;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted, text]);
+  const state = useSliderState({
+    minValue: lo,
+    maxValue: hi,
+    step: (hi - lo) / 10000,
+    value: [sorted[selected].x],
+    onChange: ([x]) => onSelect(indexAt(x)),
+    onChangeEnd: ([x]) => onPick?.(sorted[indexAt(x)].x),
+    numberFormatter: spoken,
+  });
+  const { groupProps, trackProps } = useSlider({ "aria-label": label }, state, track);
+  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label }, state);
+  const { focusProps, isFocusVisible } = useFocusRing();
+  return (
+    <div {...groupProps} className="absolute" style={box}>
+      <div
+        {...trackProps}
+        ref={track}
+        onPointerMove={(e) => onHover(e.clientX - e.currentTarget.getBoundingClientRect().left + box.left)}
+        onPointerLeave={() => onHover(null)}
+        className={cn("relative size-full cursor-crosshair touch-none", isFocusVisible && "outline-2 outline-offset-2 outline-ring")}
+      >
+        <div {...thumbProps} className="absolute inset-y-0 w-0" style={{ left: `${state.getThumbPercent(0) * 100}%` }}>
+          <VisuallyHidden>
+            <input
+              ref={input}
+              {...mergeProps(inputProps, focusProps, { onFocus: () => onFocusChange(true), onBlur: () => onFocusChange(false) })}
+              aria-labelledby={undefined}
+              onKeyDownCapture={(e) => {
+                onKeyDownCapture(e);
+                if (e.defaultPrevented) e.stopPropagation();
+              }}
+            />
+          </VisuallyHidden>
+        </div>
+      </div>
+    </div>
   );
 }
