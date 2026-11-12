@@ -41,7 +41,7 @@ export function installFakeMedia(): FakeMedia {
   define("duration", { get(this: HTMLMediaElement) { return stateOf(this).duration; } });
   define("currentTime", {
     get(this: HTMLMediaElement) { return stateOf(this).time; },
-    set(this: HTMLMediaElement, v: number) { stateOf(this).time = v; fire(this, "seeking", "seeked", "timeupdate"); },
+    set(this: HTMLMediaElement, v: number) { const st = stateOf(this); st.time = v; st.ended = false; fire(this, "seeking", "seeked", "timeupdate"); },
   });
   define("paused", { get(this: HTMLMediaElement) { return stateOf(this).paused; } });
   define("ended", { get(this: HTMLMediaElement) { return stateOf(this).ended; } });

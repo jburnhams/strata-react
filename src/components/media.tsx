@@ -71,6 +71,8 @@ export type SeekBarProps = TimeProps & {
   onSeek: (time: number) => void;
   /** Named points on the bar (chapters, markers). Pressing one seeks to it. */
   marks?: readonly { time: number; label: string }[];
+  /** What pressing a mark does. Default seeks to it; a screen that wants to land on it and pause (a moment to look at) passes its own. */
+  onMarkPress?: (mark: { time: number; label: string }) => void;
   /** How far has loaded or been recorded, drawn behind the played part. */
   buffered?: number;
   /** Arrow key step in seconds. Default 5. */
@@ -83,7 +85,7 @@ export type SeekBarProps = TimeProps & {
 };
 
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
-export function SeekBar({ time, duration: known, onSeek, marks = [], buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, className }: SeekBarProps) {
+export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, className }: SeekBarProps) {
   const duration = known && Number.isFinite(known) && known > 0 ? known : 0;
   const disabled = off || duration === 0;
   const track = React.useRef<HTMLDivElement>(null);
@@ -132,7 +134,7 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], buffered, s
               aria-label={`${m.label}, ${timecode(m.time, { precision, fps })}`}
               onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => seekTo(m.time)}
+              onClick={() => (onMarkPress ? onMarkPress(m) : seekTo(m.time))}
               className="absolute top-1/2 h-3 w-1 -translate-y-1/2 cursor-pointer rounded-pill bg-foreground"
               style={{ left: `${(m.time / duration) * 100}%` }}
             />

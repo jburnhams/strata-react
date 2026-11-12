@@ -45,6 +45,11 @@ export const Named: Story = { args: { blind: false } };
 /** With real pixels (nearest-neighbour) at any zoom, for looking at the pixels themselves. */
 export const RealPixels: Story = { args: { mode: "swipe", pixelated: "always" } };
 
+/** The app names moments ("fast motion") and holds the loop, so the same two seconds replay for every pair; slow motion goes down to 0.1. */
+export const Moments: Story = {
+  args: { mode: "swipe", moments: [{ time: 0.6, label: "Fast motion" }, { time: 1.4, label: "Turning face" }], loop: { start: 0.4, end: 1.2 }, onLoopChange: () => undefined },
+};
+
 /** As the answering half of a blind pairwise judgment: the same keys and bar as pictures and clips. */
 export const Judged: Story = {
   render: () => (
