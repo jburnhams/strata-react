@@ -2,6 +2,20 @@
 
 ## 2026-11-12
 
+**Conversation, lightbox, region editor, sequence timeline, tree and marking (issues #187 to #192)** (branch `claude/panes-browsing-editing`). The third batch of strata-360's missing screens. No dependency was added. Corrections and findings that changed the plan: `SequenceTimeline` is its own component, not a `Timeline` mode, because `Timeline` reports one item per change (`TimelineChange`) and neither `validate` nor `snapPoints` can express a boundary shared by two items; React Aria 1.22's `Tree` does not pass `hasChildItems` to its row hook (checked in `Tree.mjs`), so a closed lazy branch gets no `aria-expanded` or Right/Left keys unless the collection holds a child, which `Tree` supplies as an undrawn placeholder; and Storybook's docgen recurses endlessly on `Load<readonly T[]>` when the generic is also named `T`, so `Tree` names its parameter `N`.
+
+- `src/components/conversation.tsx`, `src/lib/rich-text.ts` (**new**, #192): `Conversation`, `Composer`, `RichText`, `matchEntities`, `parseRichText`, `safeHref`, `plainText`.
+- `src/components/lightbox.tsx` (**new**, #189): `Lightbox` on `Dialog`, which gains `size="full"`.
+- `src/components/region-editor.tsx`, `src/lib/region.ts` (**new**, #190): `RegionEditor` and the rectangle maths (`moveRect`, `resizeRect` with aspect lock, `drawRect`, `lerpRect`, `ease`).
+  - Review fixes: `drawRect` now clamps the drag's start point to the bounds as well as its end (a drag that began outside a smaller `bounds` could produce a rectangle outside it), and `RegionEditor` stops propagation of the arrow keys it handles, so a zoomed `ViewportFrame` around it no longer pans at the same time. Tests added in `region-lib` and `region-editor`.
+- `src/components/sequence-timeline.tsx`, `src/lib/sequence.ts` (**new**, #191): `SequenceTimeline`, grid and room helpers.
+- `src/components/tree.tsx`, `src/components/folder-picker.tsx` (**new**, #188): `Tree`, `FolderPicker`.
+- `src/components/markable-text.tsx`, `src/lib/marks.ts` (**new**, #187): `MarkableText`, `Mark`, `MarkSummary`. The selection bar is a bar, not a `Popover`: a selection can start in an unmounted row, and `Popover` takes focus from the text.
+- `stories/`: `conversation`, `lightbox`, `region-editor`, `sequence-timeline`, `folder-picker`, `markable-text` stories (**new**); `fixtures/folders.ts` and `screens/folder-chooser.tsx` (**new**), a pretend disk served by new `/api/folders` MSW handlers; `piecePictureUrl` in `fixtures/piece-photo.tsx`.
+- `tests/unit/`: `conversation`, `lightbox`, `region-lib`, `region-editor`, `sequence-timeline`, `folder-picker`, `markable-text` (**new**).
+- `tests/visual/baselines/`: 36 new, none changed.
+- `src/index.ts`, `README.md`: exports and component table.
+
 **Maps and charts for a media review screen: markers, shared cursor, spans, log axis, picking (issues #181 to #184)** (branch `claude/maps-and-charts`). One batch: a cursor shared by every view of the same run, items on the map, richer line charts and a place picker.
 
 - `src/components/cursor.tsx` (**new**): `CursorScope`, `useSharedCursor`, `CursorMapping`. One canonical unit, a mapping per member, `source` ids so a member never reacts to its own writes, pointer and playback owners (the pointer wins, playback is the fallback), one throttled polite live region.

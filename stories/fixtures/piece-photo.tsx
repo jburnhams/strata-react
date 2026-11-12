@@ -36,3 +36,10 @@ export function PiecePicture({ photo }: { photo: ShelfPhoto }) {
     </svg>
   );
 }
+
+/** The same picture as an address an `<img>` can load (a data URI), for components that take a `src`, such as `Lightbox`. */
+export function piecePictureUrl(photo: ShelfPhoto): string {
+  const n = Number(photo.id.slice(2));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 100"><rect width="150" height="100" fill="#ece6dc"/><rect y="80" width="150" height="20" fill="#cbc2b4"/><path transform="translate(25 0)" d="${forms[(n * 5 - 5) % forms.length]}" fill="${glazeColour[photo.glaze]}" opacity="${photo.thin ? 0.55 : 1}"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
