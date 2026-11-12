@@ -68,7 +68,7 @@ describe("ThemeProvider", () => {
         <Readout />
       </ThemeProvider>,
     );
-    const group = screen.getByRole("group", { name: "Theme" });
+    const group = screen.getByRole("radiogroup", { name: "Theme" });
     expect(screen.getByRole("radio", { name: /Match this device/ })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "Dark" }));
     expect(group).toBeInTheDocument();

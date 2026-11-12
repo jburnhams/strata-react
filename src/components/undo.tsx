@@ -233,7 +233,7 @@ export function UndoBar({
     <div
       aria-live="polite"
       className={
-        inline ? "flex" : "pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4"
+        inline ? "flex" : "layer-bar pointer-events-none fixed inset-x-0 bottom-4 flex justify-center px-4"
       }
     >
       {(pending || failed) && (

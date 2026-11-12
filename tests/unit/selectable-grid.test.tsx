@@ -102,7 +102,7 @@ describe("SelectableGrid", () => {
   it("select all shown covers the selectable tiles, goes mixed, and clears", async () => {
     renderWithStrata(<Grid />);
     await userEvent.click(box(photos[0]));
-    expect(selectAll()).toHaveAttribute("aria-checked", "mixed");
+    expect(selectAll()).toBePartiallyChecked();
     await userEvent.click(selectAll());
     expect(box(photos[0])).not.toBeChecked();
     await userEvent.click(selectAll());

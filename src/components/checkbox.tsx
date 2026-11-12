@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Checkbox as AriaCheckbox } from "react-aria-components";
+import { Check, Minus } from "lucide-react";
 import { cn } from "../lib/utils";
 
 // A checkbox cannot be written without a name: `label` is required, as `IconButton`'s is. Shown,
@@ -9,16 +11,18 @@ import { cn } from "../lib/utils";
 // label joined to a neighbour did not form a name with its space in dom-testing-library (strata-
 // react issue #11), and an aria-label leaves no room for that.
 //
-// It is the native control (an 18px box, `accent-primary`), so keyboard, forms and the platform's
-// own focus and checked rendering come free. `checked="mixed"` is the indeterminate state a
-// select-all needs; React has no prop for it, so it is set on the element.
+// It is React Aria's Checkbox (a visually hidden native input inside the label), so keyboard,
+// forms, `aria-checked="mixed"` and press handling are the library's, and the 18px box is drawn
+// from our tokens (it is no longer the platform's `accent-primary` control: that one could not show
+// a tick and a dash in the theme's own roles). `checked="mixed"` is the indeterminate state a
+// select-all needs. It used to be native; the visual baselines changed for it (CHANGELOG).
 //
 // `onCheckedChange` also says whether Shift was held, which is how a list of checkboxes extends a
 // range (strata-react issue #32). A change event carries no modifier keys, so the label notes Shift
 // on the press that leads to it: a mouse press anywhere on the target, or Space on the box.
 
 /** A checkbox with its label as one target. `label` is required; `checked="mixed"` is indeterminate. */
-export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checked" | "onChange" | "aria-label" | "children"> & {
+export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checked" | "onChange" | "aria-label" | "children" | "style"> & {
   /** Names the checkbox. Shown beside it unless `hideLabel`. */
   label: string;
   /** Keep the label as the accessible name only, for a cell or toolbar where the context shows what it is. */
@@ -33,41 +37,51 @@ export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checke
 /** How a checkbox was changed: `shiftKey` is true for Shift+click and Shift+Space, which extend a range in a list. */
 export type CheckboxGesture = { shiftKey: boolean };
 
-/** A native checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
-export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, ...props }: CheckboxProps) {
-  const ref = React.useRef<HTMLInputElement>(null);
+/** A checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
+export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, required, ...props }: CheckboxProps) {
   const shift = useShiftNote();
-  React.useEffect(() => {
-    if (ref.current) ref.current.indeterminate = checked === "mixed";
-  }, [checked]);
+  // Shift is noted in the capture phase on a wrapper, because React Aria's press handling stops the
+  // events it uses before they bubble. `contents` keeps the wrapper out of layout.
   return (
-    <label
-      {...shift.handlers}
-      className={cn(
-        "inline-flex min-h-6 min-w-6 items-start gap-3",
-        hideLabel && "items-center justify-center",
-        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-        className,
-      )}
-    >
-      <input
-        ref={ref}
-        type="checkbox"
-        checked={checked === true}
-        aria-checked={checked === "mixed" ? "mixed" : undefined}
+    <span className="contents" onMouseDownCapture={shift.handlers.onMouseDown} onKeyDownCapture={shift.handlers.onKeyDown}>
+      <AriaCheckbox
+        isSelected={checked === true}
+        isIndeterminate={checked === "mixed"}
+        isDisabled={disabled}
+        isRequired={required}
+        onChange={(selected) => onCheckedChange(selected, shift.take())}
         aria-label={hideLabel ? label : undefined}
-        disabled={disabled}
-        onChange={(e) => onCheckedChange(e.target.checked, shift.take())}
-        className={cn("size-4.5 shrink-0 accent-primary", !hideLabel && "mt-0.5", disabled ? "cursor-not-allowed" : "cursor-pointer")}
-        {...props}
-      />
-      {!hideLabel && (
-        <span className="grid">
-          <span className="type-body">{label}</span>
-          {detail && <span className="type-body-sm text-muted-foreground">{detail}</span>}
-        </span>
-      )}
-    </label>
+        {...(props as object)}
+        className={cn(
+          "group inline-flex min-h-6 min-w-6 items-start gap-3",
+          hideLabel && "items-center justify-center",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+          className,
+        )}
+      >
+        {({ isSelected, isIndeterminate }) => (
+          <>
+            <span
+              aria-hidden
+              className={cn(
+                "grid size-4.5 shrink-0 place-items-center rounded-control border border-input bg-background transition-state",
+                "group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-ring",
+                (isSelected || isIndeterminate) && "border-primary bg-primary text-primary-foreground",
+                !hideLabel && "mt-0.5",
+              )}
+            >
+              {isIndeterminate ? <Minus className="size-3.5" strokeWidth={3} /> : isSelected ? <Check className="size-3.5" strokeWidth={3} /> : null}
+            </span>
+            {!hideLabel && (
+              <span className="grid">
+                <span className="type-body">{label}</span>
+                {detail && <span className="type-body-sm text-muted-foreground">{detail}</span>}
+              </span>
+            )}
+          </>
+        )}
+      </AriaCheckbox>
+    </span>
   );
 }
 

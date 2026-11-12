@@ -73,7 +73,7 @@ describe("Checkbox", () => {
     render(<Checkbox label="Select all shown" hideLabel checked="mixed" onCheckedChange={() => undefined} />);
     const box = screen.getByRole("checkbox", { name: "Select all shown" }) as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
-    expect(box).toHaveAttribute("aria-checked", "mixed");
+    expect(box).toBePartiallyChecked();
   });
 });
 
@@ -92,7 +92,7 @@ describe("DataTable selection", () => {
   it("selects all shown selectable rows, goes mixed, and clears", async () => {
     renderWithStrata(<Harness />);
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Dev Raman" }));
-    expect(selectAll()).toHaveAttribute("aria-checked", "mixed");
+    expect(selectAll()).toBePartiallyChecked();
     // A mixed box clears what is shown.
     await userEvent.click(selectAll());
     expect(screen.getByRole("checkbox", { name: "Select Dev Raman" })).not.toBeChecked();
@@ -222,5 +222,26 @@ describe("Row actions", () => {
       />,
     );
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+  });
+});
+
+describe("Checkbox in a form", () => {
+  it("keeps the native required behaviour: an unchecked required box makes the form invalid", async () => {
+    function Consent() {
+      const [on, setOn] = React.useState(false);
+      return (
+        <form aria-label="Consent">
+          <Checkbox label="I agree" name="agree" required checked={on} onCheckedChange={setOn} />
+        </form>
+      );
+    }
+    render(<Consent />);
+    const form = screen.getByRole("form", { name: "Consent" }) as HTMLFormElement;
+    const box = screen.getByRole("checkbox", { name: "I agree" });
+    expect(box).toBeRequired();
+    expect(form.checkValidity()).toBe(false);
+    await userEvent.click(box);
+    expect(form.checkValidity()).toBe(true);
+    expect(new FormData(form).get("agree")).not.toBeNull();
   });
 });
