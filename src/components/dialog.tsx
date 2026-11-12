@@ -65,6 +65,7 @@ export function Dialog({
   title, description, trigger, open, onOpenChange, className, children, actions,
   hideTitle, closable = true, placement = "center", size = "md",
 }: DialogProps) {
+  const descriptionId = React.useId();
   return (
     <DialogTrigger isOpen={open} onOpenChange={onOpenChange}>
       {trigger}
@@ -77,7 +78,7 @@ export function Dialog({
             className,
           )}
         >
-          <AriaDialog className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
+          <AriaDialog aria-describedby={description != null ? descriptionId : undefined} className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
             {({ close }) => (
               <>
                 <div className="flex items-start justify-between gap-4">
@@ -85,7 +86,7 @@ export function Dialog({
                     <Heading slot="title" className={cn("type-heading", hideTitle && "sr-only")}>
                       {title}
                     </Heading>
-                    {description != null && <p className="type-body-sm text-muted-foreground">{description}</p>}
+                    {description != null && <p id={descriptionId} className="type-body-sm text-muted-foreground">{description}</p>}
                   </div>
                   {closable && <IconButton icon={X} label="Close" onPress={close} className="-mr-2 -mt-2 shrink-0" />}
                 </div>
@@ -124,6 +125,7 @@ export function AlertDialog({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const [inner, setInner] = React.useState(false);
+  const descriptionId = React.useId();
   const isOpen = open ?? inner;
   const change = (next: boolean) => {
     if (busy) return;
@@ -149,19 +151,22 @@ export function AlertDialog({
     <DialogTrigger isOpen={isOpen} onOpenChange={change}>
       {trigger}
       <ModalOverlay isDismissable={false} isKeyboardDismissDisabled={busy} className={cn(overlayClass, "place-items-center p-4")}>
-        <Modal className={cn("w-full max-w-sm outline-none", overlaySurface, className)}>
-          <AriaDialog role="alertdialog" className="flex flex-col gap-4 p-4 outline-none">
+        <Modal className={cn("flex max-h-full w-full max-w-sm flex-col outline-none", overlaySurface, className)}>
+          <AriaDialog role="alertdialog" aria-describedby={description != null ? descriptionId : undefined} className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
             {({ close }) => (
               <>
-                <div className="grid gap-1">
-                  <Heading slot="title" className="type-heading">{title}</Heading>
-                  {description != null && <p className="type-body-sm text-muted-foreground">{description}</p>}
+                {/* The message scrolls inside the dialog on a short window or with large text; the buttons stay in view. */}
+                <div className="grid min-h-0 gap-3 overflow-y-auto overscroll-contain">
+                  <div className="grid gap-1">
+                    <Heading slot="title" className="type-heading">{title}</Heading>
+                    {description != null && <p id={descriptionId} className="type-body-sm text-muted-foreground">{description}</p>}
+                  </div>
+                  {error && (
+                    <p role="alert" className="rounded-control bg-danger-subtle px-3 py-2 type-body-sm text-danger">
+                      {error}
+                    </p>
+                  )}
                 </div>
-                {error && (
-                  <p role="alert" className="rounded-control bg-danger-subtle px-3 py-2 type-body-sm text-danger">
-                    {error}
-                  </p>
-                )}
                 <div className="flex flex-wrap justify-end gap-2">
                   <Button autoFocus disabled={busy} onPress={close}>{cancel}</Button>
                   <Button variant={tone === "destructive" ? "destructive" : "default"} disabled={busy} aria-busy={busy || undefined} onPress={run}>
