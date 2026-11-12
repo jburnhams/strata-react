@@ -99,6 +99,15 @@ jobs:
         run: |
           set -euo pipefail
           branch="release/v$VERSION"
+          # Resume: an earlier run merged this bump but failed before tagging, so main already
+          # reads $VERSION. Tag and release that commit rather than bump again (npm version
+          # refuses an unchanged version).
+          if [ "$(node -p "require('./package.json').version")" = "$VERSION" ]; then
+            echo "main already reads $VERSION; releasing HEAD."
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
