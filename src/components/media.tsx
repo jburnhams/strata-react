@@ -116,7 +116,7 @@ export function SeekBar({ time, duration, onSeek, marks = [], buffered, step = 5
       onPointerMove={(e) => {
         if (!disabled && e.buttons === 1) at(e.clientX);
       }}
-      className={cn("relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer items-center aria-disabled:cursor-not-allowed aria-disabled:opacity-50", className)}
+      className={cn("relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer touch-none items-center aria-disabled:cursor-not-allowed aria-disabled:opacity-50", className)}
     >
       <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
       {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
@@ -127,6 +127,7 @@ export function SeekBar({ time, duration, onSeek, marks = [], buffered, step = 5
             key={`${m.time}-${m.label}`}
             type="button"
             tabIndex={-1}
+            disabled={disabled}
             title={`${m.label}, ${timecode(m.time, { precision, fps })}`}
             aria-label={`${m.label}, ${timecode(m.time, { precision, fps })}`}
             onPointerDown={(e) => e.stopPropagation()}

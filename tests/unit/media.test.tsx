@@ -126,6 +126,20 @@ describe("SeekBar", () => {
   });
 });
 
+describe("SeekBar disabled", () => {
+  it("ignores keys, pointer and marks, and stops browser panning from cancelling a touch scrub", async () => {
+    const user = userEvent.setup();
+    const seen: number[] = [];
+    renderWithStrata(<SeekBar time={10} duration={120} onSeek={(t) => seen.push(t)} marks={[{ time: 60, label: "Take 2" }]} disabled />);
+    const bar = screen.getByRole("slider", { name: "Seek" });
+    expect(bar).toHaveClass("touch-none");
+    bar.focus();
+    await user.keyboard("{ArrowRight}");
+    await user.click(screen.getByRole("button", { name: "Take 2, 1:00" }));
+    expect(seen).toEqual([]);
+  });
+});
+
 describe("TimeReadout", () => {
   it("reserves the width of the total so it does not change as the time runs, with tabular figures", () => {
     const { container, rerender } = render(<TimeReadout time={9} duration={3725} />);
