@@ -247,6 +247,14 @@ update a baseline**, and say in the PR which baselines changed and why.
 
 ## Changelog
 
+[`UPGRADING.md`](./UPGRADING.md) is the consumer-facing guide and ships in the package: what
+an app must change when it updates (removed or renamed exports and props, changed roles,
+messages or defaults that tests can see, new required setup, visual baseline moves). Terse,
+for a skilled developer: name the export and say what to do, do not repeat the docs. **Any
+PR that changes something an app or its tests can observe adds a line there, in the same PR**,
+under the newest heading; purely additive changes need none. `CHANGELOG.md` below is the
+development log with the reasons.
+
 Group entries by day under `## YYYY-MM-DD`, newest first. Each entry: a bold one-line title
 naming the work and its branch (and PR number once known), one or two sentences on what was
 asked and what changed the plan, then bullets naming each file or folder touched and what

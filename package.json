@@ -1,6 +1,6 @@
 {
   "name": "strata-react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React + Tailwind v4 components that ship structure, behaviour, states and a token contract, and no look: each product brings a theme generated from its own subject.",
   "repository": {
     "type": "git",
@@ -38,7 +38,8 @@
   "files": [
     "dist",
     "bin",
-    "README.md"
+    "README.md",
+    "UPGRADING.md"
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",

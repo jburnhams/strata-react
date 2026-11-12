@@ -11,6 +11,14 @@
 - `src/index.ts`, `README.md` (Value controls row), `stories/value-controls.stories.tsx` (**new**), `tests/unit/value-controls.test.tsx` (**new**, 19 tests), baselines for the new stories.
 - Not done: drag-to-scrub on the label (optional in the issue).
 
+**Feedback: Alert, toasts and client-side work (issue #72)** (branch `claude/feedback-72`). The issue asked for toasts, inline alerts and progress for work the browser does. Toasts and alerts are new; progress reuses `JobStatus`, so a server job and an export the browser runs are one idea with one look, instead of a second progress component.
+
+- `src/components/alert.tsx` (**new**): `Alert`, four tones each with an icon and words, a pale tint (no coloured side stripe), one optional `action`, `role="alert"` only with `announce`.
+- `src/components/toast.tsx` (**new**): `toast.show/close/clear`, `toastTimeout`, `StrataToastRegion` on React Aria's toast queue (its API is marked unstable, so it is used only in this file). No danger tone by type. Bottom end on wide screens, top on phones, on the `layer-bar` layer.
+- `src/lib/client-work.ts` (**new**): `useClientWork`: phase, progress, `cancel` (aborts the signal, ends `cancelled`), `dismiss`, a second start ignored while running, a cancelled run cannot write over a newer one.
+- `src/components/job-status.tsx`: `onCancel`/`cancelLabel`, `cancelled` (neutral ending with `words.cancelled`, default "Cancelled"), `onDismiss`. No total still means no bar.
+- `src/index.ts`, `README.md` (Feedback row), `stories/feedback.stories.tsx` (**new**), `tests/unit/feedback.test.tsx` (**new**, MSW for the abortable request), baselines for the new stories.
+
 **React Aria first: the rule for choosing a primitive** (branch `claude/aria-first-rule`). Jonathan asked for the rules to say: use a React Aria component, extend it if needed, make our own only if strictly needed. #73's first version built native inputs on an unchecked belief that React Aria's number field clamps; it does not, so the rule asks for the claim to be checked and written down.
 
 - `CLAUDE.md`: new section "React Aria first" (use as is, extend, own only when strictly needed with the verified reason in the file's opening comment); the Primitives row points to it.
@@ -27,6 +35,12 @@
 - `src/index.ts`, `README.md`: exports and a component-table row. `stories/commands.stories.tsx` (**new**): dropdown, checkable items with a submenu, menu bar, legend, command menu, a live context menu and a live editor, at phone width, light and dark. `tests/unit/commands.test.tsx` (**new**): 25 tests, including that changing a command's label and keys changes the menu, the legend and the command menu.
 - `tests/visual/baselines/`: 10 new; none changed.
 - Not done: the Storybook a11y addon pass; a Windows-style `Alt` menu-bar mnemonic; `inFields` per chord rather than per command.
+
+**Consumer upgrade guide** (branch `claude/project-thread-hjs97b`). Jonathan asked for a changelog consumers can use to see what to change when updating, concise and pointing at the code rather than repeating it. This file is the development log, so the guide is separate.
+
+- `UPGRADING.md` (**new**): breaking and observable changes since 0.1.x began, newest first, written from this log and the release dates (the 0.1.x tag for a given change is not recorded in the log, so sections are by date).
+- `CLAUDE.md`: the Changelog section now requires a line in `UPGRADING.md` in the same PR for anything an app or its tests can observe.
+- `package.json`: `UPGRADING.md` added to `files`, so it ships on npm. `README.md`: links to it.
 
 **Toolbar, toggles and Switch (issue #69)** (branch `claude/toolbar-69`, stacked on `claude/overlays-70`). The issue asked for the controls `components.md` §3.3 specifies and a toolbar to hold them. Built on React Aria's `Toolbar`, `ToggleButton`, `ToggleButtonGroup` and `Switch`.
 
