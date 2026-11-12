@@ -70,6 +70,19 @@ describe("RouteMap", () => {
     expect(summary()).toMatch(/Current position: [\d.]+\skm along\./);
   });
 
+  it("keeps the spoken position current while the position changes every frame", async () => {
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ position: [51.5, -0.12] })} />);
+    const summary = () => container.querySelector("p.sr-only")!.textContent!;
+    const end = run.points[run.points.length - 1];
+    // Ten updates a second for two and a half seconds, the last at the end of the route.
+    for (let i = 1; i <= 25; i++) {
+      const t = i / 25;
+      await act(() => new Promise((r) => setTimeout(r, 100)));
+      rerender(<RouteMap {...props({ position: [51.5 + (end[0] - 51.5) * t, -0.12 + (end[1] + 0.12) * t] })} />);
+    }
+    expect(summary()).not.toMatch(/0\sm along/); // a debounce would still say 0 m: it never saw a quiet second
+  });
+
   it("takes the app's own text alternative", () => {
     const { container } = renderWithStrata(<RouteMap {...props({ summary: "A run along the river from Vauxhall to Tower Bridge." })} />);
     expect(container.querySelector("p.sr-only")).toHaveTextContent("A run along the river from Vauxhall to Tower Bridge.");

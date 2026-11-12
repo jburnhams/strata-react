@@ -117,13 +117,15 @@ export type RouteMapProps = {
 const tuple = (p: LatLng): L.LatLngTuple => [p[0], p[1]];
 const plain = (v: number) => String(v);
 
-/** `value`, updated at most once a second: for text a screen reader may read, which must not change sixty times a second. */
+/** `value`, sampled once a second (a throttle, not a debounce: a value that changes every frame still comes through): for text a screen reader may read, which must not change sixty times a second. */
 function useSlow<T>(value: T, ms = 1000): T {
   const [slow, setSlow] = React.useState(value);
+  const latest = React.useRef(value);
+  latest.current = value;
   React.useEffect(() => {
-    const t = window.setTimeout(() => setSlow(value), ms);
-    return () => window.clearTimeout(t);
-  }, [value, ms]);
+    const id = window.setInterval(() => setSlow(latest.current), ms);
+    return () => window.clearInterval(id);
+  }, [ms]);
   return slow;
 }
 
