@@ -2,6 +2,14 @@
 
 ## 2026-11-12
 
+**File intake: pick or drop files, per-file outcomes, relink (issue #75)** (branch `claude/file-intake-75`). The issue asked for a file button, a drop zone, an outcome per file and a relink for a missing file, from a video library whose "+ Add" was a label around a hidden input with no drop target. The picker and the zone are React Aria's `FileTrigger` and `DropZone`; the per-file logic is a hook so screens can draw outcomes their own way.
+
+- `src/lib/file-intake.ts` (**new**): `useFileIntake` (type check against an `accept` list, `maxBytes`, an app `check`, one-at-a-time mode, the app's `process` per file with an abort signal, `retry`, `dismiss`, `clear`; each file runs on its own so one failure never holds up the rest; unmounting aborts running work) and `matchesAccept`.
+- `src/components/file-intake.tsx` (**new**): `FileButton`, `FileDropZone` (accepts any file drop and judges afterwards, because React Aria's `getDropOperation` refusal shows no message; "Drop to add …" replaces the prompt while a drag is over it), `FileOutcomes` (a status word per file, reason, retry and dismiss, one polite summary per finished batch), `MissingFile`.
+- Behaviour that is React Aria's: the zone's accessible name sits on a visually hidden button it renders for assistive technology; the drag-over state uses its enter and leave bookkeeping, so it does not flicker across child elements (not testable in jsdom; checked by reading `useDrop`).
+- `src/index.ts`, `README.md` (File intake row), `stories/file-intake.stories.tsx` (**new**), `tests/unit/file-intake.test.tsx` (**new**, 13 tests, real `File`s through the picker's input and drop events), 10 baselines. No new dependency.
+- Not done: a window-wide drop target (the issue leaves it to this or the workspace layout, #68); it belongs with the layout.
+
 **Inspector: a panel of properties for the selection (issue #74)** (branch `claude/inspector-74`). The issue asked for a side panel that shows and edits the properties of whatever is selected, with collapsible sections and a read-only property list, from a video editor's two properties panels. Four small parts that compose, so a settings sidebar and a file manager's details pane are the same pieces.
 
 - `src/components/inspector.tsx` (**new**): `Inspector` (labelled region, heading, required `empty` state when `title` is `null`, open sections remembered in localStorage under `storageKey`, `selectionKey` remounts section bodies for a new selection and moves focus to the heading if the focused control left with the old one). `InspectorSection` (React Aria `Disclosure`, extended so the body is mounted only while open: React Aria keeps a closed panel in the DOM and no prop changes that, checked in `Disclosure.d.ts`; actions sit beside the toggle, not inside it). `PropertyRow` (a `Field` with a "Reset <label>" button only while `modified`). `PropertyList` (a `dl`). No new dependency.
