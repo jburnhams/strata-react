@@ -90,6 +90,8 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange } from "./components/timeline";
+export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
 export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./components/file-intake";
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
