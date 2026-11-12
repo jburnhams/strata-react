@@ -112,7 +112,27 @@ const photo = ({ params }: { params: Record<string, string | readonly string[] |
   return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
 };
 
+// Map tiles for the map stories: an SVG per tile, the same streets on every tile so they meet at the
+// edges, in a light set and a dark set, so no story asks a live provider for anything. Tile imagery
+// is a provider's, not the app's, so its colours are literal here.
+const tileSet = {
+  light: { ground: "#ebe7df", road: "#ffffff", minor: "#f6f3ee", park: "#d6e4cc", edge: "#d9d4c9" },
+  dark: { ground: "#23272d", road: "#3a4048", minor: "#2d3238", park: "#27352a", edge: "#1d2025" },
+};
+const tile: Parameters<typeof http.get>[1] = ({ params }) => {
+  const set = tileSet[params.set === "dark" ? "dark" : "light"];
+  const park = (Number(params.z) + Number(params.x) + parseInt(String(params.file), 10)) % 5 === 0;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect width="256" height="256" fill="${set.ground}"/>` +
+    (park ? `<rect x="136" y="104" width="112" height="104" rx="6" fill="${set.park}"/>` : "") +
+    `<path d="M0 32H256M0 224H256M32 0V256M224 0V256" stroke="${set.minor}" stroke-width="6"/>` +
+    `<path d="M0 96H256M160 0V256" stroke="${set.road}" stroke-width="12"/>` +
+    `<path d="M0 0H256V256H0Z" fill="none" stroke="${set.edge}" stroke-width="1"/></svg>`;
+  return new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } });
+};
+
 export const handlers = [
+  http.get("https://tiles.example.test/:set/:z/:x/:file", tile),
   http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
   http.get(`${api.photos}/:id`, photo),
   http.get("/api/renderings/:variant", rendering),

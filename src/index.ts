@@ -48,6 +48,7 @@ export {
   type CommandMenuProps,
   type CommandsOptions,
 } from "./components/commands";
+export { geo, type LatLng } from "./lib/geo";
 export { formatChord, matchesChord, parseChord, isReservedChord, detectPlatform, type Platform } from "./lib/chords";
 export { Toolbar, ToolbarSeparator, type ToolbarProps } from "./components/toolbar";
 export { Toggle, ToggleGroup, type ToggleProps, type ToggleGroupProps, type ToggleOption } from "./components/toggle";

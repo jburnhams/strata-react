@@ -2,6 +2,16 @@
 
 ## 2026-11-12
 
+**Map (issue #80)** (branch `claude/map-80`). strata-vid and jonathanburnhams.com both draw routes on Leaflet with react-leaflet and `vi.mock` it in tests. Jonathan chose Leaflet without react-leaflet as an optional peer behind its own entry. The rules are in ux-research `components.md` §3.22.
+
+- `src/map/route-map.tsx` **new**: `RouteMap` on Leaflet: app-supplied light and dark tiles with attribution, role colours resolved at draw time, colour by value in runs of one step with a built-in key, chevrons and start/finish marks for a single route, a position marker moved with `setLatLng` (no route redrawn or recreated for it), fit on first show and when the set of routes changes, overlay slots away from Leaflet's controls, selection, and a generated text alternative with the position along each route (throttled to once a second, not a live region). Zoom, fade and inertia are off. Checked: React Aria has no map part; Leaflet's own keyboard handling is kept.
+- `src/map/map-styles.ts` **new**: Leaflet's stylesheet (`leaflet/dist/leaflet.css?inline`) put in the page once, plus the token overrides for its zoom buttons, attribution and tooltips (control height, roles, radius, the app's face) and the dark-tile filter used when an app has no dark tiles. An app imports no CSS.
+- `src/map/index.ts` **new**, `package.json`: the `./map` export and entry, `leaflet` as an optional peer and a devDependency (with `@types/leaflet`, which Jonathan has not ruled on separately), `vite.config.ts`: the `map` entry. `tests/integration/package.test.ts`: `./map` reaches only `leaflet` among the optional peers; the main entry still reaches none.
+- `src/lib/geo.ts` **new**: `geo` (distance, bearing, cumulative, length, bounds, `pointAlong`, `arrows`, `ends`, `nearest`) and `LatLng`, in the main entry; the helpers the two apps wrote by hand. `src/lib/format.ts`: `format.distance(metres, "metric" | "imperial")`.
+- `stories/route-map.stories.tsx` **new**: single route, several routes, a loop, colour by value with the key, a position, overlays, phone, and a live 60 fps position (skipped by the visual suite); 14 **new** baselines. `stories/fixtures/route.ts` **new**; `stories/mocks/handlers.ts`: fixture tiles served by MSW as SVG, so no story asks a live provider for anything (`leaflet-node` was not added; it needs Jonathan's decision).
+- `tests/unit/route-map.test.tsx` **new** (17, real Leaflet in jsdom, no module mocks): the label and text alternative, the throttled position text, tiles and attribution, the colour scheme choice, a position moving without any route path being recreated, removal, chevrons and marks, a loop, colour runs and the key, selection, overlays, the stylesheet once, no routes, unmount.
+- `README.md`, `CLAUDE.md` ("Building an app", step 11).
+
 **Narrow panes (issue #122)** (branch `claude/narrow-122`). In a 300px library, strata-vid's missing-file row cut a name to "parkru…", a chart's table header said "Time" for a distance, and a frame timecode read as hours. Three small fixes, found by running the components in a pane.
 
 - `src/components/file-intake.tsx`: `MissingFile` wraps its name instead of truncating it (at least ten ems), puts the status and Relink on the next row when the row is short, and takes `thumbnail`, drawn at the start.
