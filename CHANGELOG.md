@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+**Inspector: a panel of properties for the selection (issue #74)** (branch `claude/inspector-74`). The issue asked for a side panel that shows and edits the properties of whatever is selected, with collapsible sections and a read-only property list, from a video editor's two properties panels. Four small parts that compose, so a settings sidebar and a file manager's details pane are the same pieces.
+
+- `src/components/inspector.tsx` (**new**): `Inspector` (labelled region, heading, required `empty` state when `title` is `null`, open sections remembered in localStorage under `storageKey`, `selectionKey` remounts section bodies for a new selection and moves focus to the heading if the focused control left with the old one). `InspectorSection` (React Aria `Disclosure`, extended so the body is mounted only while open: React Aria keeps a closed panel in the DOM and no prop changes that, checked in `Disclosure.d.ts`; actions sit beside the toggle, not inside it). `PropertyRow` (a `Field` with a "Reset <label>" button only while `modified`). `PropertyList` (a `dl`). No new dependency.
+- `src/index.ts`, `README.md` (Inspector row), `stories/inspector.stories.tsx` (**new**), `tests/unit/inspector.test.tsx` (**new**), 14 baselines (7 stories, light and dark).
+- Not done: a two-column row layout (label beside control) for wide panels; rows stack label over control at every width.
+
 **State variants from tailwindcss-react-aria-components, not `data-[...]` strings** (branch `claude/aria-variants`). Jonathan asked for the plugin and said not to put every state into CVA. Only `Button` uses CVA, and it keeps `variant` and `size` there; its hover and disabled states now use the plugin's variants like every other component.
 
 - `package.json`, `package-lock.json`: `tailwindcss-react-aria-components` ^2.2.0 added as a dependency (Jonathan's request, 2026-11-12).
