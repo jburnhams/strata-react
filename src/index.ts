@@ -90,6 +90,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
 export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
 export {
