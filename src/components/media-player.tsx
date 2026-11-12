@@ -248,7 +248,7 @@ export type MediaPlayerProps = {
   session?: MediaSession;
   /** The playback speeds offered. Default 0.5 to 2; for speech use {@link SPEECH_RATES}. */
   rates?: readonly number[];
-  /** Keys on the page (Space or K, J and L for 10 s, M). Default true; turn off when the screen binds its own. */
+  /** Keys on the page (Space or K, J and L for 10 s, M). Default true; turn off when the screen binds its own. With several players on a page the keys go to the one last played, focused or pressed. */
   shortcuts?: boolean;
   /** The last source has ended. */
   onEnded?: () => void;
@@ -256,6 +256,48 @@ export type MediaPlayerProps = {
   onTimeChange?: (time: number) => void;
   className?: string;
 };
+
+// Which player the page's keys belong to. A page with one player binds them for it, as ever. With
+// several, binding Space once per player played and paused every one of them at once, so the keys go
+// to the player last used (played, focused or pressed) and the others leave them alone (issue #147,
+// from strata-models' blind A/B of two voices). A tiny store outside React so the players on a page
+// can see each other without a provider the app would have to add.
+const keyPlayers = (() => {
+  const ids = new Set<string>();
+  let active: string | null = null;
+  let warned = false;
+  const listeners = new Set<() => void>();
+  let snapshot = { count: 0, active: null as string | null };
+  const emit = () => {
+    snapshot = { count: ids.size, active };
+    listeners.forEach((l) => l());
+  };
+  return {
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => void listeners.delete(l);
+    },
+    get: () => snapshot,
+    add(id: string) {
+      ids.add(id);
+      if (ids.size === 2 && !warned && typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
+        warned = true;
+        console.warn("strata-react: several MediaPlayers are on this page, so Space, K, J, L and M go to the one last played or focused. Pass shortcuts={false} to one you bind your own keys for.");
+      }
+      emit();
+    },
+    remove(id: string) {
+      ids.delete(id);
+      if (active === id) active = null;
+      emit();
+    },
+    use(id: string) {
+      if (active === id) return;
+      active = id;
+      emit();
+    },
+  };
+})();
 
 /** Playback speeds an audiobook or lecture listener expects. */
 export const SPEECH_RATES: readonly number[] = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -394,7 +436,18 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [media, time, offsets, index],
   );
-  useHotkeys(keys, { enabled: shortcuts && !native });
+  // Several players on a page: the keys follow the last used (see keyPlayers); alone, they are this one's.
+  const id = React.useId();
+  React.useEffect(() => {
+    if (!shortcuts || native) return;
+    keyPlayers.add(id);
+    return () => keyPlayers.remove(id);
+  }, [id, shortcuts, native]);
+  const page = React.useSyncExternalStore(keyPlayers.subscribe, keyPlayers.get, keyPlayers.get);
+  React.useEffect(() => {
+    if (media.playing && shortcuts && !native) keyPlayers.use(id);
+  }, [media.playing, id, shortcuts, native]);
+  useHotkeys(keys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
 
   // Lock-screen and headset controls.
   React.useEffect(() => {
@@ -427,12 +480,12 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, media, time, index, list.length]);
 
-  const common = { ref: ref as React.Ref<never>, src: current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": label };
+  const common = { ref: ref as React.Ref<never>, src: current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
   const element = kind === "video" ? <video {...common} poster={poster} playsInline className="w-full rounded-surface bg-surface-sunken" /> : <audio {...common} className={native ? "w-full" : "hidden"} />;
   const what = kind === "video" ? "this video" : "this recording";
 
   return (
-    <div role="group" aria-label={label} className={cn("grid w-full gap-2", className)}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", className)}>
       {element}
       {media.error?.kind === "load" && (
         <Alert

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, render, renderHook, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { MediaPlayer, SeekBar, useMediaElement, type MediaSource } from "../../src";
@@ -140,6 +140,68 @@ describe("MediaPlayer", () => {
     const { container } = render(<MediaPlayer label="Interview" src="/a.mp3" controls="strata" shortcuts={false} />);
     await user.keyboard(" ");
     expect(audio(container).paused).toBe(true);
+  });
+
+  it("names the element after its kind so the group and the element differ (issue #147)", () => {
+    const { container } = render(<MediaPlayer label="Interview" src="/a.mp3" controls="strata" />);
+    expect(audio(container)).toHaveAttribute("aria-label", "Interview, audio");
+    expect(screen.getByRole("group", { name: "Interview" })).toBeInTheDocument();
+  });
+
+  describe("several players on one screen (issue #147)", () => {
+    const two = () =>
+      render(
+        <div>
+          <MediaPlayer label="First" src="/a.mp3" controls="strata" />
+          <MediaPlayer label="Second" src="/b.mp3" controls="strata" />
+        </div>,
+      );
+    const el = (container: HTMLElement, i: number) => container.querySelectorAll("audio")[i] as HTMLAudioElement;
+
+    it("warns once in development that several players share the keys", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const first = two();
+        expect(warn).toHaveBeenCalledTimes(1);
+        first.unmount();
+        two();
+        expect(warn).toHaveBeenCalledTimes(1);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("sends Space only to the player last played, then to the one pressed or focused", async () => {
+      const user = userEvent.setup();
+      const { container } = two();
+      act(() => {
+        media.loaded(el(container, 0), 100);
+        media.loaded(el(container, 1), 100);
+      });
+      await user.click(within(screen.getByRole("group", { name: "First" })).getByRole("button", { name: /^play/i }));
+      expect(el(container, 0).paused).toBe(false);
+      expect(el(container, 1).paused).toBe(true);
+      await user.keyboard(" ");
+      expect(el(container, 0).paused).toBe(true);
+      expect(el(container, 1).paused).toBe(true);
+      await user.click(within(screen.getByRole("group", { name: "Second" })).getByRole("slider", { name: /seek/i }));
+      await user.keyboard("k");
+      expect(el(container, 1).paused).toBe(false);
+      expect(el(container, 0).paused).toBe(true);
+    });
+
+    it("leaves a player with shortcuts off out of it", async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <div>
+          <MediaPlayer label="First" src="/a.mp3" controls="strata" />
+          <MediaPlayer label="Second" src="/b.mp3" controls="strata" shortcuts={false} />
+        </div>,
+      );
+      act(() => media.loaded(el(container, 0), 100));
+      await user.keyboard(" ");
+      expect(el(container, 0).paused).toBe(false);
+    });
   });
 
   it("says a file could not be loaded and loads it again on Try again", async () => {

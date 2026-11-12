@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `MediaPlayer`: the `<audio>`/`<video>` element is now labelled "<label>, audio" (or "video") and the group keeps "<label>"; a test that queried the element by the bare label queries the group or the longer name. With several players on a page, Space, K, J, L and M go to the one last played, focused or pressed (a single player is unchanged); `shortcuts={false}` still opts out.
 - `LineChart` no longer marks its last point "<value> now" when `current` is set (the rule, dot and label at the end of the line are gone; `current` already says where now is). A chart that has `current` and wants the end marked passes `end="now"`; a chart without `current` that does not want it passes `end="none"`. Baselines of charts with `current` change.
 - `SeekBar` with a `duration` of 0, `NaN` or `Infinity` (or `null`, now allowed) is drawn disabled; before it was enabled with the thumb at 0. Nothing to change unless a test seeks a bar with no duration.
 - Arrows and macOS modifiers in `KeysLegend`, `CommandLegend`, menu shortcuts and tooltip hints are drawn as icons, each followed by a screen-reader name (`←` reads "left arrow", `⌘` "Command"), so the text no longer contains the symbol: a test that queries `"j or ↓"` queries `"j or down arrow"`, and `"⌘Z"` is `"Command Z"`. Their baselines change a little.
