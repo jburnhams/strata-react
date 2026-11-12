@@ -44,6 +44,18 @@ export type ImageMedia = {
   size?: readonly [number, number];
 };
 
+/** A clip to compare by listening (`CompareAudio`). Serve it under a neutral address when the comparison is blind. */
+export type AudioMedia = {
+  kind: "audio";
+  src: string;
+};
+
+/** A text to compare by reading (`CompareText`). */
+export type TextMedia = {
+  kind: "text";
+  text: string;
+};
+
 /** One side of a comparison. */
 export type Candidate<M = ImageMedia> = {
   /** Who it is: a variant name, a model. Never put on the page when `blind`, and never needed by it. */

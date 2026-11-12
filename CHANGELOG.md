@@ -2,6 +2,16 @@
 
 ## 2026-11-12
 
+**CompareAudio, CompareText and PairJudge: audio and text beside pictures (issue #146)** (branch `claude/project-thread-reaene`). strata-models judges clips (text-to-speech) and transcripts as well as pictures, and drew two independent `MediaPlayer`s or two plain boxes. `Candidate`'s media kinds now include `AudioMedia` and `TextMedia`, each with its own view, and the answering half of #144 is split out so it serves all of them.
+
+- `src/components/compare-audio.tsx` (new): `CompareAudio`. One transport for two clips and a switch (`1`, `2`, `x`) that carries the playhead over, as the same time or, when the lengths differ by more than 2%, the same share of the clip (`align`). Only the chosen clip plays. A loop between two points (`i`, `o`, `c`) kept as shares of the clip and watched on `requestAnimationFrame` while playing. The louder clip is turned down to the quieter by RMS (`levelMatch`, default on; a media element's volume cannot go above 1, so it only turns down), with a line saying by how much in the candidates' labels. Built on `useMediaElement`, `Transport`, `SeekBar`, `TimeReadout` and `VolumeControl` from #139; no new dependency. Checked in the file comment: React Aria has no media player or A/B switch.
+- `src/components/compare-text.tsx` (new): `CompareText`. Two panes scrolled together to the same share of their length, each a labelled focusable region; a switch to mark the differing words (`<mark>` with a background and an underline, not colour alone) with counts; an optional `reference` (ground truth) the diff starts against and can leave for the other candidate.
+- `src/lib/text-diff.ts` (new): `diffWords`, our own word-level longest-common-subsequence diff, as Jonathan decided (2026-11-12); refuses a pair over 2.5 million cells. `src/lib/loudness.ts` (new): `loudnessOf`, `matchGains`, `gainToVolume`, `measureLoudness` (RMS and peak in dB; not LUFS, and the file says so; the browser decodes the first 120 s).
+- `src/components/pair-vote.tsx`: the answering moves into `PairJudge` (any `view`: keys `a` `b` `t` `s`, the bar, pending, flag, progress, preload, Undo); `PairVote` is now `PairJudge` with `Compare` as its view, unchanged for callers. `Pair` is generic over the media.
+- `src/components/compare.tsx`: `AudioMedia` and `TextMedia` types. `src/index.ts`: the new exports.
+- `tests/unit/compare-audio.test.tsx` (19), `compare-text.test.tsx` (10), `loudness.test.ts` (4): switching and its alignment, loop, matching, blind, failure, the answering around audio, the diff, scrolling together. `stories/compare-audio.stories.tsx` (new, 8 stories, 16 baselines) and `stories/mocks/handlers.ts` (`/api/clips/:variant` serves real WAVs, so the shots decode and measure them).
+- `README.md`: the Compare row. Not done: video (#156 to #159), and a peak meter beside the level line.
+
 **Switch and Checkbox: `detail` is a description, not part of the name (issue #152)** (branch `claude/project-thread-reaene`). React Aria puts all the text inside a switch into its label, so "Show 1 video" plus its detail was the accessible name and an exact-name query missed it.
 
 - `src/components/switch.tsx`, `src/components/checkbox.tsx`: the label span names the control (`aria-labelledby`) and the detail is `aria-describedby`, ids from `React.useId`. The hidden-label checkbox is unchanged.
