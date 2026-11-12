@@ -1,7 +1,16 @@
 import * as React from "react";
+import {
+  I18nProvider,
+  Input as AriaInput,
+  NumberField as AriaNumberField,
+  Slider as AriaSlider,
+  SliderOutput,
+  SliderThumb,
+  SliderTrack,
+} from "react-aria-components";
 import { useFieldControl } from "./field";
 import { NBSP, format } from "../lib/format";
-import { clamp, decimalsOf, parseHex, parseNumber, roundTo, stepValue, contrastRatio } from "../lib/number-input";
+import { contrastRatio, parseHex } from "../lib/number-input";
 import { cn } from "../lib/utils";
 
 // Controls for setting a number or a colour precisely (strata-react issue #73, from moving
@@ -9,34 +18,52 @@ import { cn } from "../lib/utils";
 // in the same few ways, and each rule below answers one:
 //
 // - `parseFloat(e.target.value)` turns an empty field into NaN. Here a value that is not known is
-//   `null`, stays `null`, and prints `format.missing`; a typed value that is not a number, or is
-//   outside the limits, is NOT coerced and NOT passed on: the control keeps what was typed and tells
-//   the surrounding `Field` what is wrong ("Enter a value from 0% to 500%."), the same place a
-//   server's 422 appears. The callback only ever receives a number inside the limits, or null.
-// - The unit lives inside the control, muted, and in the spoken value ("40%", "90°"): a slider
-//   whose unit is in a label elsewhere reads as a bare number to a screen reader.
-// - Digits are the locale's: what is printed, what is read back from typing, and the message all go
-//   through `Intl`, so 12,5 works in a de-DE app and 1.234,5 is not read as 1.234.
-// - Typing commits on Enter and blur (`commit="change"` to follow every keystroke, for a cheap
-//   preview). Arrow keys step and commit at once: Shift or PageUp/PageDown take the large step,
-//   Home and End jump to the limits. Nothing animates when a value changes: these are dragged and
-//   stepped dozens of times a minute (character.md, the frequency budget).
+//   `null`, stays `null`, and prints `format.missing`; a typed value outside the limits is NOT
+//   clamped and NOT passed on: React Aria's field runs with `commitBehavior="validate"` (it keeps
+//   what was typed instead of snapping 600 to 500), and the control tells the surrounding `Field`
+//   what is wrong ("Enter a value from 0% to 500%."), the same place a server's 422 appears. The
+//   callback only ever receives a number inside the limits, or null.
+// - The unit lives inside the control, muted. A slider's spoken value carries it ("40%", "90°")
+//   when `Intl` knows the unit (percent, degree, millisecond, megabit-per-second and the like):
+//   React Aria builds `aria-valuetext` from an `Intl.NumberFormat`, so "px" or "steps" are in the
+//   printed value and the label but cannot be in the spoken one.
+// - Digits are the locale's: what is printed and what is read back go through `Intl` (React Aria's
+//   `NumberParser`), so 12,5 works in a de-DE app, and the message is in the same digits.
+// - Behaviour is React Aria's: arrows step, PageUp/PageDown take ten steps, Home/End jump to the
+//   limits, a field commits on Enter and blur. Nothing animates when a value changes: these are
+//   dragged and stepped dozens of times a minute (character.md, the frequency budget).
 // - A colour a person picks for their own content (a route's line) is content, not theme, so it is
 //   the one place a raw colour value is right; `against` checks it against what it is drawn on.
-//
-// Not React Aria's NumberField or Slider, on purpose: its field clamps a typed 600 to 500 on blur
-// without saying so (coercion, which this control exists to avoid), and its slider's spoken value
-// comes from `Intl` unit names, which have no "px", "Mbps" or "steps". The native `range` input
-// gives the keyboard, touch and right-to-left behaviour for free and takes a spoken value as given.
-// The focus outline is the base layer's.
+//   The colour field's text box is ours: React Aria's colour field puts the old colour back when
+//   the text is not a colour, where this one says so under the control; the swatch opens the
+//   platform picker.
 
 const box =
-  "flex h-(--control-h) w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
+  "flex h-(--control-h) w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state data-[disabled]:cursor-not-allowed data-[disabled]:bg-muted data-[disabled]:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
 
 /** A number with its unit joined by a non-breaking space; `%` and `°` stay attached. */
 function withUnit(text: string, unit?: string) {
   if (!unit) return text;
   return unit === "%" || unit === "°" ? text + unit : text + NBSP + unit;
+}
+
+// Units `Intl` can speak, by the symbol an app prints. Anything else is printed but not spoken.
+const intlUnits: Record<string, string> = {
+  "%": "percent",
+  "°": "degree",
+  ms: "millisecond",
+  s: "second",
+  kB: "kilobyte",
+  MB: "megabyte",
+  GB: "gigabyte",
+  kbps: "kilobit-per-second",
+  Mbps: "megabit-per-second",
+};
+
+function decimalsOf(n: number): number {
+  const s = String(n);
+  if (s.includes("e-")) return Number(s.split("e-")[1]) + (s.split("e-")[0].split(".")[1]?.length ?? 0);
+  return s.split(".")[1]?.length ?? 0;
 }
 
 function useNumberText(locale: string, places: number) {
@@ -46,13 +73,19 @@ function useNumberText(locale: string, places: number) {
   }, [locale, places]);
 }
 
+function formatOptionsFor(places: number, unit?: string): Intl.NumberFormatOptions {
+  const base: Intl.NumberFormatOptions = { maximumFractionDigits: places, minimumFractionDigits: 0 };
+  const known = unit ? intlUnits[unit] : undefined;
+  return known ? { ...base, style: "unit", unit: known, unitDisplay: "narrow" } : base;
+}
+
 /** Props shared by the number field and the slider. */
 export type RangeProps = {
   min?: number;
   max?: number;
   /** The size of one arrow-key step. Default 1. */
   step?: number;
-  /** The unit shown with the value and spoken with it: "%", "°", "Mbps", "px". */
+  /** The unit shown with the value: "%", "°", "Mbps", "px". Spoken too when `Intl` has it (%, °, ms, s, kB, MB, GB, kbps, Mbps). */
   unit?: string;
   /** The locale for digits and the decimal mark. Default the app's `format` locale. */
   locale?: string;
@@ -64,12 +97,8 @@ export type NumberFieldProps = RangeProps & {
   value: number | null;
   /** Receives a number inside the limits, or `null` when the field is cleared. Never NaN, never out of range. */
   onChange: (value: number | null) => void;
-  /** The step Shift+arrow and PageUp/PageDown take. Default ten steps. */
-  largeStep?: number;
   /** Decimal places to show and keep. Default the places in `step` (and `min`). */
   places?: number;
-  /** Follow every keystroke instead of committing on Enter and blur. For cheap previews only. */
-  commit?: "blur" | "change";
   /** An empty field is an error ("Enter a value.") rather than `null`. */
   required?: boolean;
   disabled?: boolean;
@@ -89,18 +118,16 @@ function describeRange(min: number | undefined, max: number | undefined, show: (
   return "Enter a number.";
 }
 
-/** A number with a unit, keyboard stepping, and typing that is checked rather than coerced: out-of-range or non-numeric input is explained in the surrounding `Field` and never passed on; empty stays `null`. */
+/** A number with a unit on React Aria's number field: typed input is validated, not clamped, so an out-of-range value is explained in the surrounding `Field` and never passed on; empty stays `null`. */
 export function NumberField({
   value,
   onChange,
   min,
   max,
   step = 1,
-  largeStep = step * 10,
   places,
   unit,
   locale = format.locale,
-  commit = "blur",
   required = false,
   disabled,
   id: idProp,
@@ -111,9 +138,16 @@ export function NumberField({
   const { field, report } = useFieldControl();
   const digits = places ?? Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min));
   const show = useNumberText(locale, digits);
-  const [draft, setDraft] = React.useState<string | null>(null);
   const [own, setOwn] = React.useState(false); // invalid, when there is no Field to say so
-  const shown = draft ?? (value === null ? "" : show(value));
+  const unitId = React.useId();
+  // What the field shows. It follows `value`, but also holds an entry we refused, so the person sees
+  // (and can correct) what they typed instead of the field snapping back to the old value.
+  const [local, setLocal] = React.useState<number>(value ?? Number.NaN);
+  const [seen, setSeen] = React.useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setLocal(value ?? Number.NaN);
+  }
 
   const fail = (message: string) => {
     setOwn(true);
@@ -124,85 +158,50 @@ export function NumberField({
     report(undefined);
   };
 
-  /** Checks `text`; calls back and returns true when it is acceptable. */
-  const commitText = (text: string): boolean => {
-    const parsed = parseNumber(text, locale, unit);
-    if (parsed.kind === "empty") {
-      if (required) return fail("Enter a value."), false;
+  const handle = (n: number) => {
+    setLocal(n);
+    if (Number.isNaN(n)) {
+      if (required) return fail("Enter a value.");
       ok();
       if (value !== null) onChange(null);
-      return true;
+      return;
     }
-    if (parsed.kind === "invalid") return fail(describeRange(min, max, show, unit)), false;
-    // Limits are checked on what was typed, before rounding: 500.4 is out of range, not 500.
-    if (clamp(parsed.value, min, max) !== parsed.value) return fail(describeRange(min, max, show, unit)), false;
-    const n = roundTo(parsed.value, digits);
+    if ((min !== undefined && n < min) || (max !== undefined && n > max)) return fail(describeRange(min, max, show, unit));
     ok();
     if (n !== value) onChange(n);
-    return true;
-  };
-
-  const stepBy = (by: number, size: number) => {
-    const current = draft !== null ? (() => { const p = parseNumber(draft, locale, unit); return p.kind === "number" ? p.value : null; })() : value;
-    const next = stepValue(current, by, size, min, max);
-    setDraft(null);
-    ok();
-    if (next !== value) onChange(next);
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (disabled || e.nativeEvent.isComposing) return;
-    const big = e.shiftKey;
-    switch (e.key) {
-      case "ArrowUp": e.preventDefault(); return stepBy(1, big ? largeStep : step);
-      case "ArrowDown": e.preventDefault(); return stepBy(-1, big ? largeStep : step);
-      case "PageUp": e.preventDefault(); return stepBy(1, largeStep);
-      case "PageDown": e.preventDefault(); return stepBy(-1, largeStep);
-      case "Home": if (min !== undefined && draft === null) { e.preventDefault(); setDraft(null); ok(); if (min !== value) onChange(min); } return;
-      case "End": if (max !== undefined && draft === null) { e.preventDefault(); setDraft(null); ok(); if (max !== value) onChange(max); } return;
-      case "Enter": if (draft !== null && commitText(draft)) setDraft(null); return;
-      case "Escape": if (draft !== null) { setDraft(null); ok(); } return;
-    }
   };
 
   const invalid = field?.invalid || own;
-  const parsedNow = value === null ? undefined : value;
   return (
-    <div className={cn(box, className)} aria-invalid={invalid || undefined}>
-      <input
-        id={idProp ?? field?.id}
+    <I18nProvider locale={locale}>
+      <AriaNumberField
+        value={local}
+        onChange={handle}
+        minValue={min}
+        maxValue={max}
+        step={step}
+        formatOptions={{ maximumFractionDigits: digits, minimumFractionDigits: 0 }}
+        commitBehavior="validate"
+        isDisabled={disabled}
+        isInvalid={invalid || undefined}
         name={name}
-        type="text"
-        role="spinbutton"
-        inputMode={digits > 0 || (min !== undefined && min < 0) ? "decimal" : "numeric"}
-        autoComplete="off"
-        spellCheck={false}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        aria-describedby={field?.describedBy}
-        aria-invalid={invalid || undefined}
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={parsedNow}
-        aria-valuetext={value === null ? "Not set" : withUnit(show(value), unit)}
-        placeholder={format.missing}
-        value={shown}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          if (commit === "change") commitText(e.target.value);
-        }}
-        onBlur={() => {
-          if (draft !== null && commitText(draft)) setDraft(null);
-        }}
-        onKeyDown={onKeyDown}
-        className="min-w-0 flex-1 bg-transparent tabular-nums outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-      />
-      {unit && (
-        <span aria-hidden className="ml-2 shrink-0 type-body-sm text-muted-foreground">
-          {unit}
-        </span>
-      )}
-    </div>
+        aria-label={ariaLabel ?? field?.label}
+        className={cn(box, className)}
+      >
+        <AriaInput
+          id={idProp ?? field?.id}
+          placeholder={format.missing}
+          aria-describedby={[field?.describedBy, unit ? unitId : undefined].filter(Boolean).join(" ") || undefined}
+          className="min-w-0 flex-1 bg-transparent tabular-nums outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+        />
+        {unit && (
+          <span id={unitId} className="ml-2 shrink-0 type-body-sm text-muted-foreground">
+            <span aria-hidden>{unit}</span>
+            <span className="sr-only">{intlUnits[unit] ? intlUnits[unit].replace(/-/g, " ") : unit}</span>
+          </span>
+        )}
+      </AriaNumberField>
+    </I18nProvider>
   );
 }
 
@@ -222,11 +221,10 @@ export type SliderProps = RangeProps & {
   disabled?: boolean;
   /** Names the slider when it is used without a `Field`. */
   "aria-label"?: string;
-  id?: string;
   className?: string;
 };
 
-/** A range with its current value always printed beside it in words and unit, spoken as "40%"; `editable` adds a number field to type an exact value. Keyboard, touch and right-to-left are the platform's. */
+/** A slider on React Aria with its current value always printed beside the track (and spoken with the unit when `Intl` knows it); `editable` adds a number field to type an exact value. */
 export function Slider({
   value,
   onChange,
@@ -239,41 +237,48 @@ export function Slider({
   hideValue = false,
   places,
   disabled,
-  id: idProp,
   className,
   "aria-label": ariaLabel,
 }: SliderProps) {
   const { field } = useFieldControl();
-  const numberId = React.useId();
   const digits = places ?? Math.max(decimalsOf(step), decimalsOf(min));
   const show = useNumberText(locale, digits);
-  const span = max - min;
-  const fill = span > 0 ? ((clamp(value, min, max) - min) / span) * 100 : 0;
+  const name = ariaLabel ?? field?.label ?? "Value";
   const text = withUnit(show(value), unit);
   return (
-    <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      <input
-        id={idProp ?? field?.id}
-        type="range"
-        min={min}
-        max={max}
+    <I18nProvider locale={locale}>
+      <AriaSlider
+        value={value}
+        onChange={(v) => onChange(v as number)}
+        minValue={min}
+        maxValue={max}
         step={step}
-        value={clamp(value, min, max)}
-        disabled={disabled}
-        aria-label={ariaLabel}
+        formatOptions={formatOptionsFor(digits, unit)}
+        isDisabled={disabled}
+        aria-label={name}
         aria-describedby={field?.describedBy}
-        aria-invalid={field?.invalid || undefined}
-        aria-valuetext={text}
-        onChange={(e) => onChange(roundTo(Number(e.target.value), digits))}
-        style={{ "--fill": `${fill}%` } as React.CSSProperties}
-        className="strata-range h-(--control-h) min-w-0 flex-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-      />
-      {editable ? (
-        <NumberField id={numberId} className="w-28 shrink-0" aria-label={`${ariaLabel ?? field?.label ?? "Value"}, exact value`} value={value} onChange={(v) => v !== null && onChange(v)} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
-      ) : (
-        !hideValue && <output className="w-16 shrink-0 text-right type-body-sm tabular-nums text-foreground">{text}</output>
-      )}
-    </div>
+        className={cn("flex min-w-0 items-center gap-3", className)}
+      >
+        <SliderTrack className="relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer items-center data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50">
+          {({ state }) => (
+            <>
+              <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
+              <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${state.getThumbPercent(0) * 100}%` }} />
+              <SliderThumb className="top-1/2 size-5 rounded-pill border-2 border-primary bg-background data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring" />
+            </>
+          )}
+        </SliderTrack>
+        {editable ? (
+          <NumberField className="w-28 shrink-0" aria-label={`${name}, exact value`} value={value} onChange={(v) => v !== null && onChange(v)} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
+        ) : (
+          !hideValue && (
+            <SliderOutput aria-hidden className="w-16 shrink-0 text-right type-body-sm tabular-nums text-foreground">
+              {text}
+            </SliderOutput>
+          )
+        )}
+      </AriaSlider>
+    </I18nProvider>
   );
 }
 

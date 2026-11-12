@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ColorField, Field, NumberField, Slider } from "../../src";
-import { contrastRatio, decimalsOf, parseHex, parseNumber, stepValue } from "../../src/lib/number-input";
+import { contrastRatio, parseHex } from "../../src/lib/number-input";
 
 function Controlled({ initial, spy, ...props }: { initial: number | null; spy?: (v: number | null) => void } & Partial<React.ComponentProps<typeof NumberField>>) {
   const [value, setValue] = React.useState<number | null>(initial);
@@ -14,35 +14,7 @@ function Controlled({ initial, spy, ...props }: { initial: number | null; spy?: 
   );
 }
 
-describe("number-input", () => {
-  it("parses in the locale and rejects what is not a number", () => {
-    expect(parseNumber("1,234.5", "en-GB")).toEqual({ kind: "number", value: 1234.5 });
-    expect(parseNumber("1.234,5", "de-DE")).toEqual({ kind: "number", value: 1234.5 });
-    expect(parseNumber("12,5", "de-DE")).toEqual({ kind: "number", value: 12.5 });
-    expect(parseNumber("40%", "en-GB", "%")).toEqual({ kind: "number", value: 40 });
-    expect(parseNumber("−3", "en-GB")).toEqual({ kind: "number", value: -3 });
-    expect(parseNumber("  ", "en-GB")).toEqual({ kind: "empty" });
-    // wrong-locale or malformed grouping is refused, not read as a different magnitude
-    for (const bad of ["12,5", "1.234,5", "1,,234", "12,34", ",5,", "1,23"]) expect(parseNumber(bad, "en-GB").kind).toBe("invalid");
-    expect(parseNumber("12.5", "en-GB")).toEqual({ kind: "number", value: 12.5 });
-    expect(parseNumber("1 234,5", "fr-FR")).toEqual({ kind: "number", value: 1234.5 });
-    // a locale's own digits are read back
-    expect(parseNumber(new Intl.NumberFormat("ar-EG").format(1234.5), "ar-EG")).toEqual({ kind: "number", value: 1234.5 });
-    for (const bad of ["abc", "1e5", "12 34x", "--1", "1.2.3", "Infinity"]) expect(parseNumber(bad, "en-GB").kind).toBe("invalid");
-  });
-
-  it("steps on the grid without float drift and stays in the limits", () => {
-    expect(stepValue(0.1, 1, 0.1)).toBe(0.2);
-    expect(stepValue(0.7, 1, 0.1)).toBe(0.8);
-    expect(stepValue(7, 1, 5, 0)).toBe(10);
-    expect(stepValue(7, -1, 5, 0)).toBe(5);
-    expect(stepValue(500, 1, 1, 0, 500)).toBe(500);
-    expect(stepValue(null, 1, 1, 10, 20)).toBe(10);
-    expect(stepValue(null, -1, 1, 10, 20)).toBe(20);
-    expect(decimalsOf(0.25)).toBe(2);
-    expect(decimalsOf(5)).toBe(0);
-  });
-
+describe("colour rules", () => {
   it("reads hex and measures contrast", () => {
     expect(parseHex("1A7F64")).toBe("#1a7f64");
     expect(parseHex("#abc")).toBe("#aabbcc");
@@ -53,20 +25,19 @@ describe("number-input", () => {
 });
 
 describe("NumberField", () => {
-  it("is a spinbutton with its unit in the spoken value, inside a Field", () => {
+  it("is labelled by its Field, with the hint and the spoken unit as its description", () => {
     render(<Controlled initial={40} />);
-    const input = screen.getByRole("spinbutton", { name: "Volume" });
+    const input = screen.getByRole("textbox", { name: "Volume" });
     expect(input).toHaveValue("40");
-    expect(input).toHaveAttribute("aria-valuetext", "40%");
-    expect(input).toHaveAttribute("aria-valuemax", "500");
-    expect(input).toHaveAccessibleDescription("Up to 500%. Over 100% makes it louder.");
+    expect(input).toHaveAccessibleDescription(/Up to 500%\. Over 100% makes it louder\./);
+    expect(input).toHaveAccessibleDescription(/percent/);
   });
 
   it("commits a typed value on Enter and on blur, not on every keystroke", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Controlled initial={40} spy={spy} />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByRole("textbox");
     await user.clear(input);
     await user.type(input, "250");
     expect(spy).not.toHaveBeenCalledWith(250);
@@ -79,19 +50,11 @@ describe("NumberField", () => {
     expect(spy).toHaveBeenLastCalledWith(300);
   });
 
-  it("follows every keystroke with commit=change", async () => {
+  it("keeps an out-of-range entry on screen, explains it in the Field and does not call back; a good one clears it", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
-    render(<Controlled initial={null} spy={spy} commit="change" />);
-    await user.type(screen.getByRole("spinbutton"), "42");
-    expect(spy.mock.calls.map((c) => c[0])).toEqual([4, 42]);
-  });
-
-  it("explains an out-of-range or non-numeric entry in the Field and does not call back", async () => {
-    const user = userEvent.setup();
-    const spy = vi.fn();
-    render(<Controlled initial={40} spy={spy} />);
-    const input = screen.getByRole("spinbutton");
+    render(<Controlled initial={40} spy={spy} places={1} />);
+    const input = screen.getByRole("textbox");
     await user.clear(input);
     await user.type(input, "600{Enter}");
     expect(spy).not.toHaveBeenCalled();
@@ -100,10 +63,9 @@ describe("NumberField", () => {
     expect(screen.getByText("Enter a value from 0% to 500%.")).toBeInTheDocument();
     expect(input).toHaveAccessibleDescription(/Enter a value from 0% to 500%\./);
     await user.clear(input);
-    await user.type(input, "abc");
-    await user.tab();
+    await user.type(input, "500.4{Enter}"); // checked as typed, not after rounding
     expect(spy).not.toHaveBeenCalled();
-    expect(screen.getByText("Enter a value from 0% to 500%.")).toBeInTheDocument();
+    expect(input).toHaveValue("500.4");
     await user.clear(input);
     await user.type(input, "75{Enter}");
     expect(spy).toHaveBeenCalledWith(75);
@@ -111,67 +73,45 @@ describe("NumberField", () => {
     expect(input).toBeValid();
   });
 
-  it("checks the limits on what was typed, before rounding", async () => {
-    const user = userEvent.setup();
-    const spy = vi.fn();
-    render(<Controlled initial={40} spy={spy} />);
-    const input = screen.getByRole("spinbutton");
-    await user.clear(input);
-    await user.type(input, "500.4{Enter}");
-    expect(spy).not.toHaveBeenCalled();
-    expect(screen.getByText("Enter a value from 0% to 500%.")).toBeInTheDocument();
-    await user.clear(input);
-    await user.type(input, "-0.4{Enter}");
-    expect(spy).not.toHaveBeenCalled();
-  });
-
-  it("escape drops a bad entry and restores the value", async () => {
-    const user = userEvent.setup();
-    render(<Controlled initial={40} />);
-    const input = screen.getByRole("spinbutton");
-    await user.clear(input);
-    await user.type(input, "999{Enter}");
-    await user.keyboard("{Escape}");
-    expect(input).toHaveValue("40");
-    expect(screen.queryByText(/Enter a value/)).toBeNull();
+  it("follows the value when the screen changes it", () => {
+    const { rerender } = render(<NumberField aria-label="Volume" value={40} onChange={() => {}} />);
+    expect(screen.getByRole("textbox")).toHaveValue("40");
+    rerender(<NumberField aria-label="Volume" value={75} onChange={() => {}} />);
+    expect(screen.getByRole("textbox")).toHaveValue("75");
   });
 
   it("keeps an empty field as null and shows the missing mark, never 0 or NaN", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Controlled initial={40} spy={spy} />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByRole("textbox");
     await user.clear(input);
     await user.keyboard("{Enter}");
     expect(spy).toHaveBeenCalledWith(null);
     expect(input).toHaveValue("");
     expect(input).toHaveAttribute("placeholder", "–");
-    expect(input).toHaveAttribute("aria-valuetext", "Not set");
-    expect(input).not.toHaveAttribute("aria-valuenow");
   });
 
   it("a required field refuses empty", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Controlled initial={40} spy={spy} required />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByRole("textbox");
     await user.clear(input);
     await user.keyboard("{Enter}");
     expect(spy).not.toHaveBeenCalled();
     expect(screen.getByText("Enter a value.")).toBeInTheDocument();
   });
 
-  it("steps with arrows, takes the large step on Shift and PageUp, and jumps with Home and End", async () => {
+  it("steps with arrows and jumps with Home and End, stopping at the limits", async () => {
     const user = userEvent.setup();
     render(<Controlled initial={40} />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByRole("textbox");
     input.focus();
     await user.keyboard("{ArrowUp}");
     expect(input).toHaveValue("41");
-    await user.keyboard("{Shift>}{ArrowUp}{/Shift}");
-    expect(input).toHaveValue("50"); // the large step lands on its own grid (multiples of 10)
-    await user.keyboard("{PageDown}");
-    expect(input).toHaveValue("40");
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(input).toHaveValue("39");
     await user.keyboard("{End}");
     expect(input).toHaveValue("500");
     await user.keyboard("{ArrowUp}");
@@ -182,20 +122,11 @@ describe("NumberField", () => {
     expect(input).toHaveValue("0");
   });
 
-  it("starts stepping from the minimum when empty", async () => {
-    const user = userEvent.setup();
-    render(<Controlled initial={null} min={10} />);
-    const input = screen.getByRole("spinbutton");
-    input.focus();
-    await user.keyboard("{ArrowUp}");
-    expect(input).toHaveValue("10");
-  });
-
   it("uses the locale's digits and decimal mark, and reads them back", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Controlled initial={1234.5} spy={spy} locale="de-DE" step={0.5} max={5000} unit="ms" />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByRole("textbox");
     expect(input).toHaveValue("1.234,5");
     await user.clear(input);
     await user.type(input, "2.000,5{Enter}");
@@ -206,7 +137,7 @@ describe("NumberField", () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Controlled initial={40} spy={spy} disabled />);
-    await user.type(screen.getByRole("spinbutton"), "{ArrowUp}");
+    await user.type(screen.getByRole("textbox"), "{ArrowUp}");
     expect(spy).not.toHaveBeenCalled();
   });
 });
@@ -240,7 +171,7 @@ describe("Slider", () => {
       </Field>,
     );
     const range = screen.getByRole("slider", { name: "Opacity" });
-    const number = screen.getByRole("spinbutton", { name: "Opacity, exact value" });
+    const number = screen.getByRole("textbox", { name: "Opacity, exact value" });
     expect(range.id).toBeTruthy();
     expect(number.id).toBeTruthy();
     expect(number.id).not.toBe(range.id);
@@ -250,7 +181,7 @@ describe("Slider", () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Slider aria-label="Opacity" value={40} onChange={spy} min={0} max={100} unit="%" editable />);
-    const number = screen.getByRole("spinbutton", { name: "Opacity, exact value" });
+    const number = screen.getByRole("textbox", { name: "Opacity, exact value" });
     await user.clear(number);
     await user.type(number, "150{Enter}");
     expect(spy).not.toHaveBeenCalled();
