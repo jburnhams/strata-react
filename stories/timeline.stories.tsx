@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Timeline, TimelineZoomControls, noOverlap, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineLane, type TimelineProps } from "../src";
+import { useDrag } from "react-aria";
+import { Lock, Volume2 } from "lucide-react";
+import { IconButton, Timeline, TimelineZoomControls, noOverlap, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineLane, type TimelineProps } from "../src";
 
 // Issue #77. Two subjects on one component, because they are one picture: kiln bookings across a
 // working day (hours on the axis, no current-time rule) and a media edit (seconds, a current time,
@@ -136,3 +138,87 @@ function LiveStage() {
 
 /** Live: the real rules. A move that would overlap shows its reason and is not applied. Skipped by the visual suite. */
 export const Live: Story = { tags: ["no-visual"], render: () => <LiveStage /> };
+
+/** Tall lanes: two control heights, so an item can draw a strip of thumbnails or a waveform. The lane height still follows density. */
+export const TallLanes: Story = {
+  args: {
+    laneRows: 2,
+    position: 20,
+    renderItem: (item, { width }) =>
+      item.kind === "Audio" ? (
+        <Wave width={width} />
+      ) : (
+        <span aria-hidden className="flex h-full items-stretch gap-px">
+          {Array.from({ length: Math.min(Math.floor(width / 56), 12) }, (_, i) => (
+            <span key={i} className="w-14 shrink-0 bg-muted" style={{ opacity: 0.5 + ((i * 17) % 50) / 100 }} />
+          ))}
+        </span>
+      ),
+  },
+};
+
+/** Kind colours chosen by the app (here roles of the theme), so a kind keeps its colour whichever kinds are on the timeline. */
+export const KindColours: Story = {
+  args: { position: 20, kindColours: { Video: "var(--info)", Audio: "var(--success)", Text: "var(--warning)" } },
+};
+
+/** A long lane name with three controls: the column sizes to its content up to a cap, and a longer name reads in full on hover. */
+export const LongLaneName: Story = {
+  args: {
+    lanes: [
+      { id: "v1", label: "Footage from the north ridge, take two", header: <><IconButton icon={Volume2} label="Mute" /><IconButton icon={Lock} label="Lock" /></> },
+      { id: "a1", label: "Audio" },
+    ],
+    items: [{ id: "c1", lane: "v1", start: 2, length: 24, label: "run-02.mp4", kind: "Video" }],
+  },
+};
+
+type Clip = { id: string; name: string; length: number };
+const library: Clip[] = [
+  { id: "l1", name: "ridge-climb.mp4", length: 12 },
+  { id: "l2", name: "summit.mp4", length: 8 },
+  { id: "l3", name: "wind.wav", length: 20 },
+];
+
+/** The app's own drag source: a button that drags a clip (React Aria `useDrag`; Enter starts a keyboard drag). */
+function LibraryClip({ clip }: { clip: Clip }) {
+  const { dragProps, isDragging } = useDrag({ getItems: () => [{ "application/x-clip": clip.id, "text/plain": clip.name }], getAllowedDropOperations: () => ["copy"] });
+  return (
+    <div {...dragProps} role="button" tabIndex={0} aria-label={`Drag ${clip.name}`} className={isDragging ? "rounded-control border border-border bg-muted px-3 py-2 opacity-60" : "rounded-control border border-border px-3 py-2"}>
+      {clip.name} <span className="text-muted-foreground tabular-nums">{clip.length} s</span>
+    </div>
+  );
+}
+
+function DropStage() {
+  const [items, setItems] = React.useState(clips);
+  const [said, setSaid] = React.useState("Nothing added yet.");
+  const lib = (id: string) => library.find((c) => c.id === id)!;
+  return (
+    <div className="grid w-full max-w-3xl gap-3">
+      <div className="flex flex-wrap gap-2">{library.map((c) => <LibraryClip key={c.id} clip={c} />)}</div>
+      <Timeline
+        label="Edit"
+        lanes={[...tracks.slice(0, 2), { id: "a1", label: "Audio (locked)", header: <Lock aria-label="Locked" className="size-4" /> }]}
+        items={items}
+        to={90}
+        zoom={10}
+        position={30}
+        dropTypes={["application/x-clip"]}
+        dropLength={10}
+        validateDrop={(c) => (c.lane === "a1" ? "Audio is locked." : noOverlap(items)("", c))}
+        onDrop={async (d) => {
+          const [first] = d.items;
+          const id = first.kind === "text" ? await first.getText("application/x-clip") : "";
+          const clip = lib(id);
+          setItems((all) => [...all, { id: `n${all.length}`, lane: d.lane, start: d.start, length: clip.length, label: clip.name, kind: clip.name.endsWith(".wav") ? "Audio" : "Video" }]);
+          setSaid(`Added ${clip.name} at ${d.start} s.`);
+        }}
+      />
+      <p className="type-body-sm text-muted-foreground">{said} Drag a clip onto a lane (it snaps to edges); the locked lane refuses with its reason. By keyboard: focus a clip, press Enter, Tab to a lane, Enter to drop it at the current time (30 s).</p>
+    </div>
+  );
+}
+
+/** Dropping from outside by pointer and keyboard, with a refusal on a locked lane. Skipped by the visual suite. */
+export const DropFromOutside: Story = { tags: ["no-visual"], render: () => <DropStage /> };
