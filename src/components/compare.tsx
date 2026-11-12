@@ -189,7 +189,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
               >
                 <SliderTrack className="pointer-events-none h-full w-full">
                   <SliderThumb
-                    className="pointer-events-auto grid h-full w-8 cursor-ew-resize place-items-center data-[focus-visible]:outline-2 data-[focus-visible]:outline-ring"
+                    className="pointer-events-auto grid h-full w-8 cursor-ew-resize place-items-center focus-visible:outline-2 focus-visible:outline-ring"
                     style={{ top: "50%" }}
                   >
                     <span aria-hidden className="col-start-1 row-start-1 h-full w-1 border-x border-background bg-foreground" />

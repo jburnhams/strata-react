@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**State variants from tailwindcss-react-aria-components, not `data-[...]` strings** (branch `claude/aria-variants`). Jonathan asked for the plugin and said not to put every state into CVA. Only `Button` uses CVA, and it keeps `variant` and `size` there; its hover and disabled states now use the plugin's variants like every other component.
+
+- `package.json`, `package-lock.json`: `tailwindcss-react-aria-components` ^2.2.0 added as a dependency (Jonathan's request, 2026-11-12).
+- `src/styles/strata.css`: `@plugin "tailwindcss-react-aria-components"`. With no prefix the plugin makes `hover:`, `focus-visible:` and `disabled:` read React Aria's `data-*` attribute on React Aria elements and the browser's own state on plain ones, so existing plain-element classes keep working, and `hover:` is wrapped in `@media (hover: hover)`, which stops hover colours sticking after a tap.
+- `src/components/*.tsx` (13 files): 56 uses of `data-[selected]:`, `data-[focus-visible]:`, `data-[disabled]:`, `data-[hovered]:`, `data-[open]:` and `data-[focused]:` became `selected:`, `focus-visible:`, `disabled:`, `hover:`, `open:`, `focus:`.
+- `tests/integration/install.test.ts`: the simulated app gets the plugin beside `strata-react`, as npm lays it out. `tests/unit/controls.test.tsx`: the class name it checks is `selected:border-foreground`.
+- `CLAUDE.md`: stack table and the Primitives row name the plugin and the rule.
+
+
 **Compare: difference view and CompareGrid** (branch `claude/project-thread-reaene`, PR #106, second change of the comparison set after #100). Next piece of `design.md`: a way to see exactly where two renderings differ, and every candidate at once. `pixelmatch` is the image diff, as Jonathan decided (it is already a runtime dependency, so none was added).
 
 - `src/lib/image-diff.ts` (**new**): `differences` (pixelmatch over two RGBA buffers, the second resampled to the first's size, marks as a transparent mask, the count and the total), `resample`, `readPixels` (draws a picture on a canvas, at most 2048 px on its long side, and rejects when it cannot be read), `DEFAULT_TOLERANCE` (pixelmatch's 0.1). The arithmetic is pure and unit tested without a canvas; the canvas path is covered by the Storybook shots in Chromium.
