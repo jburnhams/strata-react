@@ -240,8 +240,8 @@ export function ColorSchemeChoice({
               className={cn(
                 // Outer 6px less 2px padding: the segments are 4px, as optical nesting asks.
                 "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control text-muted-foreground transition-state",
-                "data-[hovered]:text-foreground data-[selected]:bg-muted data-[selected]:text-foreground",
-                "data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring",
+                "hover:text-foreground selected:bg-muted selected:text-foreground",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               )}
             >
               <Icon aria-hidden className="size-4" />

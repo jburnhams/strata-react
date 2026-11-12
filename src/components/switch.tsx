@@ -28,18 +28,18 @@ export function Switch({ label, detail, on, defaultOn, onChange, disabled, class
       defaultSelected={defaultOn}
       onChange={onChange}
       isDisabled={disabled}
-      className={cn("group inline-flex min-h-6 cursor-pointer items-start gap-3 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50", className)}
+      className={cn("group inline-flex min-h-6 cursor-pointer items-start gap-3 disabled:cursor-not-allowed disabled:opacity-50", className)}
     >
       <span
         aria-hidden
         className={cn(
           "mt-0.5 flex h-5 w-9 shrink-0 items-center rounded-pill border border-input bg-muted p-0.5 transition-state",
-          "group-data-[selected]:border-primary group-data-[selected]:bg-primary",
-          "group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-ring",
+          "group-selected:border-primary group-selected:bg-primary",
+          "group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring",
         )}
       >
-        <span className="grid size-3.5 place-items-center rounded-pill bg-background text-primary group-data-[selected]:translate-x-4">
-          <span className="hidden size-1.5 rounded-pill bg-primary group-data-[selected]:block" />
+        <span className="grid size-3.5 place-items-center rounded-pill bg-background text-primary group-selected:translate-x-4">
+          <span className="hidden size-1.5 rounded-pill bg-primary group-selected:block" />
         </span>
       </span>
       <span className="grid">
