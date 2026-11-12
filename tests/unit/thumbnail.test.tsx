@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Thumbnail, ThumbnailSkeleton } from "../../src";
 import { installFakeIntersectionObserver } from "../../src/testing";
@@ -104,5 +104,80 @@ describe("ThumbnailSkeleton", () => {
     expect(box.style.aspectRatio).toBe("1.5 / 1");
     expect(box).toHaveAttribute("aria-hidden");
     expect(box).toHaveClass("w-16");
+  });
+});
+
+describe("Thumbnail with sources to try, a way to reject a picture, and a word when it is gone (issue #209)", () => {
+  let io: ReturnType<typeof installFakeIntersectionObserver>;
+  beforeEach(() => {
+    io = installFakeIntersectionObserver();
+  });
+  afterEach(() => io.uninstall());
+  const sizes = ["/maxres.jpg", "/hq.jpg"];
+
+  it("tries the next source when one fails, and shows the missing words after the last", () => {
+    const onMissing = vi.fn();
+    const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager onMissing={onMissing} />);
+    expect(imgIn(container)).toHaveAttribute("src", "/maxres.jpg");
+    fireEvent.error(imgIn(container)!);
+    expect(imgIn(container)).toHaveAttribute("src", "/hq.jpg");
+    expect(onMissing).not.toHaveBeenCalled();
+    fireEvent.error(imgIn(container)!);
+    expect(imgIn(container)).toBeNull();
+    expect(screen.getByRole("img", { name: "Kiln cam: No picture" })).toBeInTheDocument();
+    expect(onMissing).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops at the first source that loads", () => {
+    const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />);
+    fireEvent.load(imgIn(container)!);
+    expect(container.firstElementChild).not.toHaveAttribute("aria-busy");
+    expect(imgIn(container)).toHaveAttribute("src", "/maxres.jpg");
+  });
+
+  it("lets the app reject a picture that loaded, such as a host's grey placeholder, and goes on to the next", () => {
+    const seen: [string | null, number][] = [];
+    const reject = (img: HTMLImageElement, index: number) => {
+      seen.push([img.getAttribute("src"), index]);
+      return index === 0 ? false : undefined;
+    };
+    const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager onLoad={reject} />);
+    fireEvent.load(imgIn(container)!);
+    expect(imgIn(container)).toHaveAttribute("src", "/hq.jpg");
+    fireEvent.load(imgIn(container)!);
+    expect(seen).toEqual([["/maxres.jpg", 0], ["/hq.jpg", 1]]);
+    expect(container.firstElementChild).not.toHaveAttribute("aria-busy");
+  });
+
+  it("is missing, and says so once, when the only source is rejected", () => {
+    const onMissing = vi.fn();
+    const { container } = render(<Thumbnail src="/grey.jpg" alt="Kiln cam" missing="No picture" eager onLoad={() => false} onMissing={onMissing} />);
+    fireEvent.load(imgIn(container)!);
+    expect(screen.getByRole("img", { name: "Kiln cam: No picture" })).toBeInTheDocument();
+    expect(onMissing).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call onMissing for a record with no picture at all", () => {
+    const onMissing = vi.fn();
+    const { rerender } = render(<Thumbnail src={null} alt="Kiln cam" missing="No picture" onMissing={onMissing} />);
+    rerender(<Thumbnail src={[]} alt="Kiln cam" missing="No picture" onMissing={onMissing} />);
+    expect(screen.getByRole("img", { name: "Kiln cam: No picture" })).toBeInTheDocument();
+    expect(onMissing).not.toHaveBeenCalled();
+  });
+
+  it("starts the list again for a new item", () => {
+    const { container, rerender } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />);
+    fireEvent.error(imgIn(container)!);
+    fireEvent.error(imgIn(container)!);
+    rerender(<Thumbnail src={["/other.jpg"]} alt="Kiln cam" missing="No picture" eager />);
+    expect(imgIn(container)).toHaveAttribute("src", "/other.jpg");
+  });
+
+  it("draws the missing state of a decorative avatar as presentation, not an unnamed image", () => {
+    const { container } = render(<Thumbnail src="/gone.jpg" alt="" fallback={<span>N</span>} eager />);
+    fireEvent.error(imgIn(container)!);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(container.querySelector("[aria-hidden='true']")).toHaveTextContent("N");
+    expect(container.querySelector("[role='img']")).toBeNull();
   });
 });

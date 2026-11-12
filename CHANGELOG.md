@@ -2,6 +2,17 @@
 
 ## 2026-11-12
 
+**Thumbnail sources, and a second look from roles (issues #209, #210)** (branch `claude/thumbnail-theme-roles`). The sixth batch, from moving Tubes' viewing side onto Strata. No dependency was added. Finding that shaped the second part: Strata already makes colours, radii, fonts and heights variables, so a region can be given another look by scoping them; what blocked it was three fixed things, and each becomes a role with today's value as its default.
+
+- `src/components/thumbnail.tsx`: `src` may be a list tried in order (next on error or on rejection); `onLoad(img, index)` returning `false` rejects a loaded picture (a host's 200 with a grey placeholder); `onMissing()` once when a request ended without a picture (never for no source); with `alt=""` and no `missing`, the missing state is `aria-hidden`, not an `img` named "".
+- `src/components/infinite-list.tsx`: `LoadMore` takes `more({ label, load })` and `loading(skeleton)` to draw the idle and loading rows, and `ruled={false}` takes the hairline off the idle, loading and end rows; `InfiniteList` passes them as `moreRow`, `moreLoading`, `ruled`. The sentinel, live region, focus after Show more and failure row stay `LoadMore`'s.
+- `src/styles/strata.css`: each type step reads `--type-<step>-size`, `-leading`, `-weight` with today's value as the fallback; `--control-px`, `--control-px-sm`, `--control-icon` on `:root`.
+- `src/components/button.tsx`: padding and icon size from those roles.
+- `tests/unit/thumbnail.test.tsx`, `tests/unit/from-apps.test.tsx`, `tests/integration/package.test.ts`: the new behaviour, and that the compiled stylesheet carries the variables and defaults.
+- `stories/thumbnail.stories.tsx` (`SourcesInOrder`), `stories/button.stories.tsx` (`SecondLook`: default beside a tighter scale, set inline on a wrapper).
+- `README.md`, `UPGRADING.md`: the rows and the changes.
+- Not done: the other components' own padding and icon sizes (inputs, selects, tabs); only `Button` was in the issue.
+
 **Judging pairs: click to choose (#201) and autoplay with loop (#203)** (branch `claude/judging-pairs`). Two asks from strata-models' judge. No dependency was added. Findings that changed the plan: the click is decided in `ViewportFrame` (pointer events: down and up within 4 px and 500 ms), because the frame already owns pan, band and double click, and a pick waits out 300 ms so a double click zooms without choosing; the frame keeps its name ("Picture A") and gains an `aria-describedby` description ("Click to choose A") instead of being renamed, so existing queries and the legend still work; `CompareAudio` has no picture frames, so it has no click to choose (its A/B switch is its choice).
 
 - `src/components/viewport.tsx`: `ViewportFrame` takes `pick` (`FramePick`: `zoneAt`, `onPick`, `describe`); pointer cursor, outline and hint over the zone under the pointer, hidden description for a screen reader; **new** exported types `PickZone`, `FramePick`.

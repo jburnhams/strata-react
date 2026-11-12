@@ -38,6 +38,13 @@ import { cn } from "../lib/utils";
 // watching the viewport. Virtual rows need a box of known height, which a page-scrolled grid is
 // not; a feed long enough to need them belongs in the region. `error` and `moreError` replace the
 // look of a failed first page and a failed later page, as DataView's `error` does.
+//
+// A second look (strata-react issue #210, from Tubes, which scopes Strata's roles under a class and draws
+// centred "Show more" pills with no rules between pages): the idle, loading and end rows were the one
+// look left that an app could not set, so each can be drawn by the app (`more` gets the label and the
+// request, `loading` wraps the skeleton) and `ruled={false}` takes away the hairline above all three. The
+// sentinel, the live region, the focus after Show more and the failure row stay LoadMore's own, so a second
+// look cannot lose what makes a list of pages work.
 
 // The row a virtualised list draws for `LoadMore` is recycled when its height changes (button to
 // skeleton to button), which remounts `LoadMore` and drops what it remembers. The index to focus after
@@ -60,6 +67,12 @@ export type LoadMoreProps<T> = {
   keepAtLeast?: number;
   /** Draws a failed later page, given the reason and the Try again. Rendered inside a `role="alert"` box. */
   error?: (failure: LoadFailure) => React.ReactNode;
+  /** Draws the idle row (the "Show more" button) in the app's own look, given the label and the request. It must call `load` from a real button; focus moves to the first new item afterwards as with the default. */
+  more?: (row: { label: string; load: () => void }) => React.ReactNode;
+  /** Draws the row while a page is on its way, given `moreSkeleton`. The row is hidden from assistive technology as the default is; the "Loading more" announcement stays. */
+  loading?: (skeleton: React.ReactNode) => React.ReactNode;
+  /** A hairline above the idle, loading and end rows. Default true; `false` for a look with no rules between pages. */
+  ruled?: boolean;
   className?: string;
 };
 
@@ -92,6 +105,9 @@ export function LoadMore<T>({
   rootMargin = "400px",
   keepAtLeast = 0,
   error: drawError = defaultMoreError,
+  more: drawMore,
+  loading: drawLoading,
+  ruled = true,
   className,
 }: LoadMoreProps<T>) {
   const { more } = state;
@@ -156,17 +172,21 @@ export function LoadMore<T>({
     <div ref={box} className={className}>
       {hasMore && !error && <div ref={near.ref} aria-hidden className="h-px" />}
       {loadingMore ? (
-        <div aria-hidden className="border-t border-border">{moreSkeleton}</div>
+        <div aria-hidden className={cn(ruled && "border-t border-border")}>{drawLoading ? drawLoading(moreSkeleton) : moreSkeleton}</div>
       ) : error ? (
         <div role="alert">{drawError({ message: error, retry: loadByHand })}</div>
       ) : hasMore ? (
-        <div className="border-t border-border py-3">
-          <Button size="sm" onClick={loadByHand}>
-            {moreLabel}
-          </Button>
-        </div>
+        drawMore ? (
+          drawMore({ label: moreLabel, load: loadByHand })
+        ) : (
+          <div className={cn("py-3", ruled && "border-t border-border")}>
+            <Button size="sm" onClick={loadByHand}>
+              {moreLabel}
+            </Button>
+          </div>
+        )
       ) : (
-        end && <div className="border-t border-border py-3 type-body-sm text-muted-foreground">{end}</div>
+        end && <div className={cn("py-3 type-body-sm text-muted-foreground", ruled && "border-t border-border")}>{end}</div>
       )}
       <p role="status" className="sr-only">
         {loadingMore ? "Loading more" : ""}
@@ -203,6 +223,12 @@ export type InfiniteListProps<T> = {
   error?: (failure: LoadFailure) => React.ReactNode;
   /** Draws a failed later page. Defaults to a danger row with Try again. */
   moreError?: (failure: LoadFailure) => React.ReactNode;
+  /** Draws the "Show more" row in the app's own look, as `LoadMore`'s `more`. */
+  moreRow?: LoadMoreProps<T>["more"];
+  /** Draws the row while a page is on its way, as `LoadMore`'s `loading`. */
+  moreLoading?: LoadMoreProps<T>["loading"];
+  /** A hairline above the next-page rows. Default true. */
+  ruled?: boolean;
   estimateSize?: number;
   height?: number;
   virtualizeFrom?: number;
@@ -225,6 +251,9 @@ export function InfiniteList<T>({
   listClassName,
   error,
   moreError,
+  moreRow,
+  moreLoading,
+  ruled,
   estimateSize,
   height = 480,
   virtualizeFrom,
@@ -251,6 +280,9 @@ export function InfiniteList<T>({
       end={end}
       rootMargin={rootMargin}
       error={moreError}
+      more={moreRow}
+      loading={moreLoading}
+      ruled={ruled}
     />
     </PendingFocus.Provider>
   );

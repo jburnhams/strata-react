@@ -25,6 +25,9 @@ export const Loading: Story = { beforeEach: ({ msw }) => msw.use(photosLoading) 
 export const Missing: Story = { args: { src: "/api/photos/p-305-moved.svg", alt: "Copper red bottle" } };
 
 /** The record has no photo (`src={null}`): the same words, without a request. */
+/** A list of sources is tried in order (the first size does not exist for every item): here the first is missing, the second loads. `onLoad` can reject a picture that loaded (a host's grey placeholder), and `onMissing` is told once when none worked. */
+export const SourcesInOrder: Story = { args: { src: ["/api/photos/p-305-moved.svg", "/api/photos/p-301.svg"], alt: "Celadon bowl, front" } };
+
 export const NoPhoto: Story = { args: { src: null, alt: "Raku dish", missing: "No photo yet" } };
 
 /** The box takes `aspect`; `fit="contain"` shows the whole image inside it instead of cropping. */
