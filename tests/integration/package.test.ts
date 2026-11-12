@@ -36,7 +36,7 @@ describe("package exports", () => {
       .filter((f) => f.endsWith(".js"))
       .map((f) => readFileSync(join(root, "dist", f), "utf8"))
       .join("\n");
-    for (const dep of ["react", "react-router", "@tanstack/react-query", "@tanstack/react-table", "@tanstack/react-virtual"]) {
+    for (const dep of ["react", "react-router", "@tanstack/react-query", "@tanstack/react-table", "react-aria-components"]) {
       expect(js).toMatch(new RegExp(`from "${dep.replace("/", "\\/")}"`));
     }
     expect(js).not.toContain("__SECRET_INTERNALS");

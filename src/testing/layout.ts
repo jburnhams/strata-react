@@ -1,5 +1,5 @@
 // jsdom does no layout: every box is 0×0 and there is no ResizeObserver. Components that measure
-// (LineChart's width, DataTable through TanStack Virtual; React Aria's Virtualizer draws every row of a list in a test unless the box is mocked, which these shims do not make smaller) then render nothing to
+// (LineChart's width; React Aria's Virtualizer draws every row of a list in a test unless the box is mocked, which these shims do not make smaller. A virtualised table with detail rows, or a virtualised grid of tiles, measures each row by its scroll size, which jsdom reports as 0: a test of one gives `Element.prototype.scrollHeight` a value) then render nothing to
 // assert on, so an app testing a screen built from them hits the same wall Strata's own suite did.
 // These shims give every element one fixed box and a ResizeObserver that reports it once on
 // observe. Real layout is checked by the visual suite in Chromium, never here.

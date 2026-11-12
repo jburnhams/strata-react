@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BulkBar, Button, DataTable, SelectableGrid, useSelection, type Column, type InitialSelection } from "../../src";
@@ -34,8 +34,8 @@ function Grid({ rows = photos, initial }: { rows?: ShelfPhoto[]; initial?: Initi
 describe("SelectableGrid", () => {
   it("is a named list of tiles, each a box named from its row, disabled where it cannot be chosen", () => {
     renderWithStrata(<Grid />);
-    const list = screen.getByRole("list", { name: "Pieces from kiln 2" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(photos.length);
+    const list = screen.getByRole("grid", { name: "Pieces from kiln 2" });
+    expect(within(list).getAllByRole("row")).toHaveLength(photos.length);
     expect(box(photos[0])).toBeEnabled();
     expect(box(photos.find((p) => p.collected)!)).toBeDisabled();
     expect(screen.getByText(photos[0].piece)).toBeInTheDocument();
@@ -111,12 +111,20 @@ describe("SelectableGrid", () => {
   });
 
   it("virtualises from 100 tiles and select-all still covers every tile", async () => {
+    // React Aria's Virtualizer sizes a tile by its scroll size, which jsdom does not do (0, so every
+    // tile would count as visible). Give tiles one, like a drawn tile.
+    const before = Object.getOwnPropertyDescriptor(Element.prototype, "scrollHeight");
+    Object.defineProperty(Element.prototype, "scrollHeight", { configurable: true, get: () => 180 });
+    onTestFinished(() => {
+      if (before) Object.defineProperty(Element.prototype, "scrollHeight", before);
+      else delete (Element.prototype as unknown as Record<string, unknown>).scrollHeight;
+    });
     const many = shelfPhotos(400);
     renderWithStrata(<Grid rows={many} />);
-    const shown = within(screen.getByRole("list", { name: "Pieces from kiln 2" })).getAllByRole("listitem");
+    const grid = screen.getByRole("grid", { name: "Pieces from kiln 2" });
+    const shown = within(grid).getAllByRole("row");
     expect(shown.length).toBeLessThan(many.length);
-    expect(shown[0]).toHaveAttribute("aria-setsize", String(many.length));
-    expect(screen.getByRole("region", { name: "Pieces from kiln 2" })).toHaveAttribute("tabindex", "0");
+    expect(grid).toHaveAttribute("aria-rowcount", String(many.length));
     await userEvent.click(selectAll());
     expect(screen.getByText(`${many.filter(uncollected).length} pieces selected`)).toBeInTheDocument();
   });

@@ -48,7 +48,7 @@ export const SortInUrl: Story = {
   ),
 };
 
-/** 480 rows: from 100 rows only the visible ones are in the DOM (TanStack Virtual); header sticks. */
+/** 480 rows: from 100 rows only the visible ones are in the DOM (React Aria's Virtualizer); header sticks. */
 export const Virtualised: Story = { args: { rows: manyBookings, maxHeight: 360 } };
 
 export const Skeleton: Story = { render: () => <TableSkeleton rows={4} columns={6} /> };

@@ -9,43 +9,63 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  Button as AriaButton,
+  Cell as AriaCell,
+  Column as AriaColumn,
+  Row as AriaRow,
+  Table as AriaTable,
+  TableBody,
+  TableHeader,
+  TableLayout,
+  Virtualizer,
+  type Selection,
+} from "react-aria-components";
 import { useSearchParams } from "react-router";
 import { format } from "../lib/format";
 import { cn } from "../lib/utils";
-import { Checkbox } from "./checkbox";
-import { Chevron } from "./disclosure";
+import { TableSelectionCheckbox, useShiftNote } from "./checkbox";
 import { useSelectRows } from "./selection";
+import { Chevron } from "./disclosure";
 
 // The table real product screens use: 12px muted sentence-case headers, row rules (no zebra),
 // numbers right-aligned in tabular figures, one status mark and at most one action per row.
-// Sortable headers are buttons and look sortable; aria-sort says which way. The scroll container is
-// a labelled, focusable region so keyboard users can scroll a wide table.
 //
-// Underneath: TanStack Table for the row model and sorting, TanStack Virtual once a table passes
-// `virtualizeFrom` rows (only the visible rows are in the DOM; the header sticks). The column API
-// stays small on purpose (key, header, cell, numeric, sort), so a screen reads as a list of
-// decisions about columns, not as table plumbing. `sortParam` keeps the sort in the URL
-// (?sort=when.desc) so a sorted view can be linked and survives a reload.
+// The split (Jonathan, 2026-11-12): React Aria's Table draws it and owns what a person does with it
+// (focus and arrow-key navigation, a header that sorts, selection, row and cell semantics for screen
+// readers), and TanStack Table owns the data model (here the sort: `useTable` with the row-sorting
+// feature, so the data model can grow pagination, filtering or grouping without touching the markup).
+// From `virtualizeFrom` rows React Aria's Virtualizer with `TableLayout` draws only the visible rows
+// and keeps the header in place (a table with no detail rows uses a fixed 41px row; one with them
+// measures its rows). The column API stays small on purpose (key, header, cell, numeric, sort), so a
+// screen reads as a list of decisions about columns, not as table plumbing. `sortParam` keeps the
+// sort in the URL (?sort=when.desc) so a sorted view can be linked and survives a reload.
+//
+// A table is a `grid`, its rows `row`s and its cells `gridcell`s (the first column is the row
+// header, which React Aria requires): that is the role the keyboard model belongs to. A sortable
+// header is the column header itself, pressed or Enter: `aria-sort` is "none" until it is sorted.
 //
 // Selection is opt-in (`selection`), because checkboxes belong only where a bulk action exists
 // (one of 23 real product screens had them; a checkbox on every row is a generated-UI tell). When
-// it is on, the first column is a checkbox per row, named from the row (`rowLabel` is required),
-// disabled where `isSelectable` says no; the header's "Select all shown" covers the selectable rows
-// in `rows` (all of them, not only the rendered ones of a virtualised table) and is mixed when some
-// are chosen. Shift-click (or Shift+Space) chooses or clears the run from the last row clicked, in
-// the sorted order shown (`useSelectRows`, shared with `SelectableGrid`). Selected rows take the sunken fill, not a ring, so a selection never reads as focus.
-// The table only draws the selection; the state is the caller's, usually `useSelection`, and the
-// actions live in a `BulkBar`.
+// it is on, the first column is a checkbox per row (React Aria's selection checkbox), named from the
+// row (`rowLabel` is required), disabled where `isSelectable` says no; the header's "Select all shown"
+// covers the selectable rows in `rows` (all of them, not only the rendered ones of a virtualised
+// table) and is mixed when some are chosen, and then clears them. Only the checkbox or Space
+// chooses a row: a click on a cell does nothing to the selection. Shift-click on a checkbox (or
+// Shift+Space) chooses or clears the run from the last row clicked, in the sorted order shown
+// (`useSelectRows`, shared with `SelectableGrid`; React Aria extends a range on a row press, but a
+// checkbox always toggles one row). Selected rows take the sunken fill, not a ring, so a selection
+// never reads as focus. The table only draws the selection; the state is the caller's, usually
+// `useSelection`, and the actions live in a `BulkBar`.
 //
 // Expansion is opt-in too (`expansion`): a row opens a detail row under it, for what belongs to
 // the row but would crowd the table (a firing's pieces, a batch's faces). It follows `Disclosure`:
 // the toggle is a button with `aria-expanded`, named for what it shows (`rowLabel`, "Pieces in
 // firing 412"), and the detail is mounted only while open, so a `useLoad` inside it runs on the
-// first open and not for every row on load. The detail row spans the data columns, starts under
-// the first of them, and has no rule between it and its row, so the two read as one. State is the
-// caller's, usually `useExpanded` (which can keep it in the URL). A virtualised table measures
-// each detail row, so details of any height scroll correctly.
+// first open and not for every row on load. The detail is one more row of the grid, spanning the
+// data columns and starting under the first of them, with no rule between it and its row; it can
+// be focused but never chosen. The toggle does not carry `aria-controls`: a grid cell has no DOM id
+// to point at. State is the caller's, usually `useExpanded` (which can keep it in the URL).
 //
 // Missing values (strata-react issue #47, from the Tubes Library table): a column that gives
 // `value` gets a typed sort (numbers, then text in the locale's order with numbers in it read as
@@ -196,7 +216,7 @@ function useUrlSort(param: string, initial?: Sort): SortState {
   return [sort, set];
 }
 
-/** A table on TanStack Table: muted headers, row rules, right-aligned tabular numbers, sortable headers with `aria-sort`, virtualised from `virtualizeFrom` rows, sort optionally kept in the URL (`sortParam`). */
+/** A table on React Aria's Table with TanStack Table's data model: muted headers, row rules, right-aligned tabular numbers, sortable headers with `aria-sort`, virtualised from `virtualizeFrom` rows, sort optionally kept in the URL (`sortParam`). */
 export function DataTable<T>(props: DataTableProps<T>) {
   // Two thin wrappers so each calls its hooks unconditionally.
   return props.sortParam ? <UrlSortedTable {...props} sortParam={props.sortParam} /> : <LocalSortedTable {...props} />;
@@ -210,9 +230,7 @@ function UrlSortedTable<T>(props: DataTableProps<T> & { sortParam: string }) {
   return <Table {...(props as unknown as DataTableProps<Rec>)} sortState={useUrlSort(props.sortParam, props.initialSort)} />;
 }
 
-type Meta = { numeric?: boolean; truncate?: boolean; hideHeader?: boolean; className?: string };
-
-// The one TanStack feature in use: sorting, on the client. TanStack Table 9 is tree-shaken by feature, so
+// The one TanStack feature in use for now: sorting, on the client. TanStack Table 9 is tree-shaken by feature, so
 // nothing else (pagination, filtering, TanStack's own selection or expansion) is bundled.
 const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() });
 // TanStack Table 9 requires object or array rows. Every row a DataTable draws is a record, but the
@@ -231,11 +249,9 @@ function Table<T extends Rec>({
   expansion,
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
-  const baseId = React.useId();
   const defs = React.useMemo<ColumnDef<typeof features, T, unknown>[]>(
     () =>
       columns.map((c): ColumnDef<typeof features, T, unknown> => {
-        const meta = { numeric: c.numeric, truncate: c.truncate, hideHeader: c.hideHeader, className: c.className } satisfies Meta;
         const { value, sort } = c;
         if (!value) {
           return {
@@ -247,7 +263,6 @@ function Table<T extends Rec>({
             cell: (info) => c.cell?.(info.row.original),
             enableSorting: Boolean(sort),
             sortFn: sort ? (a, b) => sort(a.original, b.original) : undefined,
-            meta,
           };
         }
         // The accessor is the value, with null as undefined, so TanStack's `sortUndefined: "last"`
@@ -267,13 +282,13 @@ function Table<T extends Rec>({
           sortFn: sort
             ? (a, b) => sort(a.original, b.original)
             : (a, b) => compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
-          meta,
         };
       }),
     [columns],
   );
 
-  const sorting: SortingState = sort && columns.some((c) => c.key === sort.key && (c.value ? c.sort !== false : c.sort))
+  const sortable = (c: Column<T>) => (c.value ? c.sort !== false : Boolean(c.sort));
+  const sorting: SortingState = sort && columns.some((c) => c.key === sort.key && sortable(c))
     ? [{ id: sort.key, desc: sort.dir === "descending" }]
     : [];
 
@@ -290,168 +305,142 @@ function Table<T extends Rec>({
     autoResetAll: false,
   });
 
-  const toggle = (key: string) =>
-    setSort({ key, dir: sort?.key === key && sort.dir === "ascending" ? "descending" : "ascending" });
-
   const modelRows = table.getRowModel().rows;
   const canExpand = (row: T) => expansion?.isExpandable?.(row) ?? true;
-  // What the body draws, in order: every row, and a detail line after each open one. The
-  // virtualiser counts these lines, so an open detail takes its own measured slot.
-  const lines = React.useMemo(
-    () =>
-      expansion
-        ? modelRows.flatMap((row) =>
-            expansion.expanded.has(row.id) && canExpand(row.original)
-              ? [{ row, detail: false }, { row, detail: true }]
-              : [{ row, detail: false }],
-          )
-        : modelRows.map((row) => ({ row, detail: false })),
-    // canExpand reads `expansion`, which is a dependency.
-    [modelRows, expansion],
-  );
-  // In the order shown, so a Shift-click range runs down the sorted table, not the data's order.
-  const sortedRows = React.useMemo(() => modelRows.map((r) => r.original), [modelRows]);
-  const select = useSelectRows(sortedRows, rowKey, selection);
-  const selectAll = selection ? select.all : undefined;
   const virtual = modelRows.length >= virtualizeFrom;
-  const scroller = React.useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: virtual ? lines.length : 0,
-    getScrollElement: () => scroller.current,
-    estimateSize: (i) => (lines[i]?.detail ? 160 : 41),
-    // Keyed by row and line kind, not by position: opening or closing a detail shifts every line
-    // after it, and a measured detail height must stay with its detail, not pass to the row that
-    // takes its index (rows are not measured, so a wrong height would never be corrected).
-    getItemKey: (i) => (lines[i] ? `${lines[i].row.id}${lines[i].detail ? "\u0000detail" : ""}` : i),
-    overscan: 8,
-    // Until the region is measured, assume it is full height: the first paint (and a test DOM
-    // with no layout) shows the first page of rows instead of none.
-    initialRect: { width: 0, height: maxHeight },
-  });
-  const items = virtual ? virtualizer.getVirtualItems() : [];
-  const padTop = items.length ? items[0].start : 0;
-  const padBottom = items.length ? virtualizer.getTotalSize() - items[items.length - 1].end : 0;
-  const visible = virtual ? items.map((i) => ({ ...lines[i.index], index: i.index })) : lines.map((l, index) => ({ ...l, index }));
   const lead = (selection ? 1 : 0) + (expansion ? 1 : 0);
 
-  return (
-    <div
-      ref={scroller}
-      role="region"
+  // Selection is React Aria's: its checkboxes (`slot="selection"`), its Space and Shift-range
+  // keys, its select-all. We translate to and from our `RowSelection`, which holds keys of rows
+  // only (an open detail row is a row of the grid too, and is never chosen).
+  const shownKeys = React.useMemo(() => new Set(modelRows.map((r) => r.id)), [modelRows]);
+  const selectableKeys = modelRows.filter((r) => selection?.isSelectable?.(r.original) ?? true).map((r) => r.id);
+  const detailKey = (id: string) => `${id}\u0000detail`;
+  const disabledKeys = React.useMemo(() => {
+    const keys: string[] = [];
+    for (const r of modelRows) {
+      if (selection && !(selection.isSelectable?.(r.original) ?? true)) keys.push(r.id);
+      if (expansion && canExpand(r.original)) keys.push(detailKey(r.id));
+    }
+    return keys;
+    // canExpand reads `expansion`.
+  }, [modelRows, selection, expansion]);
+  // Shift-click on a checkbox extends a range from the last one clicked (issue #32). React Aria
+  // extends on a row press and Shift+Space, but a checkbox always toggles one row, so the range is
+  // still ours: Shift is noted on the press, and a change of exactly one row is a click.
+  const shift = useShiftNote();
+  const sortedRows = React.useMemo(() => modelRows.map((r) => r.original), [modelRows]);
+  const select = useSelectRows(sortedRows, rowKey, selection);
+  const changeSelection = (next: Selection) => {
+    if (!selection) return;
+    if (next !== "all") {
+      const nextShown = new Set([...next].map(String).filter((k) => shownKeys.has(k)));
+      const added = [...nextShown].filter((k) => !selection.selected.has(k));
+      const removed = [...selection.selected].filter((k) => shownKeys.has(k) && !nextShown.has(k));
+      if (added.length + removed.length === 1) {
+        select.toggle(added[0] ?? removed[0], added.length === 1, shift.take());
+        return;
+      }
+    }
+    // What the table does not show (filtered away) is left as it is, as `useSelection` prunes it.
+    const outside = [...selection.selected].filter((k) => !shownKeys.has(k));
+    // React Aria's select-all chooses everything when only some are chosen; a mixed box clears
+    // what is shown here (Gmail's rule, kept from before), so "all" over a part-chosen set clears.
+    const chosen = selectableKeys.filter((k) => selection.selected.has(k)).length;
+    const picked =
+      next === "all" ? (chosen > 0 && chosen < selectableKeys.length ? [] : selectableKeys) : [...next].map(String).filter((k) => shownKeys.has(k));
+    selection.onChange(new Set([...outside, ...picked]));
+  };
+
+  const grid = (
+    <AriaTable
       aria-label={caption}
-      tabIndex={0}
-      className={cn("relative min-w-0 overflow-x-auto", virtual && "overflow-y-auto", className)}
+      selectionMode={selection ? "multiple" : "none"}
+      selectionBehavior="toggle"
+      selectedKeys={selection ? new Set([...selection.selected].filter((k) => shownKeys.has(k))) : undefined}
+      onSelectionChange={changeSelection}
+      disabledKeys={disabledKeys}
+      sortDescriptor={sort && columns.some((c) => c.key === sort.key && sortable(c)) ? { column: sort.key, direction: sort.dir } : undefined}
+      onSortChange={(d) => setSort({ key: String(d.column), dir: d.direction })}
+      className={cn("w-full border-collapse type-body-sm outline-none", virtual && "overflow-auto")}
       style={virtual ? { maxHeight } : undefined}
     >
-      <table className="w-full border-collapse type-body-sm" aria-rowcount={virtual ? lines.length + 1 : undefined}>
-        <caption className="sr-only">{caption}</caption>
-        <thead className={cn(virtual && "sticky top-0 z-10 bg-background")}>
-          {table.getHeaderGroups().map((group) => (
-            <tr key={group.id}>
-              {selectAll && (
-                <th scope="col" className="w-8 py-2 pr-2 text-left align-bottom">
-                  <Checkbox
-                    className="-my-1"
-                    label="Select all shown"
-                    hideLabel
-                    checked={selectAll.checked}
-                    disabled={selectAll.disabled}
-                    onCheckedChange={selectAll.toggle}
-                  />
-                </th>
-              )}
-              {expansion && (
-                <th scope="col" className="w-10 py-2 pr-2">
-                  <span className="sr-only">Details</span>
-                </th>
-              )}
-              {group.headers.map((header) => {
-                const meta = header.column.columnDef.meta as Meta | undefined;
-                const active = sort?.key === header.id && header.column.getCanSort() ? sort.dir : undefined;
-                const Icon = active === "ascending" ? ArrowUp : active === "descending" ? ArrowDown : ArrowUpDown;
-                const rendered = flexRender(header.column.columnDef.header, header.getContext());
-                const label = meta?.hideHeader ? <span className="sr-only">{rendered}</span> : rendered;
-                return (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    aria-sort={active}
-                    className={cn(
-                      "py-2 pr-4 text-left align-bottom type-caption text-muted-foreground last:pr-0",
-                      meta?.numeric && "text-right",
-                    )}
-                  >
-                    {header.column.getCanSort() ? (
-                      <button
-                        type="button"
-                        onClick={() => toggle(header.id)}
-                        className={cn(
-                          "-mx-1 inline-flex cursor-pointer items-center gap-1 rounded-control px-1 transition-state hover:text-foreground",
-                          meta?.numeric && "flex-row-reverse",
-                          active && "text-foreground",
-                        )}
-                      >
-                        {label}
-                        <Icon aria-hidden className={cn("size-3.5", !active && "opacity-50")} />
-                      </button>
-                    ) : (
-                      label
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {padTop > 0 && <tr aria-hidden style={{ height: padTop }} />}
-          {visible.map(({ row, detail, index }) => {
-            const chosen = selection?.selected.has(row.id) ?? false;
-            const detailId = `${baseId}-detail-${row.id}`;
-            if (detail && expansion)
-              return (
-                <tr
-                  key={`${row.id}-detail`}
-                  ref={virtual ? virtualizer.measureElement : undefined}
-                  data-index={index}
-                  className={cn(chosen && "bg-surface-sunken")}
-                  aria-rowindex={virtual ? index + 2 : undefined}
+      <TableHeader className={cn(virtual && "bg-background")}>
+        {selection && (
+          <AriaColumn id={SELECT} textValue="Select all shown" width={32} className="w-8 py-2 pr-2 text-left align-bottom outline-offset-[-2px]">
+            <TableSelectionCheckbox label="Select all shown" className="-my-1" disabled={selectableKeys.length === 0} />
+          </AriaColumn>
+        )}
+        {expansion && (
+          <AriaColumn id={EXPAND} textValue="Details" width={40} className="w-10 py-2 pr-2 outline-offset-[-2px]">
+            <span className="sr-only">Details</span>
+          </AriaColumn>
+        )}
+        {columns.map((c, i) => (
+          <AriaColumn
+            key={c.key}
+            id={c.key}
+            textValue={c.header}
+            // React Aria requires a row header; the first data column is the row's name.
+            isRowHeader={i === 0}
+            allowsSorting={sortable(c)}
+            // Widths apply only to a virtualised table (a plain one sizes its columns to their
+            // content): numbers take less than text. `last:pr-0` would match every cell of a
+            // virtualised table, where each sits alone in a wrapper, so the last column is named.
+            width={c.numeric ? "0.6fr" : "1fr"}
+            className={cn(
+              "py-2 text-left align-bottom type-caption font-normal text-muted-foreground outline-offset-[-2px]",
+              i < columns.length - 1 && "pr-4",
+              c.numeric && "text-right",
+            )}
+          >
+            {({ allowsSorting, sortDirection }) => {
+              const Icon = sortDirection === "ascending" ? ArrowUp : sortDirection === "descending" ? ArrowDown : ArrowUpDown;
+              const label = c.hideHeader ? <span className="sr-only">{c.header}</span> : c.header;
+              return allowsSorting ? (
+                <span
+                  className={cn(
+                    "-mx-1 inline-flex cursor-pointer items-center gap-1 rounded-control px-1 transition-state hover:text-foreground",
+                    c.numeric && "flex-row-reverse",
+                    sortDirection && "text-foreground",
+                  )}
                 >
-                  {lead > 0 && <td colSpan={lead} />}
-                  <td id={detailId} colSpan={columns.length} className="pt-0.5 pb-4 align-top">
-                    {expansion.detail(row.original)}
-                  </td>
-                </tr>
+                  {label}
+                  <Icon aria-hidden className={cn("size-3.5", !sortDirection && "opacity-50")} />
+                </span>
+              ) : (
+                label
               );
-            const open = expansion?.expanded.has(row.id) ?? false;
-            return (
-            <tr
+            }}
+          </AriaColumn>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {modelRows.flatMap((row) => {
+          const open = (expansion?.expanded.has(row.id) ?? false) && canExpand(row.original);
+          const cells = new Map(row.getAllCells().map((cell) => [cell.column.id, cell]));
+          const items = [
+            <AriaRow
               key={row.id}
-              className={cn("border-t border-border", chosen && "bg-surface-sunken")}
-              aria-rowindex={virtual ? index + 2 : undefined}
+              id={row.id}
+              textValue={selection?.rowLabel(row.original) ?? expansion?.rowLabel(row.original) ?? row.id}
+              // A row's own press does nothing: only its checkbox, or Space, chooses it, so a click on
+              // a cell never changes the selection (React Aria's "toggle" would otherwise make every row a switch).
+              onAction={selection ? noop : undefined}
+              className={cn("border-t border-border outline-offset-[-2px] selected:bg-surface-sunken", open && "selected:bg-surface-sunken")}
             >
               {selection && (
-                <td className="w-8 py-2.5 pr-2 align-middle">
-                  <Checkbox
-                    className="-my-0.5"
-                    label={`Select ${selection.rowLabel(row.original)}`}
-                    hideLabel
-                    checked={chosen}
-                    disabled={!(selection.isSelectable?.(row.original) ?? true)}
-                    onCheckedChange={(on, gesture) => select.toggle(row.id, on, gesture)}
-                  />
-                </td>
+                <AriaCell className="w-8 py-2.5 pr-2 align-middle">
+                  <TableSelectionCheckbox label={`Select ${selection.rowLabel(row.original)}`} className="-my-0.5" />
+                </AriaCell>
               )}
               {expansion && (
-                <td className="w-10 py-2.5 pr-2 align-middle">
+                <AriaCell className="w-10 py-2.5 pr-2 align-middle">
                   {canExpand(row.original) && (
-                    <button
-                      type="button"
+                    <AriaButton
                       aria-expanded={open}
-                      aria-controls={open ? detailId : undefined}
                       aria-label={expansion.rowLabel(row.original)}
-                      title={expansion.rowLabel(row.original)}
-                      onClick={() => {
+                      onPress={() => {
                         const next = new Set(expansion.expanded);
                         if (open) next.delete(row.id);
                         else next.add(row.id);
@@ -460,35 +449,64 @@ function Table<T extends Rec>({
                       className="-my-1.5 grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control hover:bg-muted"
                     >
                       <Chevron open={open} />
-                    </button>
+                    </AriaButton>
                   )}
-                </td>
+                </AriaCell>
               )}
-              {row.getAllCells().map((cell) => {
-                const meta = cell.column.columnDef.meta as Meta | undefined;
+              {columns.map((c, i) => {
+                const cell = cells.get(c.key)!;
                 return (
-                  <td
-                    key={cell.id}
+                  <AriaCell
+                    key={c.key}
                     className={cn(
-                      "py-2.5 pr-4 align-middle last:pr-0",
-                      meta?.numeric && "text-right tabular-nums",
-                      meta?.truncate && "max-w-48 truncate",
-                      meta?.className,
+                      "py-2.5 align-middle",
+                      i < columns.length - 1 && "pr-4",
+                      c.numeric && "text-right tabular-nums",
+                      c.truncate && "max-w-48 truncate",
+                      c.className,
                     )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  </AriaCell>
                 );
               })}
-            </tr>
+            </AriaRow>,
+          ];
+          if (open && expansion)
+            items.push(
+              <AriaRow key={detailKey(row.id)} id={detailKey(row.id)} textValue={expansion.rowLabel(row.original)} className="outline-offset-[-2px]">
+                {lead > 0 && <AriaCell colSpan={lead} />}
+                <AriaCell colSpan={columns.length} className="pt-0.5 pb-4 align-top">
+                  {expansion.detail(row.original)}
+                </AriaCell>
+              </AriaRow>,
             );
-          })}
-          {padBottom > 0 && <tr aria-hidden style={{ height: padBottom }} />}
-        </tbody>
-      </table>
+          return items;
+        })}
+      </TableBody>
+    </AriaTable>
+  );
+
+  return (
+    <div
+      className={cn("relative min-w-0", !virtual && "overflow-x-auto", className)}
+      onMouseDownCapture={shift.handlers.onMouseDown}
+      onKeyDownCapture={shift.handlers.onKeyDown}
+    >
+      {virtual ? (
+        <Virtualizer layout={TableLayout} layoutOptions={expansion ? { estimatedRowHeight: 41, headingHeight: 36 } : { rowHeight: 41, headingHeight: 36 }}>
+          {grid}
+        </Virtualizer>
+      ) : (
+        grid
+      )}
     </div>
   );
 }
+
+const SELECT = "\u0000select";
+const EXPAND = "\u0000expand";
+const noop = () => {};
 
 /** The loading placeholder for a `DataTable`, shaped like its rows. */
 export function TableSkeleton({ rows = 4, columns = 5 }: { rows?: number; columns?: number }) {

@@ -126,13 +126,13 @@ describe("renderRoutes on the kiln app's own routes", () => {
   it("starts at the basename and loads the bookings through MSW", async () => {
     const { router } = renderRoutes(kilnRoutes, { basename });
     expect(router.state.location.pathname).toBe("/kiln");
-    const table = await screen.findByRole("table", { name: /Work in the kilns/ });
+    const table = await screen.findByRole("grid", { name: /Work in the kilns/ });
     expect(within(table).getAllByRole("row").length).toBeGreaterThan(1);
   });
 
   it("reads the sort from the URL under the basename", async () => {
     renderRoutes(kilnRoutes, { basename, route: "/kiln/?sort=pieces.desc" });
-    const table = await screen.findByRole("table", { name: /Work in the kilns/ });
+    const table = await screen.findByRole("grid", { name: /Work in the kilns/ });
     expect(within(table).getByRole("columnheader", { name: /Pieces/ })).toHaveAttribute("aria-sort", "descending");
   });
 
