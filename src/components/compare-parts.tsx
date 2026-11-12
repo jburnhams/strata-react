@@ -24,7 +24,7 @@ export function Caption({ c, blind }: { c: Candidate<unknown>; blind: boolean })
 }
 
 /** One picture inside a frame: a skeleton while it loads, the product's words if it fails. */
-export function Picture({ c, blind, missing, onNatural, imgRef }: { c: Candidate; blind: boolean; missing: string; onNatural?: (w: number, h: number) => void; imgRef?: React.Ref<HTMLImageElement> }) {
+export function Picture({ c, blind, missing, onNatural, imgRef, pixelated }: { c: Candidate; blind: boolean; missing: string; onNatural?: (w: number, h: number) => void; imgRef?: React.Ref<HTMLImageElement>; pixelated?: boolean }) {
   const [state, setState] = React.useState<"loading" | "ready" | "failed">("loading");
   React.useEffect(() => setState("loading"), [c.media.src]);
   const alt = blind ? c.label : c.media.alt;
@@ -43,6 +43,7 @@ export function Picture({ c, blind, missing, onNatural, imgRef }: { c: Candidate
         src={c.media.src}
         alt={alt}
         draggable={false}
+        style={pixelated ? { imageRendering: "pixelated" } : undefined}
         onLoad={(e) => {
           setState("ready");
           onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);

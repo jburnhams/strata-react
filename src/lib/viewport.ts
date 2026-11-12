@@ -42,3 +42,35 @@ export function actualPixelsScale(naturalWidth: number, fittedWidth: number): nu
 export function viewportTransform(v: Viewport): string {
   return `translate(${v.x}px, ${v.y}px) scale(${v.scale})`;
 }
+
+/** A box in a picture, as shares (0 to 1) of its width and height from the top left: `[x, y, width, height]`. */
+export type ShareBox = readonly [number, number, number, number];
+
+/** A named box in the source's coordinates: `of` is the reference size in pixels, and without it the box is already shares. */
+export type Region = { id: string; label: string; box: readonly [number, number, number, number]; of?: readonly [number, number] };
+
+/** A region as shares of the frame, so it lands on the same part of every candidate whatever its pixel size. */
+export function regionShares(region: Region): ShareBox {
+  const [x, y, w, h] = region.box;
+  if (!region.of) return [x, y, w, h];
+  const [ow, oh] = region.of;
+  return [x / ow, y / oh, w / ow, h / oh];
+}
+
+/** The viewport that fills the frame with a box (as much of it as fits, centred): the scale that fits the box, the offset that puts its centre at the frame's centre. */
+export function boxViewport(box: ShareBox, frame: { width: number; height: number }): Viewport {
+  const [x, y, w, h] = box;
+  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(1 / Math.max(w, 1e-6), 1 / Math.max(h, 1e-6))));
+  return clampViewport({ scale, x: -scale * (x + w / 2 - 0.5) * frame.width, y: -scale * (y + h / 2 - 0.5) * frame.height }, frame);
+}
+
+/** A rectangle drawn on the frame (pixels from its top left) as shares of the picture under the viewport now. */
+export function frameBoxToShares(rect: { x0: number; y0: number; x1: number; y1: number }, v: Viewport, frame: { width: number; height: number }): ShareBox {
+  const toShare = (p: number, offset: number, size: number) => (size ? (p - size / 2 - offset) / v.scale / size + 0.5 : 0);
+  const clamp = (n: number) => Math.min(1, Math.max(0, n));
+  const xa = clamp(toShare(Math.min(rect.x0, rect.x1), v.x, frame.width));
+  const xb = clamp(toShare(Math.max(rect.x0, rect.x1), v.x, frame.width));
+  const ya = clamp(toShare(Math.min(rect.y0, rect.y1), v.y, frame.height));
+  const yb = clamp(toShare(Math.max(rect.y0, rect.y1), v.y, frame.height));
+  return [xa, ya, xb - xa, yb - ya];
+}

@@ -14,6 +14,8 @@ import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
 import { ViewportFrame, useViewport } from "./viewport";
+import { RegionChips, useRegions } from "./compare-regions";
+import type { Region } from "../lib/viewport";
 
 // Two videos of the same thing on ONE clock, to be judged blind by eye. What the video-enhance eval
 // in strata-models needs and two plain <video> elements cannot give: the interesting views (the swipe
@@ -94,6 +96,8 @@ export type CompareVideoProps = {
   /** The looped range in seconds, `null` for an end not set. Give it (with `onLoopChange`) to keep the range when the pair changes to another of the same item. Without it the component keeps its own. */
   loop?: VideoLoop;
   onLoopChange?: (loop: VideoLoop) => void;
+  /** Named boxes to look at enlarged, as in `Compare`, on the same clock; a box drawn by hand (Shift-drag) is for a paused clip. Nearest-neighbour while one is shown. */
+  regions?: readonly Region[];
   /** Which video's sound is heard; the other is muted. Default "a". */
   audio?: "a" | "b" | "none";
   /** Draw nearest-neighbour when shown larger than the video's own pixels (`zoomed`, default), always, or never. */
@@ -126,7 +130,7 @@ function useWidth(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
-export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, moments = [], loop: loopProp, onLoopChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
+export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
   const refA = React.useRef<HTMLVideoElement>(null);
   const refB = React.useRef<HTMLVideoElement>(null);
   const sa = useMediaElement(refA);
@@ -282,11 +286,13 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   // Each video against its own pixels: the one drawn larger than its pixels is nearest-neighbour, the other not.
   const frameHeight = frameWidth / aspect;
   const sharpFor = (c: Candidate<VideoMedia>) => {
+    if (rg.active !== null) return true;
     if (pixelated !== "zoomed") return pixelated === "always";
     const drawn = Math.min(frameWidth, frameHeight * (c.media.width / c.media.height));
     return drawn > 0 && (viewport.scale * drawn) / c.media.width > 1;
   };
-  const zoom = useZoom({ viewport, setViewport, frame: frameRef, natural });
+  const rg = useRegions({ regions, viewport, setViewport, frame: frameRef, reset: `${a.media.src}|${b.media.src}` });
+  const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: frameRef, natural });
   const flip = () => setShowing((s) => (s === "a" ? "b" : "a"));
 
   const video = (c: Candidate<VideoMedia>, ref: React.RefObject<HTMLVideoElement | null>) => (
@@ -304,7 +310,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   );
   const loading = !failed && (sa.duration === null || sb.duration === null);
   const skeleton = loading && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />;
-  const frameProps = { viewport, setViewport, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
+  const frameProps = { viewport, setViewport: rg.setViewport, onBox: wanted ? undefined : rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
 
   const shortcuts: Shortcut[] = [
     ...extraShortcuts,
@@ -319,6 +325,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
     { keys: ["o"], label: "Loop ends here", run: () => setPoint("end") },
     { keys: ["c"], label: "Clear the loop", run: clearLoop, disabled: loop.start === null && loop.end === null },
     ...(audio === "none" ? [] : [{ keys: ["m"], label: "Mute", run: () => setMuted((m) => !m) }]),
+    ...rg.shortcuts,
     ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });
@@ -389,6 +396,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           <ToolbarSeparator />
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
+        <RegionChips state={rg} />
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>

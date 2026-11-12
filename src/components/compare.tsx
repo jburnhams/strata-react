@@ -11,6 +11,8 @@ import { Slider } from "./value-controls";
 import { DifferenceMarks, useDifference, type ReadPixels } from "./difference";
 import { format } from "../lib/format";
 import { ViewportFrame, useViewport } from "./viewport";
+import { RegionChips, useRegions } from "./compare-regions";
+import type { Region } from "../lib/viewport";
 
 // Two renderings of the same thing, to be looked at closely and judged. It exists because four
 // apps draw this by hand (the stills arena, the models judge, the listory match queue, the
@@ -108,6 +110,8 @@ export type CompareProps = {
   modes?: readonly CompareMode[];
   /** How tall a frame may be, so the pair and the answer fit on one screen: a CSS length (`"60svh"`) or `"viewport"` (the window's height less room for the toolbar, captions, a vote bar and the key legend). The frame narrows to keep the picture's shape. Default: as tall as the width makes it. */
   maxHeight?: string;
+  /** Named boxes in the source's coordinates to look at enlarged: a strip of chips, keys `q` `w` `e` `r` `y` `u`, nearest-neighbour drawing while one is shown, and Shift-drag to make another. They work in every view. The same share of each side is shown, whatever its pixel size. Label them by content ("Face"), never by candidate. */
+  regions?: readonly Region[];
   /** Bind the view, zoom and full-screen keys on the window. Default true; turn off when a surrounding screen binds the same keys. */
   keys?: boolean;
   /** Shortcuts of the surrounding screen (the answer keys of a `PairVote`), bound with Compare's own and drawn in the same legend, so there is one list and the two cannot clash unseen. Listed first. */
@@ -118,7 +122,7 @@ export type CompareProps = {
 };
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, regions, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -136,7 +140,8 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   const imgRef = React.useRef<HTMLImageElement>(null);
   const aspect = natural ? natural[0] / natural[1] : 3 / 2;
 
-  const zoom = useZoom({ viewport, setViewport, frame: frameRef, natural });
+  const rg = useRegions({ regions, viewport, setViewport, frame: frameRef, reset: pairKey });
+  const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: frameRef, natural });
   const flip = () => setShowing((s) => (s === "a" ? "b" : "a"));
 
   const offered = modes.includes(mode) ? modes : [mode, ...modes];
@@ -144,15 +149,16 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
     ...extraShortcuts,
     ...offered.map((m, i): Shortcut => ({ keys: [String(i + 1)], label: MODE_LABEL[m], run: () => onModeChange(m) })),
     { keys: ["x"], label: `Flip ${a.label} and ${b.label}`, run: flip, disabled: mode !== "blink" },
+    ...rg.shortcuts,
     ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });
 
   const pane = (c: Candidate, ref?: React.Ref<HTMLImageElement>, onNatural?: (w: number, h: number) => void) => (
-    <Picture c={c} blind={blind} missing={missing} imgRef={ref} onNatural={onNatural} />
+    <Picture c={c} blind={blind} missing={missing} imgRef={ref} onNatural={onNatural} pixelated={rg.active !== null} />
   );
   const learn = (w: number, h: number) => setLearned({ key: pairKey, size: [w, h] });
-  const frameProps = { viewport, setViewport, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
+  const frameProps = { viewport, setViewport: rg.setViewport, onBox: rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
 
   let body: React.ReactNode;
   if (mode === "side") {
@@ -253,6 +259,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           <ToolbarSeparator />
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
+        <RegionChips state={rg} />
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>

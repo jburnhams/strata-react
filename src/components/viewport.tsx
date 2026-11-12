@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
-import { FIT, clampViewport, viewportTransform, zoomAt, type Viewport } from "../lib/viewport";
+import { FIT, clampViewport, viewportTransform, zoomAt, type ShareBox, type Viewport } from "../lib/viewport";
 
 // One picture's frame, with zoom and pan that other frames can share (strata-react issue: shared
 // comparison and voting components). Judging two renderings of a photo is mostly looking at the same
@@ -38,12 +38,16 @@ export type ViewportFrameProps = ViewportState & {
   overlay?: React.ReactNode;
   /** The tallest the frame may be, as a CSS length (`"60svh"`). The width follows, narrower than the space it has and centred, so the picture keeps its shape. Default: no limit, the frame is as tall as its width and aspect make it. */
   maxHeight?: string;
+  /** Shift-drag draws a rectangle on the frame and calls this with it when let go (pixels from the frame's top left). Without it Shift-drag does nothing special. */
+  onBox?: (rect: { x0: number; y0: number; x1: number; y1: number }) => void;
+  /** A box to outline on the whole picture (a region being pointed at), as shares of it. Drawn only while the picture is fitted. */
+  outline?: ShareBox | null;
   className?: string;
 };
 
 /** A clipped frame whose children zoom and pan together; the viewport is the caller's, so frames can share one. */
 export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps>(function ViewportFrame(
-  { label, aspect, viewport, setViewport, children, cover, overlay, maxHeight, className },
+  { label, aspect, viewport, setViewport, children, cover, overlay, maxHeight, onBox, outline, className },
   forwardedRef,
 ) {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -51,6 +55,14 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
   const latest = React.useRef(viewport);
   latest.current = viewport;
   const drag = React.useRef<{ x: number; y: number } | null>(null);
+  // A rectangle being drawn with Shift held (frame pixels), which asks for a region instead of panning.
+  const [band, setBand] = React.useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const bandRef = React.useRef(band);
+  bandRef.current = band;
+  const inFrame = (clientX: number, clientY: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  };
 
   const size = () => {
     const r = ref.current!.getBoundingClientRect();
@@ -104,19 +116,40 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       tabIndex={0}
       onKeyDown={onKeyDown}
       onPointerDown={(e) => {
+        if (e.shiftKey && onBox && e.button === 0) {
+          const p = inFrame(e.clientX, e.clientY);
+          setBand({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          return;
+        }
         if (!zoomed || e.button !== 0) return;
         drag.current = { x: e.clientX, y: e.clientY };
         e.currentTarget.setPointerCapture?.(e.pointerId);
       }}
       onPointerMove={(e) => {
+        if (bandRef.current) {
+          const p = inFrame(e.clientX, e.clientY);
+          setBand({ ...bandRef.current, x1: p.x, y1: p.y });
+          return;
+        }
         if (!drag.current) return;
         const dx = e.clientX - drag.current.x;
         const dy = e.clientY - drag.current.y;
         drag.current = { x: e.clientX, y: e.clientY };
         setViewport(clampViewport({ ...latest.current, x: latest.current.x + dx, y: latest.current.y + dy }, size()));
       }}
-      onPointerUp={() => (drag.current = null)}
-      onPointerCancel={() => (drag.current = null)}
+      onPointerUp={() => {
+        drag.current = null;
+        const b = bandRef.current;
+        if (b) {
+          setBand(null);
+          if (Math.abs(b.x1 - b.x0) > 6 && Math.abs(b.y1 - b.y0) > 6) onBox?.(b);
+        }
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+        setBand(null);
+      }}
       onDoubleClick={(e) => {
         const v = latest.current;
         setViewport(v.scale > 1 ? FIT : zoomAt(v, 2, fromCentre(e.clientX, e.clientY), size()));
@@ -139,6 +172,10 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
           </div>
         </div>
       )}
+      {outline && viewport.scale === 1 && (
+        <div aria-hidden className="pointer-events-none absolute border-2 border-foreground ring-1 ring-background" style={{ left: `${outline[0] * 100}%`, top: `${outline[1] * 100}%`, width: `${outline[2] * 100}%`, height: `${outline[3] * 100}%` }} />
+      )}
+      {band && <div aria-hidden className="pointer-events-none absolute border-2 border-dashed border-foreground" style={{ left: Math.min(band.x0, band.x1), top: Math.min(band.y0, band.y1), width: Math.abs(band.x1 - band.x0), height: Math.abs(band.y1 - band.y0) }} />}
       {overlay != null && (
         <div
           className="pointer-events-none absolute inset-0"

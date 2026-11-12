@@ -17,6 +17,16 @@ function Stateful(args: React.ComponentProps<typeof Compare>) {
   return <Compare {...args} mode={mode} onModeChange={setMode} className="max-w-3xl" />;
 }
 
+// A story's own hand: press a region's chip once it is on the page, so a screenshot shows the region.
+function OpenOn({ chip, children }: { chip: string; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const t = setTimeout(() => [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((e) => e.textContent === chip)?.click(), 50);
+    return () => clearTimeout(t);
+  }, [chip]);
+  return <div ref={ref}>{children}</div>;
+}
+
 const meta = {
   title: "Data/Compare",
   component: Compare,
@@ -50,6 +60,16 @@ export const Blind: Story = { args: { blind: true, a: blindA, b: blindB } };
 /** Only the views a screen wants: a judging screen might offer side by side and blink and nothing else. */
 export const TwoViews: Story = { args: { modes: ["side", "blink"] } };
 
+/** Regions: the same part of each side, enlarged to fill the frame with nearest-neighbour, from chips or `q` `w` `e`. Shift-drag makes another. This one opens on the rim. */
+export const Regions: Story = {
+  args: { mode: "swipe", regions: [{ id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] }, { id: "glaze", label: "Glaze", box: [60, 120, 160, 120], of: [400, 300] }] },
+  render: (args) => (
+    <OpenOn chip="Rim">
+      <Stateful {...args} />
+    </OpenOn>
+  ),
+};
+
 /** One side did not load: the product's words in its place, and the other side still works. */
 export const OneMissing: Story = { args: { b: { ...auto, media: { ...auto.media, src: "/api/renderings/gone.svg" } } } };
 
@@ -82,5 +102,14 @@ export const Grid: StoryObj<typeof CompareGrid> = {
 export const GridBlind: StoryObj<typeof CompareGrid> = {
   render: () => (
     <CompareGrid label="Three versions" items={[{ ...final, label: "A" }, { ...auto, label: "B" }, { ...warm, label: "C" }]} blind missing="Picture not found" className="max-w-5xl" />
+  ),
+};
+
+/** The same region in every tile at once: the grid's chips, keys and Shift-drag work as in `Compare`. */
+export const GridRegions: StoryObj<typeof CompareGrid> = {
+  render: () => (
+    <OpenOn chip="Rim">
+      <CompareGrid label="Three versions of this photo" items={[final, auto, warm]} blind={false} missing="Picture not found" regions={[{ id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] }]} className="max-w-5xl" />
+    </OpenOn>
   ),
 };
