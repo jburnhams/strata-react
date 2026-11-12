@@ -167,3 +167,13 @@ export { CompareGrid, type CompareGridProps } from "./components/compare-grid";
 export { useDifference, type DifferenceState, type ReadPixels } from "./components/difference";
 export { differences, readPixels, resample, MAX_SIDE, DEFAULT_TOLERANCE, type Difference, type Pixels } from "./lib/image-diff";
 export { Workspace, Split, Pane, useWorkspaceState, type WorkspaceState, type PaneProps } from "./components/workspace";
+export {
+  useHistory,
+  useHistoryState,
+  type History,
+  type HistoryOptions,
+  type HistoryStep,
+  type HistoryStateOptions,
+  type SetOptions,
+} from "./components/history";
+export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
