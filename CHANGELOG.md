@@ -8,6 +8,14 @@
 - `src/index.ts`: exports `TimelineDrop`.
 - `stories/timeline.stories.tsx`: `TallLanes`, `KindColours`, `LongLaneName` (6 **new** baselines) and `DropFromOutside` (live, a `useDrag` library, a locked lane).
 - `tests/unit/timeline-outside.test.tsx` **new** (12): lane and time of a drop, snapping, refusal while hovering and on drop, overlap, leaving, an unaccepted type, the keyboard drop at the current time, a complete React Aria keyboard drag (a plain `Set` of types reaches `getDropOperation`, not `DragTypes`), `laneRows`, `kindColours` staying put, the header.
+
+**Narrow panes (issue #122)** (branch `claude/narrow-122`). In a 300px library, strata-vid's missing-file row cut a name to "parkru…", a chart's table header said "Time" for a distance, and a frame timecode read as hours. Three small fixes, found by running the components in a pane.
+
+- `src/components/file-intake.tsx`: `MissingFile` wraps its name instead of truncating it (at least ten ems), puts the status and Relink on the next row when the row is short, and takes `thumbnail`, drawn at the start.
+- `src/components/line-chart.tsx`: `xLabel` (default "Time") names the x column in the chart's data table.
+- `src/lib/format.ts`: `timecode` with `precision: "frames"` is always `h:mm:ss:ff`; "1:05:00" read as hours.
+- `stories/file-intake.stories.tsx`: `MissingInNarrowColumn` **new**; `stories/line-chart.stories.tsx`: the profile says "Distance".
+- `tests/unit/narrow-panes.test.tsx` **new**; `tests/unit/media.test.tsx` expects the four-part form. Baselines: `missing-with-relink` and `frame-timecode` changed (the name wraps; the longer timecode makes the transport wrap on one line), `missing-in-narrow-column` **new**.
 - `README.md`, `UPGRADING.md`.
 
 **Workspace layout (issue #68)** (branch `claude/workspace-68`). strata-vid's screen was a fixed grid: nothing could be resized or hidden. `Workspace`, `Split` and `Pane` make one screen of panes for a tool; the rules are in ux-research `components.md` §3.20.

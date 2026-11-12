@@ -6,10 +6,10 @@ import { KeysLegend, MediaStage, RateChoice, SeekBar, StageGuides, TimeReadout, 
 import { renderWithStrata } from "../../src/testing";
 
 describe("format.timecode", () => {
-  it("prints seconds, milliseconds and frames, flooring and adding hours only from one", () => {
+  it("prints seconds, milliseconds and frames, flooring and adding hours only from one, except that frames are always four parts", () => {
     expect(format.timecode(245.7)).toBe("4:05");
     expect(format.timecode(245.25, { precision: "ms" })).toBe("4:05.250");
-    expect(format.timecode(245.5, { precision: "frames", fps: 30 })).toBe("4:05:15");
+    expect(format.timecode(245.5, { precision: "frames", fps: 30 })).toBe("0:04:05:15");
     expect(format.timecode(3725, { precision: "frames", fps: 25 })).toBe("1:02:05:00");
     expect(format.timecode(59.9999, { precision: "ms" })).toBe("0:59.999");
     expect(format.timecode(null)).toBe("–");
