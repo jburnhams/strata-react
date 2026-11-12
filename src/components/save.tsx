@@ -65,6 +65,7 @@ export function useAutoSave<V>({ value, save, delayMs = 1500, equals = Object.is
   const latest = React.useRef({ value, save, equals, describeError, delayMs });
   latest.current = { value, save, equals, describeError, delayMs };
   const saved = React.useRef(value);
+  const savedAt = React.useRef<Date | null>(null);
   const running = React.useRef<Promise<void> | null>(null);
   const timer = React.useRef<number | undefined>(undefined);
   const mounted = React.useRef(true);
@@ -92,30 +93,42 @@ export function useAutoSave<V>({ value, save, delayMs = 1500, equals = Object.is
       return Promise.resolve();
     }
     setState({ status: "saving" });
+    // `settled` covers a saver that throws before its first await: the catch and finally then run
+    // inside this call, before `attempt` exists, and the lock must not be taken after that.
+    let settled = false;
     const attempt = (async () => {
       try {
         await latest.current.save(current);
         saved.current = current;
-        running.current = null;
+        savedAt.current = new Date();
         if (!mounted.current) return;
-        if (latest.current.equals(latest.current.value, current)) setState({ status: "saved", at: new Date() });
+        if (latest.current.equals(latest.current.value, current)) setState({ status: "saved", at: savedAt.current });
         else {
           setState({ status: "dirty" });
           schedule();
         }
       } catch (error) {
-        running.current = null;
         if (mounted.current) setState({ status: "failed", reason: latest.current.describeError(error) });
+      } finally {
+        settled = true;
+        running.current = null;
       }
     })();
-    running.current = attempt;
+    if (!settled) running.current = attempt;
     return attempt;
   }, [schedule]);
 
   // A change: unsaved until it is saved. A failed state stays failed (the person has not been
   // told it is fine), and a save already running picks the change up when it ends.
   React.useEffect(() => {
-    if (latest.current.equals(value, saved.current)) return;
+    if (latest.current.equals(value, saved.current)) {
+      // Edited back to what is saved: nothing to lose, so the sign says so (and the leave guard goes off).
+      if (!running.current) {
+        window.clearTimeout(timer.current);
+        setState((s) => (s.status === "dirty" || s.status === "failed" ? { status: "saved", at: savedAt.current } : s));
+      }
+      return;
+    }
     if (!running.current) setState((s) => (s.status === "failed" ? s : { status: "dirty" }));
     if (!running.current) schedule();
   }, [value, schedule]);

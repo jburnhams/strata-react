@@ -196,6 +196,39 @@ describe("useAutoSave and SaveStatus", () => {
     expect(fire()).toBe(false);
   });
 
+  it("returns to saved when the document is edited back to what was saved", async () => {
+    function Toggle() {
+      const [on, setOn] = React.useState(false);
+      const { state } = useAutoSave({ value: on, save: async () => undefined, delayMs: null });
+      return (
+        <>
+          <button onClick={() => setOn((v) => !v)}>Flip</button>
+          <SaveStatus state={state} onRetry={() => undefined} />
+        </>
+      );
+    }
+    const { container } = render(<Toggle />);
+    await userEvent.click(screen.getByRole("button", { name: "Flip" }));
+    expect(sign(container)).toBe("dirty");
+    await userEvent.click(screen.getByRole("button", { name: "Flip" }));
+    expect(sign(container)).toBe("saved");
+  });
+
+  it("can save again after a saver that throws before it awaits", async () => {
+    let calls = 0;
+    const save = vi.fn((): Promise<unknown> | void => {
+      calls++;
+      if (calls === 1) throw new Error("No connection.");
+    });
+    const { container } = render(<Doc save={save as (v: string) => Promise<unknown>} delayMs={null} />);
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save now" }));
+    await vi.waitFor(() => expect(sign(container)).toBe("failed"));
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await vi.waitFor(() => expect(sign(container)).toBe("saved"));
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
   it("shows each state's word", () => {
     const states: SaveState[] = [{ status: "saved", at: new Date("2026-11-12T10:42:00Z") }, { status: "saving" }, { status: "dirty" }, { status: "failed", reason: "Disk is full." }];
     render(<>{states.map((s) => <SaveStatus key={s.status} state={s} onRetry={() => undefined} />)}</>);
