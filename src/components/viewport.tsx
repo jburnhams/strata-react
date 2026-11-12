@@ -32,6 +32,8 @@ export type ViewportFrameProps = ViewportState & {
   /** Width over height of the frame before anything inside it has loaded. */
   aspect: number;
   children: React.ReactNode;
+  /** A second picture layer above `children`, zoomed and panned with them but cut at `shown` percent of the *frame's* width from the left, so a swipe divider in `overlay` stays where the cut is at any zoom. */
+  cover?: { content: React.ReactNode; shown: number };
   /** Drawn over the frame, not zoomed with it: a divider to drag, a corner label. Its pointer, key and double-click events do not reach the frame, so using it never pans the picture. */
   overlay?: React.ReactNode;
   className?: string;
@@ -39,7 +41,7 @@ export type ViewportFrameProps = ViewportState & {
 
 /** A clipped frame whose children zoom and pan together; the viewport is the caller's, so frames can share one. */
 export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps>(function ViewportFrame(
-  { label, aspect, viewport, setViewport, children, overlay, className },
+  { label, aspect, viewport, setViewport, children, cover, overlay, className },
   forwardedRef,
 ) {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -128,6 +130,13 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       <div className="absolute inset-0" style={{ transform: viewportTransform(viewport), transformOrigin: "center" }}>
         {children}
       </div>
+      {cover && (
+        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - cover.shown}% 0 0)` }}>
+          <div className="absolute inset-0" style={{ transform: viewportTransform(viewport), transformOrigin: "center" }}>
+            {cover.content}
+          </div>
+        </div>
+      )}
       {overlay != null && (
         <div
           className="pointer-events-none absolute inset-0"

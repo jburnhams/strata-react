@@ -125,7 +125,10 @@ function Picture({ c, blind, missing, onNatural, imgRef }: { c: Candidate; blind
 export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
-  const [natural, setNatural] = React.useState<readonly [number, number] | null>(a.media.size ?? null);
+  // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
+  const pairKey = `${a.media.src}|${b.media.src}`;
+  const [learned, setLearned] = React.useState<{ key: string; size: readonly [number, number] } | null>(null);
+  const natural = a.media.size ?? (learned?.key === pairKey ? learned.size : null);
   const [divider, setDivider] = React.useState(50);
   const [blend, setBlend] = React.useState(50);
   const [showing, setShowing] = React.useState<"a" | "b">("a");
@@ -160,7 +163,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   const pane = (c: Candidate, ref?: React.Ref<HTMLImageElement>, onNatural?: (w: number, h: number) => void) => (
     <Picture c={c} blind={blind} missing={missing} imgRef={ref} onNatural={onNatural} />
   );
-  const learn = (w: number, h: number) => setNatural((n) => n ?? [w, h]);
+  const learn = (w: number, h: number) => setLearned({ key: pairKey, size: [w, h] });
   const frameProps = { viewport, setViewport, aspect };
 
   let body: React.ReactNode;
@@ -190,6 +193,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
         <ViewportFrame
           {...frameProps}
           ref={frameRef}
+          cover={mode === "swipe" ? { content: pane(a, imgRef, learn), shown: divider } : undefined}
           label={mode === "blink" ? `Picture ${top.label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
@@ -216,12 +220,11 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           }
         >
           {pane(bottom)}
-          <div
-            className="absolute inset-0"
-            style={mode === "swipe" ? { clipPath: `inset(0 ${100 - divider}% 0 0)` } : mode === "fade" ? { opacity: 1 - blend / 100 } : undefined}
-          >
-            {pane(top, imgRef, learn)}
-          </div>
+          {mode !== "swipe" && (
+            <div className="absolute inset-0" style={mode === "fade" ? { opacity: 1 - blend / 100 } : undefined}>
+              {pane(top, imgRef, learn)}
+            </div>
+          )}
         </ViewportFrame>
       </figure>
     );

@@ -116,6 +116,21 @@ describe("Compare", () => {
     expect((g.firstElementChild as HTMLElement).style.transform).toMatch(/translate\(0px(, 0px)?\) scale\(1\.5\)/);
   });
 
+  it("cuts the swipe at the divider in frame coordinates, however far the pictures are zoomed", async () => {
+    const user = userEvent.setup();
+    render(<Harness start="swipe" />);
+    await user.click(screen.getByRole("button", { name: "Zoom in" }));
+    const frame = screen.getByRole("group", { name: "Your final over auto2" });
+    const cut = [...frame.children].find((c) => (c as HTMLElement).style.clipPath) as HTMLElement;
+    // The clip sits outside the zoomed layer: a clip inside it would be scaled with the picture and drift from the handle.
+    expect(cut.style.transform).toBe("");
+    expect(cut.style.clipPath).toContain("50%");
+    expect((cut.firstElementChild as HTMLElement).style.transform).toContain("scale(1.5)");
+    screen.getByRole("slider", { name: /Divider/ }).focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(cut.style.clipPath).toContain("51%");
+  });
+
   it("blinks between the two: one picture at a time, flipped with a key", async () => {
     const user = userEvent.setup();
     render(<Harness start="blink" />);
@@ -172,6 +187,45 @@ describe("Compare", () => {
     } finally {
       delete (document as { fullscreenEnabled?: boolean }).fullscreenEnabled;
       delete (document as { fullscreenElement?: Element | null }).fullscreenElement;
+      delete (Element.prototype as { requestFullscreen?: unknown }).requestFullscreen;
+    }
+  });
+
+  it("learns a new frame shape when the pictures change, and uses a supplied size at once", () => {
+    const side = (src: string, size?: [number, number]) => ({ id: src, label: src, media: { kind: "image" as const, src, alt: src, size } });
+    const ratio = (name: string) => {
+      const [w, h = "1"] = screen.getByRole("group", { name }).style.aspectRatio.split("/");
+      return Number(w) / Number(h);
+    };
+    const props = { label: "x", blind: false, missing: "Gone", mode: "side" as const, onModeChange: () => undefined };
+    const { rerender } = render(<Compare {...props} a={side("/a1", [1600, 900])} b={side("/b1")} />);
+    expect(ratio("/a1")).toBeCloseTo(1.7778, 3);
+    rerender(<Compare {...props} a={side("/a2", [1000, 1000])} b={side("/b2")} />);
+    expect(ratio("/a2")).toBeCloseTo(1, 3);
+    // No size supplied: the frame has a default shape until the picture says what it is, and then takes it, once per pair.
+    rerender(<Compare {...props} a={side("/a3")} b={side("/b3")} />);
+    expect(ratio("/a3")).toBeCloseTo(1.5, 3);
+    const img = screen.getByRole("img", { name: "/a3" }) as HTMLImageElement;
+    Object.defineProperty(img, "naturalWidth", { value: 800 });
+    Object.defineProperty(img, "naturalHeight", { value: 1000 });
+    fireEvent.load(img);
+    expect(ratio("/a3")).toBeCloseTo(0.8, 3);
+    rerender(<Compare {...props} a={side("/a4")} b={side("/b4")} />);
+    expect(ratio("/a4")).toBeCloseTo(1.5, 3);
+  });
+
+  it("opens the modal when the browser refuses full screen", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: true });
+    Element.prototype.requestFullscreen = () => Promise.reject(new TypeError("Permissions check failed"));
+    try {
+      render(<Harness />);
+      await user.click(screen.getByRole("button", { name: "Full screen" }));
+      expect(await screen.findByRole("dialog", { name: "Photo 1, two versions" })).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      delete (document as { fullscreenEnabled?: boolean }).fullscreenEnabled;
       delete (Element.prototype as { requestFullscreen?: unknown }).requestFullscreen;
     }
   });
