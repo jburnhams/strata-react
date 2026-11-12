@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**strata-visual and theme snags from testing strata-vid (issue #136)** (branch `claude/visual-snags-136`). Five snags found adding route tests to an app; each was worked around there and is fixed here.
+
+- `src/visual/capture.ts`: stores the shot's theme under `strata-color-scheme` (the key `ThemeProvider` and `colorSchemeScript()` read) in an init script, so the theme reaches an app whose default preference is dark. The key is copied, not imported, so the runner still loads no React. A font failure now adds the element's computed `font-family` stack, which makes a `--font-mono` naming an unimported face recognisable.
+- `src/visual/drop.ts` **new**: `dropFiles(page, target, files)` and `DROPPED_FILE_MODIFIED`, exported from `strata-react/visual`. React Aria's drop handling reads `webkitGetAsEntry()` and skips an item with no entry, and the file chooser stamps the moment of the run on `lastModified`; so the helper dispatches `dragenter`, `dragover` and `drop` with a data transfer of real `File`s, file entries and a fixed date.
+- `src/components/key-glyphs.tsx` **new**: `KeyText` draws arrows and the macOS modifiers as lucide icons with a screen-reader name, because they are outside the bundled fonts' latin subset and fell to a system font. Used by `KeysLegend`, `CommandLegend`, the menu's shortcut and `Tooltip`'s string hint.
+- `src/styles/strata.css`: `scrim` utility (black at 40%, 65% in dark) replaces `bg-foreground/40` in `Dialog`, `AlertDialog`, `CommandMenu` and `FullscreenFrame`. Not a theme role, so apps add nothing.
+- `tests/integration/visual-helpers.test.ts` **new**: real Chromium; a light shot reaches an app that defaults to dark, and `dropFiles` gives a drop target name, type, size, entry and fixed `lastModified`. `tests/unit/key-glyphs.test.tsx` **new**; `commands.test.tsx` and `keyboard.test.tsx` read the arrows and `⌘` as their names.
+- `README.md`, `UPGRADING.md`: the visual section and the observable changes.
+
 **Map (issue #80)** (branch `claude/map-80`). strata-vid and jonathanburnhams.com both draw routes on Leaflet with react-leaflet and `vi.mock` it in tests. Jonathan chose Leaflet without react-leaflet as an optional peer behind its own entry. The rules are in ux-research `components.md` §3.22.
 
 - `src/map/route-map.tsx` **new**: `RouteMap` on Leaflet: app-supplied light and dark tiles with attribution, role colours resolved at draw time, colour by value in runs of one step with a built-in key, chevrons and start/finish marks for a single route, a position marker moved with `setLatLng` (no route redrawn or recreated for it), fit on first show and when the set of routes changes, overlay slots away from Leaflet's controls, selection, and a generated text alternative with the position along each route (throttled to once a second, not a live region). Zoom, fade and inertia are off. Checked: React Aria has no map part; Leaflet's own keyboard handling is kept.

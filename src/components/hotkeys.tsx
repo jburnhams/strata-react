@@ -1,3 +1,4 @@
+import { KeyText } from "./key-glyphs";
 import * as React from "react";
 import { cn } from "../lib/utils";
 
@@ -100,7 +101,7 @@ export function KeysLegend({
               <React.Fragment key={k}>
                 {i > 0 && <span className="sr-only"> or </span>}
                 <kbd className="min-w-5 rounded-control border border-border bg-surface-sunken px-1 text-center font-mono text-foreground">
-                  {KEY_NAMES[k] ?? k}
+                  <KeyText>{KEY_NAMES[k] ?? k}</KeyText>
                 </kbd>
               </React.Fragment>
             ))}

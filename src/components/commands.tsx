@@ -1,3 +1,4 @@
+import { KeyText } from "./key-glyphs";
 import * as React from "react";
 import {
   Autocomplete,
@@ -158,7 +159,7 @@ export function CommandLegend({
         <div key={c.id} className={cn("flex items-center gap-1.5", isDisabled(c) && "opacity-50")}>
           <dt>
             <kbd className="min-w-5 rounded-control border border-border bg-surface-sunken px-1 text-center font-mono text-foreground">
-              {commandShortcut(c, where)}
+              <KeyText>{commandShortcut(c, where) ?? ""}</KeyText>
             </kbd>
           </dt>
           <dd>{labelOf(c)}</dd>
@@ -194,7 +195,7 @@ function Item({ command, platform }: { command: Command; platform: Platform }) {
             Icon && <Icon aria-hidden className="size-4 shrink-0" />
           )}
           <Text slot="label" className="min-w-0 flex-1 truncate">{labelOf(command)}</Text>
-          {shortcut && <Keyboard className="ml-6 shrink-0 font-mono type-caption text-muted-foreground">{shortcut}</Keyboard>}
+          {shortcut && <Keyboard className="ml-6 shrink-0 font-mono type-caption text-muted-foreground"><KeyText>{shortcut}</KeyText></Keyboard>}
           {reason && <Text slot="description" className="w-full pl-6 type-caption text-muted-foreground">{reason}</Text>}
         </>
       )}
@@ -365,7 +366,7 @@ export function CommandMenu({ commands, open, onOpenChange, shortcut = "Mod+K", 
   const { contains } = useFilter({ sensitivity: "base" });
   const all = flatten(commands);
   return (
-    <ModalOverlay isOpen={isOpen} onOpenChange={set} isDismissable className="layer-overlay fixed inset-0 grid justify-items-center overflow-hidden bg-foreground/40 p-4 pt-24">
+    <ModalOverlay isOpen={isOpen} onOpenChange={set} isDismissable className="layer-overlay fixed inset-0 grid justify-items-center overflow-hidden scrim p-4 pt-24">
       <Modal className={cn("flex max-h-full w-full max-w-lg flex-col self-start outline-none", overlaySurface)}>
         <AriaDialog aria-label={label} className="flex min-h-0 flex-col outline-none">
           <Autocomplete filter={contains}>

@@ -96,7 +96,7 @@ function Driven({ open, onOpenChange, children }: { open?: boolean; onOpenChange
   return React.cloneElement(children, { isOpen: open, onOpenChange });
 }
 
-const overlayClass = "layer-overlay fixed inset-0 grid overflow-hidden bg-foreground/40";
+const overlayClass = "layer-overlay fixed inset-0 grid overflow-hidden scrim";
 
 /** A modal dialog with a required title; focus goes in and returns, Escape and a close control dismiss it. `placement="end"` makes it a sheet. */
 export function Dialog({

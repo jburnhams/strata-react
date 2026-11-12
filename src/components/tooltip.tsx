@@ -1,3 +1,4 @@
+import { KeyText } from "./key-glyphs";
 import * as React from "react";
 import { Tooltip as AriaTooltip, TooltipTrigger } from "react-aria-components";
 import { cn } from "../lib/utils";
@@ -40,7 +41,7 @@ export function Tooltip({ label, hint, children, side = "top", delay = 500, open
         className={cn("layer-tip enter-overlay max-w-xs rounded-control bg-foreground px-2 py-1 type-caption text-background", className)}
       >
         {label}
-        {hint != null && <span className="ml-2 opacity-70">{hint}</span>}
+        {hint != null && <span className="ml-2 opacity-70">{typeof hint === "string" ? <KeyText>{hint}</KeyText> : hint}</span>}
       </AriaTooltip>
     </TooltipTrigger>
   );

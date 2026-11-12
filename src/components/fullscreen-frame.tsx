@@ -75,7 +75,7 @@ export function FullscreenFrame({ label, active, onActiveChange, children, class
   );
   if (!modal) return inner;
   return (
-    <ModalOverlay isOpen onOpenChange={(o) => !o && onActiveChange(false)} isDismissable className="layer-overlay fixed inset-0 bg-foreground/40">
+    <ModalOverlay isOpen onOpenChange={(o) => !o && onActiveChange(false)} isDismissable className="layer-overlay fixed inset-0 scrim">
       <Modal className={cn("h-full w-full outline-none", overlaySurface, "rounded-none")}>
         <AriaDialog aria-label={label} className="h-full outline-none">
           {inner}

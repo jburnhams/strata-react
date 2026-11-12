@@ -203,7 +203,7 @@ describe("one list, every surface", () => {
     const { commands } = editor();
     render(<Surfaces commands={commands} platform="mac" />);
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent("⌘Z");
+    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent("Command Z");
     expect(commandShortcut(commands[1], "mac")).toBe("⇧⌘Z");
   });
 });
