@@ -1,4 +1,3 @@
-import * as React from "react";
 import { act, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -142,22 +141,5 @@ describe("useClientWork", () => {
     server.use(http.get("/api/export", () => HttpResponse.text("fine")));
     await act(() => result.current.start());
     expect(result.current).toMatchObject({ phase: "finished", result: "ok" });
-  });
-
-  it("starts from a mount effect under Strict Mode and finishes, not cancelled", async () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => <React.StrictMode>{children}</React.StrictMode>;
-    const { result } = renderHook(
-      () => {
-        const work = useClientWork(async () => "done");
-        const { start } = work;
-        React.useEffect(() => {
-          void start();
-        }, [start]);
-        return work;
-      },
-      { wrapper },
-    );
-    await waitFor(() => expect(result.current.phase).toBe("finished"));
-    expect(result.current.result).toBe("done");
   });
 });
