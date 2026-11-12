@@ -18,7 +18,7 @@ import { Tooltip } from "./tooltip";
 // 4. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
 //    times a day, so that is all the motion they get (character.md, the frequency budget).
 export const buttonVariants = cva(
-  "inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-(--control-icon) [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -30,8 +30,8 @@ export const buttonVariants = cva(
         link: "h-auto px-0 text-primary-11 underline underline-offset-4 hover:text-primary-12",
       },
       size: {
-        default: "h-(--control-h) px-4",
-        sm: "h-(--control-h-sm) px-3",
+        default: "h-(--control-h) px-(--control-px)",
+        sm: "h-(--control-h-sm) px-(--control-px-sm)",
         icon: "size-(--control-h)",
         "icon-sm": "size-(--control-h-sm)",
       },

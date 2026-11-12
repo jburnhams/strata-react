@@ -125,6 +125,17 @@ describe("strata.css in an app", () => {
     }
   });
 
+  it("makes the type steps and a button's padding and icon roles with today's values as the defaults (issue #210)", async () => {
+    const css = await compileApp();
+    expect(css).toContain("font-size: var(--type-body-size, 1rem)");
+    expect(css).toContain("line-height: var(--type-body-leading, 1.5rem)");
+    expect(css).toContain("font-weight: var(--type-heading-weight, 600)");
+    expect(css).toContain("font-size: var(--type-caption-size, 0.75rem)");
+    for (const role of ["--control-px: 1rem", "--control-px-sm: 0.75rem", "--control-icon: 1rem"]) expect(css, role).toContain(role);
+    expect(css).toContain(".px-\\(--control-px\\)");
+    expect(css).toContain(".px-\\(--control-px-sm\\)");
+  });
+
   it("removes Tailwind's stock palette, sizes, radii and shadows", async () => {
     const css = await compileApp();
     for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg"]) expect(css, cls).not.toContain(cls);

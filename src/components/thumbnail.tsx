@@ -37,15 +37,29 @@ import { cn } from "../lib/utils";
 //   first letter on a disc for an avatar with no picture. The missing state is still one `img`,
 //   named `alt` (with `missing` after it, when given, as "Night Sky: No picture"), so a person
 //   using a screen reader hears whose picture it is either way. A round avatar is `aspect={1}`
-//   with `className="rounded-pill"`.
+//   with `className="rounded-pill"`. With `alt=""` and no `missing` words (a decorative avatar beside a
+//   name that already says it) there is nothing to name, so the missing state is not an image role at all
+//   (strata-react issue #209: an `img` named "" is flagged by axe, and the `<img alt="">` it replaces is
+//   presentational).
+//
+// What a third party's pictures need from the app (issue #209, from Tubes), which made it draw its own
+// `<img>` and lose everything above:
+//
+// - `src` may be a list, tried in order: the next one when a request fails or is rejected, the missing
+//   state after the last (`maxres`, then `hq`).
+// - `onLoad(img)` sees each loaded image and may return `false` to reject it: a host that answers a
+//   missing item with a 200 and a small grey placeholder is recognised by its `naturalWidth`, and the
+//   next source is tried as if it had failed.
+// - `onMissing()` is called once when the thumbnail ends in its missing state after asking for
+//   something (not for `src={null}`), so an app can record that the item behind it has gone.
 
 /** A width-over-height ratio: a number (`1.5`) or a fraction (`"4/3"`). */
 export type AspectRatio = number | `${number}/${number}`;
 
 /** The thumbnail's props. Either `missing` (the words shown when there is no image) or a `fallback` drawing is required. */
 export type ThumbnailProps = {
-  /** The image URL. `null` when the record has no photo: the `missing` words show without a request. */
-  src: string | null;
+  /** The image URL, or a list of them tried in order (the next one when a request fails or `onLoad` rejects it). `null` or an empty list when the record has no photo: the `missing` words show without a request. */
+  src: string | readonly string[] | null;
   /** What the photo shows ("Celadon bowl, front"). `""` only when the text beside it already says it. */
   alt: string;
   /** Width over height. The box has this shape before the image loads. Default `1`. */
@@ -60,6 +74,10 @@ export type ThumbnailProps = {
   rootMargin?: string;
   /** Layout at the call site: a width (`w-24`, `w-full`), or `rounded-pill` for an avatar. The height follows from `aspect`. */
   className?: string;
+  /** Sees each image that loaded, with the index of its source. Return `false` to reject it (a host's grey placeholder answered with a 200): the next source is tried, or the missing state shows. */
+  onLoad?: (image: HTMLImageElement, index: number) => boolean | void;
+  /** Called once when the thumbnail ends in its missing state after a request failed or was rejected, never for a record with no source. */
+  onMissing?: () => void;
   /** Overlays drawn above the image in the same box (a running time, a "Saved" badge), in place whether the image has loaded, failed or is missing. */
   children?: React.ReactNode;
 } & (
@@ -78,6 +96,7 @@ export type ThumbnailProps = {
 );
 
 type Phase = "loading" | "loaded" | "missing";
+type Outcome = { key: string; index: number; done: "loaded" | "missing" | null };
 
 const ratio = (aspect: AspectRatio) => (typeof aspect === "number" ? String(aspect) : aspect.replace("/", " / "));
 
@@ -94,17 +113,38 @@ export function Thumbnail({
   rootMargin = "200px",
   className,
   fallback,
+  onLoad,
+  onMissing,
   children,
 }: ThumbnailProps) {
-  // The outcome is kept with the request it belongs to (`src` and `srcSet`, since the browser may
+  // The outcome is kept with the request it belongs to (the sources and `srcSet`, since the browser may
   // have loaded a candidate from either), so a new request starts loading again without an effect
-  // to reset it, and a late event from the old image cannot mark the new one.
-  const request = src ? `${src} ${srcSet ?? ""}` : null;
-  const [result, setResult] = React.useState<{ request: string; ok: boolean } | null>(null);
-  const phase: Phase = !request ? "missing" : result?.request === request ? (result.ok ? "loaded" : "missing") : "loading";
-  const near = useInView({ active: !eager && !!src, rootMargin, once: true, unsupported: true });
+  // to reset it, and a late event from the old image cannot mark the new one. `index` is the source being tried.
+  const sources = React.useMemo(() => (src === null ? [] : typeof src === "string" ? (src ? [src] : []) : src.filter(Boolean)), [src]);
+  const key = sources.length ? `${sources.join("\n")} ${srcSet ?? ""}` : null;
+  const [outcome, setOutcome] = React.useState<Outcome | null>(null);
+  const mine = key !== null && outcome?.key === key ? outcome : null;
+  const index = mine?.index ?? 0;
+  const phase: Phase = key === null ? "missing" : mine?.done ?? "loading";
+  const current = sources[index];
+  const near = useInView({ active: !eager && sources.length > 0, rootMargin, once: true, unsupported: true });
   const requested = eager || near.inView;
+  // The next source, or the end of the list.
+  const fail = () => setOutcome(index + 1 < sources.length ? { key: key!, index: index + 1, done: null } : { key: key!, index, done: "missing" });
+  // An app that records what is gone is told once per request that ended without a picture.
+  const told = React.useRef<string | null>(null);
+  const tell = React.useRef(onMissing);
+  tell.current = onMissing;
+  React.useEffect(() => {
+    // Any state but "missing" ends the last telling, so the same request failing again later is told again.
+    if (phase !== "missing") told.current = null;
+    else if (key !== null && told.current !== key) {
+      told.current = key;
+      tell.current?.();
+    }
+  }, [key, phase]);
 
+  const name = [alt, missing].filter(Boolean).join(": ");
   return (
     <div
       ref={near.ref}
@@ -113,23 +153,23 @@ export function Thumbnail({
       aria-busy={phase === "loading" || undefined}
     >
       {phase === "loading" && <Skeleton className="absolute inset-0" />}
-      {src && request && phase !== "missing" && requested && (
+      {key !== null && phase !== "missing" && requested && (
         <img
-          key={request}
-          src={src}
-          srcSet={srcSet}
+          key={`${key}#${index}`}
+          src={current}
+          // The candidates are the first source's: a fallback would otherwise be replaced by the set that just failed.
+          srcSet={index === 0 ? srcSet : undefined}
           sizes={sizes}
           alt={alt}
           decoding="async"
-          onLoad={() => setResult({ request, ok: true })}
-          onError={() => setResult({ request, ok: false })}
+          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : setOutcome({ key: key!, index, done: "loaded" }))}
+          onError={fail}
           className={cn("absolute inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain", phase === "loading" && "opacity-0")}
         />
       )}
       {phase === "missing" && (
         <div
-          role="img"
-          aria-label={[alt, missing].filter(Boolean).join(": ")}
+          {...(name ? { role: "img", "aria-label": name } : { "aria-hidden": true })}
           className={cn(
             "absolute inset-0 grid",
             fallback === undefined && "content-center justify-items-center gap-0.5 p-1 text-center text-muted-foreground",
