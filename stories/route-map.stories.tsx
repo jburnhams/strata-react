@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, format, geo } from "../src";
-import { RouteMap, type MapRoute, type RouteMapProps } from "../src/map";
+import { Button, format, geo, type LatLng } from "../src";
+import { RouteMap, type MapPosition, type MapRoute, type RouteMapProps } from "../src/map";
 import { canalWalk, parkLoop, riverRun, riverRunAt, riverRunSpeed, speedScale } from "./fixtures/route";
 
 // Issue #80. The tiles are served by MSW (mocks/handlers.ts), so every story is the same picture
@@ -66,6 +66,53 @@ export const WithOverlays: Story = {
 
 /** Phone width: the key and the figure stay inside the map, the controls keep their size. */
 export const Phone: Story = { ...WithOverlays, tags: ["visual-phone"], args: { ...WithOverlays.args, className: "w-full" } };
+
+// Map as picture content (issue #161): the map is part of a frame, so it is set up once and must be
+// the same on every frame. The dark tiles are the light ones, so the picture does not change with the scheme.
+const sameTiles = { light: tiles.light, dark: tiles.light };
+const towpath = riverRun.map(([lat, lng]) => [lat - 0.003, lng + 0.002] as LatLng);
+const pair: MapRoute[] = [
+  { id: "river", label: "River run", points: riverRun, colour: "oklch(0.55 0.2 25)", arrows: false },
+  { id: "towpath", label: "Towpath run", points: towpath, colour: "oklch(0.5 0.15 250)", arrows: false },
+];
+const pairAt = (a: number, b: number): MapPosition[] => [
+  { id: "a", label: "Runner A", routeId: "river", at: riverRunAt(a) },
+  { id: "b", label: "Runner B", routeId: "towpath", at: towpath[Math.round(b * (towpath.length - 1))] },
+];
+
+/** Two routes, two positions at different places, each marker in its route's colour; the text alternative names both. */
+export const TwoPositions: Story = { args: { label: "Two runners", routes: pair, positions: pairAt(0.62, 0.3), tiles: sameTiles } };
+
+/** Centred follow at a set zoom: the view is held on Runner A, so the marker sits in the middle of the frame. */
+export const CentredAtZoom: Story = { args: { label: "Runner A, centred", routes: pair, positions: pairAt(0.45, 0.3), follow: "centre", zoom: 14, tiles: sameTiles } };
+
+/** The same frame one second of footage later: the view has moved with the runner, the zoom is unchanged. */
+export const CentredLater: Story = { args: { ...CentredAtZoom.args, positions: pairAt(0.5, 0.35) } };
+
+function PictureStage(args: RouteMapProps) {
+  const [t, setT] = React.useState(0);
+  React.useEffect(() => {
+    let frame = 0;
+    const started = performance.now();
+    const tick = (now: number) => {
+      setT(((now - started) / 12_000) % 1);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  // Zoom goes 12 to 15 and back while the view stays on Runner A; both positions move at their own speeds.
+  const zoom = 12 + 3 * (1 - Math.abs(2 * t - 1));
+  return (
+    <div className="grid w-full max-w-3xl gap-2">
+      <RouteMap {...args} positions={pairAt(t, (t * 0.7) % 1)} follow="centre" followId="a" zoom={zoom} />
+      <p className="type-body-sm text-muted-foreground tabular-nums">Zoom {zoom.toFixed(2)}, centred on Runner A every frame; neither route is redrawn.</p>
+    </div>
+  );
+}
+
+/** Live: zoom animates 12 to 15 while the view stays centred on a moving position. Skipped by the visual suite. */
+export const AnimatedZoom: Story = { tags: ["no-visual"], args: { label: "Runners", routes: pair, tiles: sameTiles }, render: (args) => <PictureStage {...args} /> };
 
 function LiveStage(args: RouteMapProps) {
   const [share, setShare] = React.useState(0);
