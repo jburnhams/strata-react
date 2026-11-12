@@ -154,6 +154,10 @@ async function settle(page: Page) {
   // A state that is meant to stay loading keeps a request open, so networkidle may not come.
   await page.waitForLoadState("networkidle", { timeout: 3_000 }).catch(() => undefined);
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // A paused video shows its first frame once decoded; without this a shot is taken before or after, depending on the machine.
+  await page
+    .waitForFunction(() => [...document.querySelectorAll("video")].every((v) => v.readyState >= 2 || v.error !== null), undefined, { timeout: 5_000 })
+    .catch(() => undefined);
   await page.waitForTimeout(250);
 }
 
