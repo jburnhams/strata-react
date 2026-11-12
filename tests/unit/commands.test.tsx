@@ -361,6 +361,17 @@ describe("CommandMenu", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("ignores a held shortcut: auto-repeat does not toggle it shut", async () => {
+    const user = userEvent.setup();
+    const { commands } = editor();
+    render(<CommandMenu commands={commands} platform="other" />);
+    await user.keyboard("{Control>}k{/Control}");
+    await screen.findByRole("dialog", { name: "Search commands" });
+    // dispatched on the window: the dialog's search field would otherwise be the target
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, repeat: true }));
+    expect(screen.getByRole("dialog", { name: "Search commands" })).toBeInTheDocument();
+  });
+
   it("says when nothing matches, and shows an unavailable command with its reason", async () => {
     const user = userEvent.setup();
     const { commands } = editor();

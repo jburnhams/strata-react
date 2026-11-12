@@ -355,6 +355,8 @@ export function CommandMenu({ commands, open, onOpenChange, shortcut = "Mod+K", 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.isComposing || !matchesChord(e, shortcut, where)) return;
       e.preventDefault();
+      // A held key repeats keydown; toggling on each would flicker the dialog open and shut.
+      if (e.repeat) return;
       set(!isOpen);
     };
     window.addEventListener("keydown", onKeyDown);
