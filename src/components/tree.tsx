@@ -38,25 +38,27 @@ import type { Expanded } from "./disclosure";
 /** A node's place in the tree, passed to `renderNode`. */
 export type TreeNodeState = { expanded: boolean; selected: boolean; level: number; branch: boolean };
 
-export type TreeProps<T> = {
+// The type parameter is `N`, not `T`: `Load<readonly T[]>` with a parameter named like `Load`'s own
+// sends Storybook's docgen (react-docgen's type resolver) into endless recursion.
+export type TreeProps<N> = {
   /** Names the tree for assistive technology: "Folders". Required. */
   label: string;
   /** The top level, as one read: the skeleton, the failure and Try again come from `DataView`'s `Load`. */
-  roots: Load<readonly T[]>;
+  roots: Load<readonly N[]>;
   /** The children of an open node, as a hook (`useLoad` inside). Called only while the node is open. */
-  useChildren: (node: T) => Load<readonly T[]>;
+  useChildren: (node: N) => Load<readonly N[]>;
   /** A node's key, unique in the whole tree: a path, an id. */
-  nodeKey: (node: T) => string;
+  nodeKey: (node: N) => string;
   /** A node's name: shown, and what type-ahead matches. */
-  nodeLabel: (node: T) => string;
+  nodeLabel: (node: N) => string;
   /** Whether a node can open. Default: every node can. */
-  isBranch?: (node: T) => boolean;
+  isBranch?: (node: N) => boolean;
   /** What a row shows after the icon. Default: the name, cut with an ellipsis. */
-  renderNode?: (node: T, state: TreeNodeState) => React.ReactNode;
+  renderNode?: (node: N, state: TreeNodeState) => React.ReactNode;
   /** The chosen node's key, or `null`. */
   selected: string | null;
   /** A node was chosen. */
-  onSelect: (key: string, node: T) => void;
+  onSelect: (key: string, node: N) => void;
   /** Which nodes are open; from `useExpanded`, optionally in the URL. */
   expanded: Expanded;
   /** The skeleton row while a node's children load. Default: a muted bar. */
@@ -68,9 +70,9 @@ export type TreeProps<T> = {
   className?: string;
 };
 
-type Ctx<T> = Omit<TreeProps<T>, "label" | "roots" | "className" | "height"> & { nodes: Map<string, T> };
+type Ctx<N> = Omit<TreeProps<N>, "label" | "roots" | "className" | "height"> & { nodes: Map<string, N> };
 const Context = React.createContext<Ctx<never> | null>(null);
-const useCtx = <T,>() => React.useContext(Context) as unknown as Ctx<T>;
+const useCtx = <N,>() => React.useContext(Context) as unknown as Ctx<N>;
 
 const NOTE = "\u0000";
 const isNote = (key: string) => key.includes(NOTE);
@@ -80,8 +82,8 @@ function Row({ level, children }: { level: number; children: React.ReactNode }) 
   return <div className={ROW} style={{ paddingInlineStart: `${level * 1.25 + 0.25}rem` }}>{children}</div>;
 }
 
-function Node<T>({ node }: { node: T }) {
-  const c = useCtx<T>();
+function Node<N>({ node }: { node: N }) {
+  const c = useCtx<N>();
   const key = c.nodeKey(node);
   c.nodes.set(key, node);
   const branch = c.isBranch ? c.isBranch(node) : true;
@@ -129,14 +131,14 @@ function ClosedChild({ id }: { id: string }) {
   );
 }
 
-function Nodes<T>({ nodes }: { nodes: readonly T[] }) {
-  const c = useCtx<T>();
+function Nodes<N>({ nodes }: { nodes: readonly N[] }) {
+  const c = useCtx<N>();
   return <>{nodes.map((n) => <Node key={c.nodeKey(n)} node={n} />)}</>;
 }
 
 // The children of one open node. Its own component, so the hook runs only while it is open.
-function Children<T>({ node }: { node: T }) {
-  const c = useCtx<T>();
+function Children<N>({ node }: { node: N }) {
+  const c = useCtx<N>();
   const key = c.nodeKey(node);
   const load = c.useChildren(node);
   if (load.status === "loading") {
@@ -176,9 +178,9 @@ function Children<T>({ node }: { node: T }) {
 }
 
 /** A hierarchy whose children load as each node opens (a `useChildren` hook per open node): a skeleton row, a Try again row and an "empty" row per node, type-ahead and arrow keys, single selection, open state optionally in the URL, always virtualised. */
-export function Tree<T>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, height = "24rem", className }: TreeProps<T>) {
-  const nodes = React.useRef(new Map<string, T>()).current;
-  const ctx: Ctx<T> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, nodes };
+export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
+  const nodes = React.useRef(new Map<string, N>()).current;
+  const ctx: Ctx<N> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, nodes };
 
   if (roots.status === "loading") {
     return (

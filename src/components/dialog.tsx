@@ -106,7 +106,7 @@ export function Dialog({
   const descriptionId = React.useId();
   return (
     <Overlay trigger={trigger} open={open} onOpenChange={onOpenChange}>
-      <ModalOverlay isDismissable={closable} isKeyboardDismissDisabled={!closable} className={cn(overlayClass, placement === "end" ? "justify-items-end" : "place-items-center p-4")}>
+      <ModalOverlay isDismissable={closable} isKeyboardDismissDisabled={!closable} className={cn(overlayClass, placement === "end" ? "justify-items-end" : size === "full" ? "grid-cols-1 grid-rows-1 p-4" : "place-items-center p-4")}>
         <Modal
           className={cn(
             "flex max-h-full min-h-0 w-full flex-col outline-none",

@@ -2,6 +2,19 @@
 
 ## 2026-11-12
 
+**Conversation, lightbox, region editor, sequence timeline, tree and marking (issues #187 to #192)** (branch `claude/panes-browsing-editing`). The third batch of strata-360's missing screens. No dependency was added. Corrections and findings that changed the plan: `SequenceTimeline` is its own component, not a `Timeline` mode, because `Timeline` reports one item per change (`TimelineChange`) and neither `validate` nor `snapPoints` can express a boundary shared by two items; React Aria 1.22's `Tree` does not pass `hasChildItems` to its row hook (checked in `Tree.mjs`), so a closed lazy branch gets no `aria-expanded` or Right/Left keys unless the collection holds a child, which `Tree` supplies as an undrawn placeholder; and Storybook's docgen recurses endlessly on `Load<readonly T[]>` when the generic is also named `T`, so `Tree` names its parameter `N`.
+
+- `src/components/conversation.tsx`, `src/lib/rich-text.ts` (**new**, #192): `Conversation`, `Composer`, `RichText`, `matchEntities`, `parseRichText`, `safeHref`, `plainText`.
+- `src/components/lightbox.tsx` (**new**, #189): `Lightbox` on `Dialog`, which gains `size="full"`.
+- `src/components/region-editor.tsx`, `src/lib/region.ts` (**new**, #190): `RegionEditor` and the rectangle maths (`moveRect`, `resizeRect` with aspect lock, `drawRect`, `lerpRect`, `ease`).
+- `src/components/sequence-timeline.tsx`, `src/lib/sequence.ts` (**new**, #191): `SequenceTimeline`, grid and room helpers.
+- `src/components/tree.tsx`, `src/components/folder-picker.tsx` (**new**, #188): `Tree`, `FolderPicker`.
+- `src/components/markable-text.tsx`, `src/lib/marks.ts` (**new**, #187): `MarkableText`, `Mark`, `MarkSummary`. The selection bar is a bar, not a `Popover`: a selection can start in an unmounted row, and `Popover` takes focus from the text.
+- `stories/`: `conversation`, `lightbox`, `region-editor`, `sequence-timeline`, `folder-picker`, `markable-text` stories (**new**); `fixtures/folders.ts` and `screens/folder-chooser.tsx` (**new**), a pretend disk served by new `/api/folders` MSW handlers; `piecePictureUrl` in `fixtures/piece-photo.tsx`.
+- `tests/unit/`: `conversation`, `lightbox`, `region-lib`, `region-editor`, `sequence-timeline`, `folder-picker`, `markable-text` (**new**).
+- `tests/visual/baselines/`: 36 new, none changed.
+- `src/index.ts`, `README.md`: exports and component table.
+
 **Timed media: windows, groups, waveform, transcript, streams and a 360 viewer (issues #178, #179, #180, #185, #186)** (branch `claude/media`). One batch for strata-360's review screens. `hls.js` is a new optional peer (approved by Jonathan, 2026-11-12).
 
 - `src/components/media-player.tsx`: `useMediaElement(ref, options)` takes `window`, `loop`, `group`, `onTimeUpdate`, `onWindowEnd`, `growing` and `onRetry`; the state gains `window`, `playWindow`, `ready`, `waitingForMore` and `reportProblem`. A window stops or loops at its end by a frame loop (and on `timeupdate`), starts at its start from outside, and the element keeps its pitch whenever the rate changes. `MediaPlayer` gains `window`, `loop`, `showFull`, `group`, `onTimeUpdate`, `onWindowEnd`, `attach` and `growing`. `useAttachedSource` and the `SourceAttacher` types are the engine interface.

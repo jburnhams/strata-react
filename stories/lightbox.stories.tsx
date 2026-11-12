@@ -68,7 +68,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** Open on the third picture, with its details beside it. */
-export const Open: Story = { args: { startOpen: true, start: 2 } };
+export const Open: Story = { args: { startOpen: true, start: 2 }, tags: ["visual-wide"] };
 
 /** Closed: the grid, whose tiles open it. Focus returns to the tile on close. */
 export const FromGrid: Story = { tags: ["no-visual"] };
