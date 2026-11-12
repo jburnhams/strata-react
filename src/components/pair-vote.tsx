@@ -17,8 +17,13 @@ import { cn } from "../lib/utils";
 //   a clash is visible: `a` and `b` choose a side, `t` is about the same, `s` is can't tell. None
 //   of them is a view, zoom or full-screen key. Arrow keys are left to panning and the swipe
 //   divider on purpose: a person who zooms in and presses an arrow to pan must not cast a vote.
-// - Choosing is a button under the pictures, not a click on them: a click on a picture pans.
-//   The bar is part of Compare's footer so it stays on screen in full screen.
+// - Choosing is a button under the pictures, and also a click on the picture you prefer (issue #201):
+//   `Compare` and `CompareVideo` take `onPick`, and the slot below carries it, so a view that is given
+//   the whole slot gets click to choose with no code (`pick={false}` turns it off). A click is a pick
+//   only when it is not a drag (that pans) and not a double click (that zooms), which the frame decides.
+//   The pick is the same answer as the key and the button, `pending` switches it off with them, and
+//   a pick during a pending answer is dropped. The bar is part of Compare's footer so it stays on
+//   screen in full screen.
 // - No button is filled: while either side can win, nothing is the default (ux-research
 //   `patterns.md` §2, one filled button, and a filled "A" would lean on the judge).
 // - The last answer's Undo sits in the same footer, so it is inside full screen too: a judge who answers
@@ -42,8 +47,8 @@ export type PairAnswer = { answer: "a" | "b" | "tie" | "skip" } | { answer: "fla
 /** A pair to judge: pictures by default, or any media a `view` draws (`CompareAudio`, `CompareText`). */
 export type Pair<M = ImageMedia> = { label: string; a: Candidate<M>; b: Candidate<M> };
 
-/** What `PairVote` hands a `view`: the answer keys for the view's legend and the vote bar for its footer. Pass both to `CompareAudio`, `CompareText` or your own. */
-export type PairVoteSlot = { extraShortcuts: Shortcut[]; footer: React.ReactNode };
+/** What `PairVote` hands a `view`: the answer keys for the view's legend, the vote bar for its footer, and `onPick` for a view whose sides can be clicked (`Compare`, `CompareVideo`; absent while an answer is pending). Pass the whole slot to the view. */
+export type PairVoteSlot = { extraShortcuts: Shortcut[]; footer: React.ReactNode; onPick?: (side: "a" | "b") => void };
 
 /** Words for the vote bar, all in the product's voice. */
 export type PairVoteWords = {
@@ -85,7 +90,7 @@ export type PairJudgeProps<M> = {
 };
 
 /** Props for `PairVote`: the pair judgment, drawn with `Compare`. */
-export type PairVoteProps = Omit<PairJudgeProps<ImageMedia>, "view"> & Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer">;
+export type PairVoteProps = Omit<PairJudgeProps<ImageMedia>, "view"> & Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer" | "onPick">;
 
 /** A blind pairwise judgment of two pictures: `Compare`, answer keys in its legend, and a vote bar that never leans on either side. */
 export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words, ...compare }: PairVoteProps) {
@@ -161,5 +166,5 @@ function Judged<M>({ pair, onAnswer, pending, flagReasons, words, last, view }: 
       {last && <LastAnswer last={last} />}
     </div>
   );
-  return <>{view({ extraShortcuts: shortcuts, footer }, pair)}</>;
+  return <>{view({ extraShortcuts: shortcuts, footer, onPick: pending ? undefined : (side) => answer({ answer: side }) }, pair)}</>;
 }

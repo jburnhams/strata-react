@@ -22,6 +22,21 @@ import { useMediaElement } from "./media-player";
 // brought back to the leader's time when it is visible again, so eight 50p clips do not all decode
 // when three are on screen. The leader is always kept.
 //
+// Judging short clips (issue #203, the VHS upscale judge: 8 s clips watched several times): the clock
+// can start itself (`autoPlay`) and loop the whole clip (`loopWhole`), both off by default.
+// - Auto play waits for every video's metadata, then plays; the hold rule above keeps them still
+//   until all have their frames, so "start once all can play in step" is that rule, not a second
+//   one. It starts muted unless the person has chosen a sound level on this clock (a browser
+//   refuses autoplay with sound, and a refusal falls back to paused with Play showing, as any
+//   refused play does). It starts again for a new pair (`pairKey`), from 0 and paused-then-playing,
+//   and leaves a pair the person paused alone. A person who prefers reduced motion gets no autoplay
+//   unless the app insists (`"always"`).
+// - A new pair always starts at 0: before this the position and the playing state of the last pair
+//   were put on the next one, which a judge answering pair after pair never wants.
+// - Whole-clip looping restarts at the natural end while playing. A loop range set with `i` and `o`
+//   wins while both ends are set; `c` goes back to the whole clip. A pause is kept at the loop point:
+//   the restart only happens for a clip that was playing when it ended.
+//
 // Elements are attached by index with `attach(i)` (a stable callback ref), because a screen may
 // move a video to another place in the tree (a view change makes new elements): the clock keeps the
 // time, whether it was playing and the chosen speed, and puts a new element back there when it has
@@ -46,13 +61,19 @@ export type VideoClockOptions = {
   onLoopChange?: (loop: VideoLoop) => void;
   /** The index of the video whose sound is heard; none when `null`. */
   audio: number | null;
+  /** Start playing once every video has its metadata (and muted, unless the person chose a sound level), and again for each new `pairKey`. `"always"` also with reduced motion. Default off. */
+  autoPlay?: boolean | "always";
+  /** Loop from 0 to the natural end when no range is set. A range with both ends set wins. Default off. */
+  loopWhole?: boolean;
+  /** Names the pair on the clock: when it changes the clock starts again at 0, paused (or playing, with `autoPlay`). */
+  pairKey?: string;
 };
 
 /** The clock and everything a transport needs. */
 export type VideoClock = ReturnType<typeof useVideoClock>;
 
 /** Plays, pauses, seeks, steps and loops any number of videos together. */
-export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: VideoClockOptions) {
+export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPlay = false, loopWhole = false, pairKey }: VideoClockOptions) {
   const els = React.useRef(new Map<number, HTMLVideoElement>());
   const leaderRef = React.useRef<HTMLVideoElement | null>(null);
   const cleanups = React.useRef(new Map<number, () => void>());
@@ -65,6 +86,8 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
   const [started, setStarted] = React.useState(false);
   const [volume, setVolume] = React.useState(100);
   const [muted, setMuted] = React.useState(false);
+  // True once the person has chosen a sound level on this clock: autoplay then keeps it instead of starting muted.
+  const soundChosen = React.useRef(false);
   const [behind, setBehind] = React.useState<ReadonlySet<number>>(new Set());
   const chosenRate = React.useRef(1);
   // True while the group is held for a video that has not got its frames; a cell that comes into view then waits with the rest.
@@ -94,13 +117,16 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
   };
   const loopRef = React.useRef(loop);
   loopRef.current = loop;
+  const wholeRef = React.useRef(loopWhole);
+  wholeRef.current = loopWhole;
 
   // The leader reaching the end, or any video reaching its own: the clock runs to the shortest, which is the length shown. Unless a loop is set, then the end is where it goes back from.
   const onEnded = () => {
     const { start, end } = loopRef.current;
     const list = active();
-    if (wantedRef.current && start !== null && end !== null) {
-      for (const el of list) el.currentTime = start;
+    const ranged = start !== null && end !== null;
+    if (wantedRef.current && (ranged || wholeRef.current)) {
+      for (const el of list) el.currentTime = ranged ? start : 0;
       for (const el of list) startRef.current(el);
       return;
     }
@@ -270,6 +296,34 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     if (resume.current.playing && (index === undefined || !hidden.current.has(index))) start(el);
   };
 
+  // A new pair starts again: at 0, not playing, and not waiting on the last pair's metadata (the elements keep their identity when only `src` changes, so what they said about the old clip is dropped until they say it of the new one).
+  const lastPair = React.useRef(pairKey);
+  const armed = React.useRef<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (lastPair.current === pairKey) return;
+    lastPair.current = pairKey;
+    armed.current = undefined;
+    resume.current = { time: 0, playing: false };
+    pauseAll();
+    // A new source starts at 0 in a browser; an element that is kept for the next pair must not carry the old time.
+    for (const el of els.current.values()) el.currentTime = 0;
+    setWanted(false);
+    setStarted(false);
+    setInfos({});
+  }, [pairKey]);
+
+  // Autoplay: once, for each pair, when every video has its metadata.
+  const [reduced] = React.useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const auto = autoPlay === "always" || (autoPlay === true && !reduced);
+  const playRef = React.useRef(play);
+  playRef.current = play;
+  React.useEffect(() => {
+    if (!auto || !loaded || armed.current === (pairKey ?? "")) return;
+    armed.current = pairKey ?? "";
+    if (audio !== null && !soundChosen.current) setMuted(true);
+    playRef.current();
+  }, [auto, loaded, pairKey, audio]);
+
   // One sound: the chosen video at the volume, the rest muted.
   React.useEffect(() => {
     for (const [i, el] of els.current) {
@@ -287,7 +341,7 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     { keys: ["i"], label: "Loop starts here", run: () => setPoint("start") },
     { keys: ["o"], label: "Loop ends here", run: () => setPoint("end") },
     { keys: ["c"], label: "Clear the loop", run: clearLoop, disabled: loop.start === null && loop.end === null },
-    ...(audio === null ? [] : [{ keys: ["m"], label: "Mute", run: () => setMuted((m) => !m) }]),
+    ...(audio === null ? [] : [{ keys: ["m"], label: "Mute", run: () => ((soundChosen.current = true), setMuted((m) => !m)) }]),
   ];
 
   return {
@@ -309,11 +363,13 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio }: Vide
     failed,
     loop,
     looping: loop.start !== null && loop.end !== null,
+    /** The whole clip loops: asked for, and no range set to override it. */
+    loopsWhole: loopWhole && !(loop.start !== null && loop.end !== null),
     setPoint,
     clearLoop,
     volume,
     muted,
-    setVolume: (v: number) => (setMuted(false), setVolume(v)),
+    setVolume: (v: number) => ((soundChosen.current = true), setMuted(false), setVolume(v)),
     behind,
     setVisible,
     shortcuts,
@@ -350,7 +406,7 @@ export function VideoControls({ clock, rates = SLOW_RATES, moments = [] }: { clo
           Clear the loop
         </Button>
         <span role="status" className="type-caption tabular-nums text-muted-foreground">
-          {clock.looping ? `Looping ${at(loop.start)} to ${at(loop.end)}` : loop.start !== null ? `Loop starts at ${at(loop.start)}` : loop.end !== null ? `Loop ends at ${at(loop.end)}` : "No loop"}
+          {clock.looping ? `Looping ${at(loop.start)} to ${at(loop.end)}` : clock.loopsWhole ? "Looping the whole clip" : loop.start !== null ? `Loop starts at ${at(loop.start)}` : loop.end !== null ? `Loop ends at ${at(loop.end)}` : "No loop"}
         </span>
       </div>
     </>

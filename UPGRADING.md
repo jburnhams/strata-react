@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `PairVote` and `Compare`/`CompareVideo` with `onPick` now choose on a click (after a 300 ms wait for a double click), so a screen that passes `onPick` or uses `PairVote` sees clicks answer; `pick={false}` keeps a click for panning only. `PairVoteSlot` gains an optional `onPick`: a custom `view` that spreads the whole slot onto `Compare` or `CompareVideo` gets it, and one that picks fields by hand adds it. `CompareVideo` and `CompareVideoGrid` now go back to 0, paused, when the pair's sources change (before, the position carried over). New props `autoPlay` and `loopWhole` are off by default.
 - `MediaElementState` has new members (`window`, `playWindow`, `ready`, `waitingForMore`, `reportProblem`): code that builds one by hand (a stand-in for `Transport`, say) must add them. `useMediaElement` and `MediaPlayer` now keep the pitch whenever the rate changes (`preservesPitch`).
 - `RouteMap` draws a "Reset view" button under the zoom control; a test that counts the map's buttons, and any `RouteMap` visual baseline, will see it.
 - `MediaPlayer`: the `<audio>`/`<video>` element is now labelled "<label>, audio" (or "video") and the group keeps "<label>"; a test that queried the element by the bare label queries the group or the longer name. With several players on a page, Space, K, J, L and M go to the one last played, focused or pressed (a single player is unchanged); `shortcuts={false}` still opts out.

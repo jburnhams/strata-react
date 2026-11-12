@@ -65,6 +65,10 @@ export type CompareVideoGridProps = {
   /** The looped range in seconds; give it with `onLoopChange` to keep it when the item changes. */
   loop?: VideoLoop;
   onLoopChange?: (loop: VideoLoop) => void;
+  /** Start playing once every cell has its metadata, muted (unless the person has chosen a sound level), and again when the cells change. Off with reduced motion unless `"always"`. Default false. */
+  autoPlay?: boolean | "always";
+  /** Loop the whole clip until stopped; a range set with `i` and `o` wins while both ends are set. Default false. */
+  loopWhole?: boolean;
   /** The `id` of the cell whose sound is heard. Default none: eight soundtracks at once are noise. */
   audio?: string | null;
   /** Draw nearest-neighbour when a video is shown larger than its own pixels (`zoomed`, default), always, or never. */
@@ -96,17 +100,17 @@ function Cell({ c, index, clock, blind, isReference, children }: { c: Candidate<
 }
 
 /** Many videos in a grid on one clock, zoomed and panned together, with regions, a loop, stepping and full screen. */
-export function CompareVideoGrid({ label, items, reference, blind, missing, catchingUp = "Catching up", actions, columns = 3, regions, rates = SLOW_RATES, moments = [], loop, onLoopChange, audio = null, pixelated = "zoomed", keys = true, extraShortcuts = [], footer, className }: CompareVideoGridProps) {
+export function CompareVideoGrid({ label, items, reference, blind, missing, catchingUp = "Catching up", actions, columns = 3, regions, rates = SLOW_RATES, moments = [], loop, onLoopChange, audio = null, autoPlay = false, loopWhole = false, pixelated = "zoomed", keys = true, extraShortcuts = [], footer, className }: CompareVideoGridProps) {
   const cells = reference ? [reference, ...items] : [...items];
   const first = cells[0];
   const fps = first?.media.fps ?? 30;
   const audioIndex = audio === null ? null : cells.findIndex((c) => c.id === audio);
-  const clock = useVideoClock({ fps, loop, onLoopChange, audio: audioIndex === null || audioIndex < 0 ? null : audioIndex });
+  const key = cells.map((c) => c.media.src).join("|");
+  const clock = useVideoClock({ fps, loop, onLoopChange, audio: audioIndex === null || audioIndex < 0 ? null : audioIndex, autoPlay, loopWhole, pairKey: key });
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const frameRef = React.useRef<HTMLDivElement>(null);
   const frameWidth = useWidth(frameRef);
-  const key = cells.map((c) => c.media.src).join("|");
   const aspect = first ? first.media.width / first.media.height : 4 / 3;
   const natural = first ? ([first.media.width, first.media.height] as const) : null;
   const rg = useRegions({ regions, viewport, setViewport, frame: frameRef, reset: key });

@@ -5,6 +5,7 @@ import { Button, IconButton } from "./button";
 import { Skeleton } from "./data-view";
 import type { Shortcut } from "./hotkeys";
 import type { Candidate } from "./compare";
+import type { FramePick } from "./viewport";
 
 // The pieces `Compare` and `CompareGrid` share, not exported from the package: a picture in its
 // loading, ready and failed states, the caption under it, and the zoom controls and keys, so the
@@ -12,6 +13,38 @@ import type { Candidate } from "./compare";
 
 // 100svh less the toolbar (about 3rem), captions (2rem), a vote bar (4rem), the legend (4rem) and gaps.
 export const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
+
+/** Words for click to choose, in the product's voice. */
+export type PickWords = {
+  /** What hovering a side says, and what the frame is described as: `(label) => "Click to choose " + label`. */
+  choose?: (label: string) => string;
+  /** Said under the view's controls in a view where a click cannot choose (fade, difference): `(view) => ...`. */
+  unavailable?: (view: string) => string;
+};
+
+/** What a pair's frames do with a click (issue #201): the same answer as the keys, only where a click is unambiguous. Blind: only a candidate's `label` is ever said. */
+export function makePicker(a: Candidate<unknown>, b: Candidate<unknown>, onPick: (side: "a" | "b") => void, words?: PickWords) {
+  const choose = words?.choose ?? ((label: string) => `Click to choose ${label}`);
+  const unavailable = words?.unavailable ?? ((view: string) => `A click does not choose in ${view}: use the keys or the buttons.`);
+  const answer = (zone: { value: string }) => onPick(zone.value === "a" ? "a" : "b");
+  return {
+    /** A frame that is one whole side. */
+    one(side: "a" | "b"): FramePick {
+      const text = choose((side === "a" ? a : b).label);
+      return { zoneAt: () => ({ value: side, from: 0, to: 1, hint: text }), onPick: answer, describe: text };
+    },
+    /** A frame cut by a swipe divider at `divider` percent: the left is A, the right is B. */
+    split(divider: number): FramePick {
+      const cut = divider / 100;
+      return {
+        zoneAt: (x) => (x < cut ? { value: "a", from: 0, to: cut, hint: choose(a.label) } : { value: "b", from: cut, to: 1, hint: choose(b.label) }),
+        onPick: answer,
+        describe: `${choose(a.label)} on the left, ${choose(b.label)} on the right`,
+      };
+    },
+    unavailable,
+  };
+}
 
 /** A word for a picture's name on the page: its label, with its note unless blind. */
 export function Caption({ c, blind }: { c: Candidate<unknown>; blind: boolean }) {

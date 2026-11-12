@@ -2,6 +2,17 @@
 
 ## 2026-11-12
 
+**Judging pairs: click to choose (#201) and autoplay with loop (#203)** (branch `claude/judging-pairs`). Two asks from strata-models' judge. No dependency was added. Findings that changed the plan: the click is decided in `ViewportFrame` (pointer events: down and up within 4 px and 500 ms), because the frame already owns pan, band and double click, and a pick waits out 300 ms so a double click zooms without choosing; the frame keeps its name ("Picture A") and gains an `aria-describedby` description ("Click to choose A") instead of being renamed, so existing queries and the legend still work; `CompareAudio` has no picture frames, so it has no click to choose (its A/B switch is its choice).
+
+- `src/components/viewport.tsx`: `ViewportFrame` takes `pick` (`FramePick`: `zoneAt`, `onPick`, `describe`); pointer cursor, outline and hint over the zone under the pointer, hidden description for a screen reader; **new** exported types `PickZone`, `FramePick`.
+- `src/components/compare-parts.tsx`: `makePicker` (one side, a frame cut by a divider, the "does not choose here" words) and `PickWords`.
+- `src/components/compare.tsx`, `compare-video.tsx`: `onPick`, `pick` (default true), `pickWords`; side by side picks the side clicked, swipe the side of the divider, blink the side showing, fade and difference none, and say so under the controls.
+- `src/components/pair-vote.tsx`: `PairVoteSlot` gains `onPick`; `PairVote` and `PairJudge` answer a click like the key and drop it while `pending`.
+- `src/components/video-clock.tsx`, `compare-video.tsx`, `compare-video-grid.tsx`: `autoPlay` (once every video can play in step, muted unless the person chose a sound level, paused if the browser refuses, again for each new pair, off with reduced motion unless `"always"`) and `loopWhole` (the whole clip restarts at its end when no range is set, a range wins, a paused clip stays paused, "Looping the whole clip" in the status). A new pair now starts at 0, paused or autoplaying.
+- `tests/unit/pick.test.tsx` (**new**), `tests/unit/video-autoplay.test.tsx` (**new**): the click rules per view, drag and double click, `pick={false}`, blind, `pending`, videos; autoplay, refusal, reduced motion, new pair, loop, range, pause.
+- `stories/pair-vote.stories.tsx`, `stories/compare-video.stories.tsx`: `ClickToChoose`, `ClickOff`, `AutoPlayLoop` (interactive, `no-visual`).
+- `README.md`, `UPGRADING.md`: the component row and the behaviour changes.
+
 **Three flakes: two unit tests that failed the v1.0.34 publish, and the RouteMap shots** (branch `claude/fix-release-flakes`). The `NPM Publish Package` run for v1.0.34 failed in `test:all`: the keyboard move in `sortable-list.test.tsx` pressed Tab before React Aria had put focus on the first drop target, and a React Aria announcement scheduled during a `waitFor` fired after jsdom was torn down at the end of `routes.test.tsx` (an uncaught `document is not defined`). Separately the visual job had failed on a RouteMap marker shot on #194, on main after #196 and on this PR, each time with the same pixel counts; Jonathan asked for it to be fixed here. None of the three comes from the media, maps or panes batches; all are timing.
 
 - `tests/unit/sortable-list.test.tsx`: waits for focus to reach a drop target before the Tab.
