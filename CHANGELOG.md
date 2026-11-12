@@ -2,6 +2,13 @@
 
 ## 2026-11-12
 
+**Timeline from outside (issue #121)** (branch `claude/timeline-121`). strata-vid could not drag a library clip onto a lane, had one-line lanes, got kind colours that moved with the set of kinds, and lost lane names to a fixed header. The rules are in ux-research `components.md` §3.21.
+
+- `src/components/timeline.tsx`: each lane is a React Aria `useDrop` target when `dropTypes` and `onDrop` are given. A drop reports `{ lane, start, length, items }` with the start snapped like a move; `validateDrop` shows its refusal beside a dashed preview while the drag is over the lane and announces it for the keyboard; a keyboard (virtual) drag, told apart by the lane being the focused element (React Aria reports the lane's centre in a different coordinate space), lands at the current time. `laneRows` makes lanes and headers that many `--control-h` tall (`--lane-h`). `kindColours` maps a kind to the app's own colour, the chart palette in order of appearance staying the fallback. The header column is content-sized between `w-40` and `w-80`, with the full name as a title. The move's snapping is now one function shared by moves and drops. Checked in `useDrop.d.ts` and `DragManager`: a drag shows its types but not its items until it lands, so the preview length is `dropLength`.
+- `src/index.ts`: exports `TimelineDrop`.
+- `stories/timeline.stories.tsx`: `TallLanes`, `KindColours`, `LongLaneName` (6 **new** baselines) and `DropFromOutside` (live, a `useDrag` library, a locked lane).
+- `tests/unit/timeline-outside.test.tsx` **new** (12): lane and time of a drop, snapping, refusal while hovering and on drop, overlap, leaving, an unaccepted type, the keyboard drop at the current time, a complete React Aria keyboard drag (a plain `Set` of types reaches `getDropOperation`, not `DragTypes`), `laneRows`, `kindColours` staying put, the header.
+
 **Narrow panes (issue #122)** (branch `claude/narrow-122`). In a 300px library, strata-vid's missing-file row cut a name to "parkru…", a chart's table header said "Time" for a distance, and a frame timecode read as hours. Three small fixes, found by running the components in a pane.
 
 - `src/components/file-intake.tsx`: `MissingFile` wraps its name instead of truncating it (at least ten ems), puts the status and Relink on the next row when the row is short, and takes `thumbnail`, drawn at the start.

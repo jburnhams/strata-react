@@ -1,5 +1,6 @@
 import * as React from "react";
-import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import { VisuallyHidden, mergeProps, useDrop, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import type { DropItem } from "react-aria-components";
 import { useSliderState } from "react-stately";
 import { Ban, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { clamp, snapTo, tickLabel, tickStep, ticksBetween, tidy } from "../lib/timeline";
@@ -40,6 +41,17 @@ import { IconButton } from "./button";
 // items cost what is on screen. Widths come from the props (`zoom` is pixels per unit) and one
 // ResizeObserver reading the viewport, not from measuring items.
 //
+// Drops from outside (issue #121, strata-vid's library list). Each lane is a React Aria `useDrop`
+// target, so the pointer path, the keyboard path (React Aria's virtual drag: the lane takes focus
+// and Enter drops) and the screen-reader announcements are its. Checked in `useDrop.d.ts` and
+// `DragManager`: while a drag is over a lane the types are known but the items are not, so the
+// preview is `dropLength` long and the app learns what was dropped only in `onDrop`. A pointer
+// drop lands with its left edge at the pointer, snapped like a move; a virtual drop reports the
+// lane's centre, not a time (and in a different coordinate space from a pointer's), so it is told
+// apart by the lane being the focused element and lands at the current time (`position`, else the
+// start). `validateDrop` is `validate` for a drop: the refusal shows beside the preview while it is
+// over a lane and is announced for the keyboard.
+//
 // Pointer moves are our own pointer events with a 3px threshold between click and drag. React
 // Aria's `useMove` (in `react-aria`, a transitive dependency of `react-aria-components`) would do
 // the pointer and arrow-key deltas, but using it means listing `react-aria` as a direct
@@ -55,7 +67,7 @@ export type TimelineItem = {
   length: number;
   /** The item's name, in the item and for a screen reader. */
   label: string;
-  /** What kind of thing it is (video, audio, booking). Shown as a word and a colour stripe, never colour alone. */
+  /** What kind of thing it is (video, audio, booking). Shown as a word and a colour stripe, never colour alone. Its colour is `kindColours[kind]`, else the chart palette in order of appearance. */
   kind?: string;
 };
 
@@ -70,6 +82,9 @@ export type TimelineMarker = { id: string; time: number; label: string };
 
 /** What a move or trim would produce. */
 export type TimelineChange = { start: number; length: number; lane: string };
+
+/** Where something dragged in from outside landed. */
+export type TimelineDrop = TimelineChange & { items: DropItem[] };
 
 export type TimelineProps = {
   /** Names the timeline for a screen reader ("Firing schedule"). */
@@ -106,6 +121,18 @@ export type TimelineProps = {
   step?: number;
   /** Smallest an item may be, in time units. Default `step`. */
   minLength?: number;
+  /** The colour of each kind's stripe, chosen by the app: a CSS colour, normally a role or a subject colour of its theme (`var(--info)`, `var(--kind-gpx)`). Without an entry a kind takes the chart palette in order of appearance, which moves when the set of kinds changes. */
+  kindColours?: Readonly<Record<string, string>>;
+  /** How many control heights tall each lane is. Default 1; 2 or 3 for items that draw thumbnails or a waveform. */
+  laneRows?: number;
+  /** Drag types a lane accepts from outside the timeline (`"text/plain"`, an app type). Without it nothing can be dropped. */
+  dropTypes?: readonly string[];
+  /** Length of an item dropped from outside, for the preview and for `validateDrop`. Default five steps. */
+  dropLength?: number;
+  /** Something was dropped on a lane at a time (snapped like a move). The app makes the item. Not called for a drop `validateDrop` refused. */
+  onDrop?: (drop: TimelineDrop) => void;
+  /** A reason a drop cannot be made, in the product's words, or `null`. Called while a drag is over a lane, so keep it cheap. */
+  validateDrop?: (next: TimelineChange) => string | null;
   /** Draws an item's content (a strip of thumbnails, a waveform). Default: the label and kind. */
   renderItem?: (item: TimelineItem, state: { selected: boolean; width: number }) => React.ReactNode;
   /** A time as words ("0:14", "13:30"). Default `m:ss`, with tenths on the ruler when zoomed far in. Also labels the ruler when given, so a schedule in hours reads as clock times. */
@@ -115,7 +142,6 @@ export type TimelineProps = {
   className?: string;
 };
 
-const HEADER_W = "w-40";
 const EDGE_PX = 8;
 const DRAG_THRESHOLD = 3;
 
@@ -180,6 +206,12 @@ export function Timeline({
   step = 1,
   minLength,
   renderItem,
+  kindColours,
+  laneRows = 1,
+  dropTypes,
+  dropLength,
+  onDrop,
+  validateDrop,
   formatTime = defaultFormat,
   empty,
   className,
@@ -192,6 +224,7 @@ export function Timeline({
   const dragRef = React.useRef<Drag | null>(null);
   const [focusId, setFocusId] = React.useState<string | null>(null);
   const [said, setSaid] = React.useState("");
+  const [hover, setHover] = React.useState<{ next: TimelineChange; reason: string | null; guide: number | null } | null>(null);
   const refocus = React.useRef<string | null>(null);
   const selected = selectedIds ?? new Set<string>();
   const laneIndex = React.useMemo(() => new Map(lanes.map((l, i) => [l.id, i])), [lanes]);
@@ -362,6 +395,42 @@ export function Timeline({
     }
   };
 
+  /** Snaps an item of `length` starting at `start` to whichever of its ends is nearer an edge. */
+  const snapMove = (start: number, length: number, exclude?: string) => {
+    const edges = [...snapTimes, ...items.filter((i) => i.id !== exclude).flatMap((i) => [i.start, i.start + i.length])];
+    const a = snap ? snapTo(start, edges, zoom) : null;
+    const b = snap ? snapTo(start + length, edges, zoom) : null;
+    if (a && (!b || Math.abs(a.time - start) <= Math.abs(b.time - (start + length)))) return { start: a.time, guide: a.point as number | null };
+    if (b) return { start: b.time - length, guide: b.point as number | null };
+    return { start, guide: null as number | null };
+  };
+
+  // --- drops from outside ----------------------------------------------------------------------
+  const dropLen = dropLength ?? step * 5;
+  const dropAt = (lane: string, px: number | null) => {
+    const at = px === null ? (position ?? from) : from + px / zoom;
+    const snapped = snapMove(at, dropLen);
+    const next: TimelineChange = { start: clamp(tidy(snapped.start), from, Math.max(to - dropLen, from)), length: dropLen, lane };
+    return { next, guide: snapped.guide, reason: validateDrop?.(next) ?? null };
+  };
+  const onLaneHover = (lane: string, px: number | null) => {
+    const h = dropAt(lane, px);
+    setHover(h);
+    // A pointer sees the preview; the keyboard is told, as nothing else says where the drop would land.
+    if (px === null) setSaid(h.reason ?? `Drop here: ${laneLabel(lane)} at ${formatTime(h.next.start)}.`);
+  };
+  const onLaneDrop = (lane: string, px: number | null, dropped: DropItem[]) => {
+    setHover(null);
+    const h = dropAt(lane, px);
+    if (h.reason) {
+      setSaid(h.reason);
+      return;
+    }
+    onDrop?.({ ...h.next, items: dropped });
+    setSaid(`Added at ${formatTime(h.next.start)}, ${laneLabel(lane)}.`);
+  };
+  const dropsOn = Boolean(dropTypes?.length && onDrop);
+
   // --- pointer: move and trim ----------------------------------------------------------------
   const begin = (e: React.PointerEvent, item: TimelineItem, mode: Drag["mode"]) => {
     if (e.button !== 0) return;
@@ -396,17 +465,9 @@ export function Timeline({
       return s ? s.time : t;
     };
     if (d.mode === "move") {
-      let start = o.start + dt;
-      // Snap whichever end of the item is closer to an edge.
-      const a = snap ? snapTo(start, edges, zoom) : null;
-      const b = snap ? snapTo(start + o.length, edges, zoom) : null;
-      if (a && (!b || Math.abs(a.time - start) <= Math.abs(b.time - (start + o.length)))) {
-        start = a.time;
-        guide = a.point;
-      } else if (b) {
-        start = b.time - o.length;
-        guide = b.point;
-      }
+      const m = snapMove(o.start + dt, o.length, o.id);
+      const start = m.start;
+      guide = m.guide;
       next = { start: clamp(tidy(start), from, to - o.length), length: o.length, lane: laneAt(e.clientY, o.lane) };
     } else if (d.mode === "end") {
       next = { start: o.start, length: clamp(tidy(snapped(o.start + o.length + dt) - o.start), min, to - o.start), lane: o.lane };
@@ -503,15 +564,15 @@ export function Timeline({
   const itemLabel = (i: TimelineItem) => `${i.label}, ${formatTime(i.start)} to ${formatTime(i.start + i.length)}, ${laneLabel(i.lane)}`;
 
   return (
-    <div role="group" aria-label={label} onKeyDown={onKeyDown} className={cn("min-w-0 text-foreground", className)}>
+    <div role="group" aria-label={label} onKeyDown={onKeyDown} className={cn("min-w-0 text-foreground", className)} style={{ "--lane-h": `calc(var(--control-h) * ${Math.max(laneRows, 1)})` } as React.CSSProperties}>
       <p role="status" className="sr-only">
         {said}
       </p>
       <div className="flex">
-        <div className={cn("shrink-0 border-r border-border", HEADER_W)}>
+        <div className="w-max max-w-80 min-w-40 shrink-0 border-r border-border">
           <div className="h-8 border-b border-border" aria-hidden />
           {lanes.map((l) => (
-            <div key={l.id} className="flex h-(--control-h) items-center gap-1 border-b border-border px-2 type-label">
+            <div key={l.id} className="flex h-(--lane-h) items-center gap-1 border-b border-border px-2 type-label">
               <span className="min-w-0 flex-1 truncate" title={l.label}>
                 {l.label}
               </span>
@@ -557,7 +618,18 @@ export function Timeline({
             </div>
             {lanes.length === 0 && <div className="p-4">{empty}</div>}
             {lanes.map((l) => (
-              <div key={l.id} role="group" aria-label={l.label} ref={(el) => void (el ? laneRefs.current.set(l.id, el) : laneRefs.current.delete(l.id))} className="relative h-(--control-h) border-b border-border">
+              <LaneRow
+                key={l.id}
+                label={l.label}
+                register={(el) => void (el ? laneRefs.current.set(l.id, el) : laneRefs.current.delete(l.id))}
+                types={dropsOn ? dropTypes : undefined}
+                onHover={(px) => onLaneHover(l.id, px)}
+                onLeave={() => setHover(null)}
+                onDropItems={(px, dropped) => onLaneDrop(l.id, px, dropped)}
+              >
+                {hover && hover.next.lane === l.id && (
+                  <div aria-hidden className={cn("pointer-events-none absolute top-1 bottom-1 rounded-control border border-dashed", hover.reason ? "border-danger bg-danger-subtle" : "border-primary bg-muted")} style={{ left: x(hover.next.start), width: Math.max(hover.next.length * zoom, 4) }} />
+                )}
                 {(sorted.get(l.id) ?? []).filter(visible).map((item) => {
                   const live = drag?.id === item.id && drag.moved ? drag : null;
                   // Stays mounted in its own lane while dragged (it holds the pointer capture) and is
@@ -585,7 +657,7 @@ export function Timeline({
                         isSel && "bg-muted font-medium outline-2 outline-offset-1 outline-primary",
                         live?.reason && "border-dashed border-danger bg-danger-subtle",
                       )}
-                      style={{ left: px, width: w, borderTopColor: item.kind ? kindColour(item.kind, items) : undefined, transform: laneShift ? `translateY(calc(var(--control-h) * ${laneShift}))` : undefined, zIndex: live ? 10 : undefined }}
+                      style={{ left: px, width: w, borderTopColor: item.kind ? (kindColours?.[item.kind] ?? kindColour(item.kind, items)) : undefined, transform: laneShift ? `translateY(calc(var(--lane-h) * ${laneShift}))` : undefined, zIndex: live ? 10 : undefined }}
                     >
                       {renderItem ? renderItem(item, { selected: isSel, width: w }) : <DefaultItem item={item} width={w} />}
                       {/* Trim handles: pointer-only. The keyboard trims with Alt+arrows. */}
@@ -594,27 +666,35 @@ export function Timeline({
                     </div>
                   );
                 })}
-              </div>
+              </LaneRow>
             ))}
             {position !== undefined && <div aria-hidden className="pointer-events-none absolute top-8 bottom-0 w-0.5 bg-primary" style={{ left: x(position) - 1 }} />}
-            {drag?.moved && drag.guide !== null && <div aria-hidden className="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground" style={{ left: x(drag.guide) }} />}
+            {(() => {
+              const guide = drag?.moved ? drag.guide : (hover?.guide ?? null);
+              return guide !== null && <div aria-hidden className="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground" style={{ left: x(guide) }} />;
+            })()}
           </div>
         </div>
       </div>
-      {drag?.moved && (
-        <p aria-hidden className="mt-1 flex items-center gap-1.5 type-body-sm tabular-nums text-muted-foreground">
-          {drag.reason ? (
-            <>
-              <Ban className="size-4 shrink-0 text-danger" />
-              <span className="text-danger">{drag.reason}</span>
-            </>
-          ) : (
-            <>
-              {formatTime(drag.next.start)} to {formatTime(drag.next.start + drag.next.length)}, {laneLabel(drag.next.lane)}
-            </>
-          )}
-        </p>
-      )}
+      {(() => {
+        const info = drag?.moved ? { next: drag.next, reason: drag.reason } : hover;
+        return (
+          info && (
+            <p aria-hidden className="mt-1 flex items-center gap-1.5 type-body-sm tabular-nums text-muted-foreground">
+              {info.reason ? (
+                <>
+                  <Ban className="size-4 shrink-0 text-danger" />
+                  <span className="text-danger">{info.reason}</span>
+                </>
+              ) : (
+                <>
+                  {formatTime(info.next.start)} to {formatTime(info.next.start + info.next.length)}, {laneLabel(info.next.lane)}
+                </>
+              )}
+            </p>
+          )
+        );
+      })()}
     </div>
   );
 }
@@ -630,5 +710,39 @@ function DefaultItem({ item, width }: { item: TimelineItem; width: number }) {
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.kind && width > 120 && <span className="shrink-0 text-muted-foreground">{item.kind}</span>}
     </span>
+  );
+}
+
+/** One lane: a labelled group that is a React Aria drop target when `types` is given. `px` is the pointer's distance along the lane, or null for a keyboard drag (the lane is then the focused element). */
+function LaneRow({ label, register, types, onHover, onLeave, onDropItems, children }: { label: string; register: (el: HTMLDivElement | null) => void; types?: readonly string[]; onHover: (px: number | null) => void; onLeave: () => void; onDropItems: (px: number | null, items: DropItem[]) => void; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const keyboard = () => document.activeElement === ref.current;
+  const { dropProps } = useDrop({
+    ref,
+    isDisabled: !types,
+    // A pointer drag hands over a `DragTypes` and a keyboard (virtual) drag a plain `Set` (checked in
+    // `DragManager`), and only the first takes an array in `has`, so each type is asked on its own.
+    getDropOperation: (t) => (types?.some((type) => t.has(type)) ? "copy" : "cancel"),
+    onDropEnter: (e) => onHover(keyboard() ? null : e.x),
+    onDropMove: (e) => onHover(keyboard() ? null : e.x),
+    onDropExit: onLeave,
+    // A browser sends no drop for a refused type; a keyboard drag's event says so in `dropOperation`.
+    onDrop: (e) => e.dropOperation !== "cancel" && onDropItems(keyboard() ? null : e.x, e.items),
+  });
+  return (
+    <div
+      {...(types ? dropProps : {})}
+      ref={(el) => {
+        ref.current = el;
+        register(el);
+      }}
+      role="group"
+      aria-label={label}
+      // Focusable by script only: React Aria's keyboard drag moves focus to the lane it is over.
+      tabIndex={types ? -1 : undefined}
+      className="relative h-(--lane-h) border-b border-border"
+    >
+      {children}
+    </div>
   );
 }
