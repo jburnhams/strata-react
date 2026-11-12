@@ -54,7 +54,7 @@ export function Tabs({
             className={cn(
               "-mb-px cursor-pointer border-b-2 py-2 type-label whitespace-nowrap transition-state",
               "border-transparent text-muted-foreground hover:text-foreground",
-              "data-[selected]:border-foreground data-[selected]:font-semibold data-[selected]:text-foreground",
+              "selected:border-foreground selected:font-semibold selected:text-foreground",
             )}
           >
             {item.label}

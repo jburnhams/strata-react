@@ -237,7 +237,7 @@ function Tile({
         className={cn(
           // select-none: a Shift-click range would otherwise also select the text between the tiles.
           "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none transition-state",
-          "data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           chosen && "border-primary bg-surface-sunken",
           disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
         )}

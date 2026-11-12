@@ -39,7 +39,7 @@ import { cn } from "../lib/utils";
 //   platform picker.
 
 const box =
-  "flex h-(--control-h) w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state data-[disabled]:cursor-not-allowed data-[disabled]:bg-muted data-[disabled]:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
+  "flex h-(--control-h) w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
 
 /** A number with its unit joined by a non-breaking space; `%` and `°` stay attached. */
 function withUnit(text: string, unit?: string) {
@@ -259,12 +259,12 @@ export function Slider({
         aria-describedby={field?.describedBy}
         className={cn("flex min-w-0 items-center gap-3", className)}
       >
-        <SliderTrack className="relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer items-center data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50">
+        <SliderTrack className="relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer items-center disabled:cursor-not-allowed disabled:opacity-50">
           {({ state }) => (
             <>
               <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
               <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${state.getThumbPercent(0) * 100}%` }} />
-              <SliderThumb className="top-1/2 size-5 rounded-pill border-2 border-primary bg-background data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring" />
+              <SliderThumb className="top-1/2 size-5 rounded-pill border-2 border-primary bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
             </>
           )}
         </SliderTrack>

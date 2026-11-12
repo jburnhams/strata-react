@@ -1,6 +1,6 @@
 {
   "name": "strata-react",
-  "version": "1.0.3",
+  "version": "1.0.8",
   "description": "React + Tailwind v4 components that ship structure, behaviour, states and a token contract, and no look: each product brings a theme generated from its own subject.",
   "repository": {
     "type": "git",
@@ -106,7 +106,8 @@
     "react-aria": "^3.53.1",
     "react-aria-components": "^1.22.1",
     "react-stately": "^3.51.0",
-    "tailwind-merge": "^3.3.0"
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss-react-aria-components": "^2.2.0"
   },
   "devDependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
