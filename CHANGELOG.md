@@ -2,7 +2,7 @@
 
 ## 2026-11-12
 
-**Compare: difference view and CompareGrid** (branch `claude/project-thread-reaene`, second change of the comparison set after #100). Next piece of `design.md`: a way to see exactly where two renderings differ, and every candidate at once. `pixelmatch` is the image diff, as Jonathan decided (it is already a runtime dependency, so none was added).
+**Compare: difference view and CompareGrid** (branch `claude/project-thread-reaene`, PR #106, second change of the comparison set after #100). Next piece of `design.md`: a way to see exactly where two renderings differ, and every candidate at once. `pixelmatch` is the image diff, as Jonathan decided (it is already a runtime dependency, so none was added).
 
 - `src/lib/image-diff.ts` (**new**): `differences` (pixelmatch over two RGBA buffers, the second resampled to the first's size, marks as a transparent mask, the count and the total), `resample`, `readPixels` (draws a picture on a canvas, at most 2048 px on its long side, and rejects when it cannot be read), `DEFAULT_TOLERANCE` (pixelmatch's 0.1). The arithmetic is pure and unit tested without a canvas; the canvas path is covered by the Storybook shots in Chromium.
 - `src/components/difference.tsx` (**new**): `useDifference` (reads pixels only while the changed-pixels view is open, tolerance deferred so its slider stays smooth) and the marks canvas.
