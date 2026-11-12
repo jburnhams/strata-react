@@ -224,3 +224,24 @@ describe("Row actions", () => {
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
   });
 });
+
+describe("Checkbox in a form", () => {
+  it("keeps the native required behaviour: an unchecked required box makes the form invalid", async () => {
+    function Consent() {
+      const [on, setOn] = React.useState(false);
+      return (
+        <form aria-label="Consent">
+          <Checkbox label="I agree" name="agree" required checked={on} onCheckedChange={setOn} />
+        </form>
+      );
+    }
+    render(<Consent />);
+    const form = screen.getByRole("form", { name: "Consent" }) as HTMLFormElement;
+    const box = screen.getByRole("checkbox", { name: "I agree" });
+    expect(box).toBeRequired();
+    expect(form.checkValidity()).toBe(false);
+    await userEvent.click(box);
+    expect(form.checkValidity()).toBe(true);
+    expect(new FormData(form).get("agree")).not.toBeNull();
+  });
+});
