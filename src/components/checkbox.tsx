@@ -61,17 +61,7 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
       >
         {({ isSelected, isIndeterminate }) => (
           <>
-            <span
-              aria-hidden
-              className={cn(
-                "grid size-4.5 shrink-0 place-items-center rounded-control border border-input bg-background transition-state",
-                "group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring",
-                (isSelected || isIndeterminate) && "border-primary bg-primary text-primary-foreground",
-                !hideLabel && "mt-0.5",
-              )}
-            >
-              {isIndeterminate ? <Minus className="size-3.5" strokeWidth={3} /> : isSelected ? <Check className="size-3.5" strokeWidth={3} /> : null}
-            </span>
+            <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel={hideLabel} />
             {!hideLabel && (
               <span className="grid">
                 <span className="type-body">{label}</span>
@@ -101,5 +91,48 @@ export function useShiftNote() {
       },
     }),
     [],
+  );
+}
+
+// The drawn box, shared by `Checkbox` and the table's selection checkbox.
+function CheckboxBox({ selected, indeterminate, hideLabel }: { selected: boolean; indeterminate: boolean; hideLabel: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid size-4.5 shrink-0 place-items-center rounded-control border border-input bg-background transition-state",
+        "group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring",
+        (selected || indeterminate) && "border-primary bg-primary text-primary-foreground",
+        !hideLabel && "mt-0.5",
+      )}
+    >
+      {indeterminate ? <Minus className="size-3.5" strokeWidth={3} /> : selected ? <Check className="size-3.5" strokeWidth={3} /> : null}
+    </span>
+  );
+}
+
+/**
+ * The checkbox of a React Aria `Table` row or header (`slot="selection"`): its checked, mixed and
+ * disabled state come from the table, so it takes only a name. A `Checkbox` is controlled and would
+ * fight the table's own selection state. Not exported from the package: `DataTable` uses it.
+ * @internal
+ */
+export function TableSelectionCheckbox({ label, className, disabled }: { label: string; className?: string; disabled?: boolean }) {
+  // The table names a row's checkbox from its own label and the row header's text; ours is named
+  // by the caller's `rowLabel` alone ("Select Tom Ellery"), so it labels itself.
+  const id = React.useId();
+  return (
+    <AriaCheckbox
+      slot="selection"
+      isDisabled={disabled}
+      id={id}
+      aria-labelledby={id}
+      aria-label={label}
+      className={({ isDisabled }) =>
+        cn("group inline-flex min-h-6 min-w-6 items-center justify-center", isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer", className)
+      }
+    >
+      {({ isSelected, isIndeterminate }) => <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel />}
+    </AriaCheckbox>
   );
 }

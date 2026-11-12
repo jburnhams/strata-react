@@ -1,9 +1,9 @@
 import * as React from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/utils";
-import { Checkbox as AriaCheckbox } from "react-aria-components";
+import { Checkbox as AriaCheckbox, GridLayout, GridList, GridListItem, Virtualizer, type Selection } from "react-aria-components";
+import { Size } from "react-stately";
 import { Check } from "lucide-react";
-import { Checkbox, useShiftNote, type CheckboxGesture } from "./checkbox";
+import { Checkbox, useShiftNote } from "./checkbox";
 import type { RowSelection } from "./data-table";
 import { useSelectRows } from "./selection";
 
@@ -15,19 +15,25 @@ import { useSelectRows } from "./selection";
 // or not) and is mixed when some are chosen, and Shift-click or Shift+Space chooses or clears the
 // run from the last tile clicked (`useSelectRows`, the same code the table uses).
 //
-// Each tile is one target: the picture, the box and the detail line sit in one <label>, so a click
-// anywhere on the picture toggles it (Google Photos and Apple Photos select from the picture, not
-// only from the box). The box is named from the row (`rowLabel` is required, as the table's is),
-// so a screen reader hears "Select Ada Lovelace, crop 3", not twelve "checkbox, not checked". The
-// box sits on a chip of the page's ground in the picture's corner, so it stays visible on any
-// photo. A chosen tile takes the sunken fill and a primary border, not a ring: the focus outline is
-// the only ring, so a selection never reads as focus.
+// It is React Aria's GridList with `layout="grid"` (arrow keys move across and down the tiles) and
+// its own selection: each tile is one row, a press anywhere on it toggles it (Google Photos and Apple
+// Photos select from the picture, not only from the box), Shift extends a range, Space toggles. The
+// box is React Aria's selection checkbox, named from the row (`rowLabel` is required, as the
+// table's is), so a screen reader hears "Select Ada Lovelace, crop 3", not twelve "checkbox, not
+// checked". The box sits on a chip of the page's ground in the picture's corner, so it stays
+// visible on any photo. A chosen tile takes the sunken fill and a primary border, not a ring: the
+// focus outline is the only ring, so a selection never reads as focus. Shift-click on the box also
+// extends a range, as before (a checkbox always toggles one tile in React Aria), through
+// `useSelectRows`. "Select all shown" is ours, outside the grid, since the tiles shown may be a
+// part of the keys held.
 //
 // The picture is the caller's (`renderImage`), in a frame of fixed aspect (`aspect`, square by
 // default) so tiles line up and nothing shifts as images load; an <img> or Strata's `Thumbnail`
 // fills it. Tiles are sized by a minimum width (`tileSize`) and fill the row. From
-// `virtualizeFrom` tiles (100, as the table and list) the grid renders only the visible rows of
-// tiles in a labelled, focusable scroll region, measuring its width to know how many fit a row.
+// `virtualizeFrom` tiles (100, as the table and list) React Aria's Virtualizer with `GridLayout`
+// draws only the visible rows of tiles in the grid's own scroll box, working out how many fit a row
+// and measuring each row of tiles. (Its tiles keep a margin of one gap at the edges of the box, which
+// the plain grid does not have.)
 
 /** The frame each picture is drawn in. */
 export type TileAspect = "square" | "portrait" | "landscape";
@@ -36,7 +42,7 @@ export type TileAspect = "square" | "portrait" | "landscape";
 export type TileSize = "sm" | "md" | "lg";
 
 export type SelectableGridProps<T> = {
-  /** Names the list of tiles (and its scroll region once virtualised). */
+  /** Names the grid of tiles. */
   label: string;
   rows: T[];
   rowKey: (row: T) => string;
@@ -60,9 +66,9 @@ export type SelectableGridProps<T> = {
 const minWidth: Record<TileSize, number> = { sm: 96, md: 144, lg: 192 };
 const aspectClass: Record<TileAspect, string> = { square: "aspect-square", portrait: "aspect-3/4", landscape: "aspect-4/3" };
 const aspectRatio: Record<TileAspect, number> = { square: 1, portrait: 4 / 3, landscape: 3 / 4 };
-// gap-3, in px, for the column count of a virtualised grid.
+// gap-3, in px.
 const GAP = 12;
-// The detail line and the tile's padding, for the first estimate of a row's height.
+// The detail line and the tile's padding, for the first estimate of a tile's height.
 const TILE_CHROME = 40;
 
 /** A grid of pictures to choose from: each tile one labelled target, "Select all shown", Shift-click ranges, virtualised from `virtualizeFrom` tiles. Pair with `useSelection` and a `BulkBar`. */
@@ -81,25 +87,101 @@ export function SelectableGrid<T>({
 }: SelectableGridProps<T>) {
   const select = useSelectRows(rows, rowKey, selection);
   const virtual = rows.length >= virtualizeFrom;
+  const shownKeys = React.useMemo(() => new Set(rows.map(rowKey)), [rows, rowKey]);
+  const disabledKeys = rows.filter((r) => !(selection.isSelectable?.(r) ?? true)).map(rowKey);
 
-  const tile = (row: T, index: number) => {
-    const key = rowKey(row);
-    return (
-      <Tile
-        name={`Select ${selection.rowLabel(row)}`}
-        chosen={selection.selected.has(key)}
-        disabled={!(selection.isSelectable?.(row) ?? true)}
-        onChange={(on, gesture) => select.toggle(key, on, gesture)}
-        aspect={aspect}
-        image={renderImage(row)}
-        detail={detail?.(row)}
-        index={index}
-      />
-    );
+  // React Aria owns the selection of tiles: a press anywhere on a tile toggles it, Shift extends a
+  // range from the last one, Space toggles from the keyboard. Our `RowSelection` holds keys only, and
+  // keeps the keys of rows that are not shown (a filter), so the two are translated here.
+  // A checkbox always toggles one tile in React Aria, and Shift-click on one still extends a range
+  // (issue #32): Shift is noted on the press, and a change of exactly one tile is a click on it.
+  // A press on the picture with Shift is React Aria's own range and changes several at once.
+  const shift = useShiftNote();
+  // The row last pressed (React Aria marks each row with `data-key`), to anchor a range it extended itself.
+  const pressed = React.useRef<string | null>(null);
+  const notePress = (e: React.SyntheticEvent) => void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
+  const changeSelection = (next: Selection) => {
+    if (next !== "all") {
+      const nextShown = new Set([...next].map(String).filter((k) => shownKeys.has(k)));
+      const added = [...nextShown].filter((k) => !selection.selected.has(k));
+      const removed = [...selection.selected].filter((k) => shownKeys.has(k) && !nextShown.has(k));
+      if (added.length + removed.length === 1) {
+        select.toggle(added[0] ?? removed[0], added.length === 1, shift.take());
+        return;
+      }
+      select.setAnchor(pressed.current);
+    }
+    const outside = [...selection.selected].filter((k) => !shownKeys.has(k));
+    const picked = next === "all" ? rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey) : [...next].map(String).filter((k) => shownKeys.has(k));
+    selection.onChange(new Set([...outside, ...picked]));
   };
 
+  // Tiles grow from `tileSize` to fill the row, and each row is as tall as its tallest tile as
+  // measured (the first guess is the frame at the minimum width plus the detail line).
+  const layoutOptions = React.useMemo(
+    () => ({
+      minItemSize: new Size(minWidth[tileSize], Math.round(minWidth[tileSize] * aspectRatio[aspect]) + TILE_CHROME),
+      minSpace: new Size(GAP, GAP),
+    }),
+    [tileSize, aspect],
+  );
+
+  const grid = (
+    <GridList
+      aria-label={label}
+      layout="grid"
+      selectionMode="multiple"
+      selectionBehavior="toggle"
+      selectedKeys={new Set([...selection.selected].filter((k) => shownKeys.has(k)))}
+      onSelectionChange={changeSelection}
+      disabledKeys={disabledKeys}
+      data-strata-scroll=""
+      className={cn("min-w-0 outline-none", virtual ? "overflow-y-auto" : "grid gap-3")}
+      style={
+        virtual
+          ? { height: maxHeight }
+          : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }
+      }
+    >
+      {rows.map((row, index) => {
+        const key = rowKey(row);
+        const name = selection.rowLabel(row);
+        return (
+          <GridListItem
+            key={key}
+            id={key}
+            textValue={name}
+            data-index={index}
+            className={cn(
+              // select-none: a Shift-click range would otherwise also select the text between the tiles.
+              "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none outline-offset-2 transition-state",
+              "selected:border-primary selected:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50",
+              "cursor-pointer hover:bg-surface-sunken disabled:hover:bg-transparent",
+            )}
+          >
+            <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
+              {renderImage(row)}
+            </span>
+            <TileBox label={`Select ${name}`} />
+            {detail?.(row) != null && <span className="truncate type-body-sm text-muted-foreground">{detail(row)}</span>}
+          </GridListItem>
+        );
+      })}
+    </GridList>
+  );
+
   return (
-    <div className={cn("grid min-w-0 gap-3", className)}>
+    <div
+      className={cn("grid min-w-0 gap-3", className)}
+      onMouseDownCapture={(e) => {
+        shift.handlers.onMouseDown(e);
+        notePress(e);
+      }}
+      onKeyDownCapture={(e) => {
+        shift.handlers.onKeyDown(e);
+        notePress(e);
+      }}
+    >
       <Checkbox
         className="justify-self-start"
         label="Select all shown"
@@ -108,156 +190,35 @@ export function SelectableGrid<T>({
         onCheckedChange={select.all.toggle}
       />
       {virtual ? (
-        <VirtualTiles label={label} rows={rows} rowKey={rowKey} tile={tile} aspect={aspect} tileSize={tileSize} maxHeight={maxHeight} />
+        <Virtualizer layout={GridLayout} layoutOptions={layoutOptions}>
+          {grid}
+        </Virtualizer>
       ) : (
-        <ul
-          aria-label={label}
-          className="grid gap-3"
-          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }}
-        >
-          {rows.map((row, i) => (
-            <li key={rowKey(row)}>{tile(row, i)}</li>
-          ))}
-        </ul>
+        grid
       )}
     </div>
   );
 }
 
-function VirtualTiles<T>({
-  label,
-  rows,
-  rowKey,
-  tile,
-  aspect,
-  tileSize,
-  maxHeight,
-}: {
-  label: string;
-  rows: T[];
-  rowKey: (row: T) => string;
-  tile: (row: T, index: number) => React.ReactNode;
-  aspect: TileAspect;
-  tileSize: TileSize;
-  maxHeight: number;
-}) {
-  const scroller = React.useRef<HTMLDivElement>(null);
-  const [width, setWidth] = React.useState(0);
-  React.useLayoutEffect(() => {
-    const el = scroller.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  const min = minWidth[tileSize];
-  const columns = Math.max(1, Math.floor((width + GAP) / (min + GAP)));
-  const tileWidth = width > 0 ? (width - GAP * (columns - 1)) / columns : min;
-  const lines = Math.ceil(rows.length / columns);
-  const virtualizer = useVirtualizer({
-    count: lines,
-    getScrollElement: () => scroller.current,
-    estimateSize: () => Math.round(tileWidth * aspectRatio[aspect]) + TILE_CHROME + GAP,
-    overscan: 3,
-    // Keyed by the column count as well as the row: a new count moves every tile to another row,
-    // so each row of tiles is a new element, measured afresh, not an old height reused.
-    getItemKey: (i) => `${columns}:${i}`,
-    // Until the region is measured, assume it is full height, so the first paint shows tiles.
-    initialRect: { width: 0, height: maxHeight },
-  });
-  const items = virtualizer.getVirtualItems();
-
+// The box in the tile's corner: React Aria's selection checkbox for this row (`slot="selection"`),
+// named from the row, on a chip of the page's ground so it stays visible on any photo.
+function TileBox({ label }: { label: string }) {
+  // The grid would name the box from its own label and the row's; ours is named by `rowLabel`
+  // alone, so it labels itself.
+  const id = React.useId();
   return (
-    <div
-      ref={scroller}
-      role="region"
-      aria-label={label}
-      tabIndex={0}
-      data-strata-scroll=""
-      className="min-w-0 overflow-y-auto"
-      style={{ height: maxHeight }}
-    >
-      {/* role="list" over plain rows of tiles: each row is laid out on its own, and the rows add nothing for a screen reader. */}
-      <div role="list" aria-label={label} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-        {items.map((v) => {
-          const start = v.index * columns;
-          return (
-            <div
-              key={v.key}
-              ref={virtualizer.measureElement}
-              data-index={v.index}
-              role="none"
-              className="absolute inset-x-0 top-0 grid gap-3 pb-3"
-              style={{ translate: `0 ${v.start}px`, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-            >
-              {rows.slice(start, start + columns).map((row, i) => (
-                <div key={rowKey(row)} role="listitem" aria-setsize={rows.length} aria-posinset={start + i + 1}>
-                  {tile(row, start + i)}
-                </div>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function Tile({
-  name,
-  chosen,
-  disabled,
-  onChange,
-  aspect,
-  image,
-  detail,
-  index,
-}: {
-  name: string;
-  chosen: boolean;
-  disabled: boolean;
-  onChange: (on: boolean, gesture: CheckboxGesture) => void;
-  aspect: TileAspect;
-  image: React.ReactNode;
-  detail?: React.ReactNode;
-  index: number;
-}) {
-  const shift = useShiftNote();
-  // The whole tile is one React Aria Checkbox (a label around a hidden input), so a press anywhere
-  // on it toggles; the visible box in the corner is drawn from tokens. Shift is noted in the capture
-  // phase because React Aria's press handling stops the events it uses.
-  return (
-    <span className="contents" onMouseDownCapture={shift.handlers.onMouseDown} onKeyDownCapture={shift.handlers.onKeyDown}>
-      <AriaCheckbox
-        isSelected={chosen}
-        isDisabled={disabled}
-        aria-label={name}
-        onChange={(on) => onChange(on, shift.take())}
-        data-index={index}
-        className={cn(
-          // select-none: a Shift-click range would otherwise also select the text between the tiles.
-          "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none transition-state",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-          chosen && "border-primary bg-surface-sunken",
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
-        )}
-      >
-        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
-          {image}
+    <AriaCheckbox slot="selection" id={id} aria-labelledby={id} aria-label={label} className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background">
+      {({ isSelected }) => (
+        <span
+          aria-hidden
+          className={cn(
+            "grid size-4.5 place-items-center rounded-control border border-input bg-background",
+            isSelected && "border-primary bg-primary text-primary-foreground",
+          )}
+        >
+          {isSelected && <Check className="size-3.5" strokeWidth={3} />}
         </span>
-        <span className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background">
-          <span
-            aria-hidden
-            className={cn(
-              "grid size-4.5 place-items-center rounded-control border border-input bg-background",
-              chosen && "border-primary bg-primary text-primary-foreground",
-            )}
-          >
-            {chosen && <Check className="size-3.5" strokeWidth={3} />}
-          </span>
-        </span>
-        {detail != null && <span className="truncate type-body-sm text-muted-foreground">{detail}</span>}
-      </AriaCheckbox>
-    </span>
+      )}
+    </AriaCheckbox>
   );
 }

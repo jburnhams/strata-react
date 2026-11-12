@@ -75,31 +75,33 @@ describe("DataTable missing values (#47)", () => {
     { key: "total", header: "Videos", numeric: true, value: (c) => c.total },
     { key: "synced", header: "Last synced", value: (c) => (c.synced ? new Date(c.synced) : null), missing: "Never" },
   ];
+  // The first column is the row header (React Aria requires one); the rest are grid cells.
+  const cells = (row: HTMLElement) => [...row.querySelectorAll<HTMLElement>("[role=rowheader], [role=gridcell]")];
   const names = () =>
-    within(screen.getByRole("table"))
+    within(screen.getByRole("grid"))
       .getAllByRole("row")
       .slice(1)
-      .map((r) => within(r).getAllByRole("cell")[0].textContent);
+      .map((r) => cells(r)[0].textContent);
 
   it("draws a placeholder for a missing value, the column's word where it has one", () => {
     renderWithStrata(<DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />);
     const glaze = screen.getByRole("row", { name: /Glaze Lab/ });
-    const [, total, synced] = within(glaze).getAllByRole("cell");
+    const [, total, synced] = cells(glaze);
     expect(total).toHaveTextContent("No value");
     expect(within(total).getByText("–")).toHaveAttribute("aria-hidden", "true");
     expect(synced).toHaveTextContent("Never");
-    expect(within(screen.getByRole("row", { name: /Night Sky/ })).getAllByRole("cell")[2]).toHaveTextContent("8 Nov 2026");
+    expect(cells(screen.getByRole("row", { name: /Night Sky/ }))[2]).toHaveTextContent("8 Nov 2026");
   });
 
   it("sorts by value with missing rows last in both directions", async () => {
     renderWithStrata(<DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />);
-    await userEvent.click(screen.getByRole("button", { name: "Videos" }));
+    await userEvent.click(screen.getByRole("columnheader", { name: "Videos" }));
     expect(names()).toEqual(["Wheel Work", "Night Sky", "Kiln Talk", "Glaze Lab"]);
-    await userEvent.click(screen.getByRole("button", { name: "Videos" }));
+    await userEvent.click(screen.getByRole("columnheader", { name: "Videos" }));
     expect(names()).toEqual(["Kiln Talk", "Night Sky", "Wheel Work", "Glaze Lab"]);
-    await userEvent.click(screen.getByRole("button", { name: "Last synced" }));
+    await userEvent.click(screen.getByRole("columnheader", { name: "Last synced" }));
     expect(names().slice(0, 2)).toEqual(["Wheel Work", "Night Sky"]);
-    await userEvent.click(screen.getByRole("button", { name: "Last synced" }));
+    await userEvent.click(screen.getByRole("columnheader", { name: "Last synced" }));
     expect(names().slice(0, 2)).toEqual(["Night Sky", "Wheel Work"]);
     expect(names().slice(2).sort()).toEqual(["Glaze Lab", "Kiln Talk"]);
   });
@@ -114,7 +116,7 @@ describe("DataTable missing values (#47)", () => {
         rowKey={(r) => r.id}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Kiln" }));
+    await userEvent.click(screen.getByRole("columnheader", { name: "Kiln" }));
     expect(names()).toEqual(["kiln 2", "Kiln 10", "–No value"]);
   });
 
@@ -122,7 +124,7 @@ describe("DataTable missing values (#47)", () => {
     renderWithStrata(
       <DataTable caption="Channels" columns={[{ key: "name", header: "Channel", value: (c: Channel) => c.name, sort: false }]} rows={channels} rowKey={(c) => c.id} />,
     );
-    expect(screen.queryByRole("button", { name: "Channel" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Channel" })).not.toHaveAttribute("aria-sort");
   });
 });
 
