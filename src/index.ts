@@ -90,6 +90,7 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
+export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
 export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./components/file-intake";
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
 export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
