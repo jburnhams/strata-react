@@ -9,6 +9,7 @@
 - `src/styles/strata.css`: each type step reads `--type-<step>-size`, `-leading`, `-weight` with today's value as the fallback; `--control-px`, `--control-px-sm`, `--control-icon` on `:root`.
 - `src/components/button.tsx`: padding and icon size from those roles.
 - `tests/unit/thumbnail.test.tsx`, `tests/unit/from-apps.test.tsx`, `tests/integration/package.test.ts`: the new behaviour, and that the compiled stylesheet carries the variables and defaults.
+- Review fixes (Codex, P2): `srcSet` applies to the first source only, so a fallback is not replaced by the set that just failed; `onMissing` is told again when the same request fails again after another one loaded. Two tests in `tests/unit/thumbnail.test.tsx` fail without the fix.
 - `stories/thumbnail.stories.tsx` (`SourcesInOrder`), `stories/button.stories.tsx` (`SecondLook`: default beside a tighter scale, set inline on a wrapper).
 - `README.md`, `UPGRADING.md`: the rows and the changes.
 - Not done: the other components' own padding and icon sizes (inputs, selects, tabs); only `Button` was in the issue.

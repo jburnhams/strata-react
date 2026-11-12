@@ -128,6 +128,27 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
     expect(onMissing).toHaveBeenCalledTimes(1);
   });
 
+  it("does not put the first source's srcSet on a fallback", () => {
+    const { container } = render(<Thumbnail src={sizes} srcSet="/maxres-2x.jpg 2x" alt="Kiln cam" missing="No picture" eager />);
+    expect(imgIn(container)).toHaveAttribute("srcset", "/maxres-2x.jpg 2x");
+    fireEvent.error(imgIn(container)!);
+    expect(imgIn(container)).toHaveAttribute("src", "/hq.jpg");
+    expect(imgIn(container)).not.toHaveAttribute("srcset");
+  });
+
+  it("tells again when the same request fails again after another one loaded", () => {
+    const onMissing = vi.fn();
+    const ui = (src: string) => <Thumbnail src={src} alt="Kiln cam" missing="No picture" eager onMissing={onMissing} />;
+    const { container, rerender } = render(ui("/a.jpg"));
+    fireEvent.error(imgIn(container)!);
+    expect(onMissing).toHaveBeenCalledTimes(1);
+    rerender(ui("/b.jpg"));
+    fireEvent.load(imgIn(container)!);
+    rerender(ui("/a.jpg"));
+    fireEvent.error(imgIn(container)!);
+    expect(onMissing).toHaveBeenCalledTimes(2);
+  });
+
   it("stops at the first source that loads", () => {
     const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />);
     fireEvent.load(imgIn(container)!);

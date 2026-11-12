@@ -136,7 +136,9 @@ export function Thumbnail({
   const tell = React.useRef(onMissing);
   tell.current = onMissing;
   React.useEffect(() => {
-    if (key !== null && phase === "missing" && told.current !== key) {
+    // Any state but "missing" ends the last telling, so the same request failing again later is told again.
+    if (phase !== "missing") told.current = null;
+    else if (key !== null && told.current !== key) {
       told.current = key;
       tell.current?.();
     }
@@ -155,7 +157,8 @@ export function Thumbnail({
         <img
           key={`${key}#${index}`}
           src={current}
-          srcSet={srcSet}
+          // The candidates are the first source's: a fallback would otherwise be replaced by the set that just failed.
+          srcSet={index === 0 ? srcSet : undefined}
           sizes={sizes}
           alt={alt}
           decoding="async"
