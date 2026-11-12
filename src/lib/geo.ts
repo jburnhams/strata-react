@@ -122,6 +122,18 @@ export function nearest(points: readonly LatLng[], position: LatLng): number {
   return best;
 }
 
+/** The part of a route between two distances along it (metres, clamped, either order): the cut ends and every point between. Empty for no route. */
+export function slice(points: readonly LatLng[], from: number, to: number, along: readonly number[] = cumulative(points)): LatLng[] {
+  if (!points.length) return [];
+  const [a, b] = from <= to ? [from, to] : [to, from];
+  const start = pointAlong(points, a, along)!;
+  const end = pointAlong(points, b, along)!;
+  const lo = Math.max(a, 0);
+  const hi = Math.min(b, along[along.length - 1]);
+  const inside = points.filter((_, i) => along[i] > lo && along[i] < hi);
+  return [start, ...inside, end];
+}
+
 /**
  * The nearest point on a route to `position`, not only its vertices: where it lies, how far along the
  * route that is, and how far `position` is from the route. The inverse of `pointAlong` (a cursor on a
@@ -145,5 +157,5 @@ export function snap(points: readonly LatLng[], position: LatLng, along: readonl
   return best;
 }
 
-/** Route geometry helpers: `geo.distance`, `bearing`, `length`, `cumulative`, `bounds`, `pointAlong`, `snap` (its inverse), `arrows`, `ends`, `nearest`. */
-export const geo = { distance, bearing, cumulative, length, bounds, pointAlong, snap, arrows, ends, nearest };
+/** Route geometry helpers: `geo.distance`, `bearing`, `length`, `cumulative`, `bounds`, `pointAlong`, `snap` (its inverse), `slice`, `arrows`, `ends`, `nearest`. */
+export const geo = { distance, bearing, cumulative, length, bounds, pointAlong, snap, slice, arrows, ends, nearest };

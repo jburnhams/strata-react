@@ -47,3 +47,19 @@ describe("geo.snap", () => {
     expect(s.index).toBe(2);
   });
 });
+
+describe("geo.slice", () => {
+  it("is the part of the route between two distances, cut ends included, in any order", () => {
+    const total = geo.length(route);
+    const part = geo.slice(route, total * 0.2, total * 0.8);
+    expect(part.length).toBeGreaterThanOrEqual(3);
+    expect(geo.length(part)).toBeCloseTo(total * 0.6, -1);
+    expect(geo.slice(route, total * 0.8, total * 0.2)).toEqual(part);
+    expect(geo.snap(route, part[0])!.metres).toBeCloseTo(total * 0.2, -1);
+  });
+  it("clamps to the route and is empty for none", () => {
+    const total = geo.length(route);
+    expect(geo.length(geo.slice(route, -50, total + 50))).toBeCloseTo(total, 0);
+    expect(geo.slice([], 0, 10)).toEqual([]);
+  });
+});

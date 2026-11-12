@@ -2,6 +2,17 @@
 
 ## 2026-11-12
 
+**Maps and charts for a media review screen: markers, shared cursor, spans, log axis, picking (issues #181 to #184)** (branch `claude/maps-and-charts`). One batch: a cursor shared by every view of the same run, items on the map, richer line charts and a place picker.
+
+- `src/components/cursor.tsx` (**new**): `CursorScope`, `useSharedCursor`, `CursorMapping`. One canonical unit, a mapping per member, `source` ids so a member never reacts to its own writes, pointer and playback owners (the pointer wins, playback is the fallback), one throttled polite live region.
+- `src/components/line-chart.tsx`: `spans` (shaded stretches with a word), `marks` (a roving group of buttons with `renderMarkCard`), `yScale="log"`, `yInvert`, `xTicks`, `xDomain`, `cursor`; `LineChartGroup` stacks charts on one x axis with one set of labels and one shared reading. `logScale` and `valueAt` exported.
+- `src/components/media.tsx`: `SeekBar` `cursor`.
+- `src/lib/geo.ts`: `snap` (nearest point on a route, with how far off) and `slice`.
+- `src/map/fan.ts`, `src/map/markers.tsx` (**new**): `fanOut` (single linkage in world pixels, circle for 2 to 6, rings beyond), `MapMarker` and the marker layer and key.
+- `src/map/route-map.tsx`, `map-styles.ts`, `index.ts`: `markers`, `onMarkerSelect`, `renderMarkerCard`, `markerKey`, `cursor`, `onViewChange`, `view`, a "Reset view" control, `picking`/`onPick`/`onPickCancel`/`pickBanner`.
+- Tests (**new**): `geo`, `fan-out`, `line-chart-spans`, `route-map-instrument`, `cursor-seekbar`. Stories: `SpansAndMarks`, `LogAxisFasterAtTheTop`, `StackedWithSharedReading`, `StackedPhone`, `LiveGroup`; `Markers`, `MarkersZoomedIn`, `MarkersPhone`, `Picking`, `PickAPlace`; **new** baselines, and every `RouteMap` baseline moved because the reset control is now drawn in the top-start corner.
+- `UPGRADING.md` line for the reset control. Not changed: the media playback and layout baselines differ slightly on this machine (select glyph anti-aliasing), so they were not rewritten.
+
 **strata-visual: wait for a fresh video frame before each shot (flaky CompareVideoGrid shots)** (branch `claude/project-thread-5qo67g`, found on #193). The visual job failed on one empty video cell in a different `CompareVideoGrid` shot each run (also red on `main` after #177), with every video at `readyState` 4 and frames counted. Reproduced locally by pinning Chromium to two CPUs with four busy loops and eight pages at once (about one run in three, a different cell each time); a second screenshot 2.5 s later was byte-identical, so the cell stays empty rather than lagging.
 
 - `src/visual/capture.ts`: `settle` now seeks each decoded video to the time it is already at and waits for `requestVideoFrameCallback` (2 s cap) before the shot, which hands a fresh frame to the compositor. 0 failures in 12 loaded runs of the video-grid shots after, against roughly one in three before.

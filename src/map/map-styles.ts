@@ -22,6 +22,9 @@ const strata = `
 .strata-map .leaflet-tooltip::before { display: none; }
 .strata-map[data-dark-treatment] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
 .strata-map .strata-map-arrow { background: none; border: 0; }
+.strata-map .strata-map-marker, .strata-map .strata-map-crosshair { background: none; border: 0; display: grid; place-items: center; }
+.strata-map .strata-map-reset { display: grid; place-items: center; }
+.strata-map .strata-map-picking, .strata-map .strata-map-picking .leaflet-interactive { cursor: crosshair; }
 `;
 
 let installed = false;

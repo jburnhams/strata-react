@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { LineChart, format } from "../src";
+import { LineChart, LineChartGroup, format } from "../src";
+import { riverClips, riverElevation, riverPace, riverStops } from "./fixtures/route";
 import { NOW_MIN, SAFE_TO_OPEN_C, heatScale, minuteToDate, planned, readings } from "./fixtures/kiln";
 
 const hours = Array.from({ length: Math.floor(NOW_MIN / 360) + 1 }, (_, i) => i * 360);
@@ -117,3 +118,100 @@ export const LiveProfile: Story = {
     );
   },
 };
+
+// Issue #183: spans, marks, a log axis, and charts stacked on one axis (strata-360's elevation and pace).
+const km = (x: number) => `${(x / 1000).toFixed(1)} km`;
+const paceText = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")} /km`;
+const distanceTicks = ({ min, max }: { min: number; max: number }) => {
+  const step = (max - min) / 5 > 1000 ? 1000 : 500;
+  return Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, i) => Math.ceil(min / step) * step + i * step).filter((t) => t <= max);
+};
+
+/** Shaded spans for the stops, named in the key and for screen readers; twelve clip marks on the line (one tab stop, arrows between them), one selected. */
+export const SpansAndMarks: Story = {
+  args: {
+    label: "Elevation along the run",
+    series: riverElevation,
+    seriesLabel: "Elevation",
+    xLabel: "Distance",
+    formatX: km,
+    formatY: (y: number) => `${y} m`,
+    xTicks: distanceTicks,
+    yMin: 0,
+    area: true,
+    end: "none",
+    spans: riverStops,
+    marks: riverClips.map((m, i) => ({ ...m, selected: i === 4 })),
+  },
+};
+
+/** A log axis with the faster pace at the top: ticks at 1, 2, 5 steps, so a long walk and a sprint both read. */
+export const LogAxisFasterAtTheTop: Story = {
+  args: {
+    label: "Pace along the run",
+    series: riverPace,
+    seriesLabel: "Pace",
+    xLabel: "Distance",
+    formatX: km,
+    formatY: paceText,
+    xTicks: distanceTicks,
+    yScale: "log",
+    yInvert: true,
+    end: "none",
+    spans: riverStops,
+  },
+};
+
+/** Elevation and pace stacked on one x axis, stops shaded and every clip marked on both. Hover or arrow in either chart: the rule and each chart's own reading appear in both. */
+export const StackedWithSharedReading: Story = {
+  render: () => (
+    <LineChartGroup
+      label="Elevation and pace along the run"
+      xLabel="Distance"
+      formatX={km}
+      xTicks={distanceTicks}
+      spans={riverStops}
+      marks={riverClips}
+      current={2600}
+      charts={[
+        { series: riverElevation, seriesLabel: "Elevation", formatY: (y: number) => `${y} m`, yMin: 0, area: true, end: "none", height: 170 },
+        { series: riverPace, seriesLabel: "Pace", formatY: paceText, yScale: "log", yInvert: true, end: "none", height: 170 },
+      ]}
+    />
+  ),
+};
+
+/** Phone width: the stack keeps its single set of x labels. */
+export const StackedPhone: Story = { ...StackedWithSharedReading, tags: ["visual-phone"] };
+
+function LiveGroupStage() {
+  const [along, setAlong] = React.useState(0);
+  React.useEffect(() => {
+    let frame = 0;
+    const started = performance.now();
+    const tick = (now: number) => {
+      setAlong(((now - started) / 30_000) % 1);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return (
+    <LineChartGroup
+      label="Elevation and pace along the run"
+      xLabel="Distance"
+      formatX={km}
+      xTicks={distanceTicks}
+      spans={riverStops}
+      marks={riverClips}
+      current={along * 5200}
+      charts={[
+        { series: riverElevation, seriesLabel: "Elevation", formatY: (y: number) => `${y} m`, yMin: 0, area: true, end: "none", height: 170 },
+        { series: riverPace, seriesLabel: "Pace", formatY: paceText, yScale: "log", yInvert: true, end: "none", height: 170 },
+      ]}
+    />
+  );
+}
+
+/** The stack with a position moving every frame. Skipped by the visual suite. */
+export const LiveGroup: Story = { tags: ["no-visual"], render: () => <LiveGroupStage /> };
