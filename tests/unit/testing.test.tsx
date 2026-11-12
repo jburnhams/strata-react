@@ -1,8 +1,9 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { format } from "../../src";
-import { installFakeIntersectionObserver, installLayoutShims, type FakeIntersectionObserverControls } from "../../src/testing";
+import userEvent from "@testing-library/user-event";
+import { StrataToastRegion, format, toast } from "../../src";
+import { installFakeIntersectionObserver, installLayoutShims, renderRoutes, renderWithStrata, type FakeIntersectionObserverControls } from "../../src/testing";
 
 // The helpers strata-react/testing gives an app's suite, tested the way an app would use them.
 
@@ -102,5 +103,32 @@ describe("installLayoutShims", () => {
     restore();
     expect(el.getBoundingClientRect().width).toBe(640);
     expect(el.clientWidth).toBe(640);
+  });
+});
+
+describe("toasts in renderWithStrata and renderRoutes", () => {
+  const Show = () => <button onClick={() => toast.show({ title: "Vote undone" })}>Undo</button>;
+
+  it("has a region, so a toast shown by the app can be found", async () => {
+    renderWithStrata(<Show />);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("Vote undone")).toBeInTheDocument();
+  });
+
+  it("does the same for an app's route tree", async () => {
+    renderRoutes([{ path: "/", element: <Show /> }]);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("Vote undone")).toBeInTheDocument();
+  });
+
+  it("starts each render with no toast left from the last test", () => {
+    renderWithStrata(<Show />);
+    expect(screen.queryByText("Vote undone")).toBeNull();
+  });
+
+  it("leaves the region to an app whose tree already has one, so a toast is not seen twice", async () => {
+    renderRoutes([{ path: "/", element: <><Show /><StrataToastRegion /></> }], { toasts: false });
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
   });
 });

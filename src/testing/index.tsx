@@ -12,6 +12,7 @@ import { MemoryRouter, RouterProvider, createMemoryRouter, type RouteObject, typ
 import { QueryClient } from "@tanstack/react-query";
 import { StrataQueryProvider, createQueryClient } from "../query";
 import { ThemeProvider, type ColorSchemePreference } from "../components/theme";
+import { StrataToastRegion, toast } from "../components/toast";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
 export { filledButtons, expectOneFilledButton, asyncButtonPhase } from "./buttons";
@@ -41,21 +42,28 @@ export type StrataRenderOptions = Omit<RenderOptions, "wrapper"> & {
   client?: QueryClient;
   /** The colour scheme to render; `light` when left out. */
   colorScheme?: ColorSchemePreference;
+  /** Render the one `StrataToastRegion`, so `toast.show(...)` has somewhere to appear and a test can find it. Default true; pass `false` when the app's own route tree renders the region (a root layout route), or a test would see every toast twice. The queue is cleared at the start of each render, so a toast never carries into the next test. */
+  toasts?: boolean;
 };
 
 // The providers every Strata app has above its router, in the order an app nests them.
 function StrataProviders({
   client,
   colorScheme,
+  toasts,
   children,
 }: {
   client: QueryClient;
   colorScheme: ColorSchemePreference;
+  toasts: boolean;
   children: React.ReactNode;
 }) {
   return (
     <ThemeProvider defaultPreference={colorScheme} storageKey={null}>
-      <StrataQueryProvider client={client}>{children}</StrataQueryProvider>
+      <StrataQueryProvider client={client}>
+        {children}
+        {toasts && <StrataToastRegion />}
+      </StrataQueryProvider>
     </ThemeProvider>
   );
 }
@@ -63,10 +71,11 @@ function StrataProviders({
 /** Testing Library's `render` inside `StrataQueryProvider` and a `MemoryRouter` at `route`. */
 export function renderWithStrata(
   ui: React.ReactElement,
-  { route = "/", client = createTestQueryClient(), colorScheme = "light", ...options }: StrataRenderOptions = {},
+  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, ...options }: StrataRenderOptions = {},
 ) {
+  toast.clear(); // module state: a toast from the last test must not show in this one
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StrataProviders client={client} colorScheme={colorScheme}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts}>
       <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
     </StrataProviders>
   );
@@ -96,12 +105,14 @@ export function renderRoutes(
     basename,
     client = createTestQueryClient(),
     colorScheme = "light",
+    toasts = true,
     ...options
   }: RenderRoutesOptions = {},
 ) {
+  toast.clear();
   const router = createMemoryRouter(routes, { initialEntries: [route ?? basename ?? "/"], basename });
   const result = render(
-    <StrataProviders client={client} colorScheme={colorScheme}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts}>
       <RouterProvider router={router} />
     </StrataProviders>,
     options,
