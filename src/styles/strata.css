@@ -149,6 +149,23 @@
   @starting-style { opacity: 0; translate: 0 -0.75rem; }
 }
 
+/* Stacking, once, for every floating thing, so an app never writes a z-index. A bar (the undo
+   bar, toasts) sits above panes and sticky headers; overlays (dialogs, popovers, menus) above
+   bars; a tooltip above everything, since it can name a control inside an overlay. */
+@utility layer-bar { z-index: 50; }
+@utility layer-overlay { z-index: 60; }
+@utility layer-tip { z-index: 70; }
+
+/* An overlay's entrance: an ordinary effect (fade and 2% scale), CSS only, once on mount. Overlays
+   are occasional (character.md), so the effects duration and no overshoot; they close at once.
+   Reduced motion collapses it in the rule below. */
+@utility enter-overlay {
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-effects);
+  transition-timing-function: var(--ease-effects);
+  @starting-style { opacity: 0; scale: 0.98; }
+}
+
 @layer base {
   html { color-scheme: light; }
   .dark { color-scheme: dark; }

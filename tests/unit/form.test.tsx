@@ -49,7 +49,7 @@ describe("Field ids", () => {
 });
 
 describe("ChoiceGroup", () => {
-  it("is a fieldset of radios where the whole row selects", async () => {
+  it("is a radio group where the whole row selects", async () => {
     function Choices() {
       const [value, setValue] = React.useState("glaze");
       return (
@@ -66,7 +66,7 @@ describe("ChoiceGroup", () => {
       );
     }
     render(<Choices />);
-    expect(screen.getByRole("group", { name: "Firing" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Firing" })).toBeInTheDocument();
     await userEvent.click(screen.getByText("Fridays."));
     expect(screen.getByRole("radio", { name: /Bisque/ })).toBeChecked();
   });

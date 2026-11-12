@@ -32,10 +32,13 @@ describe("Button", () => {
 });
 
 describe("IconButton", () => {
-  it("takes its accessible name and tooltip from label", () => {
+  it("takes its accessible name from label and shows it as a tooltip on focus", async () => {
     render(<IconButton icon={RefreshCw} label="Refresh readings" />);
     const button = screen.getByRole("button", { name: "Refresh readings" });
-    expect(button).toHaveAttribute("title", "Refresh readings");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    await userEvent.tab();
+    expect(button).toHaveFocus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Refresh readings");
   });
 });
 

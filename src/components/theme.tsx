@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Radio, RadioGroup } from "react-aria-components";
+import { Tooltip } from "./tooltip";
 import { Monitor, Moon, Sun } from "lucide-react";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
@@ -218,38 +220,36 @@ export function ColorSchemeChoice({
   const words = { ...defaultLabels, ...labels };
   if (compact) {
     return (
-      <div
-        role="radiogroup"
+      <RadioGroup
         aria-label={legend ?? "Appearance"}
+        orientation="horizontal"
+        name={name}
+        value={preference}
+        onChange={(value) => {
+          if (isPreference(value)) setPreference(value);
+        }}
         className={cn("inline-flex gap-0.5 rounded-surface border border-border bg-background p-0.5", className)}
       >
         {PREFERENCES.map((value) => {
           const Icon = icons[value];
           return (
-            <label
-              key={value}
-              title={words[value].label}
+            <Tooltip key={value} label={words[value].label}>
+            <Radio
+              value={value}
+              aria-label={words[value].label}
               className={cn(
                 // Outer 6px less 2px padding: the segments are 4px, as optical nesting asks.
                 "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control text-muted-foreground transition-state",
-                "hover:text-foreground has-checked:bg-muted has-checked:text-foreground",
-                "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring",
+                "data-[hovered]:text-foreground data-[selected]:bg-muted data-[selected]:text-foreground",
+                "data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring",
               )}
             >
-              <input
-                type="radio"
-                name={name}
-                value={value}
-                checked={preference === value}
-                onChange={() => setPreference(value)}
-                aria-label={words[value].label}
-                className="sr-only"
-              />
               <Icon aria-hidden className="size-4" />
-            </label>
+            </Radio>
+            </Tooltip>
           );
         })}
-      </div>
+      </RadioGroup>
     );
   }
   return (

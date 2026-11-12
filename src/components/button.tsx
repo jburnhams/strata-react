@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Button as AriaButton } from "react-aria-components";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
+import { Tooltip } from "./tooltip";
 
 // Variant names are shadcn's, so copied code and agents' prior knowledge still work. Two things
 // differ on purpose:
@@ -11,7 +12,9 @@ import { cn } from "../lib/utils";
 //    put the accent on every button; 12 of 23 real product screens had no filled primary at all.
 // 2. Heights come from --control-h, shared with Input and NativeSelect, so density changes move
 //    every control together.
-// 3. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
+// 3. React Aria is the primitives layer (CLAUDE.md, "The stack"): behaviour and accessibility come
+//    from it, the look from our tokens. `asChild`/`Slot` is gone; a button that navigates is a link.
+// 4. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
 //    times a day, so that is all the motion they get (character.md, the frequency budget).
 export const buttonVariants = cva(
   "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -35,38 +38,48 @@ export const buttonVariants = cva(
   },
 );
 
-export type ButtonProps = React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & { asChild?: boolean };
+export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "style"> &
+  VariantProps<typeof buttonVariants> & { className?: string };
 
-/** A button with shadcn's variant names. The default variant is `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`. */
-export function Button({ className, variant, size, asChild = false, type = "button", ...props }: ButtonProps) {
-  const Comp = asChild ? Slot : "button";
+/**
+ * A button with shadcn's variant names, built on React Aria's `Button` (press handling that behaves
+ * the same for mouse, touch, pen and keyboard, focus-visible and hover state). The default variant is
+ * `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`.
+ * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
+ */
+export function Button({ className, variant, size, type = "button", disabled, ...props }: ButtonProps & { onPress?: (e: import("react-aria-components").PressEvent) => void }) {
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
-    <Comp
-      type={asChild ? undefined : type}
+    <AriaButton
+      type={type}
+      isDisabled={disabled}
       data-variant={variant ?? "outline"}
       className={cn(buttonVariants({ variant, size }), className)}
-      {...props}
+      {...(props as object)}
     />
   );
 }
 
 // An icon-only button cannot be written without a name: `label` is required by the type, becomes
-// the accessible name, and doubles as the native tooltip. This makes the most common generated
+// the accessible name and is shown as a `Tooltip` on hover and keyboard focus, so the name and the
+// visible hint come from one string and cannot drift. This makes the most common generated
 // accessibility defect (an unlabelled icon button) a compile error instead of an audit finding.
 export type IconButtonProps = Omit<ButtonProps, "size" | "children" | "aria-label"> & {
   icon: IconComponent;
   label: string;
+  /** Shown after the label in its tooltip, muted: "Ctrl+Z". */
+  hint?: React.ReactNode;
 };
 
-/** An icon-only button. `label` is required and becomes the accessible name and tooltip. */
-export function IconButton({ icon: Icon, label, variant = "ghost", ...props }: IconButtonProps) {
+/** An icon-only button. `label` is required and becomes the accessible name and the tooltip (hover and keyboard focus); `hint` adds a muted aside to it, such as a shortcut. */
+export function IconButton({ icon: Icon, label, hint, variant = "ghost", ...props }: IconButtonProps) {
   return (
-    <Button size="icon" variant={variant} aria-label={label} title={label} {...props}>
-      <Icon aria-hidden />
-    </Button>
+    <Tooltip label={label} hint={hint}>
+      <Button size="icon" variant={variant} aria-label={label} {...props}>
+        <Icon aria-hidden />
+      </Button>
+    </Tooltip>
   );
 }
 
@@ -78,7 +91,7 @@ export function IconButton({ icon: Icon, label, variant = "ghost", ...props }: I
 // space in dom-testing-library (strata-react issue #11). Ghost and small, one per row, shown only
 // on the rows where it applies; an icon-only row action is an `IconButton` whose `label` names the
 // row the same way. It keeps the row's pitch: rows with and without the action are the same height.
-export type RowActionProps = Omit<ButtonProps, "children" | "aria-label" | "asChild"> & {
+export type RowActionProps = Omit<ButtonProps, "children" | "aria-label"> & {
   /** The visible verb, sentence case: "Withdraw", "Remove". */
   label: string;
   /** What the row is, as a person would say it: "Tom Ellery", "Moonbeam". Completes the accessible name. */

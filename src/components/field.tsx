@@ -1,5 +1,6 @@
 import * as React from "react";
 import { CircleAlert } from "lucide-react";
+import { Label, Radio, RadioGroup } from "react-aria-components";
 import { cn } from "../lib/utils";
 
 // Field owns the wiring a generated form usually forgets: the label's htmlFor, aria-describedby
@@ -102,8 +103,9 @@ export function NativeSelect({ className, id, ...props }: React.ComponentProps<"
   return <select {...useField(id)} className={cn(control, "h-(--control-h) pr-8", className)} {...props} />;
 }
 
-// Radio choices: a fieldset with a legend, and each label wrapping its control so the whole row is
-// one hit target. accent-color carries the theme into the native control.
+// Radio choices: React Aria's RadioGroup (a group named by its label, arrow-key movement, one tab
+// stop), and each row wraps its control so the whole row is one hit target. The dot is drawn from
+// tokens, not the platform's accent-color radio.
 export type Choice = { value: string; label: string; detail?: string };
 
 /** Radio choices in a fieldset with a legend; each whole row is the hit target. For 2 to 5 options that each need a sentence. */
@@ -124,23 +126,21 @@ export function ChoiceGroup({
 }) {
   const errorId = React.useId();
   return (
-    <fieldset className="grid gap-2" aria-describedby={error ? errorId : undefined}>
-      <legend className="mb-1.5 type-label text-foreground">{legend}</legend>
+    <RadioGroup name={name} value={value} onChange={onChange} aria-describedby={error ? errorId : undefined} className="grid gap-2">
+      <Label className="mb-1.5 type-label text-foreground">{legend}</Label>
       {choices.map((c) => (
-        <label key={c.value} className="flex min-h-(--control-h-sm) cursor-pointer items-start gap-3 py-1">
-          <input
-            type="radio"
-            name={name}
-            value={c.value}
-            checked={value === c.value}
-            onChange={() => onChange(c.value)}
-            className="mt-1 size-4 shrink-0 accent-primary"
-          />
+        <Radio key={c.value} value={c.value} className="group flex min-h-(--control-h-sm) cursor-pointer items-start gap-3 py-1">
+          <span
+            aria-hidden
+            className="mt-1 grid size-4 shrink-0 place-items-center rounded-pill border border-input bg-background transition-state group-data-[selected]:border-primary group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-ring"
+          >
+            <span className="size-2 rounded-pill bg-primary opacity-0 group-data-[selected]:opacity-100" />
+          </span>
           <span className="grid">
             <span className="type-body">{c.label}</span>
             {c.detail && <span className="type-body-sm text-muted-foreground">{c.detail}</span>}
           </span>
-        </label>
+        </Radio>
       ))}
       {error && (
         <p id={errorId} className="flex items-start gap-1.5 type-body-sm text-danger">
@@ -148,6 +148,6 @@ export function ChoiceGroup({
           {error}
         </p>
       )}
-    </fieldset>
+    </RadioGroup>
   );
 }

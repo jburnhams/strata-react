@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/utils";
+import { Checkbox as AriaCheckbox } from "react-aria-components";
+import { Check } from "lucide-react";
 import { Checkbox, useShiftNote, type CheckboxGesture } from "./checkbox";
 import type { RowSelection } from "./data-table";
 import { useSelectRows } from "./selection";
@@ -221,31 +223,41 @@ function Tile({
   index: number;
 }) {
   const shift = useShiftNote();
+  // The whole tile is one React Aria Checkbox (a label around a hidden input), so a press anywhere
+  // on it toggles; the visible box in the corner is drawn from tokens. Shift is noted in the capture
+  // phase because React Aria's press handling stops the events it uses.
   return (
-    <label
-      {...shift.handlers}
-      data-index={index}
-      className={cn(
-        // select-none: a Shift-click range would otherwise also select the text between the tiles.
-        "relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none transition-state",
-        chosen && "border-primary bg-surface-sunken",
-        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
-      )}
-    >
-      <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
-        {image}
-      </span>
-      <span className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background">
-        <input
-          type="checkbox"
-          aria-label={name}
-          checked={chosen}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.checked, shift.take())}
-          className={cn("size-4.5 accent-primary", disabled ? "cursor-not-allowed" : "cursor-pointer")}
-        />
-      </span>
-      {detail != null && <span className="truncate type-body-sm text-muted-foreground">{detail}</span>}
-    </label>
+    <span className="contents" onMouseDownCapture={shift.handlers.onMouseDown} onKeyDownCapture={shift.handlers.onKeyDown}>
+      <AriaCheckbox
+        isSelected={chosen}
+        isDisabled={disabled}
+        aria-label={name}
+        onChange={(on) => onChange(on, shift.take())}
+        data-index={index}
+        className={cn(
+          // select-none: a Shift-click range would otherwise also select the text between the tiles.
+          "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none transition-state",
+          "data-[focus-visible]:outline-2 data-[focus-visible]:outline-offset-2 data-[focus-visible]:outline-ring",
+          chosen && "border-primary bg-surface-sunken",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
+        )}
+      >
+        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
+          {image}
+        </span>
+        <span className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background">
+          <span
+            aria-hidden
+            className={cn(
+              "grid size-4.5 place-items-center rounded-control border border-input bg-background",
+              chosen && "border-primary bg-primary text-primary-foreground",
+            )}
+          >
+            {chosen && <Check className="size-3.5" strokeWidth={3} />}
+          </span>
+        </span>
+        {detail != null && <span className="truncate type-body-sm text-muted-foreground">{detail}</span>}
+      </AriaCheckbox>
+    </span>
   );
 }

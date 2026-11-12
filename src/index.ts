@@ -33,6 +33,7 @@ export {
   type IconButtonProps,
   type RowActionProps,
 } from "./components/button";
+export { Tooltip, type TooltipProps } from "./components/tooltip";
 export { Checkbox, type CheckboxProps, type CheckboxGesture } from "./components/checkbox";
 export {
   AsyncButton,

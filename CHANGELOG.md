@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-12
+
+**React Aria Components as the primitives layer, and `Tooltip`** (branch `claude/adopt-react-aria-2`). Jonathan chose React Aria over Radix and Base UI for the overlays, menus and controls the open issues (#68 to #81) need, and asked for existing components to be moved onto it and for dependencies it replaces to go. This is the first step; the issues themselves follow on top of it.
+
+- `package.json`: adds `react-aria-components` 1.22; removes `@radix-ui/react-slot` (its only user was `Button`'s unused `asChild`). **Breaking**: `Button` no longer takes `asChild`; a button that navigates is a link.
+- `src/components/button.tsx`: `Button` is React Aria's `Button` with the same variants and the same `onClick` and `disabled` props (`onPress` also works). React Aria does not forward `title`, so `IconButton` shows its `label` as a tooltip instead, and takes a new `hint` for a shortcut.
+- `src/components/tooltip.tsx` (**new**), `src/index.ts`: `Tooltip` on hover and keyboard focus, portalled, words only. `stories/tooltip.stories.tsx` (**new**), `tests/unit/overlays.test.tsx` (**new**).
+- `src/components/checkbox.tsx`, `src/components/selectable-grid.tsx`: React Aria `Checkbox`; the box is drawn from tokens with a tick and a dash instead of the platform's `accent-primary` control. Shift-range selection is kept (Shift is noted in the capture phase). A mixed box now exposes the DOM `indeterminate` state rather than an `aria-checked` attribute.
+- `src/components/tabs.tsx`: React Aria `Tabs`; the URL still holds the selection.
+- `src/components/field.tsx` (`ChoiceGroup`), `src/components/theme.tsx` (`ColorSchemeChoice`): React Aria `RadioGroup`. The role is now `radiogroup`, not `group`. The compact segments show their label as a tooltip.
+- `src/styles/strata.css`: **new** `layer-bar`, `layer-overlay` and `layer-tip` stacking utilities and `enter-overlay`, so no app writes a z-index; `UndoBar` uses `layer-bar`.
+- Kept native on purpose: `Input`, `Textarea` and `NativeSelect` (the platform control is better and React Aria adds nothing), `DataTable` on TanStack Table and virtual lists on TanStack Virtual.
+- `tests/visual/baselines/`: 8 new tooltip baselines; 27 changed. The checkbox, selectable grid and radio ones changed because the controls are drawn, not native (checked by eye: same layout, a tick and dash in the theme's roles); data tables lose 4px of height per selection table, and choice groups gain 8px. The baselines were written with Chromium 158.0.8127.18 (Playwright 1.65.0); `.strata-visual.json` now says so, where it said 153. Every other baseline matched on 158.
+- Checks run on Node 26.13: `npm run typecheck`, `npm run test:unit` (277 tests), `npm run build`, `npm run test:integration` (20 tests), `npm run test:visual` (324 of 324 after the update).
+
 ## 2026-11-11
 
 **TypeScript 7, TanStack Table 9 and lucide-react 1.70** (branch `claude/project-thread-d1q9sc`). Dependabot's three major bumps (#63, #64, #65) failed CI. Jonathan asked for them to be migrated, so this branch does all three and replaces those PRs.

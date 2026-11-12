@@ -27,8 +27,8 @@ npm install -D tailwindcss @tailwindcss/vite
 
 The npm package is built: nothing runs on install. It needs **Node 26 or later**, for apps as
 well as for this repo; an older Node gets an `EBADENGINE` warning, so upgrade it. Strata's own dependencies
-(TanStack Table and Virtual, class-variance-authority, clsx, tailwind-merge, lucide-react, Radix
-Slot) come with it, so an app does not list them.
+(React Aria Components, TanStack Table and Virtual, class-variance-authority, clsx, tailwind-merge,
+lucide-react) come with it, so an app does not list them.
 
 **Peers.** What an app installs follows from what it imports, and the integration suite checks
 it against the built files:

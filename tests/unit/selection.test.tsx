@@ -73,7 +73,7 @@ describe("Checkbox", () => {
     render(<Checkbox label="Select all shown" hideLabel checked="mixed" onCheckedChange={() => undefined} />);
     const box = screen.getByRole("checkbox", { name: "Select all shown" }) as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
-    expect(box).toHaveAttribute("aria-checked", "mixed");
+    expect(box).toBePartiallyChecked();
   });
 });
 
@@ -92,7 +92,7 @@ describe("DataTable selection", () => {
   it("selects all shown selectable rows, goes mixed, and clears", async () => {
     renderWithStrata(<Harness />);
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Dev Raman" }));
-    expect(selectAll()).toHaveAttribute("aria-checked", "mixed");
+    expect(selectAll()).toBePartiallyChecked();
     // A mixed box clears what is shown.
     await userEvent.click(selectAll());
     expect(screen.getByRole("checkbox", { name: "Select Dev Raman" })).not.toBeChecked();

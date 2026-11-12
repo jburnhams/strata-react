@@ -173,7 +173,7 @@ describe("ColorSchemeChoice compact", () => {
 
   it("keeps the settings-page list when not compact", () => {
     renderWithStrata(<ColorSchemeChoice />);
-    expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
   });
 });
 
