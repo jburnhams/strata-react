@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+**Two test flakes that failed the v1.0.34 publish** (branch `claude/fix-release-flakes`). The `NPM Publish Package` run for v1.0.34 failed in `test:all`: the keyboard move in `sortable-list.test.tsx` pressed Tab before React Aria had put focus on the first drop target, and a React Aria announcement scheduled during a `waitFor` fired after jsdom was torn down at the end of `routes.test.tsx` (an uncaught `document is not defined`). Neither comes from the three batches; both are timing.
+
+- `tests/unit/sortable-list.test.tsx`: waits for focus to reach a drop target before the Tab.
+- `tests/utils/setup.ts`: `afterAll` lets React Aria's 100 ms announcer timer run out before the environment goes.
+
 **Conversation, lightbox, region editor, sequence timeline, tree and marking (issues #187 to #192)** (branch `claude/panes-browsing-editing`). The third batch of strata-360's missing screens. No dependency was added. Corrections and findings that changed the plan: `SequenceTimeline` is its own component, not a `Timeline` mode, because `Timeline` reports one item per change (`TimelineChange`) and neither `validate` nor `snapPoints` can express a boundary shared by two items; React Aria 1.22's `Tree` does not pass `hasChildItems` to its row hook (checked in `Tree.mjs`), so a closed lazy branch gets no `aria-expanded` or Right/Left keys unless the collection holds a child, which `Tree` supplies as an undrawn placeholder; and Storybook's docgen recurses endlessly on `Load<readonly T[]>` when the generic is also named `T`, so `Tree` names its parameter `N`.
 
 - `src/components/conversation.tsx`, `src/lib/rich-text.ts` (**new**, #192): `Conversation`, `Composer`, `RichText`, `matchEntities`, `parseRichText`, `safeHref`, `plainText`.
