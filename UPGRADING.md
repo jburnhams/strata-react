@@ -13,6 +13,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
+- `SeekBar` with a `duration` of 0, `NaN` or `Infinity` (or `null`, now allowed) is drawn disabled; before it was enabled with the thumb at 0. Nothing to change unless a test seeks a bar with no duration.
 - `Timeline`'s lane header column is content-sized (at least `w-40`, at most `w-80`) instead of a fixed `w-40`; a screen with a long lane name or several header controls is now wider there. Lane height is `--lane-h` (one `--control-h` by default).
 - `format.timecode` with `precision: "frames"` now returns four parts (`0:04:05:15`, was `4:05:15`); update tests that read it. `MissingFile`'s markup changed (the name wraps; status and Relink may sit on a second row).
 React Aria Components is now the primitives layer (`react-aria-components`, installed with the
