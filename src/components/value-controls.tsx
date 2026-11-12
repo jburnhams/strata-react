@@ -309,6 +309,9 @@ export type ColorFieldProps = {
 /** Choose a colour with the platform picker, see and type its hex value, pick from the app's suggestions, and get a note when it would be hard to see on `against`. A half-typed value is never passed on. */
 export function ColorField({ value, onChange, suggestions, against, againstLabel = "the background", minContrast = 3, disabled, id: idProp, className, "aria-label": ariaLabel }: ColorFieldProps) {
   const { field, report } = useFieldControl();
+  // Named for the `aria-label` or, failing that, the surrounding Field's label, so two colour fields in one panel never share a name (issue #116).
+  const label = ariaLabel ?? field?.label;
+  const pickerName = label ? `${label}, picker` : "Colour picker";
   const [draft, setDraft] = React.useState<string | null>(null);
   const [own, setOwn] = React.useState(false);
   const text = draft ?? value ?? "";
@@ -349,7 +352,7 @@ export function ColorField({ value, onChange, suggestions, against, againstLabel
           <span aria-hidden className={cn("absolute inset-0", value === null && "bg-muted")} style={value ? { background: value } : undefined} />
           <input
             type="color"
-            aria-label={ariaLabel ? `${ariaLabel}, picker` : "Colour picker"}
+            aria-label={pickerName}
             value={value ?? "#000000"}
             disabled={disabled}
             onChange={(e) => pick(e.target.value)}

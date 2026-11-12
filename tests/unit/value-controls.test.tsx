@@ -191,6 +191,22 @@ describe("Slider", () => {
   });
 });
 
+describe("ColorField picker names (issue #116)", () => {
+  it("names each picker after its Field's label, so two in one panel never share a name", () => {
+    render(
+      <>
+        <Field label="Route colour"><ColorField value="#336699" onChange={() => {}} /></Field>
+        <Field label="Marker colour"><ColorField value="#993366" onChange={() => {}} /></Field>
+        <ColorField aria-label="Text colour" value="#000000" onChange={() => {}} />
+      </>,
+    );
+    expect(screen.getByLabelText("Route colour, picker")).toBeInTheDocument();
+    expect(screen.getByLabelText("Marker colour, picker")).toBeInTheDocument();
+    expect(screen.getByLabelText("Text colour, picker")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Colour picker")).toBeNull();
+  });
+});
+
 describe("ColorField", () => {
   function Colour(props: Partial<React.ComponentProps<typeof ColorField>> & { spy?: (v: string | null) => void; initial?: string | null }) {
     const [value, setValue] = React.useState<string | null>(props.initial ?? "#1a7f64");
@@ -243,7 +259,7 @@ describe("ColorField", () => {
     await user.click(screen.getByRole("button", { name: "#c2410c" }));
     expect(spy).toHaveBeenLastCalledWith("#c2410c");
     expect(screen.getByRole("button", { name: "#c2410c" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.change(screen.getByLabelText("Colour picker"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("Line colour, picker"), { target: { value: "#112233" } });
     expect(spy).toHaveBeenLastCalledWith("#112233");
   });
 

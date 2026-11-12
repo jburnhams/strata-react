@@ -18,7 +18,7 @@ import { Tooltip } from "./tooltip";
 // 4. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
 //    times a day, so that is all the motion they get (character.md, the frequency budget).
 export const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -53,7 +53,7 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`.
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
-export function Button({ className, variant, size, type = "button", disabled, ...props }: ButtonProps) {
+export function Button({ className, variant, size, type = "button", disabled, children, ...props }: ButtonProps) {
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
@@ -63,7 +63,10 @@ export function Button({ className, variant, size, type = "button", disabled, ..
       data-variant={variant ?? "outline"}
       className={cn(buttonVariants({ variant, size }), className)}
       {...(props as object)}
-    />
+    >
+      {/* A text label that cannot fit its column is cut with an ellipsis, not drawn past the button (issue #116). */}
+      {typeof children === "string" ? <span className="min-w-0 truncate">{children}</span> : children}
+    </AriaButton>
   );
 }
 

@@ -13,7 +13,7 @@ import { controlHeight, type ControlSize } from "../lib/control";
 // screen): in a plain flex row the button lines up with label, hint and error together and drifts
 // off the input whenever one shows. `action` is drawn on the control's row, both at --control-h,
 // with the hint and the error under both across the full width. It wraps under the control only
-// when the row cannot keep the control 14rem wide beside it: on a phone a short "Add" stays on the
+// when the row cannot keep the control 10rem wide beside it (a 250px inspector body keeps a Reset beside its slider, issue #116): on a phone a short "Add" stays on the
 // row, as a search box's button does, and a long label or a narrow column wraps. The error and hint stay the input's description; the
 // button is not described by them. Field messages for a form come from `useAsyncAction`'s
 // `fieldErrors` (its `validate`, or the server's 422), so no `problem` state is kept by hand.
@@ -77,7 +77,7 @@ export function Field({ label, id: idProp, hint, error, action, children, classN
         </label>
         {action ? (
           <div className="flex flex-wrap items-start gap-2">
-            <div className="min-w-56 flex-1">{children}</div>
+            <div className="min-w-40 flex-1">{children}</div>
             <div className="flex shrink-0 items-center">{action}</div>
           </div>
         ) : (

@@ -58,6 +58,44 @@ export type DialogProps = Common & {
 
 const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl" } as const;
 
+// A dialog with a `trigger` is React Aria's DialogTrigger around it. One driven only by `open` has
+// nothing pressable to put in a trigger, and React Aria warns "A PressResponder was rendered without a
+// pressable child" for an empty one on every mount (issue #116), so it gets the controlled
+// ModalOverlay alone: it still traps focus and, on close, returns it to whatever had it before.
+function Overlay({ trigger, open, onOpenChange, children }: { trigger?: React.ReactElement; open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>> }) {
+  if (trigger) {
+    return (
+      <DialogTrigger isOpen={open} onOpenChange={onOpenChange}>
+        {trigger}
+        {children}
+      </DialogTrigger>
+    );
+  }
+  return <Driven open={open} onOpenChange={onOpenChange}>{children}</Driven>;
+}
+
+// Without a trigger, React Aria has no element to hand focus back to, so the one that had it when
+// the dialog opened is kept (read while rendering, before the dialog moves focus in) and given it
+// back on close, unless the app has already put focus somewhere on purpose.
+function Driven({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>> }) {
+  const opener = React.useRef<Element | null>(null);
+  const wasOpen = React.useRef(false);
+  if (open && !wasOpen.current) opener.current = typeof document === "undefined" ? null : document.activeElement;
+  wasOpen.current = Boolean(open);
+  React.useEffect(() => {
+    if (!open) return;
+    return () => {
+      const back = opener.current;
+      opener.current = null;
+      requestAnimationFrame(() => {
+        const idle = !document.activeElement || document.activeElement === document.body;
+        if (idle && back instanceof HTMLElement && back.isConnected) back.focus();
+      });
+    };
+  }, [open]);
+  return React.cloneElement(children, { isOpen: open, onOpenChange });
+}
+
 const overlayClass = "layer-overlay fixed inset-0 grid overflow-hidden bg-foreground/40";
 
 /** A modal dialog with a required title; focus goes in and returns, Escape and a close control dismiss it. `placement="end"` makes it a sheet. */
@@ -67,8 +105,7 @@ export function Dialog({
 }: DialogProps) {
   const descriptionId = React.useId();
   return (
-    <DialogTrigger isOpen={open} onOpenChange={onOpenChange}>
-      {trigger}
+    <Overlay trigger={trigger} open={open} onOpenChange={onOpenChange}>
       <ModalOverlay isDismissable={closable} isKeyboardDismissDisabled={!closable} className={cn(overlayClass, placement === "end" ? "justify-items-end" : "place-items-center p-4")}>
         <Modal
           className={cn(
@@ -99,7 +136,7 @@ export function Dialog({
           </AriaDialog>
         </Modal>
       </ModalOverlay>
-    </DialogTrigger>
+    </Overlay>
   );
 }
 
@@ -148,8 +185,7 @@ export function AlertDialog({
     }
   };
   return (
-    <DialogTrigger isOpen={isOpen} onOpenChange={change}>
-      {trigger}
+    <Overlay trigger={trigger} open={isOpen} onOpenChange={change}>
       <ModalOverlay isDismissable={false} isKeyboardDismissDisabled={busy} className={cn(overlayClass, "place-items-center p-4")}>
         <Modal className={cn("flex max-h-full w-full max-w-sm flex-col outline-none", overlaySurface, className)}>
           <AriaDialog role="alertdialog" aria-describedby={description != null ? descriptionId : undefined} className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
@@ -178,7 +214,7 @@ export function AlertDialog({
           </AriaDialog>
         </Modal>
       </ModalOverlay>
-    </DialogTrigger>
+    </Overlay>
   );
 }
 
