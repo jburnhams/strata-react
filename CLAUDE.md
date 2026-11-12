@@ -28,6 +28,14 @@ First use: the live demos and examples in ux-research. Then other products.
   a day, `press` on buttons, ordinary 150–350ms on overlays, one `Done` moment at the end of a
   rare flow; most character lives in words and in how the data is drawn.
 
+## Dependencies: consult Jonathan first
+
+**Adding, replacing or removing a dependency (runtime, peer or dev) needs Jonathan's decision
+before it happens. This is critically important.** Spike on a scratch branch if you need to try
+one, never leave it installed, and put the options to him (what it replaces, size, fit with the
+token-only styling, alternatives). The same applies to a major-version pin. The stack table below
+is his decision; do not change it on your own. Same rule in ux-research's `CLAUDE.md`.
+
 ## The stack (fixed; do not swap pieces without changing this file and the changelog)
 
 | Concern | Choice | How it is used |
