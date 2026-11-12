@@ -87,6 +87,18 @@ describe("SelectableGrid", () => {
     for (const p of photos.slice(0, 4)) expect(box(p)).toBeChecked();
   });
 
+  it("keeps the range anchor where the last press was, on the picture or the box", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Grid />);
+    await user.click(box(photos[0]));
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByText(photos[3].piece)); // React Aria extends this range itself
+    await user.click(box(photos[1])); // runs from tile 4, not from tile 1
+    await user.keyboard("{/Shift}");
+    expect(box(photos[0])).toBeChecked();
+    for (const p of photos.slice(1, 4)) expect(box(p)).not.toBeChecked();
+  });
+
   it("a plain click after a range is a single toggle", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Grid />);

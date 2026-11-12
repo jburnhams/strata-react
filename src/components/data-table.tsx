@@ -329,6 +329,9 @@ function Table<T extends Rec>({
   // extends on a row press and Shift+Space, but a checkbox always toggles one row, so the range is
   // still ours: Shift is noted on the press, and a change of exactly one row is a click.
   const shift = useShiftNote();
+  // The row last pressed (React Aria marks each row with `data-key`), to anchor a range it extended itself.
+  const pressed = React.useRef<string | null>(null);
+  const notePress = (e: React.SyntheticEvent) => void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
   const sortedRows = React.useMemo(() => modelRows.map((r) => r.original), [modelRows]);
   const select = useSelectRows(sortedRows, rowKey, selection);
   const changeSelection = (next: Selection) => {
@@ -341,6 +344,7 @@ function Table<T extends Rec>({
         select.toggle(added[0] ?? removed[0], added.length === 1, shift.take());
         return;
       }
+      select.setAnchor(pressed.current);
     }
     // What the table does not show (filtered away) is left as it is, as `useSelection` prunes it.
     const outside = [...selection.selected].filter((k) => !shownKeys.has(k));
@@ -490,8 +494,14 @@ function Table<T extends Rec>({
   return (
     <div
       className={cn("relative min-w-0", !virtual && "overflow-x-auto", className)}
-      onMouseDownCapture={shift.handlers.onMouseDown}
-      onKeyDownCapture={shift.handlers.onKeyDown}
+      onMouseDownCapture={(e) => {
+        shift.handlers.onMouseDown(e);
+        notePress(e);
+      }}
+      onKeyDownCapture={(e) => {
+        shift.handlers.onKeyDown(e);
+        notePress(e);
+      }}
     >
       {virtual ? (
         <Virtualizer layout={TableLayout} layoutOptions={expansion ? { estimatedRowHeight: 41, headingHeight: 36 } : { rowHeight: 41, headingHeight: 36 }}>

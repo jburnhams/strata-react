@@ -97,6 +97,9 @@ export function SelectableGrid<T>({
   // (issue #32): Shift is noted on the press, and a change of exactly one tile is a click on it.
   // A press on the picture with Shift is React Aria's own range and changes several at once.
   const shift = useShiftNote();
+  // The row last pressed (React Aria marks each row with `data-key`), to anchor a range it extended itself.
+  const pressed = React.useRef<string | null>(null);
+  const notePress = (e: React.SyntheticEvent) => void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
   const changeSelection = (next: Selection) => {
     if (next !== "all") {
       const nextShown = new Set([...next].map(String).filter((k) => shownKeys.has(k)));
@@ -106,6 +109,7 @@ export function SelectableGrid<T>({
         select.toggle(added[0] ?? removed[0], added.length === 1, shift.take());
         return;
       }
+      select.setAnchor(pressed.current);
     }
     const outside = [...selection.selected].filter((k) => !shownKeys.has(k));
     const picked = next === "all" ? rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey) : [...next].map(String).filter((k) => shownKeys.has(k));
@@ -169,8 +173,14 @@ export function SelectableGrid<T>({
   return (
     <div
       className={cn("grid min-w-0 gap-3", className)}
-      onMouseDownCapture={shift.handlers.onMouseDown}
-      onKeyDownCapture={shift.handlers.onKeyDown}
+      onMouseDownCapture={(e) => {
+        shift.handlers.onMouseDown(e);
+        notePress(e);
+      }}
+      onKeyDownCapture={(e) => {
+        shift.handlers.onKeyDown(e);
+        notePress(e);
+      }}
     >
       <Checkbox
         className="justify-self-start"

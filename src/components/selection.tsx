@@ -147,7 +147,13 @@ export function useSelectRows<T>(rows: readonly T[], rowKey: (row: T) => string,
     selection.onChange(next);
   };
 
-  return { toggle, all: { checked: allChecked, toggle: toggleAll, disabled: keys.length === 0 } };
+  // A range React Aria makes itself (Shift on a row press) moves the anchor too, so the next
+  // Shift-click on a checkbox runs from where the last press was, whichever path it came by.
+  const setAnchor = (key: string | null) => {
+    if (key !== null) anchor.current = key;
+  };
+
+  return { toggle, setAnchor, all: { checked: allChecked, toggle: toggleAll, disabled: keys.length === 0 } };
 }
 
 /** The bar for a selection: a polite live count ("2 bookings selected"), the bulk actions, and Clear selection. Renders only the live region while nothing is chosen. */
