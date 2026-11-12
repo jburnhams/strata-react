@@ -1,6 +1,7 @@
 import L from "leaflet";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
+import { coveringTiles } from "../../src/map/route-map";
 import { RouteMap, type MapPosition, type MapRoute, type RouteMapProps } from "../../src/map";
 import { renderWithStrata } from "../../src/testing";
 import type { LatLng } from "../../src";
@@ -429,5 +430,38 @@ describe("RouteMap as picture content", () => {
     expect(text).toContain("Current position:");
     expect(text).toContain("Second:");
     expect(paths(container)).toHaveLength(5); // one route's line, finish ring and start dot, and the two markers
+  });
+});
+
+describe("the tile layer", () => {
+  // Leaflet picks tiles from floor(centre) ± size/2 but places its pane at round(centre - size/2). A centre a
+  // hair under a whole pixel (the float noise of projecting it back from the pane's position) lands a pixel
+  // low and leaves the last pixel column with no tile under it, unless a tile from an earlier view is still
+  // kept: a visual shot of a centred follow differed by that column about one run in two under load.
+  const tileBoundsRelativeToOrigin = (make: (url: string, o: L.TileLayerOptions) => L.TileLayer, nudge: number) => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const map = L.map(host).setView([51.5, -0.12], 14, { animate: false });
+    const layer = make("https://tiles.example.test/{z}/{x}/{y}.png", {}).addTo(map);
+    const origin = map.getPixelOrigin();
+    const size = map.getSize();
+    const centre = map.unproject(L.point(origin.x + size.x / 2 + nudge, origin.y + size.y / 2 + nudge), 14);
+    const bounds = (layer as unknown as { _getTiledPixelBounds(c: L.LatLng): L.Bounds })._getTiledPixelBounds(centre);
+    map.remove();
+    host.remove();
+    return { left: bounds.min!.x - origin.x, right: bounds.max!.x - origin.x, width: size.x };
+  };
+
+  it("loads tiles under every pixel of the container, whichever way the centre rounds", () => {
+    for (const nudge of [-0.000001, 0, 0.000001, -0.4]) {
+      const b = tileBoundsRelativeToOrigin(coveringTiles, nudge);
+      expect(b.left).toBeLessThanOrEqual(0);
+      expect(b.right).toBeGreaterThanOrEqual(b.width);
+    }
+  });
+
+  it("is needed: Leaflet's own layer misses the last pixel column on a centre a hair low", () => {
+    const b = tileBoundsRelativeToOrigin((url, o) => L.tileLayer(url, o), -0.000001);
+    expect(b.right).toBeLessThan(b.width);
   });
 });
