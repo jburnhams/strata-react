@@ -49,6 +49,8 @@ export type LineChartProps = {
   plannedLabel?: string;
   band?: { below: number; label: string };
   formatX: (x: number) => string;
+  /** What x is, as the screen-reader table's first column heading: "Distance", "Day". Default "Time". */
+  xLabel?: string;
   formatY: (y: number) => string;
   /** Where to put x labels, in x units. The chart drops every other one (and so on) when they would overlap at its width. */
   xTicks: number[];
@@ -160,6 +162,7 @@ export function LineChart({
   plannedLabel,
   band,
   formatX,
+  xLabel = "Time",
   formatY,
   xTicks,
   yMin,
@@ -284,7 +287,7 @@ export function LineChart({
           <caption>{label}</caption>
           <thead>
             <tr>
-              <th scope="col">Time</th>
+              <th scope="col">{xLabel}</th>
               <th scope="col">{seriesLabel}</th>
             </tr>
           </thead>
@@ -299,7 +302,7 @@ export function LineChart({
         </table>
         </div>
     ),
-    [label, seriesLabel, series, formatX, formatY],
+    [label, seriesLabel, series, formatX, formatY, xLabel],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
