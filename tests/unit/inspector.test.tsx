@@ -82,6 +82,14 @@ describe("Inspector", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Tea jar" })).toHaveFocus();
   });
 
+  it("moves focus to the panel when the selection is cleared, since the heading is gone", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithStrata(<Panel />);
+    await user.click(screen.getByRole("textbox", { name: "Glaze name" }));
+    await act(async () => rerender(<Panel title={null} />));
+    expect(screen.getByRole("complementary", { name: "Properties" })).toHaveFocus();
+  });
+
   it("leaves focus alone when it was not in the panel", async () => {
     const user = userEvent.setup();
     const { rerender } = renderWithStrata(

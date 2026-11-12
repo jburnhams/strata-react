@@ -119,12 +119,12 @@ export function Inspector({ title, kind, empty, selectionKey, storageKey, action
     };
   }, []);
   React.useEffect(() => {
-    if (hadFocus.current && (document.activeElement === document.body || !document.activeElement)) heading.current?.focus();
+    if (hadFocus.current && (document.activeElement === document.body || !document.activeElement)) (heading.current ?? root.current)?.focus(); // the panel itself when the heading is gone (nothing selected)
   }, [selectionKey, title]);
 
   return (
     <InspectorContext.Provider value={state}>
-      <aside ref={root} aria-labelledby={title === null ? undefined : headingId} aria-label={title === null ? "Properties" : undefined} className={cn("min-w-0", className)}>
+      <aside ref={root} tabIndex={-1} aria-labelledby={title === null ? undefined : headingId} aria-label={title === null ? "Properties" : undefined} className={cn("min-w-0", className)}>
         {title === null ? (
           empty
         ) : (
