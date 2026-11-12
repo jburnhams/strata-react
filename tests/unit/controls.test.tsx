@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Grid2x2, Magnet } from "lucide-react";
-import { Button, Popover, Switch, Toggle, ToggleGroup, Toolbar, ToolbarSeparator } from "../../src";
+import { Button, Checkbox, Popover, Switch, Toggle, ToggleGroup, Toolbar, ToolbarSeparator } from "../../src";
 import { expectOneFilledButton } from "../../src/testing";
 
 describe("Toggle", () => {
@@ -120,7 +120,20 @@ describe("ToggleGroup", () => {
   });
 });
 
+describe("Checkbox detail", () => {
+  it("is a description, not part of the name", () => {
+    render(<Checkbox label="Keep originals" detail="Takes more space." checked={false} onCheckedChange={() => undefined} />);
+    expect(screen.getByRole("checkbox", { name: "Keep originals" })).toHaveAccessibleDescription("Takes more space.");
+  });
+});
+
 describe("Switch", () => {
+  it("is named by its label alone and described by its detail", () => {
+    render(<Switch label="Show 1 video" detail="Videos are not processed yet." />);
+    const sw = screen.getByRole("switch", { name: "Show 1 video" });
+    expect(sw).toHaveAccessibleDescription("Videos are not processed yet.");
+  });
+
   it("is a switch whose label and control are one target, and applies at once", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
