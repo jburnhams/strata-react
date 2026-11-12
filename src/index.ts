@@ -191,3 +191,14 @@ export {
   type SetOptions,
 } from "./components/history";
 export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
+export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ComposerProps } from "./components/conversation";
+export { parseRichText, parseInline, matchEntities, safeHref, plainText, type EntityMatch, type EntityMatcher, type Block as RichBlock, type Inline as RichInline } from "./lib/rich-text";
+export { Lightbox, type LightboxProps, type LightboxItem } from "./components/lightbox";
+export { RegionEditor, describeRegion, type RegionEditorProps, type EditableRegion, type RegionTone } from "./components/region-editor";
+export { moveRect, resizeRect, fitRect, drawRect, lerpRect, ease, type Rect, type Handle, type RectLimits, type Easing } from "./lib/region";
+export { SequenceTimeline, type SequenceTimelineProps, type SequenceItem, type CutRoom, type CutChange } from "./components/sequence-timeline";
+export { snapToGrid, stepOnGrid, gridPoints, clampToRoom, settleCut, type Grid, type CutLimit } from "./lib/sequence";
+export { Tree, type TreeProps, type TreeNodeState } from "./components/tree";
+export { FolderPicker, parentOf, ancestorsOf, type FolderPickerProps, type Folder } from "./components/folder-picker";
+export { MarkableText, Mark, MarkSummary, type MarkableTextProps, type MarkKind, type MarkTone, type MarkPattern } from "./components/markable-text";
+export { rangeBetween, countMarks, stepId } from "./lib/marks";

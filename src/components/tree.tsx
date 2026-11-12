@@ -1,0 +1,229 @@
+import * as React from "react";
+import { Button as AriaButton, ListLayout, Tree as AriaTree, TreeItem, TreeItemContent, Virtualizer, type Selection } from "react-aria-components";
+import { ChevronRight, CircleAlert, Folder, FolderOpen } from "lucide-react";
+import { cn } from "../lib/utils";
+import { Button } from "./button";
+import type { Load } from "./data-view";
+import type { Expanded } from "./disclosure";
+
+// A hierarchy that loads as it opens. Issue #188, from strata-360's folder browser: the server's
+// disk is far too big to send, so each folder's children are read when it is first opened.
+//
+// React Aria's `Tree` (checked in its types, v1.22: `Expandable` keys, `hasChildItems`, a
+// `slot="chevron"` button, `Virtualizer` with `ListLayout`), not our own: it gives the `treegrid`
+// roles, arrows (Right opens or goes in, Left closes or goes out), Home/End, type-ahead over each
+// row's `textValue`, and single selection. Ours is what sits around it: where the children come from,
+// what a node shows while that is happening, and where the open state lives.
+//
+// Children come from `useChildren(node)`, a hook (a `useLoad` over the app's read) called by a
+// component that exists only while the node is open, so a closed branch makes no request and the
+// query cache answers a second opening at once. Each open node is its own small state: a skeleton
+// row while it loads, a row naming the failure with Try again in place if it fails, and an empty
+// row ("No folders") when there is nothing in it. These rows are not selectable and are named for
+// what they are, so a keyboard user is told, not left on a blank.
+//
+// The open set is `Expanded` from `useExpanded`, so it can live in the URL (`?open=…`) like a
+// `Disclosure`'s and survive a reload. A branch that is open on load fetches its children as it
+// mounts. Selection is one key (a controlled `selected`), reported with the node.
+//
+// Long trees: the tree is always inside React Aria's `Virtualizer` (`ListLayout`), so it draws only
+// the visible rows however many are open (a folder of 500 children, or 100 folders each opened).
+// It is always, not from some count, because rows appear as branches open and a Virtualizer added
+// at the hundredth row would remount the tree and lose the person's place; a short tree costs
+// nothing extra (as with `InfiniteList`). The scroll box is bounded by `height`.
+//
+// Names that do not fit are cut with an ellipsis and carry the whole text as the row's title, so a
+// long path segment is readable on hover without widening the pane.
+
+/** A node's place in the tree, passed to `renderNode`. */
+export type TreeNodeState = { expanded: boolean; selected: boolean; level: number; branch: boolean };
+
+export type TreeProps<T> = {
+  /** Names the tree for assistive technology: "Folders". Required. */
+  label: string;
+  /** The top level, as one read: the skeleton, the failure and Try again come from `DataView`'s `Load`. */
+  roots: Load<readonly T[]>;
+  /** The children of an open node, as a hook (`useLoad` inside). Called only while the node is open. */
+  useChildren: (node: T) => Load<readonly T[]>;
+  /** A node's key, unique in the whole tree: a path, an id. */
+  nodeKey: (node: T) => string;
+  /** A node's name: shown, and what type-ahead matches. */
+  nodeLabel: (node: T) => string;
+  /** Whether a node can open. Default: every node can. */
+  isBranch?: (node: T) => boolean;
+  /** What a row shows after the icon. Default: the name, cut with an ellipsis. */
+  renderNode?: (node: T, state: TreeNodeState) => React.ReactNode;
+  /** The chosen node's key, or `null`. */
+  selected: string | null;
+  /** A node was chosen. */
+  onSelect: (key: string, node: T) => void;
+  /** Which nodes are open; from `useExpanded`, optionally in the URL. */
+  expanded: Expanded;
+  /** The skeleton row while a node's children load. Default: a muted bar. */
+  loadingRow?: React.ReactNode;
+  /** What an open node with nothing in it says: "No folders". Required, so an empty branch is never blank. */
+  emptyRow: string;
+  /** The tallest the tree may be before it scrolls, as a CSS length. Default 24rem. */
+  height?: string;
+  className?: string;
+};
+
+type Ctx<T> = Omit<TreeProps<T>, "label" | "roots" | "className" | "height"> & { nodes: Map<string, T> };
+const Context = React.createContext<Ctx<never> | null>(null);
+const useCtx = <T,>() => React.useContext(Context) as unknown as Ctx<T>;
+
+const NOTE = "\u0000";
+const isNote = (key: string) => key.includes(NOTE);
+const ROW = "flex min-h-(--control-h-sm) min-w-0 items-center gap-1 rounded-control pr-2 type-body-sm";
+
+function Row({ level, children }: { level: number; children: React.ReactNode }) {
+  return <div className={ROW} style={{ paddingInlineStart: `${level * 1.25 + 0.25}rem` }}>{children}</div>;
+}
+
+function Node<T>({ node }: { node: T }) {
+  const c = useCtx<T>();
+  const key = c.nodeKey(node);
+  c.nodes.set(key, node);
+  const branch = c.isBranch ? c.isBranch(node) : true;
+  const open = branch && c.expanded.isOpen(key);
+  const name = c.nodeLabel(node);
+  return (
+    <TreeItem id={key} textValue={name} hasChildItems={branch} className="outline-none">
+      <TreeItemContent>
+        {({ level, isSelected, isExpanded }) => (
+          <div
+            title={name}
+            className={cn(ROW, "cursor-pointer outline-offset-[-2px] hover:bg-muted", isSelected && "bg-surface-sunken font-medium")}
+            style={{ paddingInlineStart: `${(level - 1) * 1.25 + 0.25}rem` }}
+            data-selected={isSelected || undefined}
+          >
+            {branch ? (
+              <AriaButton slot="chevron" className="grid size-6 shrink-0 place-items-center rounded-control text-muted-foreground">
+                <ChevronRight aria-hidden className={cn("size-4", isExpanded && "rotate-90")} />
+              </AriaButton>
+            ) : (
+              <span aria-hidden className="size-6 shrink-0" />
+            )}
+            {branch ? (isExpanded ? <FolderOpen aria-hidden className="size-4 shrink-0 text-muted-foreground" /> : <Folder aria-hidden className="size-4 shrink-0 text-muted-foreground" />) : null}
+            <span className="min-w-0 flex-1 truncate">
+              {c.renderNode ? c.renderNode(node, { expanded: isExpanded, selected: isSelected, level, branch }) : name}
+            </span>
+          </div>
+        )}
+      </TreeItemContent>
+      {open ? <Children node={node} /> : branch && <ClosedChild id={`${key}${NOTE}closed`} />}
+    </TreeItem>
+  );
+}
+
+// React Aria 1.22 does not pass `hasChildItems` on to the row's hook (checked in `Tree.mjs`: it
+// builds `useTreeItem` from the node, focus mode and arrow behaviour only), so a branch counts as
+// expandable, and gets `aria-expanded` and the Right/Left arrow keys, only when the collection
+// holds a child for it. A closed branch has not loaded any, so it holds this one: never drawn (a
+// closed branch shows no rows) and never chosen, there so the branch is a branch.
+function ClosedChild({ id }: { id: string }) {
+  return (
+    <TreeItem key="closed" id={id} textValue="" isDisabled>
+      <TreeItemContent>{() => null}</TreeItemContent>
+    </TreeItem>
+  );
+}
+
+function Nodes<T>({ nodes }: { nodes: readonly T[] }) {
+  const c = useCtx<T>();
+  return <>{nodes.map((n) => <Node key={c.nodeKey(n)} node={n} />)}</>;
+}
+
+// The children of one open node. Its own component, so the hook runs only while it is open.
+function Children<T>({ node }: { node: T }) {
+  const c = useCtx<T>();
+  const key = c.nodeKey(node);
+  const load = c.useChildren(node);
+  if (load.status === "loading") {
+    return (
+      <TreeItem key="loading" id={`${key}${NOTE}loading`} textValue="Loading" isDisabled className="outline-none">
+        <TreeItemContent>
+          {({ level }) => <Row level={level - 1}><span aria-hidden className="size-6 shrink-0" /><span role="status" className="sr-only">Loading</span>{c.loadingRow ?? <span aria-hidden className="h-3 w-32 animate-pulse rounded-pill bg-muted" />}</Row>}
+        </TreeItemContent>
+      </TreeItem>
+    );
+  }
+  if (load.status === "error") {
+    return (
+      <TreeItem key="error" id={`${key}${NOTE}error`} textValue={load.message} className="outline-none">
+        <TreeItemContent>
+          {({ level }) => (
+            <Row level={level - 1}>
+              <CircleAlert aria-hidden className="size-4 shrink-0 text-danger" />
+              <span className="min-w-0 flex-1 truncate text-danger" title={load.message}>{load.message}</span>
+              <Button size="sm" onPress={load.retry}>Try again</Button>
+            </Row>
+          )}
+        </TreeItemContent>
+      </TreeItem>
+    );
+  }
+  if (load.data.length === 0) {
+    return (
+      <TreeItem key="empty" id={`${key}${NOTE}empty`} textValue={c.emptyRow} isDisabled className="outline-none">
+        <TreeItemContent>
+          {({ level }) => <Row level={level - 1}><span aria-hidden className="size-6 shrink-0" /><span className="text-muted-foreground">{c.emptyRow}</span></Row>}
+        </TreeItemContent>
+      </TreeItem>
+    );
+  }
+  return <Nodes nodes={load.data} />;
+}
+
+/** A hierarchy whose children load as each node opens (a `useChildren` hook per open node): a skeleton row, a Try again row and an "empty" row per node, type-ahead and arrow keys, single selection, open state optionally in the URL, always virtualised. */
+export function Tree<T>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, height = "24rem", className }: TreeProps<T>) {
+  const nodes = React.useRef(new Map<string, T>()).current;
+  const ctx: Ctx<T> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, expanded, loadingRow, emptyRow, nodes };
+
+  if (roots.status === "loading") {
+    return (
+      <div role="status" aria-label={`${label}: loading`} className={cn("space-y-2 p-2", className)}>
+        {[0, 1, 2, 3].map((i) => <div key={i} aria-hidden className="h-4 animate-pulse rounded-pill bg-muted" style={{ width: `${70 - i * 10}%` }} />)}
+      </div>
+    );
+  }
+  if (roots.status === "error") {
+    return (
+      <div role="alert" className={cn("flex items-center gap-3 rounded-surface bg-danger-subtle p-3 text-danger", className)}>
+        <CircleAlert aria-hidden className="size-5 shrink-0" />
+        <p className="min-w-0 flex-1 type-body-sm">{roots.message}</p>
+        <Button size="sm" onPress={roots.retry}>Try again</Button>
+      </div>
+    );
+  }
+
+  const choose = (keys: Selection) => {
+    const first = keys === "all" ? undefined : [...keys][0];
+    if (first === undefined || isNote(String(first))) return;
+    const key = String(first);
+    const node = nodes.get(key);
+    if (node !== undefined) onSelect(key, node);
+  };
+  const tree = (
+    <AriaTree
+      aria-label={label}
+      selectionMode="single"
+      disallowEmptySelection
+      selectedKeys={selected === null ? [] : [selected]}
+      onSelectionChange={choose}
+      expandedKeys={expanded.expanded}
+      onExpandedChange={(keys) => expanded.onChange(new Set([...keys].map(String).filter((k) => !isNote(k))))}
+      renderEmptyState={() => <p className="p-3 type-body-sm text-muted-foreground">{emptyRow}</p>}
+      className={cn("min-w-0 overflow-y-auto outline-none", className)}
+      style={{ maxHeight: height }}
+      data-strata-scroll=""
+    >
+      <Nodes nodes={roots.data} />
+    </AriaTree>
+  );
+  return (
+    <Context.Provider value={ctx as unknown as Ctx<never>}>
+      <Virtualizer layout={ListLayout} layoutOptions={{ rowHeight: 32 }}>{tree}</Virtualizer>
+    </Context.Provider>
+  );
+}

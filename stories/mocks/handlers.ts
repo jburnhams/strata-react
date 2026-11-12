@@ -1,4 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
+import { listDisk, makeFolder } from "../fixtures/folders";
 import { bookings, firedWork, firings, glazeSwatches, piecePhotos, readings, type Booking, type Firing } from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
 
@@ -169,7 +170,24 @@ const growing = ({ request }: { request: Request }) => {
   return new HttpResponse(lines.join("\n") + "\n", { headers: { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "no-store" } });
 };
 
+/** The pretend disk: GET lists a folder's subfolders (`/locked` refuses, `/slow-share` is slow), POST makes one. */
+const folders = [
+  http.get("/api/folders", async ({ request }) => {
+    const path = new URL(request.url).searchParams.get("path") || "/";
+    if (path.endsWith("/slow-share")) await delay(1500);
+    if (path.endsWith("/locked")) return HttpResponse.json({ detail: `You do not have permission to open ${path}.` }, { status: 403, statusText: "Forbidden" });
+    return HttpResponse.json({ folders: listDisk(path) });
+  }),
+  http.post("/api/folders", async ({ request }) => {
+    const { parent, name } = (await request.json()) as { parent: string; name: string };
+    await delay(300);
+    const made = makeFolder(parent, name);
+    return made.ok ? HttpResponse.json({ path: `${parent === "/" ? "" : parent}/${name}` }, { status: 201 }) : HttpResponse.json({ detail: made.reason }, { status: made.status });
+  }),
+];
+
 export const handlers = [
+  ...folders,
   http.get("*/hls/growing.m3u8", growing),
   http.get("/api/clips/:variant", clip),
   http.get("https://tiles.example.test/:set/:z/:x/:file", tile),

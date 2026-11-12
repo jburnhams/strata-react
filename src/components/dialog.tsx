@@ -53,10 +53,10 @@ export type DialogProps = Common & {
   closable?: boolean;
   /** `center` is a dialog; `end` is a sheet down the right edge. Default `center`. */
   placement?: "center" | "end";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "full";
 };
 
-const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl" } as const;
+const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl", full: "h-full max-w-none" } as const;
 
 // A dialog with a `trigger` is React Aria's DialogTrigger around it. One driven only by `open` has
 // nothing pressable to put in a trigger, and React Aria warns "A PressResponder was rendered without a
