@@ -75,6 +75,7 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
   const files = React.useRef(new Map<string, File>());
   const controllers = React.useRef(new Map<string, AbortController>());
   const counter = React.useRef(0);
+  const alive = React.useRef(true);
 
   const patch = React.useCallback((id: string, next: (o: FileOutcome) => FileOutcome) => {
     setOutcomes((all) => all.map((o) => (o.id === id ? next(o) : o)));
@@ -101,10 +102,37 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
     [patch],
   );
 
+  // The app's own check, then its `process`. A check that throws (synchronously or not) fails the
+  // file with a retry rather than accepting it unchecked or escaping `add`; nothing runs after the
+  // screen is gone or the file was dismissed.
+  const start = React.useCallback(
+    (id: string, file: File) => {
+      const base = { id, name: file.name, size: file.size };
+      patch(id, () => ({ ...base, status: "processing" }));
+      Promise.resolve()
+        .then(() => opts.current.check?.(file))
+        .then(
+          (reason) => {
+            if (!alive.current || !files.current.has(id)) return;
+            if (reason) {
+              files.current.delete(id);
+              patch(id, () => ({ ...base, status: "rejected", reason }));
+            } else run(id, file);
+          },
+          (error: unknown) => {
+            if (!alive.current || !files.current.has(id)) return;
+            const reason = error instanceof Error && error.message ? error.message : `${file.name} could not be checked. Try again.`;
+            patch(id, () => ({ ...base, status: "failed", reason }));
+          },
+        );
+    },
+    [patch, run],
+  );
+
   const add = React.useCallback(
     (offered: Iterable<File> | ArrayLike<File>) => {
       const list = Array.from(offered as ArrayLike<File>);
-      const { accept, acceptLabel, multiple = true, maxBytes, check } = opts.current;
+      const { accept, acceptLabel, multiple = true, maxBytes } = opts.current;
       list.forEach((file, index) => {
         const id = `f${++counter.current}`;
         const base = { id, name: file.name, size: file.size };
@@ -116,19 +144,10 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
         }
         files.current.set(id, file);
         setOutcomes((all) => [...all, { ...base, status: "processing" }]);
-        Promise.resolve(check?.(file)).then(
-          (reason) => {
-            if (!files.current.has(id)) return; // dismissed while it was being checked
-            if (reason) {
-              files.current.delete(id);
-              patch(id, () => ({ ...base, status: "rejected", reason }));
-            } else run(id, file);
-          },
-          () => files.current.has(id) && run(id, file),
-        );
+        start(id, file);
       });
     },
-    [patch, run],
+    [patch, start],
   );
 
   const dismiss = React.useCallback((id: string) => {
@@ -141,9 +160,9 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
   const retry = React.useCallback(
     (id: string) => {
       const file = files.current.get(id);
-      if (file) run(id, file);
+      if (file) start(id, file);
     },
-    [run],
+    [start],
   );
 
   const clear = React.useCallback(() => {
@@ -154,8 +173,10 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
   }, []);
 
   React.useEffect(() => {
+    alive.current = true;
     const live = controllers.current;
     return () => {
+      alive.current = false;
       for (const c of live.values()) c.abort();
       live.clear();
     };

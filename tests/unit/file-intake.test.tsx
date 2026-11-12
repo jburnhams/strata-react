@@ -158,6 +158,39 @@ describe("file intake", () => {
   });
 });
 
+describe("a check that fails to run", () => {
+  it("fails the file with the error's message and a retry, for a synchronous throw and for a rejection, and the rest of the batch still goes through", async () => {
+    const user = userEvent.setup();
+    let calls = 0;
+    const { container } = renderWithStrata(
+      <Library
+        check={(f) => {
+          if (f.name === "bad.mp4" && ++calls === 1) throw new Error("bad.mp4 could not be checked. Try again.");
+          if (f.name === "later.mp4") return Promise.reject(new Error("later.mp4 could not be checked. Try again."));
+          return null;
+        }}
+      />,
+    );
+    await user.upload(container.querySelector('input[type="file"]')!, [file("bad.mp4", "video/mp4"), file("later.mp4", "video/mp4"), file("ok.mp4", "video/mp4")]);
+    expect(await screen.findAllByText("Failed")).toHaveLength(2);
+    expect(screen.getByText("Added")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again bad.mp4" }));
+    await waitFor(() => expect(screen.getAllByText("Added")).toHaveLength(2));
+  });
+
+  it("does nothing when the screen unmounts while the check is pending", async () => {
+    const user = userEvent.setup();
+    let release!: (v: null) => void;
+    let processed = 0;
+    const { container, unmount } = renderWithStrata(<Library check={() => new Promise<null>((r) => (release = r))} process={() => void processed++} />);
+    await user.upload(container.querySelector('input[type="file"]')!, file("a.mp4", "video/mp4"));
+    unmount();
+    release(null);
+    await Promise.resolve();
+    expect(processed).toBe(0);
+  });
+});
+
 describe("FileDropZone", () => {
   it("says what it takes while a drag is over it, then goes back, with the picker inside it", () => {
     renderWithStrata(<Library />);
