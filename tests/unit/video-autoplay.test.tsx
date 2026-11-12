@@ -50,6 +50,23 @@ describe("autoPlay", () => {
     expect(el("B").muted).toBe(true);
   });
 
+  it("mutes the videos before it asks the browser to play", async () => {
+    const mutedAtPlay: boolean[] = [];
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      mutedAtPlay.push(this.muted);
+      return play.call(this);
+    };
+    try {
+      renderWithStrata(<Pair autoPlay />);
+      load();
+      await waitFor(() => expect(mutedAtPlay.length).toBeGreaterThan(0));
+    } finally {
+      HTMLMediaElement.prototype.play = play;
+    }
+    expect(mutedAtPlay.every(Boolean)).toBe(true);
+  });
+
   it("stays paused when the browser refuses to play", async () => {
     renderWithStrata(<Pair autoPlay />);
     media.refuseNextPlay();

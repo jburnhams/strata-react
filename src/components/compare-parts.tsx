@@ -27,11 +27,13 @@ export function makePicker(a: Candidate<unknown>, b: Candidate<unknown>, onPick:
   const choose = words?.choose ?? ((label: string) => `Click to choose ${label}`);
   const unavailable = words?.unavailable ?? ((view: string) => `A click does not choose in ${view}: use the keys or the buttons.`);
   const answer = (zone: { value: string }) => onPick(zone.value === "a" ? "a" : "b");
+  // The pair on screen: a click still waiting for a double click is dropped if another pair has come up (ids are never drawn).
+  const token = `${a.id}|${b.id}`;
   return {
     /** A frame that is one whole side. */
     one(side: "a" | "b"): FramePick {
       const text = choose((side === "a" ? a : b).label);
-      return { zoneAt: () => ({ value: side, from: 0, to: 1, hint: text }), onPick: answer, describe: text };
+      return { zoneAt: () => ({ value: side, from: 0, to: 1, hint: text }), onPick: answer, describe: text, token };
     },
     /** A frame cut by a swipe divider at `divider` percent: the left is A, the right is B. */
     split(divider: number): FramePick {
@@ -39,6 +41,7 @@ export function makePicker(a: Candidate<unknown>, b: Candidate<unknown>, onPick:
       return {
         zoneAt: (x) => (x < cut ? { value: "a", from: 0, to: cut, hint: choose(a.label) } : { value: "b", from: cut, to: 1, hint: choose(b.label) }),
         onPick: answer,
+        token,
         describe: `${choose(a.label)} on the left, ${choose(b.label)} on the right`,
       };
     },

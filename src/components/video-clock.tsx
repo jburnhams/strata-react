@@ -309,7 +309,9 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
     for (const el of els.current.values()) el.currentTime = 0;
     setWanted(false);
     setStarted(false);
-    setInfos({});
+    // Read every attached element again rather than forgetting them all: a clip that kept its source (a grid's reference) does not
+    // reload, so nothing else would bring its duration or error back; one that changed reports NaN from the browser's own reload.
+    setInfos(Object.fromEntries([...els.current].map(([i, el]) => [i, { duration: Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null, error: !!el.error && el.error.code !== 1 }])));
   }, [pairKey]);
 
   // Autoplay: once, for each pair, when every video has its metadata.
@@ -320,7 +322,11 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
   React.useEffect(() => {
     if (!auto || !loaded || armed.current === (pairKey ?? "")) return;
     armed.current = pairKey ?? "";
-    if (audio !== null && !soundChosen.current) setMuted(true);
+    if (audio !== null && !soundChosen.current) {
+      setMuted(true);
+      // Now, not on the next render: a browser that blocks audible autoplay judges the play() call, and the sound effect has not run yet.
+      for (const el of els.current.values()) el.muted = true;
+    }
     playRef.current();
   }, [auto, loaded, pairKey, audio]);
 

@@ -156,3 +156,24 @@ describe("click to choose, videos", () => {
     expect(el("A").paused).toBe(false);
   });
 });
+
+describe("a click that is still waiting", () => {
+  it("is dropped when the pair changes before the double-click window ends", async () => {
+    const onPick = vi.fn();
+    const C = img("model-z", "A");
+    const { rerender } = renderWithStrata(<Compare label="Pair 1" a={A} b={B} blind missing="x" mode="side" onModeChange={() => undefined} onPick={onPick} />);
+    await userEvent.click(screen.getByRole("group", { name: "Picture A" }));
+    rerender(<Compare label="Pair 2" a={C} b={B} blind missing="x" mode="side" onModeChange={() => undefined} onPick={onPick} />);
+    await settle();
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("is dropped when an answer becomes pending", async () => {
+    const onPick = vi.fn();
+    const { rerender } = renderWithStrata(<Pictures onPick={onPick} />);
+    await userEvent.click(frameA());
+    rerender(<Pictures />);
+    await settle();
+    expect(onPick).not.toHaveBeenCalled();
+  });
+});

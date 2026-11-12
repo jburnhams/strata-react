@@ -12,6 +12,7 @@
 - `tests/unit/pick.test.tsx` (**new**), `tests/unit/video-autoplay.test.tsx` (**new**): the click rules per view, drag and double click, `pick={false}`, blind, `pending`, videos; autoplay, refusal, reduced motion, new pair, loop, range, pause.
 - `stories/pair-vote.stories.tsx`, `stories/compare-video.stories.tsx`: `ClickToChoose`, `ClickOff`, `AutoPlayLoop` (interactive, `no-visual`).
 - `README.md`, `UPGRADING.md`: the component row and the behaviour changes.
+- Review fixes on the PR: autoplay mutes the elements before `play()` (not on the next render); a pair change re-reads the attached videos' duration and error instead of forgetting them (a grid's reference keeps its own); a click still waiting out the double-click window is dropped when the pair changes or the pick goes away (`FramePick.token`).
 
 **Three flakes: two unit tests that failed the v1.0.34 publish, and the RouteMap shots** (branch `claude/fix-release-flakes`). The `NPM Publish Package` run for v1.0.34 failed in `test:all`: the keyboard move in `sortable-list.test.tsx` pressed Tab before React Aria had put focus on the first drop target, and a React Aria announcement scheduled during a `waitFor` fired after jsdom was torn down at the end of `routes.test.tsx` (an uncaught `document is not defined`). Separately the visual job had failed on a RouteMap marker shot on #194, on main after #196 and on this PR, each time with the same pixel counts; Jonathan asked for it to be fixed here. None of the three comes from the media, maps or panes batches; all are timing.
 

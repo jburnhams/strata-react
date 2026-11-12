@@ -55,6 +55,8 @@ export type FramePick = {
   onPick: (zone: PickZone) => void;
   /** What the frame is described as for assistive technology: "Click to choose A". */
   describe: string;
+  /** Names what is being judged. A choice still waiting out the double-click window is dropped if this changes or the pick goes away (the next pair came up, or an answer is pending). */
+  token?: string;
 };
 
 /** Props for `ViewportFrame`. */
@@ -204,9 +206,11 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
           const zone = pickRef.current.zoneAt(shareAcross(e.clientX));
           if (zone) {
             cancelPick();
+            const token = pickRef.current.token;
             waiting.current = setTimeout(() => {
               waiting.current = null;
-              pickRef.current?.onPick(zone);
+              const now = pickRef.current;
+              if (now && now.token === token) now.onPick(zone);
             }, DOUBLE_CLICK_MS);
           }
         }
