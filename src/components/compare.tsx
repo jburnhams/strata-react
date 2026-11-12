@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, Picture, ZoomControls, useZoom, zoomShortcuts } from "./compare-parts";
+import { Caption, FullscreenButton, Picture, VIEWPORT_HEIGHT, ZoomControls, useZoom, zoomShortcuts } from "./compare-parts";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
@@ -56,6 +56,19 @@ export type TextMedia = {
   text: string;
 };
 
+/** A video to compare (`CompareVideo`). Serve it under a neutral address when the comparison is blind: `src` reaches the page. */
+export type VideoMedia = {
+  kind: "video";
+  src: string;
+  /** A still shown before the first frame. */
+  poster?: string;
+  /** Its size in pixels, for the shape of the frame, "1:1" and drawing candidates of different sizes in one box. */
+  width: number;
+  height: number;
+  /** Frames per second, if known: the unit of the sync tolerance and of the frame readout. Default 30. */
+  fps?: number;
+};
+
 /** One side of a comparison. */
 export type Candidate<M = ImageMedia> = {
   /** Who it is: a variant name, a model. Never put on the page when `blind`, and never needed by it. */
@@ -71,8 +84,6 @@ export type Candidate<M = ImageMedia> = {
 export type CompareMode = "side" | "swipe" | "fade" | "blink" | "difference";
 
 const MODE_LABEL: Record<CompareMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink", difference: "Difference" };
-// 100svh less the toolbar (about 3rem), captions (2rem), a vote bar (4rem), the legend (4rem) and gaps.
-const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
 const ALL_MODES: readonly CompareMode[] = ["side", "swipe", "fade", "blink", "difference"];
 
 /** Props for `Compare`. */

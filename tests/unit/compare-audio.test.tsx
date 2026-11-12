@@ -1,6 +1,6 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
 import { CompareAudio, PairJudge, type AudioMedia, type Candidate, type Loudness } from "../../src";
@@ -92,7 +92,8 @@ describe("CompareAudio", () => {
     renderWithStrata(<Harness />);
     load(10, 10);
     expect(await screen.findByText("A is louder than B, so it is turned down by 3.0 dB.")).toBeInTheDocument();
-    expect(audioOf("A").volume).toBeCloseTo(10 ** (-3 / 20), 3);
+    // The volume is applied in an effect after the render that drew the line, which may run a tick later.
+    await waitFor(() => expect(audioOf("A").volume).toBeCloseTo(10 ** (-3 / 20), 3));
     expect(audioOf("B").volume).toBe(1);
   });
 

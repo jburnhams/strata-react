@@ -9,6 +9,8 @@ export type FakeMedia = {
   end: (el: HTMLMediaElement) => void;
   /** Sets the time and fires timeupdate. */
   tick: (el: HTMLMediaElement, time: number) => void;
+  /** The element has not got its next frames (readyState 1): a stall. `loaded` again clears it. */
+  stall: (el: HTMLMediaElement) => void;
   /** Fails the load with a MediaError code (4: not supported or not found). */
   fail: (el: HTMLMediaElement, code: number) => void;
   /** Makes the next play() reject, as a browser does when autoplay is refused. */
@@ -96,6 +98,10 @@ export function installFakeMedia(): FakeMedia {
     tick(el, time) {
       stateOf(el).time = time;
       fire(el, "timeupdate");
+    },
+    stall(el) {
+      stateOf(el).ready = 1;
+      fire(el, "waiting");
     },
     fail(el, code) {
       Object.assign(stateOf(el), { error: { code }, network: 3 });
