@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { act, createEvent, fireEvent, screen } from "@testing-library/react";
+import { act, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Timeline, noOverlap, type TimelineDrop, type TimelineItem } from "../../src";
+import userEvent from "@testing-library/user-event";
+import { useDrag } from "react-aria";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #121: drops from outside, lane height, kind colours, header width.
@@ -150,5 +152,35 @@ describe("Timeline: lane height, kind colours, header", () => {
     const name = screen.getByTitle("Footage from the north ridge, take two");
     expect(name).toHaveTextContent("Footage from the north ridge, take two");
     expect(name.parentElement!.parentElement!.className).toMatch(/w-max/);
+  });
+});
+
+function Source() {
+  const { dragProps } = useDrag({ getItems: () => [{ "application/x-clip": "clip-9" }], getAllowedDropOperations: () => ["copy"] });
+  return (
+    <div {...dragProps} role="button" tabIndex={0} aria-label="Drag clip-9">
+      clip-9
+    </div>
+  );
+}
+
+describe("Timeline: a complete keyboard drag", () => {
+  it("picks a clip up, moves to a lane that takes it and drops it at the current time", async () => {
+    const user = userEvent.setup();
+    const drops: TimelineDrop[] = [];
+    renderWithStrata(
+      <>
+        <Source />
+        <Harness onDrop={(d) => drops.push(d)} position={60} />
+      </>,
+    );
+    const announced = () => document.querySelector("[data-live-announcer]")?.textContent ?? "";
+    screen.getByRole("button", { name: "Drag clip-9" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(announced()).toMatch(/Started dragging/));
+    await waitFor(() => expect(document.activeElement).toHaveAttribute("aria-label", "Track 1"));
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(drops).toHaveLength(1));
+    expect(drops[0]).toMatchObject({ lane: "t1", start: 60 });
   });
 });

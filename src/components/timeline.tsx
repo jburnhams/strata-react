@@ -720,7 +720,9 @@ function LaneRow({ label, register, types, onHover, onLeave, onDropItems, childr
   const { dropProps } = useDrop({
     ref,
     isDisabled: !types,
-    getDropOperation: (t) => (types && t.has([...types]) ? "copy" : "cancel"),
+    // A pointer drag hands over a `DragTypes` and a keyboard (virtual) drag a plain `Set` (checked in
+    // `DragManager`), and only the first takes an array in `has`, so each type is asked on its own.
+    getDropOperation: (t) => (types?.some((type) => t.has(type)) ? "copy" : "cancel"),
     onDropEnter: (e) => onHover(keyboard() ? null : e.x),
     onDropMove: (e) => onHover(keyboard() ? null : e.x),
     onDropExit: onLeave,
