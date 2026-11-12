@@ -17,6 +17,7 @@ React Aria Components is now the primitives layer (`react-aria-components`, inst
 package). `@radix-ui/react-slot` is gone.
 
 - **State classes are the `tailwindcss-react-aria-components` variants** (`selected:`, `focus-visible:`, `hover:`, `disabled:`), loaded by `strata.css` (the plugin is installed with the package). A test that matched a class such as `data-[selected]:border-foreground` now matches `selected:border-foreground`; hover colours no longer apply on touch screens.
+- **`Compare`'s default view switch has a fifth view, `difference`** (key `5`). An app that renders `Compare` without `modes` sees one more toggle (and its visual baselines move); pass `modes={["side", "swipe", "fade", "blink"]}` to keep the previous four.
 - **`Button` has no `asChild`.** A button that navigates is a link: use a router `Link`.
   Do not rely on `@radix-ui/react-slot` arriving through Strata.
 - **`IconButton` shows `label` as a tooltip**, not a `title` attribute. New optional `hint`

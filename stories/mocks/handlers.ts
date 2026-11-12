@@ -93,8 +93,9 @@ export function piecePhotoSvg(file: string): string | null {
  *  (a cooler glaze, a darker shelf and a speck on the rim to find). Same SVG, so they differ only where drawn. */
 export function renderingSvg(variant: string): string | null {
   const base = piecePhotoSvg("p-301.svg");
-  if (!base || (variant !== "final" && variant !== "auto")) return null;
+  if (!base || !["final", "auto", "warm"].includes(variant)) return null;
   if (variant === "final") return base;
+  if (variant === "warm") return base.replaceAll("#8fb3a1", "#b3a47f").replace('fill="#efe9df"', 'fill="#f3e6d2"');
   return base
     .replaceAll("#8fb3a1", "#7fa6b3")
     .replace('fill="#cfc6b8"', 'fill="#b8b2a8"')
