@@ -7,6 +7,8 @@ import { NativeSelect } from "./field";
 import type { Shortcut } from "./hotkeys";
 import { Toolbar } from "./toolbar";
 import { Slider } from "./value-controls";
+import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
+import { useSliderState } from "react-stately";
 
 // The controls around anything that plays (strata issue #78): transport, a time readout, a seek
 // bar, volume with mute, a playback rate, and a stage that holds a picture at its aspect ratio.
@@ -23,13 +25,14 @@ import { Slider } from "./value-controls";
 // a toggle in a screen reader. (The issue asked for both; one is the WAI-ARIA way, so the name.)
 // The group is React Aria's toolbar through `Toolbar` (one tab stop, arrows between controls).
 //
-// The seek bar is our own `role="slider"`, not React Aria's `Slider`. Checked in `useSliderThumb`
-// and `useSliderState`: the thumb's `aria-valuetext` is the formatted number from `Intl.NumberFormat`
-// options, which cannot say "1:23", so a screen reader would hear seconds as a bare number; and
-// the input is a native range input whose Page Up and Page Down steps belong to the browser, so a
-// larger step cannot be set. The hooks would allow a formatter, but `react-stately` is not a direct
-// dependency here (CLAUDE.md: that is Jonathan's call). So the keys, the pointer and the ARIA are
-// ours, the same set React Aria's slider has. Volume has neither limit, and stays React Aria's.
+// The seek bar is React Aria's slider hooks (`useSlider`, `useSliderThumb`, `useSliderState`): the
+// pointer, the thumb, the hidden range input and its label come from them. Two things are ours on top,
+// each checked in the hooks' source. The value text: `useSliderState` formats through an object with
+// `format`, `formatRange` and `resolvedOptions`, so it is given one that says "1:23" instead of an
+// `Intl.NumberFormat` (which would read seconds as a bare number). The keys: the state has one
+// `step`, and a seek bar needs a fine one so a drag lands on any moment, so arrows (`step` seconds),
+// Page keys (`bigStep`) and Home and End are handled in a capture handler on the input and the hooks'
+// own arrow handling is stopped. Volume has neither limit, and stays React Aria's component.
 //
 // Readouts are `tabular-nums` and are padded to the width of the longest value they will show
 // (`duration`), so they do not change width as the time runs.
@@ -81,62 +84,62 @@ export type SeekBarProps = TimeProps & {
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
 export function SeekBar({ time, duration, onSeek, marks = [], buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled, className }: SeekBarProps) {
   const track = React.useRef<HTMLDivElement>(null);
+  const input = React.useRef<HTMLInputElement>(null);
   const frac = duration > 0 ? clamp(time / duration, 0, 1) : 0;
   const seekTo = (t: number) => onSeek(clamp(t, 0, duration));
-  const at = (clientX: number) => {
-    const r = track.current?.getBoundingClientRect();
-    if (r && r.width > 0) seekTo(((clientX - r.left) / r.width) * duration);
-  };
+  // React Aria's state with a formatter that says "1:23" (it only needs `format`, `formatRange` and
+  // `resolvedOptions`, which is all `useSliderState` calls) and a fine step, so a drag lands on any
+  // moment and not on every 5 s.
+  const timeText = React.useMemo(() => {
+    const say = (t: number) => timecode(t, { precision, fps });
+    return { format: say, formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`, resolvedOptions: () => ({ locale: "en-US" }) } as unknown as Intl.NumberFormat;
+  }, [precision, fps]);
+  const fine = precision === "frames" ? 1 / fps : precision === "ms" ? 0.001 : 0.01;
+  const state = useSliderState({ minValue: 0, maxValue: Math.max(duration, fine), step: fine, value: [clamp(time, 0, duration)], onChange: ([t]) => seekTo(t), numberFormatter: timeText, isDisabled: disabled });
+  const { groupProps, trackProps } = useSlider({ "aria-label": label, isDisabled: disabled }, state, track);
+  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label, isDisabled: disabled }, state);
+  const { focusProps, isFocusVisible } = useFocusRing();
+  // The keys are ours, because the hooks step by `state.step` and this one has to be fine for the
+  // drag: arrows move `step` seconds, Page keys `bigStep`, Home and End the ends. Captured so the
+  // hook's own arrow handling (one fine step) does not also run.
   const keys: Record<string, number> = { ArrowLeft: -step, ArrowDown: -step, ArrowRight: step, ArrowUp: step, PageDown: -bigStep, PageUp: bigStep };
+  const onKeyDownCapture = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key in keys) seekTo(time + keys[e.key]);
+    else if (e.key === "Home") seekTo(0);
+    else if (e.key === "End") seekTo(duration);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
   return (
-    <div
-      ref={track}
-      role="slider"
-      tabIndex={disabled ? -1 : 0}
-      aria-label={label}
-      aria-orientation="horizontal"
-      aria-valuemin={0}
-      aria-valuemax={duration}
-      aria-valuenow={time}
-      aria-valuetext={timecode(time, { precision, fps })}
-      aria-disabled={disabled || undefined}
-      onKeyDown={(e) => {
-        if (disabled) return;
-        if (e.key in keys) seekTo(time + keys[e.key]);
-        else if (e.key === "Home") seekTo(0);
-        else if (e.key === "End") seekTo(duration);
-        else return;
-        e.preventDefault();
-      }}
-      onPointerDown={(e) => {
-        if (disabled || e.button !== 0) return;
-        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-        at(e.clientX);
-      }}
-      onPointerMove={(e) => {
-        if (!disabled && e.buttons === 1) at(e.clientX);
-      }}
-      className={cn("relative flex h-(--control-h) min-w-0 flex-1 cursor-pointer touch-none items-center aria-disabled:cursor-not-allowed aria-disabled:opacity-50", className)}
-    >
-      <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
-      {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
-      <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
-      {duration > 0 &&
-        marks.map((m) => (
-          <button
-            key={`${m.time}-${m.label}`}
-            type="button"
-            tabIndex={-1}
-            disabled={disabled}
-            title={`${m.label}, ${timecode(m.time, { precision, fps })}`}
-            aria-label={`${m.label}, ${timecode(m.time, { precision, fps })}`}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => seekTo(m.time)}
-            className="absolute top-1/2 h-3 w-1 -translate-y-1/2 cursor-pointer rounded-pill bg-foreground"
-            style={{ left: `${(m.time / duration) * 100}%` }}
-          />
-        ))}
-      <span aria-hidden className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background" style={{ left: `${frac * 100}%` }} />
+    <div {...groupProps} className={cn("relative flex h-(--control-h) min-w-0 flex-1 items-center", disabled && "cursor-not-allowed opacity-50", className)}>
+      <div {...trackProps} ref={track} className={cn("relative flex h-full w-full cursor-pointer touch-none items-center", disabled && "cursor-not-allowed")}>
+        <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
+        {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
+        <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
+        {duration > 0 &&
+          marks.map((m) => (
+            <button
+              key={`${m.time}-${m.label}`}
+              type="button"
+              tabIndex={-1}
+              disabled={disabled}
+              title={`${m.label}, ${timecode(m.time, { precision, fps })}`}
+              aria-label={`${m.label}, ${timecode(m.time, { precision, fps })}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => seekTo(m.time)}
+              className="absolute top-1/2 h-3 w-1 -translate-y-1/2 cursor-pointer rounded-pill bg-foreground"
+              style={{ left: `${(m.time / duration) * 100}%` }}
+            />
+          ))}
+        <div {...thumbProps} className={cn("absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: `${frac * 100}%` }}>
+          <VisuallyHidden>
+            <input ref={input} {...mergeProps(inputProps, focusProps)} aria-labelledby={undefined} onKeyDownCapture={onKeyDownCapture} />
+          </VisuallyHidden>
+        </div>
+      </div>
     </div>
   );
 }

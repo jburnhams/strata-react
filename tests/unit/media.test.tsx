@@ -95,8 +95,8 @@ describe("SeekBar", () => {
     renderWithStrata(<Player initialTime={65} />);
     const bar = screen.getByRole("slider", { name: "Seek" });
     expect(bar).toHaveAttribute("aria-valuetext", "1:05");
-    expect(bar).toHaveAttribute("aria-valuemin", "0");
-    expect(bar).toHaveAttribute("aria-valuemax", "120");
+    expect(bar).toHaveAttribute("min", "0"); // a range input: its limits are native
+    expect(bar).toHaveAttribute("max", "120");
     bar.focus();
     await user.keyboard("{ArrowRight}");
     expect(bar).toHaveAttribute("aria-valuetext", "1:10");
@@ -116,11 +116,14 @@ describe("SeekBar", () => {
     const user = userEvent.setup();
     renderWithStrata(<Player />);
     const bar = screen.getByRole("slider", { name: "Seek" });
-    bar.getBoundingClientRect = () => new DOMRect(0, 0, 400, 40);
-    fireEvent.pointerDown(bar, { button: 0, clientX: 100 });
-    expect(state().time).toBe(30);
-    fireEvent.pointerMove(bar, { buttons: 1, clientX: 200 });
-    expect(state().time).toBe(60);
+    const track = bar.closest("[style*='touch-action']") as HTMLElement;
+    track.getBoundingClientRect = () => new DOMRect(0, 0, 400, 40);
+    fireEvent.pointerDown(track, { button: 0, clientX: 100, pointerId: 1 });
+    fireEvent.pointerUp(track, { button: 0, clientX: 100, pointerId: 1 });
+    expect(state().time).toBeCloseTo(30, 1);
+    fireEvent.pointerDown(track, { button: 0, clientX: 200, pointerId: 1 });
+    fireEvent.pointerUp(track, { button: 0, clientX: 200, pointerId: 1 });
+    expect(state().time).toBeCloseTo(60, 1);
     await user.click(screen.getByRole("button", { name: "Take 2, 1:00" }));
     expect(state().time).toBe(60);
   });
@@ -132,7 +135,7 @@ describe("SeekBar disabled", () => {
     const seen: number[] = [];
     renderWithStrata(<SeekBar time={10} duration={120} onSeek={(t) => seen.push(t)} marks={[{ time: 60, label: "Take 2" }]} disabled />);
     const bar = screen.getByRole("slider", { name: "Seek" });
-    expect(bar).toHaveClass("touch-none");
+    expect(bar.closest("[style*='touch-action']")).toHaveClass("touch-none");
     bar.focus();
     await user.keyboard("{ArrowRight}");
     await user.click(screen.getByRole("button", { name: "Take 2, 1:00" }));
