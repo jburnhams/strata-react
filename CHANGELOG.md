@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**RouteMap as picture content: zoom, centred follow, several positions (issue #161)** (branch `claude/project-thread-5qo67g`). strata-vid draws a route inset over footage and needs the map to be set up once and identical on every frame. Existing uses are unchanged: one `position`, fit to bounds, the themed marker (all earlier tests and baselines pass as they were).
+
+- `src/map/route-map.tsx`: `zoom` (any number; `zoomSnap` is 0 only while it is set; unset keeps fit-to-routes), `follow="centre"` (`setView` with `reset` and no animation: a pan accumulates Leaflet's whole-pixel truncation, a reset depends only on position and zoom, so a frame is deterministic; the first view starts centred on the followed position), `positions` (`MapPosition`: `id`, `at`, `label`, `routeId`, `colour`) and `followId`. The single `position` is the first entry of the same list. Markers are kept by id in one effect and moved with `setLatLng`, coloured by their route (else their own colour, else the theme primary), restyled only when the colour or scheme changes, and brought to the front when routes are redrawn. The text alternative names every position along its own route (an untied one along each, as `position` always was).
+- `src/map/index.ts`: exports `MapPosition`.
+- `tests/unit/route-map.test.tsx`: 13 tests (33 in the file): zoom and a changing zoom without redrawing routes, the centre held on every update, the same view however the position got there, first view centred, centred follow without a zoom, two positions in route colours moving with no route redrawn, own colour and theme fallback, add and remove by id, markers above redrawn routes, `followId`, the text alternative, `position` beside `positions`.
+- `stories/route-map.stories.tsx`: `TwoPositions`, `CentredAtZoom`, `CentredLater` (dark tiles are the light ones, so the picture does not change with the scheme) and `AnimatedZoom` (zoom 12 to 15 while centred on a moving position; no visual shot). **New** baselines for the three, light and dark; the existing route-map baselines are unchanged.
+- `README.md`: Maps row. `UPGRADING.md`: nothing, the change is additive.
+- Not done: a pan-free `follow` that is smooth for a page map; centred follow has no easing by design.
+
 **CompareVideoGrid: every candidate's video on one clock (issue #159)** (branch `claude/project-thread-reaene`). strata-models' Outputs tab for a video eval shows a baseline and several upscalers at once; `CompareGrid` is pictures only. The clock `CompareVideo` had is now shared, and the grid is built on it. Not done: a "play one at a time" fallback for when decoding cannot keep up (the "Catching up" mark says when it is needed).
 
 - `src/components/video-clock.tsx` (**new**): `useVideoClock` (the leader/follower clock, frame stepping, loop, rate, hold while any waits, drift correction, a `behind` set, `setVisible` for cells out of sight, one soundtrack) and `VideoControls` (transport, readout, seek bar with moments, speed, volume, loop row), moved out of `compare-video.tsx` unchanged in behaviour; the 43 `CompareVideo` and region tests pass as they were.

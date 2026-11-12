@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
-import { RouteMap, type MapRoute, type RouteMapProps } from "../../src/map";
+import { RouteMap, type MapPosition, type MapRoute, type RouteMapProps } from "../../src/map";
 import { renderWithStrata } from "../../src/testing";
+import type { LatLng } from "../../src";
 
 // Real Leaflet in jsdom: no module mocks. jsdom has no layout, so the map's container is given a
 // size (Leaflet reads clientWidth and clientHeight); tiles are <img> elements that nothing loads.
@@ -237,5 +238,155 @@ describe("RouteMap", () => {
   it("unmounts cleanly", () => {
     const { unmount } = renderWithStrata(<RouteMap {...props({ position: [51.5, -0.12] })} />);
     expect(() => unmount()).not.toThrow();
+  });
+});
+
+// Map as picture content (issue #161): a set zoom, centred follow, several positions.
+describe("RouteMap as picture content", () => {
+  const same = { routes: [run, loop] };
+  const tileZoom = (c: HTMLElement) => Number(c.querySelector<HTMLImageElement>("img.leaflet-tile")!.src.match(/light\/(\d+)\//)![1]);
+
+  it("keeps fitting the routes when no zoom is set", () => {
+    const { container } = renderWithStrata(<RouteMap {...props()} />);
+    expect(tileZoom(container)).toBeGreaterThan(10);
+  });
+
+  it("places the view at the zoom it is given, and follows a zoom that changes every frame without touching a route", () => {
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same, zoom: 12 })} />);
+    const routePaths = paths(container).slice(0, 2);
+    expect(tileZoom(container)).toBe(12);
+    for (const z of [12.5, 13, 13.7, 14.4, 15]) rerender(<RouteMap {...props({ ...same, zoom: z })} />);
+    expect(tileZoom(container)).toBe(15);
+    expect(paths(container).slice(0, 2)).toEqual(routePaths); // same elements, not redrawn
+    expect(paths(container)[0]).toBe(routePaths[0]);
+  });
+
+  it("holds the view centred on the position at the zoom, exactly, on every update and with the routes untouched", () => {
+    const start: LatLng = [51.5, -0.12];
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same, position: start, follow: "centre", zoom: 12 })} />);
+    const routePaths = paths(container).slice(0, 2);
+    // Centred means the marker is drawn at the middle of the view every time, whatever the zoom.
+    const centreOf = () => paths(container).at(-1)!.getAttribute("d");
+    for (let i = 0; i <= 8; i++) {
+      const z = 12 + (3 * i) / 8;
+      const at: LatLng = [51.5 + 0.002 * i, -0.12 + 0.003 * i];
+      rerender(<RouteMap {...props({ ...same, position: at, follow: "centre", zoom: z })} />);
+      expect(centreOf()).toMatch(/^M(32[01]|31[0-9])/); // half of 640 wide, within a pixel
+    }
+    expect(paths(container).slice(0, 2)).toEqual(routePaths);
+  });
+
+  it("reaches the same view however the position got there (a frame is deterministic)", () => {
+    const frame = (path: LatLng[]) => {
+      const { container, rerender, unmount } = renderWithStrata(<RouteMap {...props({ routes: [run], position: path[0], follow: "centre", zoom: 14 })} />);
+      for (const at of path.slice(1)) rerender(<RouteMap {...props({ routes: [run], position: at, follow: "centre", zoom: 14 })} />);
+      const d = [...container.querySelectorAll(".leaflet-tile-pane img")].map((t) => t.getAttribute("src")).sort().join();
+      const out = [d, container.querySelector<HTMLElement>(".leaflet-map-pane")!.style.transform, paths(container)[0].getAttribute("d")];
+      unmount();
+      return out;
+    };
+    const target: LatLng = [51.507, -0.105];
+    const direct = frame([target]);
+    const wandering = frame([[51.5, -0.12], [51.515, -0.095], [51.502, -0.118], target]);
+    expect(wandering).toEqual(direct);
+  });
+
+  it("starts centred on the followed position when the map is first shown, not on the middle of the routes", () => {
+    const at: LatLng = [51.5, -0.12];
+    const { container } = renderWithStrata(<RouteMap {...props({ ...same, position: at, follow: "centre", zoom: 15 })} />);
+    expect(paths(container).at(-1)!.getAttribute("d")).toMatch(/^M3[12]\d/);
+  });
+
+  it("without a zoom, centred follow keeps the zoom the map has", () => {
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same })} />);
+    const z = tileZoom(container);
+    rerender(<RouteMap {...props({ ...same, position: [51.505, -0.11], follow: "centre" })} />);
+    expect(tileZoom(container)).toBe(z);
+  });
+
+  it("draws several positions, each in its route's colour, moving without redrawing a route", () => {
+    const coloured = [
+      { ...run, colour: "rgb(10, 20, 30)" },
+      { ...loop, colour: "rgb(200, 100, 50)" },
+    ];
+    const at = (n: number): MapPosition[] => [
+      { id: "a", label: "Runner A", routeId: "run", at: [51.5 + n * 0.001, -0.12 + n * 0.001] },
+      { id: "b", label: "Runner B", routeId: "loop", at: [51.5 + n * 0.0005, -0.12 + n * 0.0005] },
+    ];
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ routes: coloured, positions: at(0) })} />);
+    const before = paths(container);
+    expect(before).toHaveLength(4); // two routes, two markers
+    expect(before[2].getAttribute("fill")).toBe("rgb(10, 20, 30)");
+    expect(before[3].getAttribute("fill")).toBe("rgb(200, 100, 50)");
+    const ds = before.slice(2).map((p) => p.getAttribute("d"));
+    for (const n of [1, 2, 3]) rerender(<RouteMap {...props({ routes: coloured, positions: at(n) })} />);
+    const after = paths(container);
+    expect(after).toHaveLength(4);
+    for (let i = 0; i < 4; i++) expect(after[i]).toBe(before[i]);
+    expect(after[2].getAttribute("d")).not.toBe(ds[0]);
+    expect(after[3].getAttribute("d")).not.toBe(ds[1]);
+  });
+
+  it("a position's own colour wins, and one with no route uses the theme's primary", () => {
+    const { container } = renderWithStrata(
+      <RouteMap {...props({ ...same, positions: [{ id: "a", label: "A", routeId: "run", colour: "rgb(1, 2, 3)", at: [51.5, -0.12] }, { id: "b", label: "B", at: [51.505, -0.11] }] })} />,
+    );
+    const [, , a, b] = paths(container);
+    expect(a.getAttribute("fill")).toBe("rgb(1, 2, 3)");
+    expect(b.getAttribute("fill")).not.toBe("rgb(1, 2, 3)");
+  });
+
+  it("adds and removes positions by id, keeping the ones that stay", () => {
+    const a: MapPosition = { id: "a", label: "A", routeId: "run", at: [51.5, -0.12] };
+    const b: MapPosition = { id: "b", label: "B", routeId: "loop", at: [51.502, -0.11] };
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ ...same, positions: [a] })} />);
+    const markerA = paths(container).at(-1)!;
+    rerender(<RouteMap {...props({ ...same, positions: [a, b] })} />);
+    expect(paths(container)).toHaveLength(4);
+    expect(paths(container)[2]).toBe(markerA);
+    rerender(<RouteMap {...props({ ...same, positions: [{ ...a, at: null }, b] })} />);
+    expect(paths(container)).toHaveLength(3);
+  });
+
+  it("keeps positions above the routes when the routes are redrawn", () => {
+    const { container, rerender } = renderWithStrata(<RouteMap {...props({ routes: [run], position: [51.5, -0.12] })} />);
+    const marker = paths(container).at(-1)!;
+    rerender(<RouteMap {...props({ routes: [{ ...run, colour: "rgb(9, 9, 9)" }], position: [51.5, -0.12] })} />);
+    expect(paths(container).at(-1)).toBe(marker);
+  });
+
+  it("follows the position named by followId", () => {
+    const positions: MapPosition[] = [
+      { id: "a", label: "A", routeId: "run", at: [51.5, -0.12] },
+      { id: "b", label: "B", routeId: "run", at: [51.51, -0.1] },
+    ];
+    const { container } = renderWithStrata(<RouteMap {...props({ ...same, positions, follow: "centre", followId: "b", zoom: 15 })} />);
+    const [, , a, b] = paths(container);
+    expect(b.getAttribute("d")).toMatch(/^M3[12]\d/);
+    expect(a.getAttribute("d")).not.toMatch(/^M3[12]\d/);
+  });
+
+  it("names every position in the text alternative, each along its own route", async () => {
+    const positions: MapPosition[] = [
+      { id: "a", label: "Runner A", routeId: "run", at: [51.505, -0.11] },
+      { id: "b", label: "Runner B", routeId: "loop", at: [51.5, -0.12] },
+    ];
+    const { container } = renderWithStrata(<RouteMap {...props({ ...same, positions })} />);
+    await act(() => new Promise((r) => setTimeout(r, 1100)));
+    const text = container.querySelector("p.sr-only")!.textContent!;
+    expect(text).toMatch(/Wednesday run: [^.]*\.\d* ?[^]*Runner A: [\d.]+\s[mk]m? along\./);
+    const park = text.slice(text.indexOf("Park loop"));
+    expect(park).toContain("Runner B:");
+    expect(park).not.toContain("Runner A:");
+    expect(text.slice(0, text.indexOf("Park loop"))).not.toContain("Runner B:");
+  });
+
+  it("keeps the single position's text and look beside positions", async () => {
+    const { container } = renderWithStrata(<RouteMap {...props({ position: [51.5, -0.12], positions: [{ id: "a", label: "Second", routeId: "run", at: [51.51, -0.1] }] })} />);
+    await act(() => new Promise((r) => setTimeout(r, 1100)));
+    const text = container.querySelector("p.sr-only")!.textContent!;
+    expect(text).toContain("Current position:");
+    expect(text).toContain("Second:");
+    expect(paths(container)).toHaveLength(5); // one route's line, finish ring and start dot, and the two markers
   });
 });
