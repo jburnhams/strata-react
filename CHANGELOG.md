@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**State variants from tailwindcss-react-aria-components, not `data-[...]` strings** (branch `claude/aria-variants`). Jonathan asked for the plugin and said not to put every state into CVA. Only `Button` uses CVA, and it keeps `variant` and `size` there; its hover and disabled states now use the plugin's variants like every other component.
+
+- `package.json`, `package-lock.json`: `tailwindcss-react-aria-components` ^2.2.0 added as a dependency (Jonathan's request, 2026-11-12).
+- `src/styles/strata.css`: `@plugin "tailwindcss-react-aria-components"`. With no prefix the plugin makes `hover:`, `focus-visible:` and `disabled:` read React Aria's `data-*` attribute on React Aria elements and the browser's own state on plain ones, so existing plain-element classes keep working, and `hover:` is wrapped in `@media (hover: hover)`, which stops hover colours sticking after a tap.
+- `src/components/*.tsx` (13 files): 56 uses of `data-[selected]:`, `data-[focus-visible]:`, `data-[disabled]:`, `data-[hovered]:`, `data-[open]:` and `data-[focused]:` became `selected:`, `focus-visible:`, `disabled:`, `hover:`, `open:`, `focus:`.
+- `tests/integration/install.test.ts`: the simulated app gets the plugin beside `strata-react`, as npm lays it out. `tests/unit/controls.test.tsx`: the class name it checks is `selected:border-foreground`.
+- `CLAUDE.md`: stack table and the Primitives row name the plugin and the rule.
+
+
 **Compare: two pictures judged together, with shared zoom, full screen and four views** (branch `claude/project-thread-reaene`, PR #100). Jonathan asked for one set of comparison and voting components for the stills arena, the models judge, the listory match queue and Bright Horizons' review; the design (survey of the four apps, proposed API) is `design.md`, and this is its first piece, for pictures. Decisions he gave: `pixelmatch` (already a runtime dependency, used by `strata-react/visual`) is the image diff in a later change, text diff is our own simple one for now; no dependency was added here.
 
 - `src/components/compare.tsx` (**new**): `Compare` (side by side, swipe, fade, blink), `Candidate`, `ImageMedia`, `CompareMode`. `blind` is required with no default and, when true, the page carries only each side's `label`: never the `id`, `note` or the caller's `alt`. `missing` is required. View and zoom keys come from one `Shortcut[]` given to `useHotkeys` and `KeysLegend`. The swipe divider is React Aria's `Slider` (keyboard, `aria-valuetext`), drawn over the frame so it does not zoom with the picture; fade uses our `Slider`, the view switch our `ToggleGroup`, the controls our `Toolbar`.
