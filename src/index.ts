@@ -154,3 +154,6 @@ export { Compare, type CompareProps, type CompareMode, type Candidate, type Imag
 export { ViewportFrame, useViewport, type ViewportFrameProps, type ViewportState } from "./components/viewport";
 export { FullscreenFrame, canFullscreen, type FullscreenFrameProps } from "./components/fullscreen-frame";
 export { FIT, MIN_SCALE, MAX_SCALE, clampViewport, zoomAt, actualPixelsScale, type Viewport } from "./lib/viewport";
+export { CompareGrid, type CompareGridProps } from "./components/compare-grid";
+export { useDifference, type DifferenceState, type ReadPixels } from "./components/difference";
+export { differences, readPixels, resample, MAX_SIDE, DEFAULT_TOLERANCE, type Difference, type Pixels } from "./lib/image-diff";

@@ -1,15 +1,15 @@
 import * as React from "react";
 import { Slider as AriaSlider, SliderThumb, SliderTrack } from "react-aria-components";
-import { ImageOff, Maximize, Minimize, Scan, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "../lib/utils";
-import { FIT, actualPixelsScale, zoomAt } from "../lib/viewport";
-import { Button, IconButton } from "./button";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
+import { Caption, FullscreenButton, Picture, ZoomControls, useZoom, zoomShortcuts } from "./compare-parts";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
+import { DifferenceMarks, useDifference, type ReadPixels } from "./difference";
+import { format } from "../lib/format";
 import { ViewportFrame, useViewport } from "./viewport";
 
 // Two renderings of the same thing, to be looked at closely and judged. It exists because four
@@ -56,10 +56,10 @@ export type Candidate<M = ImageMedia> = {
 };
 
 /** How two pictures are laid out. */
-export type CompareMode = "side" | "swipe" | "fade" | "blink";
+export type CompareMode = "side" | "swipe" | "fade" | "blink" | "difference";
 
-const MODE_LABEL: Record<CompareMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink" };
-const ALL_MODES: readonly CompareMode[] = ["side", "swipe", "fade", "blink"];
+const MODE_LABEL: Record<CompareMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink", difference: "Difference" };
+const ALL_MODES: readonly CompareMode[] = ["side", "swipe", "fade", "blink", "difference"];
 
 /** Props for `Compare`. */
 export type CompareProps = {
@@ -73,56 +73,21 @@ export type CompareProps = {
   missing: string;
   mode: CompareMode;
   onModeChange: (mode: CompareMode) => void;
-  /** Which views are offered. Default all four. Must include `mode`. */
+  /** Words for when the difference view cannot read the pictures' pixels (a picture from another site without CORS headers). Default says so plainly. */
+  cannotCompare?: string;
+  /** Which difference the difference view opens on: `brightness` (live, any picture) or `pixels` (the changed pixels marked, with a tolerance and the share that differ). Default `brightness`. */
+  defaultDifference?: "brightness" | "pixels";
+  /** How pictures become pixels for the difference view. Default draws them on a canvas. */
+  readPixels?: ReadPixels;
+  /** Which views are offered. Default all five. Must include `mode`. */
   modes?: readonly CompareMode[];
   /** Bind the view, zoom and full-screen keys on the window. Default true; turn off when a surrounding screen binds the same keys. */
   keys?: boolean;
   className?: string;
 };
 
-/** A word for a picture's name on the page: its label, with its note unless blind. */
-function Caption({ c, blind }: { c: Candidate; blind: boolean }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="type-label">{c.label}</span>
-      {!blind && c.note && <span className="type-caption text-muted-foreground">{c.note}</span>}
-    </div>
-  );
-}
-
-/** One picture inside a frame: a skeleton while it loads, the product's words if it fails. */
-function Picture({ c, blind, missing, onNatural, imgRef }: { c: Candidate; blind: boolean; missing: string; onNatural?: (w: number, h: number) => void; imgRef?: React.Ref<HTMLImageElement> }) {
-  const [state, setState] = React.useState<"loading" | "ready" | "failed">("loading");
-  React.useEffect(() => setState("loading"), [c.media.src]);
-  const alt = blind ? c.label : c.media.alt;
-  if (state === "failed")
-    return (
-      <div role="img" aria-label={`${alt}: ${missing}`} className="absolute inset-0 grid place-content-center justify-items-center gap-2 text-muted-foreground">
-        <ImageOff aria-hidden className="size-6" />
-        <span className="type-body-sm">{missing}</span>
-      </div>
-    );
-  return (
-    <>
-      {state === "loading" && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />}
-      <img
-        ref={imgRef}
-        src={c.media.src}
-        alt={alt}
-        draggable={false}
-        onLoad={(e) => {
-          setState("ready");
-          onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
-        }}
-        onError={() => setState("failed")}
-        className="absolute inset-0 size-full object-contain"
-      />
-    </>
-  );
-}
-
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -132,31 +97,22 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   const [divider, setDivider] = React.useState(50);
   const [blend, setBlend] = React.useState(50);
   const [showing, setShowing] = React.useState<"a" | "b">("a");
+  const [style, setStyle] = React.useState<"brightness" | "pixels">(defaultDifference);
+  const [amplify, setAmplify] = React.useState(4);
+  const [tolerance, setTolerance] = React.useState(10); // percent; pixelmatch's threshold is this over 100
+  const diff = useDifference(a.media.src, b.media.src, tolerance / 100, mode === "difference" && style === "pixels", readPixels);
   const frameRef = React.useRef<HTMLDivElement>(null);
   const imgRef = React.useRef<HTMLImageElement>(null);
   const aspect = natural ? natural[0] / natural[1] : 3 / 2;
 
-  const frameSize = () => {
-    const r = frameRef.current?.getBoundingClientRect();
-    return { width: r?.width ?? 0, height: r?.height ?? 0 };
-  };
-  const zoomBy = (k: number) => setViewport(zoomAt(viewport, viewport.scale * k, { x: 0, y: 0 }, frameSize()));
-  const actual = () => {
-    const f = frameSize();
-    // The width the picture is drawn at when fitted: the frame's, unless the picture is taller than it is wide for the frame.
-    const fitted = natural ? Math.min(f.width, f.height * (natural[0] / natural[1])) : f.width;
-    setViewport(zoomAt(viewport, actualPixelsScale(natural?.[0] ?? 0, fitted), { x: 0, y: 0 }, f));
-  };
+  const zoom = useZoom({ viewport, setViewport, frame: frameRef, natural });
   const flip = () => setShowing((s) => (s === "a" ? "b" : "a"));
 
   const offered = modes.includes(mode) ? modes : [mode, ...modes];
   const shortcuts: Shortcut[] = [
     ...offered.map((m, i): Shortcut => ({ keys: [String(i + 1)], label: MODE_LABEL[m], run: () => onModeChange(m) })),
     { keys: ["x"], label: "Flip A and B", run: flip, disabled: mode !== "blink" },
-    { keys: ["+", "="], label: "Zoom in", run: () => zoomBy(1.5), repeat: true },
-    { keys: ["-"], label: "Zoom out", run: () => zoomBy(1 / 1.5), repeat: true },
-    { keys: ["0"], label: "Fit", run: () => setViewport(FIT) },
-    { keys: ["f"], label: full ? "Leave full screen" : "Full screen", run: () => setFull((f) => !f) },
+    ...zoomShortcuts(zoom, full, setFull),
   ];
   useHotkeys(shortcuts, { enabled: keys });
 
@@ -179,6 +135,31 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           </figure>
         ))}
       </div>
+    );
+  } else if (mode === "difference") {
+    body = (
+      <figure className="grid gap-1.5">
+        <div className="flex justify-between gap-4">
+          <Caption c={a} blind={blind} />
+          <span className="type-caption text-muted-foreground">against</span>
+          <Caption c={b} blind={blind} />
+        </div>
+        <ViewportFrame {...frameProps} ref={frameRef} label={`Difference between ${a.label} and ${b.label}`}>
+          {style === "brightness" ? (
+            <div className="absolute inset-0 isolate" style={{ filter: `brightness(${amplify})` }}>
+              {pane(a, imgRef, learn)}
+              <div className="absolute inset-0 mix-blend-difference">{pane(b)}</div>
+            </div>
+          ) : (
+            <>
+              <div className="absolute inset-0 opacity-35">{pane(a, imgRef, learn)}</div>
+              {diff.status === "ready" && <DifferenceMarks difference={diff.difference} />}
+              {diff.status === "loading" && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none opacity-40" />}
+              {diff.status === "failed" && <p role="alert" className="absolute inset-x-0 bottom-0 bg-background/90 p-2 type-body-sm text-danger">{cannotCompare}</p>}
+            </>
+          )}
+        </ViewportFrame>
+      </figure>
     );
   } else {
     // One frame, both pictures in it. Swipe clips the top one at the divider; fade lays it over at an opacity; blink shows one.
@@ -236,19 +217,44 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
         <Toolbar label="Comparison view" className="items-center gap-2">
           <ToggleGroup label="View" options={offered.map((m) => ({ value: m, label: MODE_LABEL[m] }))} value={mode} onChange={(v) => onModeChange(v as CompareMode)} size="sm" />
           <ToolbarSeparator />
-          <IconButton icon={ZoomOut} label="Zoom out" onPress={() => zoomBy(1 / 1.5)} disabled={viewport.scale <= 1} />
-          <IconButton icon={ZoomIn} label="Zoom in" onPress={() => zoomBy(1.5)} />
-          <IconButton icon={Scan} label="Fit" onPress={() => setViewport(FIT)} disabled={viewport.scale === 1} />
-          <Button size="sm" variant="ghost" onPress={actual} disabled={!natural}>1:1</Button>
-          <span aria-live="off" className="type-caption tabular-nums text-muted-foreground">{viewport.scale === 1 ? "Fit" : `${viewport.scale.toFixed(1)}×`}</span>
+          <ZoomControls viewport={viewport} zoom={zoom} natural={natural} />
           <ToolbarSeparator />
-          <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />
+          <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>
             <Slider aria-label={`Blend from ${a.label} to ${b.label}`} value={blend} onChange={setBlend} min={0} max={100} unit="%" hideValue className="flex-1" />
             <span className="type-caption text-muted-foreground">{b.label}</span>
+          </div>
+        )}
+        {mode === "difference" && (
+          <div className="grid gap-2">
+            <ToggleGroup label="Difference style" options={[{ value: "brightness", label: "Brightness" }, { value: "pixels", label: "Changed pixels" }]} value={style} onChange={(v) => setStyle(v as "brightness" | "pixels")} size="sm" className="justify-self-start" />
+            {style === "brightness" ? (
+              <div className="flex items-center gap-3">
+                <span className="type-caption text-muted-foreground">Amplify</span>
+                <Slider aria-label="Amplify differences" value={amplify} onChange={setAmplify} min={1} max={8} hideValue className="flex-1" />
+                <span className="w-8 type-caption tabular-nums text-muted-foreground">{amplify}×</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="type-caption text-muted-foreground">Tolerance</span>
+                  <Slider aria-label="Tolerance for a changed pixel" value={tolerance} onChange={setTolerance} min={0} max={50} unit="%" hideValue className="flex-1" />
+                  <span className="w-10 type-caption tabular-nums text-muted-foreground">{tolerance}%</span>
+                </div>
+                <p role="status" className="type-body-sm text-muted-foreground">
+                  {diff.status === "ready"
+                    ? diff.difference.differing === 0
+                      ? "No pixels differ at this tolerance."
+                      : `${format.share(diff.difference.differing / diff.difference.total)} of pixels differ at this tolerance.`
+                    : diff.status === "loading"
+                      ? "Comparing pixels…"
+                      : ""}
+                </p>
+              </>
+            )}
           </div>
         )}
         {mode === "blink" && (

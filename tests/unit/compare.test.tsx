@@ -2,7 +2,8 @@ import * as React from "react";
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Compare, FullscreenFrame, FIT, actualPixelsScale, clampViewport, zoomAt, type CompareMode } from "../../src";
+import type { Pixels } from "../../src/lib/image-diff";
+import { Compare, CompareGrid, FullscreenFrame, FIT, actualPixelsScale, clampViewport, zoomAt, type CompareMode } from "../../src";
 
 const frame = { width: 400, height: 300 };
 
@@ -31,7 +32,7 @@ describe("viewport arithmetic", () => {
   });
 });
 
-function Harness({ blind = false, start = "side" as CompareMode, keys = true }) {
+function Harness({ blind = false, start = "side" as CompareMode, keys = true, readPixels }: { blind?: boolean; start?: CompareMode; keys?: boolean; readPixels?: (src: string) => Promise<Pixels> }) {
   const [mode, setMode] = React.useState<CompareMode>(start);
   return (
     <Compare
@@ -41,6 +42,7 @@ function Harness({ blind = false, start = "side" as CompareMode, keys = true }) 
       mode={mode}
       onModeChange={setMode}
       keys={keys}
+      readPixels={readPixels}
       a={{ id: "lightroom-final", label: blind ? "A" : "Your final", note: "Lightroom", media: { kind: "image", src: "/img/1/left", alt: "Celadon bowl, Lightroom final", size: [1600, 1200] } }}
       b={{ id: "auto2", label: blind ? "B" : "auto2", note: "14 s", media: { kind: "image", src: "/img/1/right", alt: "Celadon bowl, auto2", size: [1600, 1200] } }}
     />
@@ -230,6 +232,79 @@ describe("Compare", () => {
     }
   });
 
+  describe("difference view", () => {
+    // The pictures' pixels come from a stand-in reader, as a browser's canvas would give them: a grey picture, and the same with a corner changed.
+    const grey = (changed: boolean): Pixels => {
+      const data = new Uint8ClampedArray(10 * 10 * 4).fill(200);
+      for (let i = 3; i < data.length; i += 4) data[i] = 255;
+      if (changed) for (let i = 0; i < 5; i++) data.set([0, 0, 0, 255], i * 4); // 5 of 100 pixels
+      return { data, width: 10, height: 10 };
+    };
+    const read = (src: string) => Promise.resolve(grey(src.endsWith("right")));
+
+    it("lays one over the other with a difference blend and lets the person amplify it", async () => {
+      const user = userEvent.setup();
+      render(<Harness start="difference" />);
+      expect(screen.getAllByRole("img")).toHaveLength(2);
+      const frame = screen.getByRole("group", { name: "Difference between Your final and auto2" });
+      const layer = frame.querySelector("[style*='brightness']") as HTMLElement;
+      expect(layer.style.filter).toBe("brightness(4)");
+      screen.getByRole("slider", { name: "Amplify differences" }).focus();
+      await user.keyboard("{ArrowRight}");
+      expect(layer.style.filter).toBe("brightness(5)");
+      expect(layer.querySelector(".mix-blend-difference")).not.toBeNull();
+    });
+
+    it("says what share of pixels differ, and recounts when the tolerance changes", async () => {
+      const user = userEvent.setup();
+      // The same picture with a faint change (200 to 185 on five pixels): under the default tolerance, over a strict one.
+      const faint = (src: string): Promise<Pixels> => {
+        const p = grey(false);
+        if (src.endsWith("right")) for (let i = 0; i < 5; i++) p.data.set([185, 185, 185, 255], i * 4);
+        return Promise.resolve(p);
+      };
+      render(<Harness start="difference" readPixels={faint} />);
+      await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
+      expect(await screen.findByText("No pixels differ at this tolerance.")).toBeInTheDocument();
+      screen.getByRole("slider", { name: "Tolerance for a changed pixel" }).focus();
+      await user.keyboard("{Home}");
+      expect(await screen.findByText("5% of pixels differ at this tolerance.")).toBeInTheDocument();
+    });
+
+    it("says what share of pixels differ at the default tolerance", async () => {
+      const user = userEvent.setup();
+      render(<Harness start="difference" readPixels={read} />);
+      await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
+      expect(await screen.findByText("5% of pixels differ at this tolerance.")).toBeInTheDocument();
+    });
+
+    it("says there is no difference when there is none", async () => {
+      const user = userEvent.setup();
+      render(<Harness start="difference" readPixels={() => Promise.resolve(grey(false))} />);
+      await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
+      expect(await screen.findByText("No pixels differ at this tolerance.")).toBeInTheDocument();
+    });
+
+    it("says so in words when the pictures' pixels cannot be read, and the brightness view still works", async () => {
+      const user = userEvent.setup();
+      render(<Harness start="difference" readPixels={() => Promise.reject(new Error("tainted"))} />);
+      await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Could not read these pictures to compare their pixels.");
+      await user.click(screen.getByRole("radio", { name: "Brightness" }));
+      expect(screen.getByRole("slider", { name: "Amplify differences" })).toBeInTheDocument();
+    });
+
+    it("does not read any pixels until the changed-pixels view is open", async () => {
+      const user = userEvent.setup();
+      const asked: string[] = [];
+      render(<Harness start="difference" readPixels={(s) => (asked.push(s), read(s))} />);
+      expect(asked).toEqual([]);
+      await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
+      await screen.findByText(/of pixels differ/);
+      expect(asked.sort()).toEqual(["/img/1/left", "/img/1/right"]);
+    });
+  });
+
   it("leaves the keys to the screen when asked", async () => {
     const user = userEvent.setup();
     render(<Harness keys={false} />);
@@ -244,5 +319,40 @@ describe("FullscreenFrame", () => {
     render(<FullscreenFrame label="x" active={false} onActiveChange={() => undefined}><p>inside</p></FullscreenFrame>);
     expect(screen.getByText("inside")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("CompareGrid", () => {
+  const items = ["one", "two", "three"].map((n) => ({ id: `secret-${n}`, label: n === "one" ? "A" : n === "two" ? "B" : "C", note: `note ${n}`, media: { kind: "image" as const, src: `/img/${n}`, alt: `alt ${n}`, size: [400, 300] as const } }));
+
+  it("zooms every tile together", async () => {
+    const user = userEvent.setup();
+    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" />);
+    await user.click(screen.getByRole("button", { name: "Zoom in" }));
+    for (const name of ["A", "B", "C"]) expect((screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform).toContain("scale(1.5)");
+    await user.keyboard("0");
+    expect((screen.getByRole("group", { name: "C" }).firstElementChild as HTMLElement).style.transform).toContain("scale(1)");
+  });
+
+  it("draws the caller's actions under each tile", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" actions={(c) => <button onClick={() => opened.push(c.id)}>{`Compare ${c.label}`}</button>} />);
+    await user.click(screen.getByRole("button", { name: "Compare B" }));
+    expect(opened).toEqual(["secret-two"]);
+  });
+
+  it("when blind, names tiles by label only and never writes an id, note or alt", () => {
+    const { container } = render(<CompareGrid label="Three versions" items={items} blind missing="Gone" />);
+    expect(screen.getByRole("img", { name: "B" })).toBeInTheDocument();
+    const html = container.ownerDocument.body.innerHTML;
+    for (const leak of ["secret-", "note one", "alt one"]) expect(html).not.toContain(leak);
+  });
+
+  it("says in words which picture failed and keeps the others", () => {
+    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Picture not found" />);
+    fireEvent.error(screen.getByRole("img", { name: "alt two" }));
+    expect(screen.getByRole("img", { name: "alt two: Picture not found" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "alt one" })).toBeInTheDocument();
   });
 });
