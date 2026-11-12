@@ -3,6 +3,7 @@ import { Button as AriaButton, type PressEvent } from "react-aria-components";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
+import type { ControlSize } from "../lib/control";
 import { Tooltip } from "./tooltip";
 
 // Variant names are shadcn's, so copied code and agents' prior knowledge still work. Two things
@@ -32,6 +33,7 @@ export const buttonVariants = cva(
         default: "h-(--control-h) px-4",
         sm: "h-(--control-h-sm) px-3",
         icon: "size-(--control-h)",
+        "icon-sm": "size-(--control-h-sm)",
       },
     },
     defaultVariants: { variant: "outline", size: "default" },
@@ -73,6 +75,8 @@ export function Button({ className, variant, size, type = "button", disabled, ch
 // visible hint come from one string and cannot drift. This makes the most common generated
 // accessibility defect (an unlabelled icon button) a compile error instead of an audit finding.
 export type IconButtonProps = Omit<ButtonProps, "size" | "children" | "aria-label"> & {
+  /** `sm` is --control-h-sm, the height of a small `Toggle` or `Button`, for a toolbar or property row. Default --control-h. */
+  size?: ControlSize;
   icon: IconComponent;
   label: string;
   /** Shown after the label in its tooltip, muted: "Ctrl+Z". */
@@ -80,10 +84,10 @@ export type IconButtonProps = Omit<ButtonProps, "size" | "children" | "aria-labe
 };
 
 /** An icon-only button. `label` is required and becomes the accessible name and the tooltip (hover and keyboard focus); `hint` adds a muted aside to it, such as a shortcut. */
-export function IconButton({ icon: Icon, label, hint, variant = "ghost", ...props }: IconButtonProps) {
+export function IconButton({ icon: Icon, label, hint, variant = "ghost", size = "default", ...props }: IconButtonProps) {
   return (
     <Tooltip label={label} hint={hint}>
-      <Button size="icon" variant={variant} aria-label={label} {...props}>
+      <Button size={size === "sm" ? "icon-sm" : "icon"} variant={variant} aria-label={label} {...props}>
         <Icon aria-hidden />
       </Button>
     </Tooltip>

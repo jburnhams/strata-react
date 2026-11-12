@@ -2,6 +2,18 @@
 
 ## 2026-11-12
 
+**Density reaches every control (issue #117)** (branch `claude/density-117`). `data-density` moved `--control-h` only on the root, `IconButton` was a fixed 36px, and a dialog or menu, portalled out of the app's root, never saw a region's density. Controls now take their height from two variables and density can be set app-wide.
+
+- `src/styles/strata.css`: `[data-density="default"]` rule; the coarse-pointer rule (44px targets) lists default and compact too, so touch wins whatever the density.
+- `src/lib/control.ts` **new**: `ControlSize` and `controlHeight`, the one place a control height is named.
+- `src/components/density.tsx` **new**: `Density` (a region, or `page` for the root so overlays follow) and `useDensityOn`, which restores the previous value on cleanup. `src/components/theme.tsx`: `ThemeProvider` takes `density`.
+- `src/components/button.tsx`: `icon-sm` size; `IconButton` takes `size`. `field.tsx`: `Input`, `NativeSelect` take `size` (the native `size` attribute is no longer passed). `value-controls.tsx`: `NumberField` takes `size`, the box has no fixed height.
+- `src/index.ts`: exports `Density`, `DensityName`, `DensityProps`, `ControlSize`.
+- `stories/density.stories.tsx` **new**: toolbar row, icon button sizes, compact dialog and menu. 8 **new** baselines.
+- Tests: `tests/unit/density.test.tsx` **new** (8); `tests/integration/install.test.ts`: the compiled CSS carries both variables per density and the coarse rule after them.
+- `README.md` (component table), `CLAUDE.md` ("Building an app"), `UPGRADING.md`.
+
+
 **Fixes found moving strata-vid onto 1.0.6 (issue #116)** (branch `claude/fixes-116`). Three defects in released components and a gap in the testing docs, each checked against `main` at b1edb1f.
 
 - `src/components/dialog.tsx`: a `Dialog` or `AlertDialog` given `open` and no `trigger` is no longer wrapped in React Aria's `DialogTrigger` (an empty one logged "A PressResponder was rendered without a pressable child" on every mount). It is the controlled `ModalOverlay` alone, which still traps focus; because React Aria then has no trigger to hand focus back to, the element that had focus when it opened is remembered and given it back on close, unless the app has moved focus on purpose.

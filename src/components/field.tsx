@@ -2,6 +2,7 @@ import * as React from "react";
 import { CircleAlert } from "lucide-react";
 import { Label, Radio, RadioGroup } from "react-aria-components";
 import { cn } from "../lib/utils";
+import { controlHeight, type ControlSize } from "../lib/control";
 
 // Field owns the wiring a generated form usually forgets: the label's htmlFor, aria-describedby
 // pointing at the hint and the error, and aria-invalid. Controls read it from context, so a control
@@ -101,9 +102,9 @@ export function Field({ label, id: idProp, hint, error, action, children, classN
 const control =
   "w-full min-w-0 rounded-control border border-input bg-background px-3 type-body text-foreground transition-state placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 aria-invalid:border-danger";
 
-/** A text input that picks up its id and descriptions from the surrounding `Field`. */
-export function Input({ className, id, ...props }: React.ComponentProps<"input">) {
-  return <input {...useField(id)} className={cn(control, "h-(--control-h)", className)} {...props} />;
+/** A text input that picks up its id and descriptions from the surrounding `Field`. `size="sm"` is --control-h-sm; the native `size` (a width in characters) is not passed on. */
+export function Input({ className, id, size = "default", ...props }: Omit<React.ComponentProps<"input">, "size"> & { size?: ControlSize }) {
+  return <input {...useField(id)} className={cn(control, controlHeight[size], className)} {...props} />;
 }
 
 /** A multi-line input that picks up its id and descriptions from the surrounding `Field`. */
@@ -113,9 +114,9 @@ export function Textarea({ className, id, ...props }: React.ComponentProps<"text
 
 // A native select, styled. For short option lists on a touch screen it beats a custom listbox:
 // the platform picker, typeahead and form autofill all work with no code.
-/** The platform select, styled. The default for short lists, especially on touch screens. */
-export function NativeSelect({ className, id, ...props }: React.ComponentProps<"select">) {
-  return <select {...useField(id)} className={cn(control, "h-(--control-h) pr-8", className)} {...props} />;
+/** The platform select, styled. The default for short lists, especially on touch screens. `size="sm"` is --control-h-sm. */
+export function NativeSelect({ className, id, size = "default", ...props }: Omit<React.ComponentProps<"select">, "size"> & { size?: ControlSize }) {
+  return <select {...useField(id)} className={cn(control, controlHeight[size], "pr-8", className)} {...props} />;
 }
 
 // Radio choices: React Aria's RadioGroup (a group named by its label, arrow-key movement, one tab

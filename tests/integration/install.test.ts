@@ -60,6 +60,16 @@ describe("strata-react installed from its tarball", () => {
     }
   });
 
+  it("moves both control heights with density, and a coarse pointer still wins (issue #117)", async () => {
+    const css = await compileApp();
+    expect(css).toMatch(/\[data-density="default"\]\s*\{[^}]*--control-h:\s*2\.5rem/);
+    expect(css).toMatch(/\[data-density="compact"\]\s*\{[^}]*--control-h:\s*2rem[^}]*--control-h-sm:\s*1\.75rem/);
+    // The small icon button and the small control height are generated for components only.
+    expect(css).toContain(".size-\\(--control-h-sm\\)");
+    // After the density rules: a coarse pointer gives every density 44px targets.
+    expect(css.lastIndexOf("pointer: coarse")).toBeGreaterThan(css.indexOf('[data-density="compact"]'));
+  });
+
   it("would miss them without the library's own @source line", async () => {
     const sheet = join(app, "node_modules/strata-react/dist/strata.css");
     const original = readFileSync(sheet, "utf8");
