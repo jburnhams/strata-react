@@ -11,6 +11,11 @@
 - `README.md`: the Compare row names `PairVote`.
 - Not done yet from the issue's list: a `RatingTable` for server-side results, and the media kinds beyond pictures (issue #146).
 
+**MediaPlayer: several players share the keys sensibly (issue #147)** (branch `claude/media-keys-147`). Every `MediaPlayer` bound Space, K, J, L and M, so two on a page both toggled on one press. Now one player owns the keys at a time.
+
+- `src/components/media-player.tsx`: a module-level store (`useSyncExternalStore`) tracks players with shortcuts on; with more than one, the keys go to the one last played, focused or pressed, and a development warning says so once. The media element is labelled "<label>, audio|video" so it differs from its group.
+- `tests/unit/media-player.test.tsx`: five tests (labels, key ownership across two players, the single warning, `shortcuts={false}` left out, and an opted-out player cannot take the keys when focused).
+
 **Compare: the flip shortcut uses the candidates' labels (issue #145)** (branch `claude/project-thread-reaene`). The legend said "Flip A and B" for a blind comparison labelled X and Y. It now says "Flip X and Y". The other strings (captions, frame names, blend and divider sliders, blink toggle) already used the labels; checked by reading every string in `compare.tsx` and `compare-grid.tsx`.
 
 - `src/components/compare.tsx`: the flip shortcut's label is built from `a.label` and `b.label`.
