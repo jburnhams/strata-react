@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
 import { renderWithStrata } from "../../src/testing";
 import { CommandLegend, KeysLegend, type Command } from "../../src";
 
