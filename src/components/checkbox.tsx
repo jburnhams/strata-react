@@ -65,7 +65,7 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
               aria-hidden
               className={cn(
                 "grid size-4.5 shrink-0 place-items-center rounded-control border border-input bg-background transition-state",
-                "group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-ring",
+                "group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring",
                 (isSelected || isIndeterminate) && "border-primary bg-primary text-primary-foreground",
                 !hideLabel && "mt-0.5",
               )}

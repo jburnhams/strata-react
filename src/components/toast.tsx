@@ -79,7 +79,7 @@ export function StrataToastRegion({ label = "Notifications", className }: Strata
       {({ toast: t }) => (
         <AriaToast
           toast={t}
-          className={cn("flex w-full max-w-sm items-start gap-3 p-3 outline-none data-[focus-visible]:outline-2 data-[focus-visible]:outline-ring", overlaySurface)}
+          className={cn("flex w-full max-w-sm items-start gap-3 p-3 outline-none focus-visible:outline-2 focus-visible:outline-ring", overlaySurface)}
         >
           {(() => {
             const { icon: Icon, color } = marks[t.content.tone ?? "info"];
@@ -96,7 +96,7 @@ export function StrataToastRegion({ label = "Notifications", className }: Strata
               {t.content.action.label}
             </Button>
           )}
-          <AriaButton slot="close" aria-label="Dismiss" className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-control text-muted-foreground transition-state data-[hovered]:bg-muted data-[hovered]:text-foreground">
+          <AriaButton slot="close" aria-label="Dismiss" className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-control text-muted-foreground transition-state hover:bg-muted hover:text-foreground">
             <X aria-hidden className="size-4" />
           </AriaButton>
         </AriaToast>

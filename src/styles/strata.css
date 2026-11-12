@@ -20,6 +20,14 @@
   --font-*: initial;
 }
 
+/* React Aria's state variants (`selected:`, `pressed:`, `hover:`, `focus-visible:`, `disabled:`, `open:`,
+   `invalid:`, `expanded:`, `sort-ascending:`…): each reads the `data-*` attribute React Aria Components
+   sets, so state is styled once where it is used and never copied into a variant map. On a plain
+   element `hover:`, `focus-visible:` and `disabled:` still mean the browser's own (the plugin only takes
+   over on elements React Aria marks with `data-rac`). The plugin is a dependency of strata-react, so an
+   app needs no install step for it. */
+@plugin "tailwindcss-react-aria-components";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Status roles are part of the contract but not of the generated palette: the product solves them
