@@ -148,6 +148,16 @@ describe("controls", () => {
     expect(onView.mock.lastCall![0]).toEqual({ yaw: 20, pitch: 5, fov: 90 });
   });
 
+  it("uses a fresh canvas when the mode changes between flat and GL, so each can get its context", () => {
+    const { container, rerender } = renderWithStrata(<Host />);
+    const first = container.querySelector("canvas");
+    rerender(<Host mode="flat" />);
+    const second = container.querySelector("canvas");
+    expect(second).not.toBe(first);
+    rerender(<Host />);
+    expect(container.querySelector("canvas")).not.toBe(second);
+  });
+
   it("holds its own view when the app does not, and the app's view when it does", async () => {
     const { rerender } = renderWithStrata(<Host />);
     fireEvent.keyDown(group(), { key: "ArrowRight" });

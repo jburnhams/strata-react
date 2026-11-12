@@ -396,7 +396,7 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}
       >
-        <canvas ref={canvas} role="img" aria-label={`${label}. ${direction}, field of view ${Math.round(view.fov)}°`} className="absolute inset-0 size-full" />
+        <canvas key={mode === "flat" ? "2d" : "gl"} ref={canvas} role="img" aria-label={`${label}. ${direction}, field of view ${Math.round(view.fov)}°`} className="absolute inset-0 size-full" />
         {overlay && size.width > 0 && <div className="pointer-events-none absolute inset-0">{overlay(api)}</div>}
       </div>
       {flat && <p className="type-body-sm text-muted-foreground">This browser cannot draw the 360 view, so the flat picture is shown. The controls work the same.</p>}

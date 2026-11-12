@@ -33,6 +33,16 @@ describe("attachHls with the engine", () => {
     expect(log.destroyed).toBe(2);
   });
 
+  it("moves the engine to the new element when the player switches between audio and video", () => {
+    const { Engine, log } = fakeHlsEngine();
+    const attach = createHlsAttacher(Engine);
+    const { container, rerender } = render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={attach} />);
+    rerender(<MediaPlayer label="Preview" kind="audio" src="/a.m3u8" attach={attach} />);
+    expect(log.destroyed).toBe(1);
+    expect(log.created).toHaveLength(2);
+    expect(log.created[1].media).toBe(container.querySelector("audio"));
+  });
+
   it("quietly recovers a dropped connection and a decoder hiccup, three times, and resets once a segment loads", () => {
     const { Engine, log } = fakeHlsEngine();
     render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
