@@ -14,6 +14,7 @@
 **Toolbar, toggles and Switch (issue #69)** (branch `claude/toolbar-69`, stacked on `claude/overlays-70`). The issue asked for the controls `components.md` §3.3 specifies and a toolbar to hold them. Built on React Aria's `Toolbar`, `ToggleButton`, `ToggleButtonGroup` and `Switch`.
 
 - `src/components/toolbar.tsx` (**new**): `Toolbar` (required `label`; one tab stop, arrow keys from React Aria, and Home and End added here because React Aria's toolbar does not do them, left alone in a typing target) and `ToolbarSeparator`. It wraps onto more lines when it runs out of width; an overflow menu waits for `Menu` (#71).
+- Review fix: Home and End are only taken for events from inside the toolbar's own DOM, so a `Popover` opened from a toolbar control (portalled, but in the React tree) keeps its own keys; tested.
 - `src/components/toggle.tsx` (**new**): `Toggle` (`aria-pressed`) and `ToggleGroup` (single choice, one always chosen, a `radiogroup` of radios). Chosen is an ink border on a neutral tint, so it shows without colour and never looks like `variant="default"`; `label` is always required and is the name and tooltip of an icon-only toggle.
 - `src/components/switch.tsx` (**new**): `Switch`, label and control one target, on shown by position and a dot in the thumb as well as colour.
 - `src/index.ts`, `README.md`: exports and a component-table row.
@@ -29,6 +30,7 @@
 - `src/visual/capture.ts`: **correction** to the `paint` clip, which only walked the story root, so a portalled overlay was missing from its screenshot. It now also walks the other children of `<body>`. The tooltip baselines from the previous entry showed only the trigger; they are rewritten and now show the tip. `CLAUDE.md` and the README say so.
 - `stories/dialog.stories.tsx` (**new**): dialog, long content, not closable, sheet, destructive alert dialog, popover near the edge and with a form, at phone width, light and dark; a live story with a trigger is skipped by the visual suite. `tests/unit/overlays.test.tsx`: 13 new tests by role and name for focus in and out, Escape, outside press, `closable={false}`, `hideTitle`, the sheet, the alert dialog's safe focus, and a failing async confirm answered by MSW.
 - `README.md`: **new** Overlays row in the component table.
+- Review fixes: `Dialog` and `AlertDialog` now point `aria-describedby` at their description, so it is announced with the title, and an `AlertDialog` has a maximum height with its message scrolling above the buttons, as `Dialog` does. Two tests cover both.
 - `tests/visual/baselines/`: 14 new, 8 tooltip baselines rewritten. All other baselines are unchanged.
 - Not done: the accessibility addon pass on these stories runs in Storybook, not in this suite, and the `IconButton` tooltip repeats its name once as a description (React Aria links a tooltip to its trigger).
 - Checks run on Node 26.13: `npm run typecheck`, `npm run test:unit` (289 tests), `npm run test:integration` (20 tests), `npm run test:visual` (338 of 338 after the update).

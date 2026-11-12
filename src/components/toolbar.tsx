@@ -27,7 +27,9 @@ export function Toolbar({ label, orientation = "horizontal", children, className
   // added here, as the WAI-ARIA toolbar pattern lists them. The capture phase runs before React
   // Aria's own handler, and a typing target (a number field inside the toolbar) keeps its Home and End.
   const jump = (e: React.KeyboardEvent<HTMLElement>) => {
-    if ((e.key !== "Home" && e.key !== "End") || isTypingTarget(e.target)) return;
+    // Only events from inside the toolbar's own DOM: a Popover opened from a control here renders in
+    // a portal, and its events still reach this handler through React's tree.
+    if ((e.key !== "Home" && e.key !== "End") || isTypingTarget(e.target) || !e.currentTarget.contains(e.target as Node)) return;
     const items = [...e.currentTarget.querySelectorAll<HTMLElement>("button, input, select, textarea, a[href], [tabindex]")].filter(
       (el) => !el.hasAttribute("disabled") && el.getAttribute("aria-disabled") !== "true" && el.tabIndex >= -1 && el.getAttribute("role") !== "separator",
     );

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Grid2x2, Magnet } from "lucide-react";
-import { Button, Switch, Toggle, ToggleGroup, Toolbar, ToolbarSeparator } from "../../src";
+import { Button, Popover, Switch, Toggle, ToggleGroup, Toolbar, ToolbarSeparator } from "../../src";
 import { expectOneFilledButton } from "../../src/testing";
 
 describe("Toggle", () => {
@@ -175,6 +175,24 @@ describe("Toolbar", () => {
     expect(screen.getByRole("button", { name: "Safe areas" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "After" })).toHaveFocus();
+  });
+
+  it("leaves Home and End alone inside a portalled popover opened from the toolbar", async () => {
+    const user = userEvent.setup();
+    render(
+      <Toolbar label="Options">
+        <Toggle label="Grid" />
+        <Popover label="Colour" trigger={<Button>Colour</Button>}>
+          <button>First swatch</button>
+          <button>Last swatch</button>
+        </Popover>
+      </Toolbar>,
+    );
+    await user.click(screen.getByRole("button", { name: "Colour" }));
+    const swatch = await screen.findByRole("button", { name: "Last swatch" });
+    swatch.focus();
+    await user.keyboard("{Home}");
+    expect(swatch).toHaveFocus(); // not pulled to the toolbar's first control
   });
 
   it("draws a separator between groups", () => {
