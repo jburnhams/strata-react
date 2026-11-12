@@ -366,4 +366,12 @@ describe("CompareGrid", () => {
     expect(screen.getByRole("img", { name: "alt two: Picture not found" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "alt one" })).toBeInTheDocument();
   });
+
+  it("narrows a frame to a height limit so the picture keeps its shape", () => {
+    render(<Compare label="L" a={{ id: "a", label: "A", media: { kind: "image", src: "/a.svg", alt: "a", size: [400, 300] } }} b={{ id: "b", label: "B", media: { kind: "image", src: "/b.svg", alt: "b", size: [400, 300] } }} blind={false} missing="Missing" mode="swipe" onModeChange={() => undefined} maxHeight="60svh" />);
+    const frame = screen.getByRole("group", { name: /A over B/ });
+    // Width is the limit times the aspect ratio: 60svh × 400/300 = 80svh (jsdom folds the calc), centred.
+    expect(frame.style.maxWidth).toBe("calc(80svh)");
+    expect(frame.style.marginInline).toBe("auto");
+  });
 });

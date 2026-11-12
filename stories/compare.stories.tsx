@@ -57,6 +57,9 @@ export const OneMissing: Story = { args: { b: { ...auto, media: { ...auto.media,
 export const Loading: Story = { beforeEach: ({ msw }) => msw.use(renderingsLoading) };
 
 /** On a phone the two sides stack, and the controls wrap. */
+/** A height limit: the swipe frame narrows to fit the window's height (here with room for a vote bar), so the pair and the answer are on screen together. */
+export const FitsTheScreen: Story = { args: { mode: "swipe", maxHeight: "viewport" }, tags: ["visual-wide"] };
+
 export const Phone: Story = { tags: ["visual-phone"] };
 
 const warm: Candidate = { id: "warm", label: "auto3", note: "11 s", media: { kind: "image", src: "/api/renderings/warm.svg", alt: "Celadon bowl, auto3", size: [400, 300] } };
