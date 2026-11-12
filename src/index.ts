@@ -72,6 +72,7 @@ export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from ".
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type LoadFailure, type Stale } from "./components/data-view";
+export { NumberField, Slider, ColorField, type NumberFieldProps, type SliderProps, type ColorFieldProps, type RangeProps } from "./components/value-controls";
 export { JobStatus, type JobStatusProps, type JobFailure, type JobWords } from "./components/job-status";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {

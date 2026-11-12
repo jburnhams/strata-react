@@ -152,6 +152,19 @@
 /* Stacking, once, for every floating thing, so an app never writes a z-index. A bar (the undo
    bar, toasts) sits above panes and sticky headers; overlays (dialogs, popovers, menus) above
    bars; a tooltip above everything, since it can name a control inside an overlay. */
+/* The track and thumb of a native range, drawn from the theme's roles. `--fill` (set inline by Slider)
+   is the share of the track to the left of the thumb. The thumb is 20px: larger than the track so
+   it is a touch target as well as a mark; the base layer's focus outline still applies to the input. */
+@utility strata-range {
+  appearance: none;
+  background: transparent;
+  &::-webkit-slider-runnable-track { height: 0.375rem; border-radius: var(--radius-pill); background: linear-gradient(to right, var(--primary) var(--fill), var(--muted) var(--fill)); }
+  &::-moz-range-track { height: 0.375rem; border-radius: var(--radius-pill); background: var(--muted); }
+  &::-moz-range-progress { height: 0.375rem; border-radius: var(--radius-pill); background: var(--primary); }
+  &::-webkit-slider-thumb { appearance: none; width: 1.25rem; height: 1.25rem; margin-top: -0.4375rem; border-radius: var(--radius-pill); border: 2px solid var(--primary); background: var(--background); }
+  &::-moz-range-thumb { width: 1rem; height: 1rem; border-radius: var(--radius-pill); border: 2px solid var(--primary); background: var(--background); }
+}
+
 @utility layer-bar { z-index: 50; }
 @utility layer-overlay { z-index: 60; }
 @utility layer-tip { z-index: 70; }
