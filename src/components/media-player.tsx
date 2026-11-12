@@ -1,10 +1,14 @@
 import * as React from "react";
-import { SkipBack, SkipForward } from "lucide-react";
+import { LoaderCircle, SkipBack, SkipForward } from "lucide-react";
+import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
 import { Button, IconButton } from "./button";
 import { useHotkeys, type Shortcut } from "./hotkeys";
 import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
+import { joinMediaGroup, useMediaGroupName } from "./media-group";
+import { format } from "../lib/format";
+import { VisuallyHidden } from "react-aria";
 
 // Playing a file without writing the glue (strata-react issue #134, from strata-listory, whose two
 // players stayed `<audio controls>` because the parts of #78 take state in and requests out, and
@@ -41,6 +45,16 @@ export type MediaProblem = { kind: "load"; message: string } | { kind: "blocked"
 
 /** What `useMediaElement` returns: the element's state as values, and the requests a player makes of it. */
 export type MediaElementState = {
+  /** Seconds that can be sought to: for a source still being made, the end of what exists; otherwise the duration (or 0 while it is not known). */
+  ready: number;
+  /** A source that is still being made has been played up to the end of what exists, and is waiting for more. */
+  waitingForMore: boolean;
+  /** Shows a stream's own failure (one the element cannot report, such as a stream engine's fatal error) as the load error, with Try again. */
+  reportProblem: (message: string | null) => void;
+  /** The stretch of the file being played, if any: the `window` option, or the last `playWindow`. */
+  window: MediaWindow | null;
+  /** Plays a stretch: seeks to its start, plays, and stops (or loops) at its end. */
+  playWindow: (window: MediaWindow) => Promise<void>;
   playing: boolean;
   /** Seconds. */
   time: number;
@@ -68,9 +82,30 @@ export type MediaElementState = {
   retry: () => void;
 };
 
-type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry">;
+/** A stretch of a file, in seconds. */
+export type MediaWindow = { start: number; end: number };
 
-const idle: Snapshot = { playing: false, time: 0, duration: null, buffered: 0, volume: 100, muted: false, rate: 1, ended: false, loading: false, error: null };
+/** What `useMediaElement` can be asked to do besides follow the element. */
+export type MediaElementOptions = {
+  /** Bound playback to a stretch: it starts at `start` (a play from outside it seeks there) and stops at `end`. */
+  window?: MediaWindow | null;
+  /** At the end of the window, go back to its start and carry on, instead of stopping. */
+  loop?: boolean;
+  /** Join a group: when this element plays, the others in the group pause. Defaults to the nearest `MediaGroup`. */
+  group?: string;
+  /** Called every animation frame while playing, with the element's time, for highlighting what is being heard. */
+  onTimeUpdate?: (time: number) => void;
+  /** The window's end was reached (once per play; not called when it loops). */
+  onWindowEnd?: () => void;
+  /** The source is still being made (a growing stream): its duration is the end of what exists and keeps growing, it never counts as ended, and playback that reached the end carries on when more arrives. */
+  growing?: boolean;
+  /** Loads again from `time`, for a source the element cannot reload itself (a stream engine). Replaces the element's `load()` in `retry`. */
+  onRetry?: (time: number) => void;
+};
+
+type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry" | "playWindow" | "window" | "reportProblem">;
+
+const idle: Snapshot = { ready: 0, waitingForMore: false, playing: false, time: 0, duration: null, buffered: 0, volume: 100, muted: false, rate: 1, ended: false, loading: false, error: null };
 
 const LOAD_MESSAGES: Record<number, string> = {
   2: "The connection dropped while it was loading.",
@@ -112,41 +147,110 @@ const EVENTS = [
 ] as const;
 
 /** Follows an `<audio>` or `<video>` and returns its state and the requests a player makes. Works with the browser's own controls too. */
-export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): MediaElementState {
+export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, options: MediaElementOptions = {}): MediaElementState {
   const [snapshot, setSnapshot] = React.useState<Snapshot>(idle);
   const blocked = React.useRef<MediaProblem | null>(null);
   const pendingSeek = React.useRef<number | null>(null);
+  // The window being played: the app's, or the last `playWindow`. Held in a ref as well, because the
+  // element's events (`play`, `timeupdate`) and the frame loop read it between renders.
+  const [ownWindow, setOwnWindow] = React.useState<MediaWindow | null>(null);
+  const active = options.window ?? ownWindow;
+  const win = React.useRef<MediaWindow | null>(active);
+  win.current = active;
+  const opts = React.useRef(options);
+  opts.current = options;
+  const windowEnded = React.useRef(false);
+  const streamProblem = React.useRef<string | null>(null);
+  const edgePause = React.useRef(false);
+  const contextGroup = useMediaGroupName();
+  const group = options.group ?? contextGroup;
 
   const read = React.useCallback(() => {
     const el = ref.current;
     if (!el) return;
     const finite = Number.isFinite(el.duration) && el.duration > 0;
-    let error: MediaProblem | null = blocked.current;
+    const growing = opts.current.growing === true;
+    // A source still being made: what can be sought is the end of what exists.
+    const seekEnd = el.seekable && el.seekable.length > 0 ? el.seekable.end(el.seekable.length - 1) : 0;
+    const known = finite ? el.duration : growing && seekEnd > 0 ? seekEnd : null;
+    const ready = growing ? (seekEnd > 0 ? seekEnd : (known ?? 0)) : (known ?? 0);
+    const endedNow = el.ended && !growing;
+    let error: MediaProblem | null = blocked.current ?? (streamProblem.current ? { kind: "load", message: streamProblem.current } : null);
     // Code 1 is the load being abandoned on purpose (a new src), not a failure.
     if (el.error && el.error.code !== 1) error = { kind: "load", message: LOAD_MESSAGES[el.error.code] ?? "It could not be played." };
     const next: Snapshot = {
+      ready,
+      // At the end of what exists, still being made: not an ending.
+      waitingForMore: growing && known !== null && (el.ended || (el.readyState < 3 && !el.paused)) && el.currentTime >= known - 2,
       playing: !el.paused && !el.ended,
       time: Number.isFinite(el.currentTime) ? el.currentTime : 0,
-      duration: finite ? el.duration : null,
+      duration: known,
       buffered: bufferedAhead(el),
       volume: el.muted ? 0 : Math.round(el.volume * 100),
       muted: el.muted,
       rate: el.playbackRate,
-      ended: el.ended,
+      ended: endedNow,
       loading: !error && el.networkState === 2 && el.readyState < 3 && !el.paused,
       error,
     };
+    // Playback that ran into the end of a growing source carries on when more has been made.
+    if (growing && el.ended) edgePause.current = true;
+    if (edgePause.current && known !== null && known > el.currentTime + 0.5 && el.paused) {
+      edgePause.current = false;
+      void el.play().catch(() => {});
+    }
     setSnapshot((previous) => (Object.keys(next) as (keyof Snapshot)[]).every((k) => Object.is(previous[k], next[k]) || (k === "error" && previous.error?.message === next.error?.message && previous.error?.kind === next.error?.kind)) ? previous : next);
   }, [ref]);
 
+  // Stops, or loops, at the end of the window. Called every frame while playing and on every
+  // `timeupdate` (the frame loop is what makes it exact; the event is what a background tab still gets).
+  const enforce = React.useCallback(
+    (el: HTMLMediaElement) => {
+      const w = win.current;
+      if (!w || el.paused || windowEnded.current) return;
+      if (el.currentTime < w.end) return;
+      if (opts.current.loop) {
+        el.currentTime = w.start;
+        return;
+      }
+      windowEnded.current = true;
+      el.pause();
+      el.currentTime = w.end;
+      opts.current.onWindowEnd?.();
+    },
+    [],
+  );
+
   useElementListeners(ref, (el) => {
+    el.preservesPitch = true;
     const on = (e: Event) => {
       if (e.type === "play" || e.type === "playing") blocked.current = null;
+      if (e.type === "play") {
+        windowEnded.current = false;
+        const w = win.current;
+        // A play from outside the window (the start of the file, or after it stopped at its end) begins at its start.
+        if (w && (el.currentTime < w.start || el.currentTime >= w.end)) el.currentTime = w.start;
+      }
+      if (e.type === "ended" && win.current && !windowEnded.current) {
+        // The file's own end is the window's end.
+        if (opts.current.loop) {
+          el.currentTime = win.current.start;
+          void el.play().catch(() => {});
+        } else {
+          windowEnded.current = true;
+          opts.current.onWindowEnd?.();
+        }
+      }
+      if (e.type === "timeupdate") enforce(el);
       if (e.type === "loadedmetadata" && pendingSeek.current !== null) {
         el.currentTime = pendingSeek.current;
         pendingSeek.current = null;
       }
-      if (e.type === "emptied" || e.type === "loadstart") blocked.current = null;
+      if (e.type === "emptied" || e.type === "loadstart") {
+        blocked.current = null;
+        streamProblem.current = null;
+      }
+      if (e.type === "pause" && !el.ended) edgePause.current = false;
       read();
     };
     for (const type of EVENTS) el.addEventListener(type, on);
@@ -155,6 +259,52 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
       for (const type of EVENTS) el.removeEventListener(type, on);
     };
   });
+
+  // Group: while joined, a `play` here pauses the others. Re-joins if the ref later holds another element.
+  const joined = React.useRef<{ el: HTMLMediaElement; name: string; leave: () => void } | null>(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (joined.current && (joined.current.el !== el || joined.current.name !== group)) {
+      joined.current.leave();
+      joined.current = null;
+    }
+    if (el && group && !joined.current) joined.current = { el, name: group, leave: joinMediaGroup(group, el) };
+  });
+  React.useEffect(
+    () => () => {
+      joined.current?.leave();
+      joined.current = null;
+    },
+    [],
+  );
+
+  // A window set or changed from outside: if the element is outside it, go to its start.
+  const startKey = active ? `${active.start}:${active.end}` : null;
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || !active) return;
+    windowEnded.current = false;
+    if (el.readyState < 1) pendingSeek.current = active.start;
+    else if (el.currentTime < active.start || el.currentTime >= active.end) el.currentTime = active.start;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startKey]);
+
+  // The frame loop: exact stops at the window's end and `onTimeUpdate` at the display's rate. Only while playing.
+  React.useEffect(() => {
+    if (!snapshot.playing || (!active && !options.onTimeUpdate)) return;
+    let frame = 0;
+    const tick = () => {
+      const el = ref.current;
+      if (el) {
+        enforce(el);
+        opts.current.onTimeUpdate?.(el.currentTime);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.playing, active !== null, options.onTimeUpdate !== undefined, enforce, ref]);
 
   return React.useMemo<MediaElementState>(() => {
     const play = async () => {
@@ -170,8 +320,25 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
         } else if (!(e instanceof DOMException && e.name === "AbortError")) read();
       }
     };
+    const playWindow = async (w: MediaWindow) => {
+      const el = ref.current;
+      if (!el) return;
+      // Set first, synchronously: the `play` event reads it before React has rendered.
+      win.current = w;
+      windowEnded.current = false;
+      setOwnWindow(w);
+      if (el.readyState < 1) pendingSeek.current = w.start;
+      else el.currentTime = w.start;
+      await play();
+    };
     return {
       ...snapshot,
+      window: active,
+      playWindow,
+      reportProblem: (message) => {
+        streamProblem.current = message;
+        read();
+      },
       play,
       pause: () => ref.current?.pause(),
       toggle: () => {
@@ -200,6 +367,8 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
         // The default too: loading another source resets `playbackRate` to `defaultPlaybackRate`, which would drop the chosen speed at every chapter.
         el.defaultPlaybackRate = rate;
         el.playbackRate = rate;
+        // Speech at 0.75 or 2.5 times is only listenable at its own pitch.
+        el.preservesPitch = true;
       },
       retry: () => {
         const el = ref.current;
@@ -207,13 +376,71 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
         const resume = !el.paused;
         const at = el.currentTime;
         blocked.current = null;
+        streamProblem.current = null;
+        if (opts.current.onRetry) {
+          // A stream the element cannot reload: its engine restarts at the current time.
+          opts.current.onRetry(at);
+          read();
+          return;
+        }
         el.load();
         if (at > 0) pendingSeek.current = at;
         read();
         if (resume) void play();
       },
     };
-  }, [snapshot, ref, read]);
+  }, [snapshot, ref, read, active]);
+}
+
+/** What a stream engine is given when it takes over an element. */
+export type StreamContext = {
+  /** Where to start, seconds (a reload starts where playback was). */
+  startAt: number;
+  /** Tell the player the stream failed, in words for the person: it shows the load error with Try again. */
+  onProblem: (message: string) => void;
+};
+
+/** A stream engine's hold on an element, so the player can end it and restart it. */
+export type StreamAttachment = {
+  /** Lets go of the element: stops loading, frees what the engine made. */
+  detach: () => void;
+  /** Starts again from `at` seconds (the player's Try again). */
+  reload: (at: number) => void;
+};
+
+/**
+ * Plays a source the element cannot play by itself (HLS outside Safari, say) by taking over the
+ * element: sets what it needs on it, and returns a hold the player ends when the source changes or the
+ * player unmounts. `strata-react/hls` has one; any engine that fits is used the same way.
+ */
+export type SourceAttacher = (el: HTMLMediaElement, src: string, context: StreamContext) => StreamAttachment;
+
+/**
+ * Hands `src` to a stream engine (`attach`) for the element in `ref`, and ends the hold when `src` changes, `attach` does, or the component unmounts.
+ * Use it for a plain `<video>` the app owns, with `useMediaElement`; `MediaPlayer` does it for `attach`.
+ * Returns `reload`, for the player's Try again (`useMediaElement`'s `onRetry`), and gives the engine's failures to `onProblem` (`reportProblem`).
+ */
+export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void): { reload: (at: number) => void } {
+  const hold = React.useRef<{ el: HTMLMediaElement; src: string; attach: SourceAttacher; attachment: StreamAttachment } | null>(null);
+  const problem = React.useRef(onProblem);
+  problem.current = onProblem;
+  // Runs after every commit, not only when `src` or `attach` change: a `MediaPlayer` that switches
+  // between audio and video replaces the element and keeps the ref object, so the element's identity
+  // is checked too, and the engine is moved to the new one.
+  React.useEffect(() => {
+    const el = ref.current;
+    const now = hold.current;
+    if (now && now.el === el && now.src === src && now.attach === attach) return;
+    now?.attachment.detach();
+    hold.current = null;
+    if (!el || !attach || !src) return;
+    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m) }) };
+  });
+  React.useEffect(() => () => {
+    hold.current?.attachment.detach();
+    hold.current = null;
+  }, []);
+  return React.useMemo(() => ({ reload: (at: number) => hold.current?.attachment.reload(at) }), []);
 }
 
 /** One file in a sequence. */
@@ -250,6 +477,22 @@ export type MediaPlayerProps = {
   rates?: readonly number[];
   /** Keys on the page (Space or K, J and L for 10 s, M). Default true; turn off when the screen binds its own. With several players on a page the keys go to the one last played, focused or pressed. */
   shortcuts?: boolean;
+  /** Play only a stretch of the file (seconds): it starts at `start`, stops at `end` (or loops), the seek bar and time show the stretch, and "Playing 0:12 to 0:15" is announced. One file only, not with `sources`. */
+  window?: MediaWindow;
+  /** Go back to the start of `window` at its end and carry on. */
+  loop?: boolean;
+  /** Show the whole file's timeline with the window marked, instead of the window as the whole bar. */
+  showFull?: boolean;
+  /** Join a group: starting this player pauses the others in it. Defaults to the nearest `MediaGroup`. */
+  group?: string;
+  /** Called every animation frame while playing, with the time in the file (not in the window), for highlighting. */
+  onTimeUpdate?: (time: number) => void;
+  /** The window reached its end (not called when it loops). */
+  onWindowEnd?: () => void;
+  /** Plays the sources through a stream engine instead of the element's own `src` (`attachHls` from `strata-react/hls` for HLS). The element is the same one throughout, so playback carries on across sources as ever. */
+  attach?: SourceAttacher;
+  /** The source is still being made (a stream that grows while it plays): the seek bar shows the part that exists, a "Still being made" word and `status` (what the app says about progress) appear, and playback that catches up with the end waits, says so, and resumes when more arrives, without an `onEnded`. Give the source's `duration` when the whole length is known. */
+  growing?: { status?: string };
   /** The last source has ended. */
   onEnded?: () => void;
   /** Called as the element plays, with the time in the whole sequence. */
@@ -337,6 +580,14 @@ export function MediaPlayer({
   session,
   rates,
   shortcuts = true,
+  attach,
+  growing,
+  window: bound,
+  loop,
+  showFull,
+  group,
+  onTimeUpdate,
+  onWindowEnd,
   onEnded,
   onTimeChange,
   className,
@@ -346,7 +597,9 @@ export function MediaPlayer({
   const index = Math.min(controlledIndex ?? ownIndex, Math.max(list.length - 1, 0));
   const current = list[index];
   const ref = React.useRef<HTMLMediaElement>(null);
-  const media = useMediaElement(ref);
+  const stream = React.useRef<{ reload: (at: number) => void }>({ reload: () => {} });
+  const media = useMediaElement(ref, { window: bound, loop, group, onTimeUpdate, onWindowEnd, growing: growing !== undefined, onRetry: attach ? (t) => stream.current.reload(t) : undefined });
+  stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem);
   const coarse = useCoarsePointer();
   const native = controls === "native" || (controls === "auto" && coarse);
 
@@ -380,8 +633,12 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.src]);
 
+  const growingRef = React.useRef(growing !== undefined);
+  growingRef.current = growing !== undefined;
   const onEnd = React.useCallback(() => {
     const k = keep.current;
+    // A source still being made has not ended: it is waiting for more.
+    if (growingRef.current) return;
     if (k.autoAdvance && k.index < k.last) {
       resume.current = true;
       k.go(k.index + 1);
@@ -403,10 +660,16 @@ export function MediaPlayer({
     });
   }, [list]);
   const total = offsets ? offsets[offsets.length - 1] + list[list.length - 1].duration! : null;
-  const time = (offsets ? offsets[index] : 0) + media.time;
-  const duration = total ?? media.duration;
+  // A window is the bar's whole length unless `showFull`: times are shown from its start.
+  const cut = bound && !showFull ? bound : null;
+  const time = cut ? Math.min(Math.max(media.time - cut.start, 0), cut.end - cut.start) : (offsets ? offsets[index] : 0) + media.time;
+  // A source still being made: the whole length when the app knows it, with the part that exists drawn as ready; otherwise the part that exists.
+  const wholeLength = growing && list.length === 1 && list[0].duration ? list[0].duration : null;
+  const duration = cut ? cut.end - cut.start : (total ?? wholeLength ?? media.duration);
 
   const seek = (t: number) => {
+    if (growing && media.ready > 0) t = Math.min(t, media.ready);
+    if (cut) return media.seek(cut.start + Math.min(Math.max(t, 0), cut.end - cut.start));
     if (!offsets) return media.seek(t);
     let to = offsets.length - 1;
     while (to > 0 && offsets[to] > t) to--;
@@ -481,7 +744,7 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, media, time, index, list.length]);
 
-  const common = { ref: ref as React.Ref<never>, src: current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
+  const common = { ref: ref as React.Ref<never>, src: attach ? undefined : current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
   const element = kind === "video" ? <video {...common} poster={poster} playsInline className="w-full rounded-surface bg-surface-sunken" /> : <audio {...common} className={native ? "w-full" : "hidden"} />;
   const what = kind === "video" ? "this video" : "this recording";
 
@@ -507,6 +770,28 @@ export function MediaPlayer({
           {media.error.message}
         </p>
       )}
+      {growing && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Status tone="info" icon={LoaderCircle}>
+            Still being made
+          </Status>
+          {growing.status && <span className="type-body-sm text-muted-foreground">{growing.status}</span>}
+          <span role="status" className="type-body-sm text-muted-foreground">
+            {media.waitingForMore ? "Waiting for more to be made. It will carry on by itself." : ""}
+          </span>
+        </div>
+      )}
+      {bound && (
+        <>
+          <p className="type-caption text-muted-foreground tabular-nums">
+            {format.runningTime(bound.start)} to {format.runningTime(bound.end)}
+            {loop ? ", looping" : ""}
+          </p>
+          <VisuallyHidden>
+            <span role="status">{media.playing ? `Playing ${format.runningTime(bound.start)} to ${format.runningTime(bound.end)}` : ""}</span>
+          </VisuallyHidden>
+        </>
+      )}
       {!native && (
         <div className="grid gap-2">
           <div className="flex min-w-0 items-center gap-3">
@@ -514,8 +799,8 @@ export function MediaPlayer({
               time={time}
               duration={duration}
               onSeek={seek}
-              buffered={offsets ? undefined : media.buffered}
-              marks={offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
+              buffered={growing ? media.ready : offsets ? undefined : media.buffered}
+              marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
               step={JUMP}
               bigStep={60}
               label={`Seek in ${label}`}

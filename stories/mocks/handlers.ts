@@ -154,7 +154,23 @@ const clip = ({ params }: { params: Record<string, string | readonly string[] | 
   return new HttpResponse(bytes.buffer, { headers: { "Content-Type": "audio/wav" } });
 };
 
+/**
+ * A playlist that grows while it is "made" (issue #179): one two-second segment at first, one more every
+ * three seconds, the end-list once all six exist. `?start=<ms>` is when this showing began, so every story
+ * mount starts again from one segment. The segments are static files (`.storybook/public/hls/`), so the
+ * stream is real media that hls.js plays; only the playlist is the mock.
+ */
+const growing = ({ request }: { request: Request }) => {
+  const start = Number(new URL(request.url).searchParams.get("start")) || Date.now();
+  const made = Math.min(6, 1 + Math.floor((Date.now() - start) / 3000));
+  const lines = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:2", "#EXT-X-MEDIA-SEQUENCE:0"];
+  for (let i = 0; i < made; i++) lines.push("#EXTINF:2.000000,", `seg${i}.ts`);
+  if (made === 6) lines.push("#EXT-X-ENDLIST");
+  return new HttpResponse(lines.join("\n") + "\n", { headers: { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "no-store" } });
+};
+
 export const handlers = [
+  http.get("*/hls/growing.m3u8", growing),
   http.get("/api/clips/:variant", clip),
   http.get("https://tiles.example.test/:set/:z/:x/:file", tile),
   http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
