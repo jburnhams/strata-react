@@ -196,7 +196,8 @@ async function platformFonts(page: Page): Promise<string[]> {
 // Runs in the page. The box around what the root actually paints: text, replaced and form
 // elements, SVGs, and any box with a background, border or shadow, each cut to the scroll
 // containers it sits in. So a row of buttons is cropped to the buttons, not the full-width div
-// holding them, and fixed elements (an undo bar) count wherever they are. The screenshot is
+// holding them, and fixed elements (an undo bar) count wherever they are. Portalled overlays
+// (children of the body outside the root) count too, so an open dialog or popover is in its shot. The screenshot is
 // fullPage, so the box may extend past the viewport and a large component is captured whole.
 function paintedBox({ root: selector, margin }: { root: string; margin: number }) {
   const root = document.querySelector(selector);
@@ -227,8 +228,15 @@ function paintedBox({ root: selector, margin }: { root: string; margin: number }
     return right - left > 1 && bottom - top > 1 ? { left, top, right, bottom } : null;
   };
   const rects: { left: number; top: number; right: number; bottom: number }[] = [];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+  // Overlays (dialogs, popovers, tooltips, menus) are portalled to the body, outside the root, so
+  // the walk covers the root and every other element the body holds besides scripts and styles.
+  const roots: Element[] = [root, ...[...document.body.children].filter((c) => !c.contains(root) && !["SCRIPT", "STYLE", "LINK", "TEMPLATE"].includes(c.tagName))];
+  const nodes: Node[] = [];
+  for (const r of roots) {
+    const walker = document.createTreeWalker(r, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
+  }
+  for (const n of nodes) {
     if (n.nodeType === Node.TEXT_NODE) {
       if (!n.textContent?.trim() || !n.parentElement) continue;
       const range = document.createRange();

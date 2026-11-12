@@ -2,6 +2,19 @@
 
 ## 2026-11-12
 
+**Overlays: Dialog, AlertDialog, Popover (issue #70)** (branch `claude/overlays-70`, stacked on `claude/adopt-react-aria-2`). The issue asked for the overlay family from ux-research `components.md` §3.11, not built until now. All three are React Aria (Modal, Popover) with one shared surface, so Menu, Toast and the rest can reuse it.
+
+- `src/components/dialog.tsx` (**new**): `Dialog` (required `title`, optional `description`, `hideTitle`, `actions` as nodes or a `(close) => node` render prop, `closable={false}` for work that cannot be interrupted, `placement="end"` for a sheet, three sizes) and `AlertDialog` (required `confirm` verb, `cancel` focused first, outside press ignored, `tone`, and an async `onConfirm` that shows the button busy and stays open with the server's reason, through `describeActionError`, when it fails).
+- `src/components/popover.tsx` (**new**): `Popover` with a required `label`, `side`, `align` and `size`; flips and shifts inside the viewport, closes on Escape and an outside press, returns focus.
+- `src/lib/overlay.ts` (**new**): `overlaySurface`, the one class string for a floating surface (popover role colours, overlay radius, hairline, the one shadow, `enter-overlay`).
+- `src/components/button.tsx`: `ButtonProps` declares `onPress` (React Aria's press event) beside `onClick`.
+- `src/visual/capture.ts`: **correction** to the `paint` clip, which only walked the story root, so a portalled overlay was missing from its screenshot. It now also walks the other children of `<body>`. The tooltip baselines from the previous entry showed only the trigger; they are rewritten and now show the tip. `CLAUDE.md` and the README say so.
+- `stories/dialog.stories.tsx` (**new**): dialog, long content, not closable, sheet, destructive alert dialog, popover near the edge and with a form, at phone width, light and dark; a live story with a trigger is skipped by the visual suite. `tests/unit/overlays.test.tsx`: 13 new tests by role and name for focus in and out, Escape, outside press, `closable={false}`, `hideTitle`, the sheet, the alert dialog's safe focus, and a failing async confirm answered by MSW.
+- `README.md`: **new** Overlays row in the component table.
+- `tests/visual/baselines/`: 14 new, 8 tooltip baselines rewritten. All other baselines are unchanged.
+- Not done: the accessibility addon pass on these stories runs in Storybook, not in this suite, and the `IconButton` tooltip repeats its name once as a description (React Aria links a tooltip to its trigger).
+- Checks run on Node 26.13: `npm run typecheck`, `npm run test:unit` (289 tests), `npm run test:integration` (20 tests), `npm run test:visual` (338 of 338 after the update).
+
 **React Aria Components as the primitives layer, and `Tooltip`** (branch `claude/adopt-react-aria-2`). Jonathan chose React Aria over Radix and Base UI for the overlays, menus and controls the open issues (#68 to #81) need, and asked for existing components to be moved onto it and for dependencies it replaces to go. This is the first step; the issues themselves follow on top of it.
 
 - `package.json`: adds `react-aria-components` 1.22; removes `@radix-ui/react-slot` (its only user was `Button`'s unused `asChild`). **Breaking**: `Button` no longer takes `asChild`; a button that navigates is a link.

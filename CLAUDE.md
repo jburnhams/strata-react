@@ -200,7 +200,7 @@ scripts/                copy-css, clean, build-site
 Visual tests run through `strata-visual`, the same command apps use, so a change to
 `src/visual/` is tested on this repo's own 316 shots before an app sees it. A story tagged `visual-wide` renders at 1440×900, `visual-phone` at 390×844,
 otherwise 1024 wide (the story's own tag beats its file's); `no-visual` skips (interactive
-demos). Each PNG is **clipped to what the story paints** (text, controls, SVGs, and boxes
+demos). Each PNG is **clipped to what the story paints**, including portalled overlays (a dialog or popover outside the story root) (text, controls, SVGs, and boxes
 with a background, border or shadow, cut to their scroll containers, plus 8px for focus rings
 and shadows), and grows past the viewport when the component is bigger, so a baseline shows
 the component and nothing else. Route shots (the example app) are whole pages, named

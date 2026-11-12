@@ -33,6 +33,8 @@ export {
   type IconButtonProps,
   type RowActionProps,
 } from "./components/button";
+export { Dialog, AlertDialog, type DialogProps, type AlertDialogProps } from "./components/dialog";
+export { Popover, type PopoverProps } from "./components/popover";
 export { Tooltip, type TooltipProps } from "./components/tooltip";
 export { Checkbox, type CheckboxProps, type CheckboxGesture } from "./components/checkbox";
 export {
