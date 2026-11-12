@@ -16,6 +16,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 React Aria Components is now the primitives layer (`react-aria-components`, installed with the
 package). `@radix-ui/react-slot` is gone.
 
+- **`Compare`'s default view switch has a fifth view, `difference`** (key `5`). An app that renders `Compare` without `modes` sees one more toggle (and its visual baselines move); pass `modes={["side", "swipe", "fade", "blink"]}` to keep the previous four.
 - **`Button` has no `asChild`.** A button that navigates is a link: use a router `Link`.
   Do not rely on `@radix-ui/react-slot` arriving through Strata.
 - **`IconButton` shows `label` as a tooltip**, not a `title` attribute. New optional `hint`

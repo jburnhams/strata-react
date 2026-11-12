@@ -252,7 +252,11 @@ describe("Compare", () => {
       screen.getByRole("slider", { name: "Amplify differences" }).focus();
       await user.keyboard("{ArrowRight}");
       expect(layer.style.filter).toBe("brightness(5)");
-      expect(layer.querySelector(".mix-blend-difference")).not.toBeNull();
+      const blended = layer.querySelector(".mix-blend-difference") as HTMLElement;
+      expect(blended).not.toBeNull();
+      // Both layers sit on the same opaque backdrop, so identical pictures with transparent edges cancel to black.
+      expect(blended).toHaveClass("bg-background");
+      expect(layer.firstElementChild).toHaveClass("bg-background");
     });
 
     it("says what share of pixels differ, and recounts when the tolerance changes", async () => {

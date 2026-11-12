@@ -147,8 +147,8 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
         <ViewportFrame {...frameProps} ref={frameRef} label={`Difference between ${a.label} and ${b.label}`}>
           {style === "brightness" ? (
             <div className="absolute inset-0 isolate" style={{ filter: `brightness(${amplify})` }}>
-              {pane(a, imgRef, learn)}
-              <div className="absolute inset-0 mix-blend-difference">{pane(b)}</div>
+              <div className="absolute inset-0 bg-background">{pane(a, imgRef, learn)}</div>
+              <div className="absolute inset-0 bg-background mix-blend-difference">{pane(b)}</div>
             </div>
           ) : (
             <>
