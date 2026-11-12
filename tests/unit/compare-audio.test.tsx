@@ -172,6 +172,20 @@ describe("CompareAudio", () => {
     expect(audioOf("B").currentTime).toBe(4);
   });
 
+  it("under align=time a loop keeps its seconds on a clip of another length", async () => {
+    renderWithStrata(<Harness levelMatch={false} align="time" />);
+    load(10, 20);
+    act(() => media.tick(audioOf("A"), 2));
+    await userEvent.keyboard("i");
+    act(() => media.tick(audioOf("A"), 4));
+    await userEvent.keyboard("o");
+    await userEvent.keyboard("2");
+    expect(screen.getByText("Looping 0:02 to 0:04")).toBeInTheDocument();
+    await userEvent.keyboard(" ");
+    act(() => media.tick(audioOf("B"), 4.5));
+    expect(audioOf("B").currentTime).toBe(2);
+  });
+
   it("a start after the end replaces the end", async () => {
     renderWithStrata(<Harness levelMatch={false} />);
     load(10, 10);

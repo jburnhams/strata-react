@@ -123,6 +123,11 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
     const wasPlaying = from.playing;
     from.pause();
     to.seek(carry(from.time, from, to));
+    // The loop moves with the playhead's policy: under `time` it keeps its seconds, so its shares change.
+    if (from.duration && to.duration) {
+      const move = (share: number | null) => (share === null ? null : Math.min(1, carry(share * from.duration!, from, to) / to.duration!));
+      setLoop((l) => ({ start: move(l.start), end: move(l.end) }));
+    }
     if (wasPlaying) void to.play();
     setShowing(side);
   };
