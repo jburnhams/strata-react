@@ -186,8 +186,9 @@ Native elements stay where the platform does it better and the stack table says 
    A job the server runs for a while is `useJob({ isRunning, invalidates })` → `JobStatus` with
    its three words, its sentence and each failure named; never a hand-written `refetchInterval`
    plus an effect watching it end.
-9. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-10. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+9. A document edited over a session (an editor, a form builder) uses `useHistory` (or `useHistoryState`): name each step, group a drag with `begin`/`end`, pass `history.commands` to `useCommands` and a `Menu`, and show `SaveStatus` from `useAutoSave`. `useUndoable` stays for one removal that commits to a server; never a `window.confirm` on leaving a document that saves itself (`useLeaveGuard` while unsaved).
+10. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+11. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`. Export the app's
    `RouteObject[]` from its own module (as `examples/kiln-app/src/routes.tsx` does), give the same
    array to `createBrowserRouter` and to `renderRoutes(routes, { route, basename })` in tests, and
@@ -198,7 +199,7 @@ Native elements stay where the platform does it better and the stack table says 
    `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`. Check the
    one-filled-button rule with `expectOneFilledButton()` (after an interaction too), and read an
    `AsyncButton`'s phase with `asyncButtonPhase(el)`, never with class names or its text.
-11. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+12. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
    version and commit `tests/visual/baselines/`. See the README for the config and the CI job.

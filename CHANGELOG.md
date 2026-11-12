@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+**Document history and save state (issue #81)** (branch `claude/history-81`). strata-vid's undo had no step names and its autosave said nothing. This adds undo and redo across a session and the "Saved" sign for a document that saves itself; the rules are in ux-research `components.md` §3.19.
+
+- `src/components/history.tsx` **new**: `useHistory` (named steps as `undo`/`redo` pairs, `begin(label)`/`end` and `group` to make a drag one step, a `key` that merges a slider's pushes, a `limit` with `atLimit`, and `commands`: Undo and Redo as `Command`s with their step's name and a disabled reason) and `useHistoryState` (the snapshot case for plain React state). The model is a step, not a patch or a snapshot, so it does not care what the app's store is. React Aria has no history part or hook; this is noted in the file.
+- `src/components/save.tsx` **new**: `useAutoSave` (debounced, never two saves at once, edits during a save saved after it, `delayMs: null` for an explicit Save command), `SaveStatus` (four states at a fixed width through stacked labels, a failure announced once with its reason and the recovery announced, a routine save silent) and `useLeaveGuard` (`beforeunload` only while active).
+- `src/index.ts`: exports them and their types.
+- `stories/history.stories.tsx` **new**: no history, several steps, at the limit, and the four save states; 8 **new** baselines. The failed state cuts a long reason to the sign's width (shown whole in its title and the announcement).
+- `tests/unit/history.test.tsx` **new** (13): a grouped drag undoes in one step and redo repeats it, the step's name in the menu item and the command, keyed merging, the limit, a text field keeping its own undo, the save states in order at one width, one failure announcement and the recovery, saves never overlapping, manual save, the leave guard, edited back to the saved value, a saver that throws synchronously.
+- `README.md` (component table), `CLAUDE.md` ("Building an app", step 9).
+
 **Density reaches every control (issue #117)** (branch `claude/density-117`). `data-density` moved `--control-h` only on the root, `IconButton` was a fixed 36px, and a dialog or menu, portalled out of the app's root, never saw a region's density. Controls now take their height from two variables and density can be set app-wide.
 
 - `src/styles/strata.css`: `[data-density="default"]` rule; the coarse-pointer rule (44px targets) lists default and compact too, so touch wins whatever the density.
