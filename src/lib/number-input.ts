@@ -21,18 +21,39 @@ export type ParseResult = { kind: "empty" } | { kind: "invalid" } | { kind: "num
  * ones) as grouping, and a trailing `unit` the person typed ("40%"). Anything else is `invalid`.
  */
 export function parseNumber(text: string, locale: string, unit?: string): ParseResult {
-  let t = text.trim();
+  let t = asciiDigits(text.trim(), locale);
   if (unit && t.endsWith(unit)) t = t.slice(0, -unit.length).trim();
   if (t === "") return { kind: "empty" };
   const { decimal, group, minus } = numberMarks(locale);
-  t = t.replace(/[\s  ']/g, "");
-  if (group && group.trim() !== "") t = t.split(group).join("");
-  if (decimal !== "." && group !== ".") t = t.replace(".", decimal);
-  t = t.split(decimal).join(".");
+  t = t.replace(/[\u00a0\u202f']/g, " ");
   t = t.replace(new RegExp(`^[${escapeClass(minus)}\\u2212-]`), "-");
-  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(t)) return { kind: "invalid" };
-  const value = Number(t);
+  const negative = t.startsWith("-");
+  if (negative) t = t.slice(1);
+  // A plain "." is accepted as the decimal mark unless the locale uses "." to group.
+  if (decimal !== "." && group !== ".") t = t.replace(".", decimal);
+  const groupMark = group.trim() === "" || /[\s\u00a0\u202f]/.test(group) ? " " : group;
+  const d = escapeRegExp(decimal);
+  const g = escapeRegExp(groupMark);
+  // Grouping must be where the locale puts it (1,234,567 but not 12,5 or 1,,234); a number may also
+  // be typed with no grouping at all. Checking the shape first means a wrong-locale entry is
+  // refused instead of read as a different magnitude.
+  const grouped = new RegExp(`^\\d{1,3}(?:${g}\\d{3})+(?:${d}\\d*)?$`);
+  const plain = new RegExp(`^(?:\\d+(?:${d}\\d*)?|${d}\\d+)$`);
+  if (!plain.test(t) && !grouped.test(t)) return { kind: "invalid" };
+  const value = Number((negative ? "-" : "") + t.split(groupMark).join("").replace(decimal, "."));
   return Number.isFinite(value) ? { kind: "number", value } : { kind: "invalid" };
+}
+
+/** Turns a locale's own digits (Arabic-Indic, Devanagari) into 0-9, so what the field prints can be read back. */
+function asciiDigits(text: string, locale: string): string {
+  const f = new Intl.NumberFormat(locale, { useGrouping: false });
+  const map = new Map<string, string>();
+  for (let i = 0; i < 10; i++) map.set(f.format(i), String(i));
+  return [...text].map((c) => map.get(c) ?? c).join("");
+}
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function escapeClass(s: string) {

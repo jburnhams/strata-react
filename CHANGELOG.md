@@ -8,7 +8,8 @@
 - `src/components/value-controls.tsx` (**new**): `NumberField` (spinbutton with `aria-valuetext` including the unit; commit on Enter and blur; arrows, Shift, PageUp/PageDown, Home/End; empty stays `null`; invalid or out-of-range input is explained and never passed on), `Slider` (native range, value always printed, `editable` adds a `NumberField`), `ColorField` (picker, typed hex normalised to `#rrggbb`, suggestions, contrast note). Not React Aria's NumberField and Slider, with the reasons in the file: its field clamps a typed value silently and its slider's spoken value cannot carry "px" or "Mbps". No new dependency.
 - `src/components/field.tsx`: `Field` accepts a message from the control inside it (`useFieldControl`, internal) and draws it as its error; a screen's `error` still wins.
 - `src/styles/strata.css`: `strata-range` utility for the native range, drawn from theme roles.
-- `src/index.ts`, `README.md` (Value controls row), `stories/value-controls.stories.tsx` (**new**), `tests/unit/value-controls.test.tsx` (**new**, 22 tests), baselines for the new stories.
+- `src/index.ts`, `README.md` (Value controls row), `stories/value-controls.stories.tsx` (**new**), `tests/unit/value-controls.test.tsx` (**new**, 24 tests), baselines for the new stories.
+- Parsing checks grouping ("12,5" is refused in en-GB rather than read as 125), reads a locale's own digits, and checks limits before rounding (500.4 is out of range). An editable slider's number input has its own id and is named "<field>, exact value".
 - Not done: drag-to-scrub on the label (optional in the issue).
 
 **Commands: menus, context menu, command menu and chords from one list (issue #71)** (branch `claude/commands-71`, stacked on `claude/toolbar-69`). The issue asked to extend the "one list drives the handler and the legend" idea of `useHotkeys` to menus and chords. It is a new layer beside `useHotkeys`, which is unchanged (single keys, no chords), rather than a rewrite of it.

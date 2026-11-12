@@ -22,6 +22,12 @@ describe("number-input", () => {
     expect(parseNumber("40%", "en-GB", "%")).toEqual({ kind: "number", value: 40 });
     expect(parseNumber("−3", "en-GB")).toEqual({ kind: "number", value: -3 });
     expect(parseNumber("  ", "en-GB")).toEqual({ kind: "empty" });
+    // wrong-locale or malformed grouping is refused, not read as a different magnitude
+    for (const bad of ["12,5", "1.234,5", "1,,234", "12,34", ",5,", "1,23"]) expect(parseNumber(bad, "en-GB").kind).toBe("invalid");
+    expect(parseNumber("12.5", "en-GB")).toEqual({ kind: "number", value: 12.5 });
+    expect(parseNumber("1 234,5", "fr-FR")).toEqual({ kind: "number", value: 1234.5 });
+    // a locale's own digits are read back
+    expect(parseNumber(new Intl.NumberFormat("ar-EG").format(1234.5), "ar-EG")).toEqual({ kind: "number", value: 1234.5 });
     for (const bad of ["abc", "1e5", "12 34x", "--1", "1.2.3", "Infinity"]) expect(parseNumber(bad, "en-GB").kind).toBe("invalid");
   });
 
@@ -103,6 +109,20 @@ describe("NumberField", () => {
     expect(spy).toHaveBeenCalledWith(75);
     expect(screen.queryByText("Enter a value from 0% to 500%.")).toBeNull();
     expect(input).toBeValid();
+  });
+
+  it("checks the limits on what was typed, before rounding", async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<Controlled initial={40} spy={spy} />);
+    const input = screen.getByRole("spinbutton");
+    await user.clear(input);
+    await user.type(input, "500.4{Enter}");
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.getByText("Enter a value from 0% to 500%.")).toBeInTheDocument();
+    await user.clear(input);
+    await user.type(input, "-0.4{Enter}");
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("escape drops a bad entry and restores the value", async () => {
@@ -213,11 +233,24 @@ describe("Slider", () => {
     expect(spy).toHaveBeenCalledWith(0.0007);
   });
 
+  it("with editable, the two inputs have different ids and the number is named for the field", () => {
+    render(
+      <Field label="Opacity">
+        <Slider value={40} onChange={() => {}} min={0} max={100} unit="%" editable />
+      </Field>,
+    );
+    const range = screen.getByRole("slider", { name: "Opacity" });
+    const number = screen.getByRole("spinbutton", { name: "Opacity, exact value" });
+    expect(range.id).toBeTruthy();
+    expect(number.id).toBeTruthy();
+    expect(number.id).not.toBe(range.id);
+  });
+
   it("with editable, an exact value can be typed beside it, and out-of-range is refused", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<Slider aria-label="Opacity" value={40} onChange={spy} min={0} max={100} unit="%" editable />);
-    const number = screen.getByRole("spinbutton", { name: "Opacity" });
+    const number = screen.getByRole("spinbutton", { name: "Opacity, exact value" });
     await user.clear(number);
     await user.type(number, "150{Enter}");
     expect(spy).not.toHaveBeenCalled();

@@ -134,8 +134,9 @@ export function NumberField({
       return true;
     }
     if (parsed.kind === "invalid") return fail(describeRange(min, max, show, unit)), false;
+    // Limits are checked on what was typed, before rounding: 500.4 is out of range, not 500.
+    if (clamp(parsed.value, min, max) !== parsed.value) return fail(describeRange(min, max, show, unit)), false;
     const n = roundTo(parsed.value, digits);
-    if (clamp(n, min, max) !== n) return fail(describeRange(min, max, show, unit)), false;
     ok();
     if (n !== value) onChange(n);
     return true;
@@ -243,6 +244,7 @@ export function Slider({
   "aria-label": ariaLabel,
 }: SliderProps) {
   const { field } = useFieldControl();
+  const numberId = React.useId();
   const digits = places ?? Math.max(decimalsOf(step), decimalsOf(min));
   const show = useNumberText(locale, digits);
   const span = max - min;
@@ -267,7 +269,7 @@ export function Slider({
         className="strata-range h-(--control-h) min-w-0 flex-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
       />
       {editable ? (
-        <NumberField className="w-28 shrink-0" aria-label={ariaLabel ?? "Value"} value={value} onChange={(v) => v !== null && onChange(v)} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
+        <NumberField id={numberId} className="w-28 shrink-0" aria-label={`${ariaLabel ?? field?.label ?? "Value"}, exact value`} value={value} onChange={(v) => v !== null && onChange(v)} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
       ) : (
         !hideValue && <output className="w-16 shrink-0 text-right type-body-sm tabular-nums text-foreground">{text}</output>
       )}

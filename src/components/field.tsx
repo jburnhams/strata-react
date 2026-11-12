@@ -17,7 +17,7 @@ import { cn } from "../lib/utils";
 // button is not described by them. Field messages for a form come from `useAsyncAction`'s
 // `fieldErrors` (its `validate`, or the server's 422), so no `problem` state is kept by hand.
 
-type FieldState = { id: string; describedBy?: string; invalid: boolean; report: (message: string | undefined) => void };
+type FieldState = { id: string; label: string; describedBy?: string; invalid: boolean; report: (message: string | undefined) => void };
 const FieldContext = React.createContext<FieldState | null>(null);
 
 // A control that checks what was typed (a number field, a colour field) reports its own message to
@@ -69,7 +69,7 @@ export function Field({ label, id: idProp, hint, error, action, children, classN
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <FieldContext.Provider value={{ id, describedBy, invalid: Boolean(shown), report }}>
+    <FieldContext.Provider value={{ id, label, describedBy, invalid: Boolean(shown), report }}>
       <div className={cn("grid min-w-0 content-start gap-1.5", className)}>
         <label htmlFor={id} className="type-label text-foreground">
           {label}
