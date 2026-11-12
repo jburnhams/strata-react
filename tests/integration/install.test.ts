@@ -25,6 +25,8 @@ beforeAll(() => {
   mkdirSync(target, { recursive: true });
   for (const f of [...pkg.files, "package.json"]) cpSync(join(root, f), join(target, f), { recursive: true });
   symlinkSync(join(root, "node_modules/tailwindcss"), join(app, "node_modules/tailwindcss"), "dir");
+  // strata.css loads this plugin with @plugin; npm installs a dependency of strata-react beside it.
+  symlinkSync(join(root, "node_modules/tailwindcss-react-aria-components"), join(app, "node_modules/tailwindcss-react-aria-components"), "dir");
   execFileSync("git", ["init", "-q"], { cwd: app });
   writeFileSync(join(app, ".gitignore"), "node_modules\n");
   writeFileSync(join(app, "theme.css"), readFileSync(join(root, ".storybook/theme.generated.css"), "utf8"));

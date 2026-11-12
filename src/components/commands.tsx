@@ -170,8 +170,8 @@ export function CommandLegend({
 
 const itemClass = cn(
   "flex min-h-(--control-h-sm) cursor-pointer items-center gap-2 rounded-control px-2 type-body-sm outline-none",
-  "data-[focused]:bg-muted data-[disabled]:cursor-not-allowed data-[disabled]:text-muted-foreground data-[disabled]:opacity-70",
-  "data-[open]:bg-muted",
+  "focus:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-70",
+  "open:bg-muted",
 );
 
 function Item({ command, platform }: { command: Command; platform: Platform }) {

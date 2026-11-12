@@ -52,7 +52,7 @@ describe("Toggle", () => {
     );
     const grid = screen.getByRole("button", { name: "Grid" });
     expect(grid).toHaveAttribute("data-selected", "true");
-    expect(grid.className).toContain("data-[selected]:border-foreground");
+    expect(grid.className).toContain("selected:border-foreground");
     expect(grid.className).not.toContain("bg-primary");
     expectOneFilledButton(); // the chosen toggle does not count as a second filled button
   });

@@ -176,6 +176,22 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
       const [h, m] = [Math.floor(s / 3600), Math.floor((s % 3600) / 60)];
       return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
     },
+    /**
+     * A position in media as an editor shows it, to a chosen precision: "4:05" (seconds), "4:05.250"
+     * (`"ms"`), or "4:05:07" (`"frames"` at `fps`, the last part the frame). Hours appear only from
+     * one hour. Floors, never rounds up, so a time never reads ahead of the picture. Unknown
+     * (null, negative, not finite) prints the placeholder. Set it in `tabular-nums`.
+     */
+    timecode: (seconds: number | null | undefined, { precision = "seconds", fps = 30 }: { precision?: "seconds" | "ms" | "frames"; fps?: number } = {}) => {
+      if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return missing;
+      const whole = Math.floor(seconds);
+      const two = (n: number) => String(n).padStart(2, "0");
+      const [h, m] = [Math.floor(whole / 3600), Math.floor((whole % 3600) / 60)];
+      const base = h > 0 ? `${h}:${two(m)}:${two(whole % 60)}` : `${m}:${two(whole % 60)}`;
+      if (precision === "ms") return `${base}.${String(Math.min(Math.floor((seconds - whole) * 1000 + 1e-6), 999)).padStart(3, "0")}`;
+      if (precision === "frames") return `${base}:${two(Math.min(Math.floor((seconds - whole) * fps + 1e-6), Math.ceil(fps) - 1))}`;
+      return base;
+    },
     /** What a missing value prints as: an en dash unless `createFormat`'s `missing` says otherwise. */
     missing,
     /** A time of day: `format.clock(at)` is "06:05". */

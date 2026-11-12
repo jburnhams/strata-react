@@ -147,9 +147,9 @@ export function ChoiceGroup({
         <Radio key={c.value} value={c.value} className="group flex min-h-(--control-h-sm) cursor-pointer items-start gap-3 py-1">
           <span
             aria-hidden
-            className="mt-1 grid size-4 shrink-0 place-items-center rounded-pill border border-input bg-background transition-state group-data-[selected]:border-primary group-data-[focus-visible]:outline-2 group-data-[focus-visible]:outline-offset-2 group-data-[focus-visible]:outline-ring"
+            className="mt-1 grid size-4 shrink-0 place-items-center rounded-pill border border-input bg-background transition-state group-selected:border-primary group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"
           >
-            <span className="size-2 rounded-pill bg-primary opacity-0 group-data-[selected]:opacity-100" />
+            <span className="size-2 rounded-pill bg-primary opacity-0 group-selected:opacity-100" />
           </span>
           <span className="grid">
             <span className="type-body">{c.label}</span>
