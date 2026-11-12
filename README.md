@@ -210,6 +210,8 @@ vite build && npx strata-visual            # compare; diffs land in tests/visual
 npx strata-visual --filter review--error   # only some shots
 ```
 
+A shot's theme reaches the app itself: the runner stores it under the key `ThemeProvider` reads (`strata-color-scheme`) before the page loads, so light shots are light even in an app whose default is dark. To show a state that needs files dropped, use `dropFiles(page, "text=Drop files", [{ name: "clip.mp4", type: "video/mp4", content: bytes }])` from `strata-react/visual` in a `setup`: it dispatches the drag events with a data transfer that holds real `File`s and file-system entries (which React Aria's drop zones need) and a fixed `lastModified`, so a date shown from the file does not change between runs.
+
 Baselines are named `route--state--viewport--theme.png` (`review--empty--phone--dark.png`) and
 stories `story-id--theme.png`. A shot fails when it differs from its baseline, when any of its
 text is drawn in a font installed on the machine rather than one the page loaded, when the page

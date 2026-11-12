@@ -87,7 +87,7 @@ describe("KeysLegend", () => {
     const legend = screen.getByLabelText("Keyboard shortcuts");
     expect(legend.tagName).toBe("DL");
     const terms = within(legend).getAllByRole("term");
-    expect(terms[0]).toHaveTextContent("j or ↓");
+    expect(terms[0]).toHaveTextContent("j or down arrow");
     expect(within(legend).getAllByRole("definition").map((d) => d.textContent)).toEqual(["Next booking", "Approve"]);
   });
 });

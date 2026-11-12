@@ -7,6 +7,9 @@ import type { Browser, BrowserContext, Page, Request as PlaywrightRequest, Route
 import type { RequestHandler } from "msw";
 import type { Shot, VisualConfig } from "./types";
 
+// Where ThemeProvider and colorSchemeScript() keep the preference (COLOR_SCHEME_STORAGE_KEY in components/theme.tsx; copied, not imported, so the runner loads no React).
+const COLOR_SCHEME_STORAGE_KEY = "strata-color-scheme";
+
 // Animations and transitions off, caret hidden: a screenshot is of the settled state.
 const freeze = `*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`;
 
@@ -92,6 +95,16 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
   const problems: string[] = [];
   try {
     if (options.time !== undefined) await context.clock.setFixedTime(options.time);
+    // The theme the app's ThemeProvider reads before React runs (what `colorSchemeScript()` reads), so a shot's
+    // theme reaches an app whose default preference is not "system" (issue #136). Failing storage is the app's no-op.
+    await context.addInitScript(
+      ({ key, theme }) => {
+        try {
+          localStorage.setItem(key, theme);
+        } catch {}
+      },
+      { key: COLOR_SCHEME_STORAGE_KEY, theme: shot.theme },
+    );
     if (shot.darkClass) {
       await context.addInitScript(
         ({ cls, dark }) => {
@@ -184,7 +197,11 @@ async function platformFonts(page: Page): Promise<string[]> {
       for (const f of fonts) {
         if (f.isCustomFont || found.has(f.familyName)) continue;
         const text = t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text;
-        found.set(f.familyName, `"${f.familyName}" in <${t.name}>${text ? ` "${text}"` : ""}`);
+        // The CSS stack that fell through to the machine, so a `--font-mono` that names a face the app did not import is
+        // recognisable as such (issue #136): the glyph or the whole stack was missing from the bundled faces.
+        const { computedStyle } = await cdp.send("CSS.getComputedStyleForNode", { nodeId: t.id }).catch(() => ({ computedStyle: [] }));
+        const stack = computedStyle.find((p) => p.name === "font-family")?.value;
+        found.set(f.familyName, `"${f.familyName}" in <${t.name}>${text ? ` "${text}"` : ""}${stack ? ` (font-family: ${stack})` : ""}`);
       }
     }
     return [...found.values()];
