@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Button, format, geo, type LatLng } from "../src";
-import { RouteMap, type MapPosition, type MapRoute, type RouteMapProps } from "../src/map";
-import { canalWalk, parkLoop, riverRun, riverRunAt, riverRunSpeed, speedScale } from "./fixtures/route";
+import { RouteMap, type MapMarker, type MapPosition, type MapRoute, type PickNearest, type RouteMapProps } from "../src/map";
+import { canalWalk, parkLoop, riverRun, riverRunMetres, riverRunAt, riverRunSpeed, speedScale } from "./fixtures/route";
 
 // Issue #80. The tiles are served by MSW (mocks/handlers.ts), so every story is the same picture
 // every time; the routes are the fixture run along a river. The resting stories are the visual
@@ -142,3 +142,47 @@ function LiveStage(args: RouteMapProps) {
 
 /** Live: the position moves every animation frame. Only the marker moves; the route line is the same element throughout. Skipped by the visual suite. */
 export const Live: Story = { tags: ["no-visual"], render: (args) => <LiveStage {...args} /> };
+
+// Markers, cursor and picking (batch of issues #181 to #184).
+const spots = (n: number, around: LatLng, spread: number): MapMarker[] =>
+  Array.from({ length: n }, (_, i) => ({
+    id: `clip-${i}`,
+    label: `Clip ${i + 1}`,
+    at: [around[0] + spread * Math.sin(i * 2.4), around[1] + spread * Math.cos(i * 2.4)] as LatLng,
+  }));
+const mid = riverRun[Math.floor(riverRun.length / 2)];
+const clips: MapMarker[] = [
+  ...spots(5, mid, 0.00008),
+  { id: "far-1", label: "Clip 6", at: riverRun[20] },
+  { id: "far-2", label: "Clip 7", at: riverRun[160], highlighted: true },
+  { id: "stretch", label: "Clip 8, the climb", at: { routeId: "run", from: riverRunMetres[80], to: riverRunMetres[110] }, selected: true },
+];
+
+/** Items on the map: a close group fans out around its true place with leader lines, the rest are single pins, a stretch of the route is drawn heavier, and the key names each state. */
+export const Markers: Story = { args: { label: "Clips on the run", markers: clips } };
+
+/** Zoomed in until the group separates: no fan, each pin at its own place. */
+export const MarkersZoomedIn: Story = { args: { ...Markers.args, zoom: 18, follow: "centre", positions: [{ id: "a", label: "Here", at: mid }], tiles: sameTiles } };
+
+/** Phone width: the key stays inside the map. */
+export const MarkersPhone: Story = { ...Markers, tags: ["visual-phone"], args: { ...Markers.args, className: "w-full" } };
+
+/** Picking a place: the crosshair cursor and the banner; the keyboard moves a crosshair with the arrows. */
+export const Picking: Story = { args: { picking: true, pickBanner: "Click the map to place the clip", onPick: () => {} } };
+
+function PickStage(args: RouteMapProps) {
+  const [picking, setPicking] = React.useState(false);
+  const [picked, setPicked] = React.useState<PickNearest | null>(null);
+  return (
+    <div className="grid w-full max-w-3xl gap-2">
+      <RouteMap {...args} picking={picking} onPick={(_, info) => { setPicked(info.nearest); setPicking(false); }} onPickCancel={() => setPicking(false)} />
+      <div className="flex items-center gap-3">
+        <Button size="sm" onClick={() => setPicking(true)}>Pick a place</Button>
+        <p className="type-body-sm text-muted-foreground tabular-nums">{picked ? `${format.distance(picked.alongM)} along, ${format.distance(picked.distanceM)} off the route` : "Nothing picked"}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Live: pick a place, read the nearest point on the route. Skipped by the visual suite. */
+export const PickAPlace: Story = { tags: ["no-visual"], render: (args) => <PickStage {...args} /> };
