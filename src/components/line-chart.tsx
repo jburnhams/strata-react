@@ -25,6 +25,15 @@ import { cn } from "../lib/utils";
 // 1% CPU gives a 0 to 8% axis that makes it look busy (strata-react issue #23). A pin is a floor on
 // the extent, never a crop: a reading outside it widens the axis, because a chart that hides a
 // reading is worse than one with an untidy scale.
+//
+// Reading a value (`readout`, `onPick`) is a slider laid over the plot, and it is our own, by the
+// "React Aria first" rule's last step. Part considered: React Aria's `Slider`. What it cannot do,
+// checked in `useSliderThumb` and `useSliderState`: it steps a continuous number by a fixed step,
+// and speaks its value only through `Intl.NumberFormat` options, so it cannot say "300 m: 60 m up"
+// and cannot step between the readings of an uneven series. A formatter can be given to
+// `useSliderState`, but `react-stately` is not a direct dependency, which is Jonathan's decision to
+// make (issue #103 asks him). Until then the keys (arrows, Home, End), `role="slider"` and its
+// `aria-valuetext` follow the same contract as React Aria's.
 
 export type Point = { x: number; y: number };
 
@@ -297,8 +306,6 @@ export function LineChart({
   const [hover, setHover] = React.useState<number | null>(null);
   const [kbd, setKbd] = React.useState<number | null>(null);
   const [focused, setFocused] = React.useState(false);
-  const activeIdx = hover ?? (focused ? kbd : null);
-  const active = activeIdx === null ? null : sorted[activeIdx];
   const readoutText = (pt: Point) => (typeof readout === "function" ? readout(pt) : `${formatX(pt.x)}: ${formatY(pt.y)}`);
   const nearest = (px: number) => {
     const target = xMin + ((px - pad.left) / (w || 1)) * (xMax - xMin || 1);
@@ -319,8 +326,16 @@ export function LineChart({
     return sorted[sorted.length - 1].y;
   };
   const currentAt = current === undefined ? null : { x: Math.min(Math.max(current, xMin), xMax), y: yAt(current) };
+  // One reading is "the" selection for the announced value, the drawn marker and Enter: the pointer's
+  // while it is over the plot, else the keyboard's (clamped, since `series` can be replaced by a shorter
+  // one), else where the current rule is, else the last reading.
+  const fallbackIdx = sorted.length ? (currentAt ? nearest(sx(currentAt.x)) : sorted.length - 1) : 0;
+  const heldIdx = kbd === null ? fallbackIdx : Math.min(kbd, Math.max(sorted.length - 1, 0));
+  const selectedIdx = hover === null ? heldIdx : Math.min(hover, Math.max(sorted.length - 1, 0));
+  const active = (hover !== null || focused) && sorted.length ? sorted[selectedIdx] : null;
+  const selected = sorted[selectedIdx];
   const onKey = (e: React.KeyboardEvent) => {
-    const at = kbd ?? (currentAt ? nearest(sx(currentAt.x)) : sorted.length - 1);
+    const at = selectedIdx;
     let next = at;
     if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(at + 1, sorted.length - 1);
     else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = Math.max(at - 1, 0);
@@ -332,6 +347,7 @@ export function LineChart({
       return;
     } else return;
     e.preventDefault();
+    setHover(null); // the key takes over from a pointer left resting on the plot
     setKbd(next);
   };
   const flip = (px: number, text: string) => (px + labelWidth(text) + 16 > width ? { x: px - 8, anchor: "end" as const } : { x: px + 8, anchor: "start" as const });
@@ -382,8 +398,8 @@ export function LineChart({
             aria-orientation="horizontal"
             aria-valuemin={sorted[0].x}
             aria-valuemax={sorted[sorted.length - 1].x}
-            aria-valuenow={(active ?? sorted[sorted.length - 1]).x}
-            aria-valuetext={readoutText(active ?? sorted[sorted.length - 1])}
+            aria-valuenow={selected.x}
+            aria-valuetext={readoutText(selected)}
             onKeyDown={onKey}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}

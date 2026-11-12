@@ -93,6 +93,49 @@ describe("reading a value", () => {
   });
 });
 
+describe("one selection for what is announced, drawn and picked", () => {
+  it("picks the reading it announces when the current rule is set (Enter and the first arrow start there)", async () => {
+    const user = userEvent.setup();
+    const picked: number[] = [];
+    renderWithStrata(<LineChart {...props} readout current={100} onPick={(x) => picked.push(x)} />);
+    const plot = screen.getByRole("slider");
+    plot.focus();
+    const announced = plot.getAttribute("aria-valuetext");
+    await user.keyboard("{Enter}");
+    expect(announced).toBe("100 m: 45 m up");
+    expect(picked).toEqual([100]);
+    await user.keyboard("{ArrowRight}");
+    expect(plot).toHaveAttribute("aria-valuetext", "200 m: 87 m up");
+  });
+
+  it("lets a key take over from a pointer resting on the plot", async () => {
+    const user = userEvent.setup();
+    const picked: number[] = [];
+    renderWithStrata(<LineChart {...props} readout onPick={(x) => picked.push(x)} />);
+    const plot = screen.getByRole("slider");
+    plot.getBoundingClientRect = () => new DOMRect(56, 16, 568, 236);
+    fireEvent.pointerMove(plot, { clientX: 56 + 568 * 0.4 }); // 200 m, and the pointer stays
+    plot.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(plot).toHaveAttribute("aria-valuetext", "300 m: 60 m up");
+    await user.keyboard("{Enter}");
+    expect(picked).toEqual([300]);
+  });
+
+  it("clamps a stored keyboard position when the series is replaced by a shorter one", async () => {
+    const user = userEvent.setup();
+    const picked: number[] = [];
+    const { rerender } = renderWithStrata(<LineChart {...props} readout onPick={(x) => picked.push(x)} />);
+    const plot = screen.getByRole("slider");
+    plot.focus();
+    await user.keyboard("{Home}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}");
+    rerender(<LineChart {...props} readout onPick={(x) => picked.push(x)} series={profile.slice(0, 3)} xTicks={[0, 100, 200]} />);
+    expect(plot).toHaveAttribute("aria-valuetext", "200 m: 87 m up");
+    await user.keyboard("{Enter}");
+    expect(picked).toEqual([200]);
+  });
+});
+
 describe("picking a reading", () => {
   it("reports the x of the reading on Enter, and on a click", async () => {
     const user = userEvent.setup();
