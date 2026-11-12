@@ -10,8 +10,11 @@ import type { Candidate } from "./compare";
 // loading, ready and failed states, the caption under it, and the zoom controls and keys, so the
 // two views behave the same way and cannot drift apart.
 
+// 100svh less the toolbar (about 3rem), captions (2rem), a vote bar (4rem), the legend (4rem) and gaps.
+export const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
+
 /** A word for a picture's name on the page: its label, with its note unless blind. */
-export function Caption({ c, blind }: { c: Candidate; blind: boolean }) {
+export function Caption({ c, blind }: { c: Candidate<unknown>; blind: boolean }) {
   return (
     <div className="flex items-baseline gap-2">
       <span className="type-label">{c.label}</span>
