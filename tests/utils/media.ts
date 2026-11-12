@@ -18,11 +18,11 @@ export type FakeMedia = {
   uninstall: () => void;
 };
 
-type State = { duration: number; time: number; paused: boolean; ended: boolean; error: { code: number } | null; volume: number; muted: boolean; rate: number; ready: number; network: number };
+type State = { duration: number; time: number; paused: boolean; ended: boolean; error: { code: number } | null; volume: number; muted: boolean; rate: number; defaultRate: number; ready: number; network: number };
 const states = new WeakMap<HTMLMediaElement, State>();
 const stateOf = (el: HTMLMediaElement): State => {
   let s = states.get(el);
-  if (!s) states.set(el, (s = { duration: NaN, time: 0, paused: true, ended: false, error: null, volume: 1, muted: false, rate: 1, ready: 0, network: 0 }));
+  if (!s) states.set(el, (s = { duration: NaN, time: 0, paused: true, ended: false, error: null, volume: 1, muted: false, rate: 1, defaultRate: 1, ready: 0, network: 0 }));
   return s;
 };
 
@@ -50,11 +50,13 @@ export function installFakeMedia(): FakeMedia {
   define("volume", { get(this: HTMLMediaElement) { return stateOf(this).volume; }, set(this: HTMLMediaElement, v: number) { stateOf(this).volume = v; fire(this, "volumechange"); } });
   define("muted", { get(this: HTMLMediaElement) { return stateOf(this).muted; }, set(this: HTMLMediaElement, v: boolean) { stateOf(this).muted = v; fire(this, "volumechange"); } });
   define("playbackRate", { get(this: HTMLMediaElement) { return stateOf(this).rate; }, set(this: HTMLMediaElement, v: number) { stateOf(this).rate = v; fire(this, "ratechange"); } });
+  define("defaultPlaybackRate", { get(this: HTMLMediaElement) { return stateOf(this).defaultRate; }, set(this: HTMLMediaElement, v: number) { stateOf(this).defaultRate = v; } });
   define("load", {
     value(this: HTMLMediaElement) {
       fake.loads++;
       const s = stateOf(this);
-      Object.assign(s, { duration: NaN, time: 0, ended: false, error: null, ready: 0, network: 2 });
+      // The load algorithm resets the rate to the default, as a browser does.
+      Object.assign(s, { duration: NaN, time: 0, ended: false, error: null, ready: 0, network: 2, rate: s.defaultRate });
       fire(this, "emptied", "loadstart");
     },
   });

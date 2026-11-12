@@ -84,6 +84,28 @@ function bufferedAhead(el: HTMLMediaElement) {
   return 0;
 }
 
+// Subscribes while an element is mounted, and again if the ref later holds another one (a player that
+// changes `kind` replaces its DOM node, and the old node's listeners are gone with it).
+function useElementListeners(ref: React.RefObject<HTMLMediaElement | null>, bind: (el: HTMLMediaElement) => () => void) {
+  const bound = React.useRef<{ el: HTMLMediaElement; unbind: () => void } | null>(null);
+  const latest = React.useRef(bind);
+  latest.current = bind;
+  // No dependency list on purpose: a ref changing does not render, but whatever replaced the node did.
+  React.useEffect(() => {
+    const el = ref.current;
+    if (bound.current?.el === el) return;
+    bound.current?.unbind();
+    bound.current = el ? { el, unbind: latest.current(el) } : null;
+  });
+  React.useEffect(
+    () => () => {
+      bound.current?.unbind();
+      bound.current = null;
+    },
+    [],
+  );
+}
+
 const EVENTS = [
   "loadstart", "loadedmetadata", "durationchange", "timeupdate", "progress", "play", "playing", "pause", "ended",
   "volumechange", "ratechange", "seeking", "seeked", "waiting", "canplay", "emptied", "error",
@@ -117,9 +139,7 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
     setSnapshot((previous) => (Object.keys(next) as (keyof Snapshot)[]).every((k) => Object.is(previous[k], next[k]) || (k === "error" && previous.error?.message === next.error?.message && previous.error?.kind === next.error?.kind)) ? previous : next);
   }, [ref]);
 
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  useElementListeners(ref, (el) => {
     const on = (e: Event) => {
       if (e.type === "play" || e.type === "playing") blocked.current = null;
       if (e.type === "loadedmetadata" && pendingSeek.current !== null) {
@@ -134,7 +154,7 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
     return () => {
       for (const type of EVENTS) el.removeEventListener(type, on);
     };
-  }, [ref, read]);
+  });
 
   return React.useMemo<MediaElementState>(() => {
     const play = async () => {
@@ -175,7 +195,11 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>): 
         if (v > 0) el.volume = v / 100;
       },
       setRate: (rate) => {
-        if (ref.current) ref.current.playbackRate = rate;
+        const el = ref.current;
+        if (!el) return;
+        // The default too: loading another source resets `playbackRate` to `defaultPlaybackRate`, which would drop the chosen speed at every chapter.
+        el.defaultPlaybackRate = rate;
+        el.playbackRate = rate;
       },
       retry: () => {
         const el = ref.current;
@@ -320,12 +344,10 @@ export function MediaPlayer({
       k.go(k.index + 1);
     } else k.onEnded?.();
   }, []);
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  useElementListeners(ref, (el) => {
     el.addEventListener("ended", onEnd);
     return () => el.removeEventListener("ended", onEnd);
-  }, [onEnd]);
+  });
 
   // The sequence as one timeline, when every source says how long it is.
   const offsets = React.useMemo(() => {

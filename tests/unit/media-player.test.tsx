@@ -186,6 +186,27 @@ describe("MediaPlayer", () => {
     }
   });
 
+  it("keeps the chosen speed when another source loads", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "1.5×");
+    expect(audio(container).playbackRate).toBe(1.5);
+    await user.click(screen.getByRole("button", { name: "Next chapter" }));
+    audio(container).load();
+    expect(audio(container).playbackRate).toBe(1.5);
+  });
+
+  it("follows the new element when the kind changes, and still advances chapters", () => {
+    const { container, rerender } = render(<MediaPlayer label="Book" kind="audio" sources={chapters} controls="strata" />);
+    rerender(<MediaPlayer label="Book" kind="video" sources={chapters} controls="strata" />);
+    const video = container.querySelector("video") as HTMLVideoElement;
+    expect(container.querySelector("audio")).toBeNull();
+    act(() => media.loaded(video, 600));
+    expect(screen.getByRole("slider", { name: "Seek in Book" })).toBeEnabled();
+    act(() => media.end(video));
+    expect(video.getAttribute("src")).toBe("/two.mp3");
+  });
+
   describe("a sequence", () => {
     it("moves to the next source when one ends, on the same element, and keeps playing", async () => {
       const user = userEvent.setup();
