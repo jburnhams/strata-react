@@ -83,11 +83,15 @@ export type CompareProps = {
   modes?: readonly CompareMode[];
   /** Bind the view, zoom and full-screen keys on the window. Default true; turn off when a surrounding screen binds the same keys. */
   keys?: boolean;
+  /** Shortcuts of the surrounding screen (the answer keys of a `PairVote`), bound with Compare's own and drawn in the same legend, so there is one list and the two cannot clash unseen. Listed first. */
+  extraShortcuts?: Shortcut[];
+  /** Drawn under the picture, above the legend, and kept in full screen: where a vote bar goes so the answer is never out of reach of the pictures. */
+  footer?: React.ReactNode;
   className?: string;
 };
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, keys = true, extraShortcuts = [], footer, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -110,6 +114,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
 
   const offered = modes.includes(mode) ? modes : [mode, ...modes];
   const shortcuts: Shortcut[] = [
+    ...extraShortcuts,
     ...offered.map((m, i): Shortcut => ({ keys: [String(i + 1)], label: MODE_LABEL[m], run: () => onModeChange(m) })),
     { keys: ["x"], label: `Flip ${a.label} and ${b.label}`, run: flip, disabled: mode !== "blink" },
     ...zoomShortcuts(zoom, full, setFull),
@@ -263,6 +268,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
           </div>
         )}
         {body}
+        {footer}
         {keys && <KeysLegend shortcuts={shortcuts} />}
       </section>
     </FullscreenFrame>
