@@ -232,6 +232,14 @@ export function InfiniteList<T>({
 }: InfiniteListProps<T>) {
   const { more, itemKey } = state;
   const pendingFocus = React.useRef<number | null>(null);
+  // The queue refill lives here, not in LoadMore: in a virtualised region the footer row is only
+  // mounted while it is near the viewport, and a queue below `keepAtLeast` must refill regardless.
+  const ready = state.status === "ready";
+  const held = ready ? state.data.length : 0;
+  const { hasMore, loadingMore, error: moreFailure, loadMore } = more;
+  React.useEffect(() => {
+    if (ready && hasMore && !loadingMore && !moreFailure && held < keepAtLeast) loadMore();
+  }, [ready, hasMore, loadingMore, moreFailure, held, keepAtLeast, loadMore]);
   const footer = (
     <PendingFocus.Provider value={pendingFocus}>
     <LoadMore
@@ -242,7 +250,6 @@ export function InfiniteList<T>({
       moreSkeleton={moreSkeleton}
       end={end}
       rootMargin={rootMargin}
-      keepAtLeast={keepAtLeast}
       error={moreError}
     />
     </PendingFocus.Provider>

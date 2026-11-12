@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { Button, EmptyState, InfiniteList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
+import { Button, EmptyState, InfiniteList, VirtualList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { api, firingPage, firingsEmpty, firingsLaterPageError, firingsServerError, type FiringPage } from "../../stories/mocks/handlers";
@@ -162,6 +162,15 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     expect(rows()).toHaveLength(5);
     for (const id of ["f-0412", "f-0411"]) exposed!.dismiss(id);
     await waitFor(() => expect(rows()).toHaveLength(8));
+  });
+
+  it("keeps the call-site className on a short list that has a footer", () => {
+    renderWithStrata(
+      <VirtualList label="Short" items={["a", "b"]} itemKey={(x) => x} footer={<span>End</span>} className="w-1/2">
+        {(x) => <span>{x}</span>}
+      </VirtualList>,
+    );
+    expect(screen.getByRole("grid", { name: "Short" })).toHaveClass("w-1/2");
   });
 
   it("keeps paging when every item held is dismissed, going after the last one seen", async () => {

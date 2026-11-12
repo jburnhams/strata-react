@@ -71,7 +71,7 @@ export function VirtualList<T>({
       aria-label={label}
       selectionMode="none"
       data-strata-scroll=""
-      className={cn("min-w-0 outline-none", scrolls && "overflow-y-auto", !scrolls && !footer && className, scrolls && className)}
+      className={cn("min-w-0 outline-none", scrolls && "overflow-y-auto", className)}
       style={scrolls ? (virtual ? { height } : { maxHeight: height }) : undefined}
     >
       <Collection items={rows}>
