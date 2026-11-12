@@ -20,6 +20,16 @@ function Stateful(props: React.ComponentProps<typeof CompareVideo>) {
   );
 }
 
+// A story's own hand: press a region's chip once it is on the page, so a screenshot shows the region.
+function OpenOn({ chip, children }: { chip: string; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const t = setTimeout(() => [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((e) => e.textContent === chip)?.click(), 50);
+    return () => clearTimeout(t);
+  }, [chip]);
+  return <div ref={ref}>{children}</div>;
+}
+
 const meta = {
   title: "Data/CompareVideo",
   component: CompareVideo,
@@ -48,6 +58,16 @@ export const RealPixels: Story = { args: { mode: "swipe", pixelated: "always" } 
 /** The app names moments ("fast motion") and holds the loop, so the same two seconds replay for every pair; slow motion goes down to 0.1. */
 export const Moments: Story = {
   args: { mode: "swipe", moments: [{ time: 0.6, label: "Fast motion" }, { time: 1.4, label: "Turning face" }], loop: { start: 0.4, end: 1.2 }, onLoopChange: () => undefined },
+};
+
+/** Regions on the shared clock: the same part of each side, enlarged with nearest-neighbour; the videos keep playing. Opens on the timecode. */
+export const Regions: Story = {
+  args: { mode: "swipe", regions: [{ id: "timecode", label: "Timecode", box: [0, 0, 240, 180], of: [720, 540] }, { id: "checker", label: "Checkerboard", box: [400, 260, 240, 180], of: [720, 540] }] },
+  render: (args) => (
+    <OpenOn chip="Timecode">
+      <Stateful {...args} />
+    </OpenOn>
+  ),
 };
 
 /** As the answering half of a blind pairwise judgment: the same keys and bar as pictures and clips. */

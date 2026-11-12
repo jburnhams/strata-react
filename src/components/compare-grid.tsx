@@ -6,6 +6,8 @@ import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys } from "./hotkeys";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ViewportFrame, useViewport } from "./viewport";
+import { RegionChips, useRegions } from "./compare-regions";
+import type { Region } from "../lib/viewport";
 
 // Every candidate's picture for one item at once, with one zoom for all of them (the models app's
 // "Outputs" tab, which lists each candidate's output, and Bright Horizons' pick-which-to-keep).
@@ -28,6 +30,8 @@ export type CompareGridProps = {
   actions?: (item: Candidate) => React.ReactNode;
   /** Tiles per row at full width. Default 3. A narrow screen uses fewer. */
   columns?: 2 | 3 | 4;
+  /** Named boxes to look at enlarged in every tile at once, as in `Compare`: chips, keys `q` `w` `e` `r` `y` `u`, nearest-neighbour while one is shown, Shift-drag to make another. */
+  regions?: readonly Region[];
   /** Bind the zoom and full-screen keys on the window. Default true. */
   keys?: boolean;
   className?: string;
@@ -36,7 +40,7 @@ export type CompareGridProps = {
 const COLUMNS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-2 lg:grid-cols-3", 4: "sm:grid-cols-2 lg:grid-cols-4" } as const;
 
 /** Many pictures in a grid, zoomed and panned together, and full screen. */
-export function CompareGrid({ label, items, blind, missing, actions, columns = 3, keys = true, className }: CompareGridProps) {
+export function CompareGrid({ label, items, blind, missing, actions, columns = 3, regions, keys = true, className }: CompareGridProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const key = items.map((i) => i.media.src).join("|");
@@ -44,8 +48,9 @@ export function CompareGrid({ label, items, blind, missing, actions, columns = 3
   const natural = items[0]?.media.size ?? (learned?.key === key ? learned.size : null);
   const aspect = natural ? natural[0] / natural[1] : 3 / 2;
   const first = React.useRef<HTMLDivElement>(null);
-  const zoom = useZoom({ viewport, setViewport, frame: first, natural });
-  const shortcuts = zoomShortcuts(zoom, full, setFull);
+  const rg = useRegions({ regions, viewport, setViewport, frame: first, reset: key });
+  const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: first, natural });
+  const shortcuts = [...rg.shortcuts, ...zoomShortcuts(zoom, full, setFull)];
   useHotkeys(shortcuts, { enabled: keys });
 
   return (
@@ -56,12 +61,13 @@ export function CompareGrid({ label, items, blind, missing, actions, columns = 3
           <ToolbarSeparator />
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
+        <RegionChips state={rg} />
         <div className={cn("grid gap-3", COLUMNS[columns])}>
           {items.map((c, i) => (
             <figure key={c.id} className="grid content-start gap-1.5">
               <Caption c={c} blind={blind} />
-              <ViewportFrame viewport={viewport} setViewport={setViewport} aspect={aspect} label={blind ? `Picture ${c.label}` : c.label} ref={i === 0 ? first : undefined}>
-                <Picture c={c} blind={blind} missing={missing} onNatural={i === 0 ? (w, h) => setLearned({ key, size: [w, h] }) : undefined} />
+              <ViewportFrame viewport={viewport} setViewport={rg.setViewport} onBox={rg.add} outline={rg.peek} aspect={aspect} label={blind ? `Picture ${c.label}` : c.label} ref={i === 0 ? first : undefined}>
+                <Picture c={c} blind={blind} missing={missing} pixelated={rg.active !== null} onNatural={i === 0 ? (w, h) => setLearned({ key, size: [w, h] }) : undefined} />
               </ViewportFrame>
               {actions && <div className="flex flex-wrap gap-2">{actions(c)}</div>}
             </figure>
