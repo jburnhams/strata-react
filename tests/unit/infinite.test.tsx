@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { Button, EmptyState, InfiniteList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
+import { Button, EmptyState, InfiniteList, VirtualList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { api, firingPage, firingsEmpty, firingsLaterPageError, firingsServerError, type FiringPage } from "../../stories/mocks/handlers";
@@ -53,7 +53,8 @@ function recordCursors() {
   return cursors;
 }
 
-const rows = () => within(screen.getByRole("list", { name: "Firing log" })).getAllByRole("listitem");
+// Rows are a grid's rows (React Aria's GridList); the footer is one more row, so count the items by `data-index`.
+const rows = () => [...screen.getByRole("grid", { name: "Firing log" }).querySelectorAll("[data-index]")];
 
 describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
   it("keeps the held items when a refetch fails, with a stale notice rather than a page error", async () => {
@@ -90,7 +91,7 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     await screen.findByText("Firing f-0412");
     const [observer] = [...io.observers];
     expect(observer.options.rootMargin).toBe("400px");
-    expect(observer.options.root).toBe(screen.getByRole("region", { name: "Firing log" }));
+    expect(observer.options.root).toBe(screen.getByRole("grid", { name: "Firing log" }));
   });
 
   it("loads the next page when the end comes near, with the cursor after the last item held", async () => {
@@ -105,9 +106,13 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
   it("keeps loading while the end stays in view, and says when it is all", async () => {
     renderWithStrata(<FiringLog limit={50} />);
     await screen.findByText("Firing f-0412");
-    io.scrollToEnd();
-    // The sentinel never leaves view, so each landed page asks for the next until the last.
-    expect(await screen.findByText("That is every firing since March.")).toBeInTheDocument();
+    // The end stays in view, so each landed page asks for the next until the last. A virtualised list
+    // redraws its next-page row as it changes height, which gives the sentinel a new element that a
+    // real IntersectionObserver reports at once; the stand-in reports only when told, so tell it.
+    await waitFor(() => {
+      io.scrollToEnd();
+      expect(screen.getByText("That is every firing since March.")).toBeInTheDocument();
+    });
     expect(exposed?.status === "ready" && exposed.data).toHaveLength(firings.length);
     expect(screen.queryByRole("button", { name: "Show older firings" })).toBeNull();
   });
@@ -157,6 +162,15 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     expect(rows()).toHaveLength(5);
     for (const id of ["f-0412", "f-0411"]) exposed!.dismiss(id);
     await waitFor(() => expect(rows()).toHaveLength(8));
+  });
+
+  it("keeps the call-site className on a short list that has a footer", () => {
+    renderWithStrata(
+      <VirtualList label="Short" items={["a", "b"]} itemKey={(x) => x} footer={<span>End</span>} className="w-1/2">
+        {(x) => <span>{x}</span>}
+      </VirtualList>,
+    );
+    expect(screen.getByRole("grid", { name: "Short" })).toHaveClass("w-1/2");
   });
 
   it("keeps paging when every item held is dismissed, going after the last one seen", async () => {

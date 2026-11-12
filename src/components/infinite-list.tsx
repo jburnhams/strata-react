@@ -1,5 +1,6 @@
 import * as React from "react";
 import { CircleAlert, RotateCcw } from "lucide-react";
+import { ListStateContext } from "react-aria-components";
 import { Button } from "./button";
 import { DataView, type LoadFailure } from "./data-view";
 import { VirtualList } from "./virtual-list";
@@ -37,6 +38,12 @@ import { cn } from "../lib/utils";
 // watching the viewport. Virtual rows need a box of known height, which a page-scrolled grid is
 // not; a feed long enough to need them belongs in the region. `error` and `moreError` replace the
 // look of a failed first page and a failed later page, as DataView's `error` does.
+
+// The row a virtualised list draws for `LoadMore` is recycled when its height changes (button to
+// skeleton to button), which remounts `LoadMore` and drops what it remembers. The index to focus after
+// a click on Show more therefore lives in the list around it (InfiniteList), reached through this
+// context; a `LoadMore` used on its own keeps it in itself.
+const PendingFocus = React.createContext<React.MutableRefObject<number | null> | null>(null);
 
 /** The next-page row's props: `InfiniteList`'s, for a list or grid the app draws itself. */
 export type LoadMoreProps<T> = {
@@ -92,6 +99,9 @@ export function LoadMore<T>({
   const held = ready ? state.data.length : 0;
   const box = React.useRef<HTMLDivElement>(null);
   const near = useInView({ active: ready && more.hasMore, rootMargin });
+  // Inside a VirtualList the rows are React Aria's grid rows, which keep their own idea of which row
+  // has focus; moving focus to a new row has to tell that state, or it takes focus back.
+  const grid = React.useContext(ListStateContext);
 
   // Load on approach, and keep a worked-through queue topped up. Not after a failure: that waits
   // for Try again. Re-runs when a page lands, so a sentinel still in view asks for the next one.
@@ -102,7 +112,9 @@ export function LoadMore<T>({
   }, [ready, hasMore, loadingMore, error, near.inView, held, keepAtLeast, loadMore]);
 
   // After a click on Show more or Try again, focus the first new item: the button is gone.
-  const focusFrom = React.useRef<number | null>(null);
+  const own = React.useRef<number | null>(null);
+  const shared = React.useContext(PendingFocus);
+  const focusFrom = shared ?? own;
   const loadByHand = () => {
     focusFrom.current = held;
     loadMore();
@@ -110,15 +122,34 @@ export function LoadMore<T>({
   React.useEffect(() => {
     const from = focusFrom.current;
     if (from === null || loadingMore) return;
-    if (held > from) {
-      const item = box.current?.parentElement?.querySelector<HTMLElement>(`[data-index="${from}"]`);
-      if (item) {
-        item.tabIndex = -1;
-        item.focus();
+    if (held <= from) {
+      if (error || !hasMore) focusFrom.current = null;
+      return;
+    }
+    // The new row may not be in the DOM yet: a virtualised list draws it a frame after its data
+    // arrives. Look for it for a few frames, then give up rather than wait for ever.
+    let frames = 0;
+    let frame = 0;
+    const find = () => {
+      const scope = box.current?.closest<HTMLElement>("[data-strata-scroll]") ?? box.current?.parentElement;
+      const item = scope?.querySelector<HTMLElement>(`[data-index="${from}"]`);
+      if (!item) {
+        if (frames++ < 30) frame = requestAnimationFrame(find);
+        else focusFrom.current = null;
+        return;
       }
+      const key = item.getAttribute("data-key");
+      if (grid && key !== null) {
+        grid.selectionManager.setFocused(true);
+        grid.selectionManager.setFocusedKey(key);
+      }
+      item.tabIndex = -1;
+      item.focus();
       focusFrom.current = null;
-    } else if (error || !hasMore) focusFrom.current = null;
-  }, [held, loadingMore, error, hasMore]);
+    };
+    find();
+    return () => cancelAnimationFrame(frame);
+  }, [held, loadingMore, error, hasMore, grid]);
 
   if (!ready) return null;
   return (
@@ -200,7 +231,17 @@ export function InfiniteList<T>({
   className,
 }: InfiniteListProps<T>) {
   const { more, itemKey } = state;
+  const pendingFocus = React.useRef<number | null>(null);
+  // The queue refill lives here, not in LoadMore: in a virtualised region the footer row is only
+  // mounted while it is near the viewport, and a queue below `keepAtLeast` must refill regardless.
+  const ready = state.status === "ready";
+  const held = ready ? state.data.length : 0;
+  const { hasMore, loadingMore, error: moreFailure, loadMore } = more;
+  React.useEffect(() => {
+    if (ready && hasMore && !loadingMore && !moreFailure && held < keepAtLeast) loadMore();
+  }, [ready, hasMore, loadingMore, moreFailure, held, keepAtLeast, loadMore]);
   const footer = (
+    <PendingFocus.Provider value={pendingFocus}>
     <LoadMore
       // A grid's cards have their own edges, so the row keeps a gap from them.
       className={scroll === "page" ? "mt-4" : undefined}
@@ -209,9 +250,9 @@ export function InfiniteList<T>({
       moreSkeleton={moreSkeleton}
       end={end}
       rootMargin={rootMargin}
-      keepAtLeast={keepAtLeast}
       error={moreError}
     />
+    </PendingFocus.Provider>
   );
 
   return (
