@@ -10,6 +10,14 @@
 - `src/components/job-status.tsx`: `onCancel`/`cancelLabel`, `cancelled` (neutral ending with `words.cancelled`, default "Cancelled"), `onDismiss`. No total still means no bar.
 - `src/index.ts`, `README.md` (Feedback row), `stories/feedback.stories.tsx` (**new**), `tests/unit/feedback.test.tsx` (**new**, MSW for the abortable request), baselines for the new stories.
 
+**React Aria first: the rule for choosing a primitive** (branch `claude/aria-first-rule`). Jonathan asked for the rules to say: use a React Aria component, extend it if needed, make our own only if strictly needed. #73's first version built native inputs on an unchecked belief that React Aria's number field clamps; it does not, so the rule asks for the claim to be checked and written down.
+
+- `CLAUDE.md`: new section "React Aria first" (use as is, extend, own only when strictly needed with the verified reason in the file's opening comment); the Primitives row points to it.
+
+**Release: bump the version through a pull request** (branch `claude/project-thread-dnygsz`). The release workflow failed on every run since main became pull-request-only (`push declined due to repository rule violations`), so no version was bumped or published. Jonathan asked for the pattern `leaflet-node` uses.
+
+- `.github/workflows/release.yml`: replaces `phips28/gh-action-bump-version` with the `leaflet-node` flow. After a green push CI on main it works out the bump from commit messages since the last `v*` tag (same wording: major/breaking, minor/feat/feature, else patch), pushes `release/vX.Y.Z`, opens a PR with `RELEASE_TOKEN`, merges it (retrying while GitHub computes mergeability), then tags and releases the merge commit so `npm-publish.yml` still fires. The bump commit carries `[skip ci]`; a `release` concurrency group stops two runs racing. It no longer builds, since `npm-publish.yml` builds and tests. A rerun after a merged bump that failed before tagging detects that `package.json` already reads the target version and releases `HEAD` instead of bumping again (a Codex review finding). Only the PR-merge step needs `RELEASE_TOKEN` to have pull-requests write as well as contents write; no secret or setting was changed from here and the workflow could not be run before merging.
+
 **Commands: menus, context menu, command menu and chords from one list (issue #71)** (branch `claude/commands-71`, stacked on `claude/toolbar-69`). The issue asked to extend the "one list drives the handler and the legend" idea of `useHotkeys` to menus and chords. It is a new layer beside `useHotkeys`, which is unchanged (single keys, no chords), rather than a rewrite of it.
 
 - `src/lib/chords.ts` (**new**): chords written once ("Mod+Shift+Z"): `parseChord`, `matchesChord` (exact on modifiers, so Undo is not Redo; Shift ignored for a symbol key; Alt letters matched by physical key for macOS), `formatChord` (⇧⌘Z or Ctrl+Shift+Z), `isReservedChord` (the browser's own chords), `detectPlatform`.
