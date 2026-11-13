@@ -1,3 +1,4 @@
+import type { SpanTone } from "./line-chart";
 import * as React from "react";
 import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward, Volume2, VolumeX } from "lucide-react";
 import { format } from "../lib/format";
@@ -64,6 +65,28 @@ export function TimeReadout({ time, duration, precision = "seconds", fps = 30, c
   );
 }
 
+// A stretch is coloured by a status role the product already sets (the same tones as a chart's spans), never a fixed colour.
+const SPAN_TONE: Record<SpanTone, string> = { info: "bg-info", success: "bg-success", warning: "bg-warning", danger: "bg-danger", neutral: "bg-neutral-8" };
+
+/** A stretch of the bar, drawn as a range: an intro, a recap, an advert break. */
+export type SeekBarSpan = {
+  /** Seconds. */
+  start: number;
+  end: number;
+  /** Its name for a screen reader and the tooltip: "Intro". The bar adds its times: "Intro, 0:00 to 0:12". */
+  label: string;
+  /** Default "info". */
+  tone?: SpanTone;
+};
+
+/** The spans a bar of `duration` seconds can draw: in order, cut to the bar, and none that are empty or backwards. */
+function drawableSpans(spans: readonly SeekBarSpan[], duration: number) {
+  return spans
+    .map((s) => ({ ...s, start: clamp(s.start, 0, duration), end: clamp(s.end, 0, duration) }))
+    .filter((s) => Number.isFinite(s.start) && Number.isFinite(s.end) && s.end > s.start)
+    .sort((a, b) => a.start - b.start);
+}
+
 export type SeekBarProps = TimeProps & {
   time: number;
   /** Seconds; null, NaN or 0 while it is not known (a stream before its metadata): the bar is drawn disabled, with no thumb. */
@@ -72,6 +95,8 @@ export type SeekBarProps = TimeProps & {
   onSeek: (time: number) => void;
   /** Named points on the bar (chapters, markers). Pressing one seeks to it. */
   marks?: readonly { time: number; label: string }[];
+  /** Stretches drawn along the bar as ranges (strata-react issue #207): each named for a screen reader and in a tooltip, in a status role's colour, and never thinner than a few pixels so a one-second span still shows. They only draw; `MediaPlayer`'s `spans` is what acts on them. */
+  spans?: readonly SeekBarSpan[];
   /** What pressing a mark does. Default seeks to it; a screen that wants to land on it and pause (a moment to look at) passes its own. */
   onMarkPress?: (mark: { time: number; label: string }) => void;
   /** How far has loaded or been recorded, drawn behind the played part. */
@@ -88,7 +113,7 @@ export type SeekBarProps = TimeProps & {
 };
 
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
-export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, cursor: cursorProp, className }: SeekBarProps) {
+export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, cursor: cursorProp, className }: SeekBarProps) {
   const duration = known && Number.isFinite(known) && known > 0 ? known : 0;
   const disabled = off || duration === 0;
   const track = React.useRef<HTMLDivElement>(null);
@@ -158,6 +183,11 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], onMarkPress
         <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
         {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
         <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
+        {duration > 0 &&
+          drawableSpans(spans, duration).map((s) => {
+            const name = `${s.label}, ${timecode(s.start, { precision, fps })} to ${timecode(s.end, { precision, fps })}`;
+            return <span key={`${s.start}-${s.end}-${s.label}`} role="img" aria-label={name} title={name} data-span="" className={cn("absolute h-1.5 min-w-1 rounded-pill opacity-70", SPAN_TONE[s.tone ?? "info"])} style={{ left: `${(s.start / duration) * 100}%`, width: `${((s.end - s.start) / duration) * 100}%` }} />;
+          })}
         {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
         {duration > 0 &&
           marks.map((m) => (
@@ -231,9 +261,11 @@ export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, cla
   if (volume > 0) last.current = volume;
   const muted = volume === 0;
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    // `min-w-0` all the way down and a slider that shrinks, so a player a phone wide (320 px with a side rail) does not
+    // run its "100%" past its edge (issue #213): the button and the readout keep their size, the track gives way.
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
       <IconButton icon={muted ? VolumeX : Volume2} label={muted ? "Unmute" : "Mute"} hint="M" disabled={disabled} onClick={() => onVolumeChange(muted ? last.current : 0)} />
-      <Slider aria-label="Volume" value={volume} onChange={onVolumeChange} min={0} max={max} unit="%" disabled={disabled} className="w-40" />
+      <Slider aria-label="Volume" value={volume} onChange={onVolumeChange} min={0} max={max} unit="%" disabled={disabled} className="w-40 min-w-24 shrink" />
     </div>
   );
 }

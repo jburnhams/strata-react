@@ -44,16 +44,22 @@ const WORDS = {
   unsupported: "This browser cannot play this kind of stream.",
 };
 
+/** The words an HLS attacher says for each way a stream fails. */
+export type HlsWords = Partial<Record<keyof typeof WORDS, string>>;
+
 /** Options of an HLS attacher. */
 export type HlsAttacherOptions = {
   /** Which to use where both would do: `"engine"` (default) is hls.js, `"native"` is the element's own HLS. Where only one is available that one is used. */
   prefer?: "engine" | "native";
   /** hls.js's own configuration. */
   config?: Partial<HlsConfig>;
+  /** What each failure says in the product's words (the connection dropped, the stream could not be decoded, anything else, no support here). Defaults are plain English. */
+  words?: HlsWords;
 };
 
 /** Makes a `SourceAttacher` around an hls.js engine: the engine where the browser has Media Source Extensions, otherwise the element's own HLS. */
-export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config = {} }: HlsAttacherOptions = {}): SourceAttacher {
+export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config = {}, words = {} }: HlsAttacherOptions = {}): SourceAttacher {
+  const say = { ...WORDS, ...words };
   return (el: HTMLMediaElement, src: string, context: StreamContext): StreamAttachment => {
     const canNative = el.canPlayType("application/vnd.apple.mpegurl") !== "";
     const native = canNative && (prefer === "native" || !Engine.isSupported());
@@ -81,10 +87,12 @@ export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config
         return;
       }
       if (!Engine.isSupported()) {
-        context.onProblem(WORDS.unsupported);
+        context.onProblem(say.unsupported);
         return;
       }
-      const hls = new Engine({ ...config, startPosition: at > 0 ? at : -1 });
+      // Where playback had reached, else the app's own start, else the beginning of a source still being made
+      // (an EVENT playlist counts as live to hls.js, which with -1 would start at the newest part), else hls.js's choice.
+      const hls = new Engine({ ...config, startPosition: at > 0 ? at : (config.startPosition ?? (context.growing ? 0 : -1)) });
       engine = hls;
       let recoveries = 0;
       hls.on(Engine.Events.FRAG_LOADED, () => {
@@ -99,7 +107,7 @@ export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config
           recoveries++;
           hls.recoverMediaError();
         } else {
-          context.onProblem(data.type === Engine.ErrorTypes.NETWORK_ERROR ? WORDS.network : data.type === Engine.ErrorTypes.MEDIA_ERROR ? WORDS.media : WORDS.other);
+          context.onProblem(data.type === Engine.ErrorTypes.NETWORK_ERROR ? say.network : data.type === Engine.ErrorTypes.MEDIA_ERROR ? say.media : say.other);
           stop();
         }
       });

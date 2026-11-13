@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { MediaPlayer, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaSource } from "../src";
+import { Button, MediaPlayer, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
 import { silentWav } from "./fixtures/media";
+import clipSrc from "./fixtures/video/a.webm?url";
 
 // Issue #134: playing a file without the glue. `MediaPlayer` is the element, its state
 // (`useMediaElement`) and the parts of #78; the stories are the cases strata-listory had: one file,
@@ -67,3 +68,57 @@ function Reader() {
 
 /** Live: use the hook alone with the browser's controls and read the time for something else (a chapter list). Skipped by the visual suite. */
 export const HookWithNativeControls: Story = { tags: ["no-visual"], args: { label: "x" }, render: () => <Reader /> };
+
+// Marked stretches (issue #207): an intro skipped as it starts, a recap offered as a button, a sponsor read
+// muted, credits only drawn. The kind's tone is a status role the product sets.
+const spanKinds: Record<string, SpanKind> = {
+  intro: { label: "Intro", behaviour: "auto", tone: "info" },
+  recap: { label: "Recap", behaviour: "ask", tone: "warning" },
+  sponsor: { label: "Sponsor", behaviour: "auto", tone: "danger" },
+  credits: { label: "Credits", behaviour: "off", tone: "neutral" },
+};
+const spans: MediaSpanData[] = [
+  { start: 0, end: 12, kind: "intro" },
+  { start: 40, end: 70, kind: "recap" },
+  { start: 120, end: 150, kind: "sponsor", action: "mute" },
+  { start: 225, end: 245, kind: "credits" },
+];
+
+/** Stretches on the seek bar, each a named range in its kind's tone (the title and the screen reader say "Recap, 0:40 to 1:10"); a one-second span keeps a visible width. */
+export const Spans: Story = { args: { label: "x" }, render: () => <One spans={spans} spanKinds={spanKinds} /> };
+
+/** What each kind does on reaching a stretch: `auto` skips (or mutes) it with "Skipped intro" and Undo, `ask` offers "Skip recap ›" over the picture and on the S key, `off` only draws it. Play it to see. */
+export const SpanBehaviours: Story = {
+  tags: ["no-visual"],
+  args: { label: "x" },
+  render: () => (
+    <div className="max-w-3xl">
+      <MediaPlayer label="Episode 4" kind="video" src={clipSrc} controls="strata" spans={[{ start: 0, end: 1, kind: "intro" }, { start: 1.2, end: 1.8, kind: "recap" }]} spanKinds={spanKinds} />
+    </div>
+  ),
+};
+
+/** The app's own thing over the picture (a comment pinned to a time, in the corner its classes choose), and the player's state through `mediaRef`, so a list beside the player can seek. */
+export const OverlayAndState: Story = {
+  tags: ["no-visual"],
+  args: { label: "x" },
+  render: () => {
+    const state = React.useRef<MediaElementState | null>(null);
+    return (
+      <div className="grid max-w-3xl gap-2">
+        <MediaPlayer
+          label="Kiln cam" kind="video" src={clipSrc} controls="strata" mediaRef={state}
+          overlay={(m) => <p className="absolute top-3 left-3 rounded-control bg-background px-2 py-1 type-caption tabular-nums">{m.time.toFixed(1)} s</p>}
+        />
+        <Button onClick={() => state.current?.seek(1)}>Jump to 1 s</Button>
+      </div>
+    );
+  },
+};
+
+/** A video player a phone wide, with a side rail's width taken off (issue #213): the speed and volume row wraps, the volume track gives way, and "100%" stays inside the player. */
+export const VideoPhone: Story = {
+  tags: ["visual-phone"],
+  args: { label: "x" },
+  render: () => <div className="w-80"><MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" /></div>,
+};

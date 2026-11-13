@@ -7,6 +7,7 @@ import { Button, IconButton } from "./button";
 import { useHotkeys, type Shortcut } from "./hotkeys";
 import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
+import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 
@@ -398,6 +399,8 @@ export type StreamContext = {
   startAt: number;
   /** Tell the player the stream failed, in words for the person: it shows the load error with Try again. */
   onProblem: (message: string) => void;
+  /** The source is still being made (`MediaPlayer growing`): its start exists and the edge moves, so a first load starts at the beginning, not at the newest part. */
+  growing?: boolean;
 };
 
 /** A stream engine's hold on an element, so the player can end it and restart it. */
@@ -420,10 +423,12 @@ export type SourceAttacher = (el: HTMLMediaElement, src: string, context: Stream
  * Use it for a plain `<video>` the app owns, with `useMediaElement`; `MediaPlayer` does it for `attach`.
  * Returns `reload`, for the player's Try again (`useMediaElement`'s `onRetry`), and gives the engine's failures to `onProblem` (`reportProblem`).
  */
-export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void): { reload: (at: number) => void } {
+export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void, growing?: boolean): { reload: (at: number) => void } {
   const hold = React.useRef<{ el: HTMLMediaElement; src: string; attach: SourceAttacher; attachment: StreamAttachment } | null>(null);
   const problem = React.useRef(onProblem);
   problem.current = onProblem;
+  const grows = React.useRef(growing);
+  grows.current = growing;
   // Runs after every commit, not only when `src` or `attach` change: a `MediaPlayer` that switches
   // between audio and video replaces the element and keeps the ref object, so the element's identity
   // is checked too, and the engine is moved to the new one.
@@ -434,7 +439,7 @@ export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>,
     now?.attachment.detach();
     hold.current = null;
     if (!el || !attach || !src) return;
-    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m) }) };
+    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m), growing: grows.current }) };
   });
   React.useEffect(() => () => {
     hold.current?.attachment.detach();
@@ -497,6 +502,20 @@ export type MediaPlayerProps = {
   onEnded?: () => void;
   /** Called as the element plays, with the time in the whole sequence. */
   onTimeChange?: (time: number) => void;
+  /** Marked stretches (an intro, a recap, a sponsor read), in seconds on the player's timeline: drawn on the seek bar, and acted on as playback reaches them as `spanKinds` says (strata-react issue #207). */
+  spans?: readonly MediaSpanData[];
+  /** For each kind of span: its `label`, its `tone` (a status role) and what happens on reaching one: `"auto"` skips it (or mutes it, for a span whose `action` is `"mute"`) with "Skipped intro" and Undo, `"ask"` offers a Skip button over the picture (and the `s` key), `"off"` (default) only draws it. Keep the object stable (state or `useMemo`). */
+  spanKinds?: Readonly<Record<string, SpanKind>>;
+  /** Told what was done with a span: `skipped`, `muted`, `undone` or `played`. */
+  onSpan?: (span: MediaSpanData, what: SpanOutcome) => void;
+  /** The Skip button's and the notice's words, in the product's language. */
+  spanWords?: SpanWords;
+  /** The player's state and requests (`seek`, `setVolume`, `time`, `duration`…), for an app that acts on playback from beside it: a chapter list, comments at a time (strata-react issue #211). An object ref holds the latest state without rendering again; a function ref is called with it on every render. */
+  mediaRef?: React.Ref<MediaElementState>;
+  /** Drawn over the picture only (never the controls) in a box that fills it; the app's classes choose the corner (`absolute bottom-3 right-3`). Anything interactive in it is clickable and focusable. A video's box keeps its shape before the metadata loads, so the overlay has a stable place. */
+  overlay?: (media: MediaElementState) => React.ReactNode;
+  /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
+  aspect?: number | `${number}/${number}`;
   className?: string;
 };
 
@@ -590,6 +609,13 @@ export function MediaPlayer({
   onWindowEnd,
   onEnded,
   onTimeChange,
+  spans,
+  spanKinds,
+  onSpan,
+  spanWords,
+  mediaRef,
+  overlay,
+  aspect,
   className,
 }: MediaPlayerProps) {
   const list = React.useMemo<readonly MediaSource[]>(() => sources ?? (src ? [{ src, title: label }] : []), [sources, src, label]);
@@ -599,7 +625,7 @@ export function MediaPlayer({
   const ref = React.useRef<HTMLMediaElement>(null);
   const stream = React.useRef<{ reload: (at: number) => void }>({ reload: () => {} });
   const media = useMediaElement(ref, { window: bound, loop, group, onTimeUpdate, onWindowEnd, growing: growing !== undefined, onRetry: attach ? (t) => stream.current.reload(t) : undefined });
-  stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem);
+  stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem, growing !== undefined);
   const coarse = useCoarsePointer();
   const native = controls === "native" || (controls === "auto" && coarse);
 
@@ -685,6 +711,32 @@ export function MediaPlayer({
     go(to);
   };
 
+  const spanState = useMediaSpans({ spans, kinds: spanKinds, words: spanWords, onSpan, time, playing: media.playing, duration: growing ? null : duration, limit: growing ? media.ready : undefined, seek, volume: media.volume, setVolume: media.setVolume });
+  const offer = spanState.offer;
+
+  // The app's hold on the state: an object ref keeps the latest (no render of its own), a function ref hears every render.
+  React.useEffect(() => {
+    if (typeof mediaRef === "function") mediaRef(media);
+    else if (mediaRef) (mediaRef as React.MutableRefObject<MediaElementState | null>).current = media;
+  });
+  React.useEffect(
+    () => () => {
+      if (mediaRef && typeof mediaRef !== "function") (mediaRef as React.MutableRefObject<MediaElementState | null>).current = null;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  // The picture's own shape once it is known, so the box does not change when the metadata arrives.
+  const [natural, setNatural] = React.useState<number | null>(null);
+  useElementListeners(ref, (el) => {
+    const read = () => setNatural(el instanceof HTMLVideoElement && el.videoWidth > 0 && el.videoHeight > 0 ? el.videoWidth / el.videoHeight : null);
+    for (const t of ["loadedmetadata", "resize", "emptied"]) el.addEventListener(t, read);
+    read();
+    return () => {
+      for (const t of ["loadedmetadata", "resize", "emptied"]) el.removeEventListener(t, read);
+    };
+  });
+
   React.useEffect(() => {
     if (onTimeChange) onTimeChange(time);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -696,9 +748,10 @@ export function MediaPlayer({
       { keys: ["j"], label: `Back ${JUMP} s`, run: () => seek(time - JUMP), repeat: true },
       { keys: ["l"], label: `Forward ${JUMP} s`, run: () => seek(time + JUMP), repeat: true },
       { keys: ["m"], label: "Mute", run: () => media.setVolume(media.muted ? 100 : 0) },
+      ...(offer ? [{ keys: ["s"], label: offer.label, run: offer.run }] : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [media, time, offsets, index],
+    [media, time, offsets, index, offer],
   );
   // Several players on a page: the keys follow the last used (see keyPlayers); alone, they are this one's.
   const id = React.useId();
@@ -745,12 +798,30 @@ export function MediaPlayer({
   }, [session, media, time, index, list.length]);
 
   const common = { ref: ref as React.Ref<never>, src: attach ? undefined : current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
-  const element = kind === "video" ? <video {...common} poster={poster} playsInline className="w-full rounded-surface bg-surface-sunken" /> : <audio {...common} className={native ? "w-full" : "hidden"} />;
+  const hasSpans = (spans?.length ?? 0) > 0;
+  // The picture sits in a box of its own shape (the app's `aspect`, else the video's, else 16:9 until it says), so the page does not jump
+  // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
+  const element =
+    kind === "video" ? (
+      <div className="relative w-full overflow-hidden rounded-surface bg-surface-sunken" style={{ aspectRatio: aspect ?? natural ?? 16 / 9 }}>
+        <video {...common} poster={poster} playsInline className="absolute inset-0 size-full object-contain" />
+        {(overlay || hasSpans) && (
+          <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
+            {overlay?.(media)}
+            {hasSpans && <SpanActions state={spanState} className={cn("absolute right-3 flex flex-col items-end gap-2", native ? "bottom-14" : "bottom-3")} />}
+          </div>
+        )}
+      </div>
+    ) : (
+      <audio {...common} className={native ? "w-full" : "hidden"} />
+    );
   const what = kind === "video" ? "this video" : "this recording";
 
   return (
     <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", className)}>
       {element}
+      {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
+      {kind === "audio" && overlay?.(media)}
       {media.error?.kind === "load" && (
         <Alert
           tone="danger"
@@ -800,6 +871,7 @@ export function MediaPlayer({
               duration={duration}
               onSeek={seek}
               buffered={growing ? media.ready : offsets ? undefined : media.buffered}
+              spans={spanState.bars}
               marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
               step={JUMP}
               bigStep={60}
