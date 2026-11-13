@@ -23,6 +23,7 @@ export default defineConfig({
         panorama: resolve(__dirname, "src/panorama/index.ts"),
         visual: resolve(__dirname, "src/visual/index.ts"),
         "visual-cli": resolve(__dirname, "src/visual/cli.ts"),
+        "migrate-cli": resolve(__dirname, "src/migrate/cli.ts"),
       },
       formats: ["es"],
     },

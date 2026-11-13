@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, Picture, VIEWPORT_HEIGHT, ZoomControls, makePicker, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
+import { Caption, FullscreenButton, Picture, ZoomControls, frameCap, makePicker, useFitHeight, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
@@ -117,8 +117,10 @@ export type CompareProps = {
   readPixels?: ReadPixels;
   /** Which views are offered. Default all five. Must include `mode`. */
   modes?: readonly CompareMode[];
-  /** How tall a frame may be, so the pair and the answer fit on one screen: a CSS length (`"60svh"`) or `"viewport"` (the window's height less room for the toolbar, captions, a vote bar and the key legend). The frame narrows to keep the picture's shape. Default: as tall as the width makes it. */
+  /** How tall a frame may be, so the pair and the answer fit on one screen: a CSS length (`"60svh"`), `"viewport"` (the window's height less a fixed 14rem for the toolbar, captions, a vote bar and the key legend: a guess), or `"fit"` (measured: the window from the top of this component, less what it draws besides its frames and what follows it in the page, shared between the rows of frames, never under 120 px; re-measured as the page changes; see `reserve`). The frame narrows to keep the picture's shape. In full screen the frame fills what the controls leave, whatever this is. Default: as tall as the width makes it. */
   maxHeight?: string;
+  /** With `maxHeight="fit"`: pixels of the page below this component that it cannot measure (padding and gaps of the screen around it); later siblings are measured. Default 0. */
+  reserve?: number;
   /** Named boxes in the source's coordinates to look at enlarged: a strip of chips, keys `q` `w` `e` `r` `y` `u`, nearest-neighbour drawing while one is shown, and Shift-drag to make another. They work in every view. The same share of each side is shown, whatever its pixel size. Label them by content ("Face"), never by candidate. */
   regions?: readonly Region[];
   /** Called with the side clicked or tapped, in the views where a click is unambiguous: side by side, swipe (by the side of the divider) and blink (the side showing). A pointer convenience: the keys and the vote bar stay the way to answer. A `PairVote` sets this for you. */
@@ -137,7 +139,7 @@ export type CompareProps = {
 };
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
-export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, regions, onPick, pick = true, pickWords, keys = true, extraShortcuts = [], footer, maxHeight, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
+export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes = ALL_MODES, regions, onPick, pick = true, pickWords, keys = true, extraShortcuts = [], footer, maxHeight, reserve, cannotCompare = "Could not read these pictures to compare their pixels.", readPixels, defaultDifference = "brightness", className }: CompareProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   // Learned from the picture once it loads, and only for the pair it was learned from: a new pair starts again.
@@ -154,6 +156,8 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   const frameRef = React.useRef<HTMLDivElement>(null);
   const imgRef = React.useRef<HTMLImageElement>(null);
   const aspect = natural ? natural[0] / natural[1] : 3 / 2;
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const fit = useFitHeight(sectionRef, { enabled: maxHeight === "fit" || full, full, reserve });
 
   const rg = useRegions({ regions, viewport, setViewport, frame: frameRef, reset: pairKey });
   const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: frameRef, natural });
@@ -174,7 +178,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
   );
   const learn = (w: number, h: number) => setLearned({ key: pairKey, size: [w, h] });
   const picker = pick && onPick ? makePicker(a, b, onPick, pickWords) : null;
-  const frameProps = { viewport, setViewport: rg.setViewport, onBox: rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
+  const frameProps = { viewport, setViewport: rg.setViewport, onBox: rg.add, outline: rg.peek, aspect, maxHeight: frameCap(maxHeight, fit, full) };
 
   let body: React.ReactNode;
   if (mode === "side") {
@@ -268,7 +272,7 @@ export function Compare({ label, a, b, blind, missing, mode, onModeChange, modes
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} className={className}>
-      <section aria-label={label} className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}>
+      <section ref={sectionRef} aria-label={label} className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}>
         <Toolbar label="Comparison view" className="items-center gap-2">
           <ToggleGroup label="View" options={offered.map((m) => ({ value: m, label: MODE_LABEL[m] }))} value={mode} onChange={(v) => onModeChange(v as CompareMode)} size="sm" />
           <ToolbarSeparator />

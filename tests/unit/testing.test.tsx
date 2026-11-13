@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrataToastRegion, format, toast } from "../../src";
@@ -130,5 +130,38 @@ describe("toasts in renderWithStrata and renderRoutes", () => {
     renderRoutes([{ path: "/", element: <><Show /><StrataToastRegion /></> }], { toasts: false });
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
+  });
+
+  // Issue #230: the mistake that `toasts: false` avoids is also caught when it is made.
+  it("shows a toast once when the tree draws a region and the helper does too, and says what to do", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      renderRoutes([{ path: "/", element: <><Show /><StrataToastRegion /></> }]);
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
+      expect(screen.getAllByRole("region", { name: "Notifications" })).toHaveLength(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("pass `toasts: false` to renderRoutes"));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("hands the queue to the next region when the one drawing it unmounts", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const Two = ({ first }: { first: boolean }) => (
+        <>
+          {first && <StrataToastRegion label="First" />}
+          <StrataToastRegion label="Second" />
+        </>
+      );
+      const { rerender } = render(<Two first />);
+      expect(screen.getByRole("region", { name: "First" })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Second" })).toBeNull();
+      rerender(<Two first={false} />);
+      expect(screen.getByRole("region", { name: "Second" })).toBeInTheDocument();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

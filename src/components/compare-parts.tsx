@@ -12,7 +12,91 @@ import type { FramePick } from "./viewport";
 // two views behave the same way and cannot drift apart.
 
 // 100svh less the toolbar (about 3rem), captions (2rem), a vote bar (4rem), the legend (4rem) and gaps.
+// A guess at the rest of the page: `maxHeight="fit"` measures it instead (issue #229).
 export const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
+
+/** The least a frame is made, however little room is left: a pair this small can still be told apart. */
+export const MIN_FIT = 120;
+
+/** The tallest each row of frames may be so that all of `chrome` and `rows` rows fit in `space` pixels. Pure, so it is tested without a layout. */
+export function fitFrames({ space, chrome, rows, min = MIN_FIT }: { space: number; chrome: number; rows: number; min?: number }): number {
+  return Math.max(min, Math.floor((space - chrome) / Math.max(1, rows)));
+}
+
+/** Frame cap for what the caller asked for: a measured height for `"fit"` and in full screen (whatever the caller passed, so the frame fills what the controls leave), the guess for `"viewport"`, the caller's own length otherwise. */
+export function frameCap(maxHeight: string | undefined, fit: number | null, full: boolean): string | undefined {
+  if ((maxHeight === "fit" || full) && fit !== null) return `${fit}px`;
+  return maxHeight === "viewport" || maxHeight === "fit" ? VIEWPORT_HEIGHT : maxHeight;
+}
+
+/**
+ * How tall each frame may be for the pair and everything around it to fit the window (issue #229), measured, not
+ * guessed. In the page: the window's height from the top of `root` (as the page is at its top), less what `root` draws
+ * besides its frames (toolbar, captions, footer, legend: the bottom of its last child, not its height, which a stretched
+ * full-screen section would inflate), less what follows it (later siblings of it and of its ancestors, then `reserve` for
+ * padding and gaps the caller knows). In full screen: the window from the top of `root`, nothing after. Divided by the
+ * rows of frames (side by side is one row; below `sm` it is two) and floored at `MIN_FIT`. Frames are found by
+ * `data-viewport-frame`, so an app never queries for them. Null until measured, or when `enabled` is false.
+ */
+export function useFitHeight(root: React.RefObject<HTMLElement | null>, { enabled, full, reserve = 0 }: { enabled: boolean; full: boolean; reserve?: number }): number | null {
+  const [fit, setFit] = React.useState<number | null>(null);
+  React.useLayoutEffect(() => {
+    if (!enabled) {
+      setFit(null);
+      return;
+    }
+    const el = root.current;
+    if (!el) return;
+    const measure = () => {
+      const frames = [...el.querySelectorAll<HTMLElement>("[data-viewport-frame]")].map((f) => f.getBoundingClientRect());
+      if (!frames.length) return;
+      const top = el.getBoundingClientRect().top;
+      const rows: { top: number; height: number }[] = [];
+      for (const r of frames) {
+        const row = rows.find((x) => Math.abs(x.top - r.top) < 2);
+        if (row) row.height = Math.max(row.height, r.height);
+        else rows.push({ top: r.top, height: r.height });
+      }
+      const bottom = Math.max(el.lastElementChild?.getBoundingClientRect().bottom ?? 0, ...frames.map((r) => r.bottom));
+      const chrome = bottom - top - rows.reduce((sum, r) => sum + r.height, 0);
+      const windowHeight = document.documentElement.clientHeight;
+      let space: number;
+      if (full) {
+        const pad = el.parentElement ? parseFloat(getComputedStyle(el.parentElement).paddingBottom) || 0 : 0;
+        space = windowHeight - top - pad;
+      } else {
+        let after = 0;
+        for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+          for (let sib = n.nextElementSibling; sib; sib = sib.nextElementSibling) {
+            const position = getComputedStyle(sib).position;
+            if (position !== "fixed" && position !== "absolute") after += sib.getBoundingClientRect().height;
+          }
+        }
+        space = windowHeight - (top + window.scrollY) - after - reserve;
+      }
+      const next = fitFrames({ space, chrome, rows: rows.length });
+      setFit((was) => (was !== null && Math.abs(was - next) <= 1 ? was : next));
+    };
+    let frame = 0;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    observer?.observe(el);
+    observer?.observe(document.body);
+    window.addEventListener("resize", schedule);
+    document.addEventListener("fullscreenchange", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", schedule);
+      document.removeEventListener("fullscreenchange", schedule);
+    };
+  }, [root, enabled, full, reserve]);
+  return fit;
+}
 
 /** Words for click to choose, in the product's voice. */
 export type PickWords = {
@@ -82,7 +166,8 @@ export function Picture({ c, blind, missing, onNatural, imgRef, pixelated }: { c
         style={pixelated ? { imageRendering: "pixelated" } : undefined}
         onLoad={(e) => {
           setState("ready");
-          onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
+          // A picture that loads with no size (an SVG without one, jsdom) says nothing: 0 would make the frame's aspect NaN.
+          if (e.currentTarget.naturalWidth && e.currentTarget.naturalHeight) onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
         }}
         onError={() => setState("failed")}
         className="absolute inset-0 size-full object-contain"
