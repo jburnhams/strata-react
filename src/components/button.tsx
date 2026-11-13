@@ -45,6 +45,9 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
     className?: string;
     /** React Aria's press event (mouse, touch, pen and keyboard alike). `onClick` also works. */
     onPress?: (event: PressEvent) => void;
+    /** When a press begins and ends: for a control that acts while held (a nudge that repeats). */
+    onPressStart?: (event: PressEvent) => void;
+    onPressEnd?: (event: PressEvent) => void;
   };
 
 /**

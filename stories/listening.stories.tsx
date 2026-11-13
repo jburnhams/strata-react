@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, MediaGroup, MediaPlayer, PlayWindowButton, TranscriptView, Waveform, useMediaElement, type TranscriptViewProps, type WaveformProps } from "../src";
+import { Button, MediaGroup, MediaPlayer, PlayWindowButton, TranscriptView, Waveform, useMediaElement, type TranscriptGroup, type TranscriptViewProps, type WaveformProps } from "../src";
 import { longTalk, talkGroups, talkLength, trackDuration, trackMarks, trackPeaks, trackSpans } from "./fixtures/listening";
 import { silentWav } from "./fixtures/media";
 
-// Issues #180 (a window of a file, one player at a time), #185 (Waveform) and #186 (TranscriptView):
+// Issues #180 (a window of a file, one player at a time), #185 (Waveform), #186 (TranscriptView) and
+// #223 (its doubtful words, a phrase's own mark, correcting text and a hover card):
 // listening to and reading timed material. The resting stories are the visual baselines; the ones that
 // play are tagged `no-visual`.
 
@@ -170,3 +171,72 @@ function TranscriptWithPlayer() {
 
 /** With a player: the heard word moves as it plays, a word plays from there, each phrase has its own play button, and scrolling away shows Jump to now. Skipped by the visual suite. */
 export const TranscriptWithPlayer_: Story = { name: "Transcript with a player", tags: ["no-visual"], render: () => <TranscriptWithPlayer /> };
+
+
+// --- Transcript: doubt, marks, correction, card (issue #223)
+
+const notSung = { id: "not-sung", label: "Not sung", tone: "neutral" } as const;
+const notLyric = { id: "not-lyric", label: "Not a lyric", tone: "warning" } as const;
+
+/** The recogniser's low-confidence words, as it gives them: a confidence per word, under 0.6 doubtful. */
+const doubtfulTalk: TranscriptGroup[] = talkGroups.map((g, gi) => ({
+  ...g,
+  phrases: g.phrases.map((p, pi) => ({
+    ...p,
+    words: p.words.map((w, wi) => ((gi + pi) % 2 === 0 && wi === 2 ? { ...w, confidence: 0.32 } : gi === 1 && pi === 1 && wi === 4 ? { ...w, doubtful: true } : w)),
+    state: gi === 1 && pi === 2 ? notSung : undefined,
+  })),
+}));
+
+/** Doubtful words are dotted-underlined and named for a screen reader, their phrase says "Doubtful", a phrase can carry its own mark ("Not sung"), and the controls count both. */
+export const TranscriptDoubtAndMarks: Story = { render: () => <Talk groups={doubtfulTalk} states={[notSung, notLyric]} onPhraseState={() => {}} time={0} follow={false} /> };
+
+/** "Only doubtful" leaves the phrases that need a look, with their clip headings. */
+export const TranscriptOnlyDoubtful: Story = {
+  render: () => {
+    const [only, setOnly] = React.useState(true);
+    return (
+      <div className="grid max-w-2xl gap-3">
+        <Button size="sm" className="justify-self-start" onClick={() => setOnly((o) => !o)}>
+          {only ? "Show the whole transcript" : "Show only doubtful"}
+        </Button>
+        <Talk groups={only ? doubtfulTalk.map((g) => ({ ...g, phrases: g.phrases.filter((p) => p.words.some((w) => w.doubtful || (w.confidence ?? 1) < 0.6)) })).filter((g) => g.phrases.length) : doubtfulTalk} time={0} follow={false} />
+      </div>
+    );
+  },
+};
+
+function CorrectingTalk() {
+  const [groups, setGroups] = React.useState(doubtfulTalk);
+  const change = (id: string, f: (p: TranscriptGroup["phrases"][number]) => TranscriptGroup["phrases"][number]) => setGroups((gs) => gs.map((g) => ({ ...g, phrases: g.phrases.map((p) => (p.id === id ? f(p) : p)) })));
+  return (
+    <Talk
+      groups={groups}
+      states={[notSung, notLyric]}
+      time={0}
+      follow={false}
+      onPhraseState={(id, state) => change(id, (p) => ({ ...p, state: [notSung, notLyric].find((s) => s.id === state) }))}
+      onEdit={(id, text) =>
+        change(id, (p) => {
+          const parts = text.split(/\s+/);
+          // The app keeps the timings: spread the words over the phrase, and the doubt is settled by a person.
+          const step = (p.end - p.start) / parts.length;
+          return { ...p, words: parts.map((t, i) => ({ text: t, start: p.start + i * step, end: p.start + (i + 1) * step })) };
+        })
+      }
+      renderCard={(p) => (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 type-body-sm">
+          <dt className="text-muted-foreground">Clip</dt>
+          <dd>{groups.find((g) => g.phrases.some((x) => x.id === p.id))?.title}</dd>
+          <dt className="text-muted-foreground">Spoken by</dt>
+          <dd>{p.speaker}</dd>
+          <dt className="text-muted-foreground">Real time</dt>
+          <dd className="tabular-nums">19:{String(40 + Math.floor(p.start)).padStart(2, "0")}</dd>
+        </dl>
+      )}
+    />
+  );
+}
+
+/** Correcting by hand: focus a row and press Enter or F2 for its text, Ctrl+Enter saves, Escape cancels; the menu at the end of a row marks it; hover or focus a phrase for its card. Skipped by the visual suite. */
+export const TranscriptCorrecting: Story = { name: "Transcript, correcting", tags: ["no-visual"], render: () => <CorrectingTalk /> };

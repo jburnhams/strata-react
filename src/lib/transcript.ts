@@ -3,7 +3,18 @@
 // asked sixty times a second is "which phrase and which word is being heard at this time".
 
 /** One word, with when it starts and ends (seconds). */
-export type TranscriptWord = { text: string; start: number; end: number };
+export type TranscriptWord = {
+  text: string;
+  start: number;
+  end: number;
+  /** How sure the recogniser was, 0 to 1. Below the view's `doubtfulBelow` (default 0.6) the word is doubtful. */
+  confidence?: number;
+  /** The recogniser's own verdict, when it gives one instead of a number. Wins over `confidence`. */
+  doubtful?: boolean;
+};
+
+/** A mark an app puts on a phrase ("Not sung", "Not a lyric"): a word, always, and the tone it is drawn in. */
+export type TranscriptPhraseState = { id: string; label: string; tone: "neutral" | "info" | "success" | "warning" | "danger" };
 
 /** A phrase: timed words, who said it, and its other texts (a translation) by mode. */
 export type TranscriptPhrase = {
@@ -14,7 +25,19 @@ export type TranscriptPhrase = {
   speaker?: string;
   /** Other texts for the phrase by mode name: `{ translated: "…" }`. */
   alt?: Readonly<Record<string, string>>;
+  /** The mark the person (or the app) put on it. */
+  state?: TranscriptPhraseState;
 };
+
+/** Whether a word is doubtful: the recogniser said so, or its confidence is under `below`. */
+export function isDoubtful(word: Pick<TranscriptWord, "confidence" | "doubtful">, below = 0.6): boolean {
+  return word.doubtful ?? (word.confidence !== undefined && word.confidence < below);
+}
+
+/** Whether any word of a phrase is doubtful. */
+export function phraseDoubtful(phrase: Pick<TranscriptPhrase, "words">, below = 0.6): boolean {
+  return phrase.words.some((w) => isDoubtful(w, below));
+}
 
 /** Phrases that belong together (a clip), with a heading. */
 export type TranscriptGroup = { id: string; title: string; /** Defaults to the first phrase's start. */ start?: number; /** Defaults to the last phrase's end. */ end?: number; phrases: readonly TranscriptPhrase[] };

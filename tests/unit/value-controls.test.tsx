@@ -1,5 +1,5 @@
 import * as React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ColorField, Field, NumberField, Slider } from "../../src";
@@ -268,5 +268,140 @@ describe("ColorField", () => {
     expect(screen.getByText(/Hard to see on the map/)).toBeInTheDocument();
     rerender(<ColorField aria-label="Route" value="#000000" onChange={() => {}} against="#ffffff" againstLabel="the map" />);
     expect(screen.queryByText(/Hard to see/)).toBeNull();
+  });
+});
+
+// Issue #224: nudge buttons, a suggestion, and a preview behind Apply.
+describe("NumberField nudge, suggestion and preview", () => {
+  function Clock(props: Partial<React.ComponentProps<typeof NumberField>> & { spy?: (v: number | null) => void }) {
+    const { spy, ...rest } = props;
+    const [v, setV] = React.useState<number | null>(2);
+    return (
+      <Field label="Camera clock offset">
+        <NumberField value={v} onChange={(n) => { spy?.(n); setV(n); }} min={-60} max={60} step={0.1} unit="s" nudge={[0.1, 1, 10]} {...rest} />
+      </Field>
+    );
+  }
+  const nudgeButtons = () => within(screen.getByRole("toolbar", { name: "Nudge Camera clock offset" })).getAllByRole("button");
+
+  it("draws −10 −1 −0.1 +0.1 +1 +10, each named with its unit", () => {
+    render(<Clock />);
+    expect(nudgeButtons().map((b) => b.textContent)).toEqual(["−10", "−1", "−0.1", "+0.1", "+1", "+10"]);
+    expect(screen.getByRole("button", { name: "Subtract 1\u00a0s" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add 0.1\u00a0s" })).toBeInTheDocument();
+  });
+
+  it("steps once per press, rounded to the field's places, and reports each step", async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<Clock spy={spy} />);
+    await user.click(screen.getByRole("button", { name: "Add 0.1\u00a0s" }));
+    await user.click(screen.getByRole("button", { name: "Add 0.1\u00a0s" }));
+    expect(spy.mock.calls).toEqual([[2.1], [2.2]]);
+    await user.click(screen.getByRole("button", { name: "Subtract 10\u00a0s" }));
+    expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("-7.8");
+  });
+
+  it("repeats while held, after a delay, and stops on release", async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<Clock spy={spy} />);
+    const add = screen.getByRole("button", { name: "Add 0.1\u00a0s" });
+    await user.pointer({ keys: "[MouseLeft>]", target: add });
+    expect(spy).toHaveBeenCalledTimes(1);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(spy).toHaveBeenCalledTimes(1); // the first repeat waits
+    await new Promise((r) => setTimeout(r, 450));
+    expect(spy.mock.calls.length).toBeGreaterThan(2);
+    await user.pointer({ keys: "[/MouseLeft]", target: add });
+    const after = spy.mock.calls.length;
+    await new Promise((r) => setTimeout(r, 300));
+    expect(spy).toHaveBeenCalledTimes(after);
+  });
+
+  it("holds at the limits: the button that would pass one is disabled, and a step is cut to it", async () => {
+    const user = userEvent.setup();
+    render(<Clock />);
+    await user.click(screen.getByRole("button", { name: "Add 10\u00a0s" }));
+    for (let i = 0; i < 5; i++) await user.click(screen.getByRole("button", { name: "Add 10\u00a0s" }));
+    expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("60");
+    expect(screen.getByRole("button", { name: "Add 10\u00a0s" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Subtract 10\u00a0s" })).toBeEnabled();
+  });
+
+  it("a suggestion states its reason in text, changes nothing by itself, and Use this value sets it", async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<Clock spy={spy} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both saw you start running at 10:02" }} />);
+    expect(screen.getByText(/Suggested \+2\.4 s:/)).toBeInTheDocument();
+    expect(screen.getByText(/both saw you start running at 10:02/)).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("2");
+    await user.click(screen.getByRole("button", { name: "Use this value" }));
+    expect(spy).toHaveBeenCalledWith(2.4);
+    expect(screen.queryByRole("button", { name: "Use this value" })).toBeNull(); // the field holds it now
+  });
+
+  describe("preview", () => {
+    function Held({ onApply }: { onApply: (n: number | null) => Promise<unknown> | void }) {
+      const [saved, setSaved] = React.useState<number | null>(2);
+      return (
+        <Field label="Camera clock offset">
+          <NumberField
+            value={saved}
+            min={-60}
+            max={60}
+            step={0.1}
+            unit="s"
+            nudge={[1]}
+            preview={(p) => <p>{`12 clips would move by ${p === null ? "–" : p - (saved ?? 0)} s`}</p>}
+            onChange={async (n) => { await onApply(n); setSaved(n); }}
+          />
+        </Field>
+      );
+    }
+
+    it("holds changes back: shows what would change with Apply and Revert, and calls onChange once on Apply", async () => {
+      const user = userEvent.setup();
+      const onApply = vi.fn();
+      render(<Held onApply={onApply} />);
+      expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
+      await user.click(screen.getByRole("button", { name: "Add 1\u00a0s" }));
+      await user.click(screen.getByRole("button", { name: "Add 1\u00a0s" }));
+      expect(onApply).not.toHaveBeenCalled(); // not per press
+      expect(screen.getByText("12 clips would move by 2 s")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Apply" })).toHaveAttribute("data-variant", "default");
+      await user.click(screen.getByRole("button", { name: "Apply" }));
+      expect(onApply).toHaveBeenCalledTimes(1);
+      expect(onApply).toHaveBeenCalledWith(4);
+      await waitFor(() => expect(screen.queryByText(/clips would move/)).toBeNull());
+    });
+
+    it("Revert puts the saved value back and calls nothing", async () => {
+      const user = userEvent.setup();
+      const onApply = vi.fn();
+      render(<Held onApply={onApply} />);
+      await user.click(screen.getByRole("button", { name: "Subtract 1\u00a0s" }));
+      expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("1");
+      await user.click(screen.getByRole("button", { name: "Revert" }));
+      expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("2");
+      expect(screen.queryByRole("group", { name: "Change not applied yet" })).toBeNull();
+      expect(onApply).not.toHaveBeenCalled();
+    });
+
+    it("a typed value waits for Apply as well, and one outside the limits never reaches it", async () => {
+      const user = userEvent.setup();
+      const onApply = vi.fn();
+      render(<Held onApply={onApply} />);
+      const input = screen.getByRole("textbox", { name: "Camera clock offset" });
+      await user.clear(input);
+      await user.type(input, "99{Enter}");
+      expect(screen.getByText(/Enter a value from/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
+      await user.clear(input);
+      await user.type(input, "5{Enter}");
+      await user.click(screen.getByRole("button", { name: "Apply" }));
+      expect(onApply).toHaveBeenCalledWith(5);
+    });
   });
 });
