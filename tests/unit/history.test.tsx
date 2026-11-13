@@ -123,13 +123,16 @@ const sign = (container: HTMLElement) => container.querySelector("[data-status]"
 
 describe("useAutoSave and SaveStatus", () => {
   it("moves saved, unsaved, saving, saved, and keeps one fixed-width sign", async () => {
+    // The wait before an automatic save is a real timer: with a short one, a click that takes longer than it on a loaded
+    // machine finds "saving" where it expects "dirty". A wait that never ends in the test, and "Save now", walk the same states.
     let release!: () => void;
     const save = vi.fn(() => new Promise<void>((r) => (release = r)));
-    const { container } = render(<Doc save={save} />);
+    const { container } = render(<Doc save={save} delayMs={60_000} />);
     expect(sign(container)).toBe("saved");
     const width = container.querySelector("[data-status]")!.className;
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(sign(container)).toBe("dirty");
+    await userEvent.click(screen.getByRole("button", { name: "Save now" }));
     await vi.waitFor(() => expect(sign(container)).toBe("saving"));
     expect(save).toHaveBeenCalledWith("ab");
     await act(async () => release());
