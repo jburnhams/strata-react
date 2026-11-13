@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.39 (2026-11-13)
+
+- `Tree`'s props are now a union: give `selected` and `onSelect` (one chosen node) or `choices` from `useChoices` (several). Code that passed `selected` and `onSelect` compiles as before.
+- `useSelection`'s `selected` includes keys implied by `implies` only when you pass `implies`; without it nothing changes. `NumberField`'s `onChange` may now return a promise (only `preview` mode awaits it). A transcript with `onEdit`, `renderCard` or `states` set draws a menu, an edit box and a card; one without them is unchanged, and the extra summary line and "Only doubtful" toggle appear only when a word is doubtful or a phrase has a `state`.
+
 ## After v0.1.17 (2026-11-11 to 2026-11-12)
 
 - `RouteMap` now always has a tile under the last pixel column of the map (Leaflet could leave one bare, depending on the path the view took). A `RouteMap` baseline in a centred follow may gain one column of tile at the right edge.

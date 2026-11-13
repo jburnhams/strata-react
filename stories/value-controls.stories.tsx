@@ -167,3 +167,76 @@ export const Phone: Story = {
     </div>
   ),
 };
+
+
+/** A value set a little at a time: −10 −1 −0.1 +0.1 +1 +10, each named ("Subtract 1 s"), held to repeat, stopping at the limits. */
+export const Nudge: Story = {
+  render: () => (
+    <div className="max-w-xl">
+      <Field label="Camera clock offset" hint="Seconds the camera clock is ahead of real time.">
+        <NumberDemo initial={2.4} min={-60} max={60} step={0.1} unit="s" nudge={[0.1, 1, 10]} />
+      </Field>
+    </div>
+  ),
+};
+
+/** What the app suggests, and why, in words under the field. It changes nothing until "Use this value". */
+export const Suggestion: Story = {
+  render: () => (
+    <div className="max-w-xl">
+      <Field label="Camera clock offset">
+        <NumberDemo initial={0} min={-60} max={60} step={0.1} unit="s" nudge={[0.1, 1]} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both the camera and the GPS saw you start running at 10:02." }} />
+      </Field>
+    </div>
+  ),
+};
+
+function Held() {
+  const [saved, setSaved] = React.useState<number | null>(2.4);
+  return (
+    <div className="max-w-xl">
+      <Field label="Camera clock offset" hint="Changing it re-times every clip.">
+        <NumberField
+          value={saved}
+          onChange={(n) => new Promise((done) => setTimeout(() => { setSaved(n); done(null); }, 600))}
+          min={-60}
+          max={60}
+          step={0.1}
+          unit="s"
+          nudge={[0.1, 1, 10]}
+          suggestion={{ value: 3.1, label: "+3.1 s", reason: "the GPS and the camera agree on the finish." }}
+          applyLabels={{ idle: "Re-time clips", pending: "Re-timing…", done: "Re-timed" }}
+          preview={(p) => <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - (saved ?? 0)).toFixed(1)} s ${p > (saved ?? 0) ? "later" : "earlier"}`}.`}</p>}
+        />
+      </Field>
+    </div>
+  );
+}
+
+/** A change that costs work: nudges and typing are held, the preview says what would change, and Re-time clips (the view's one filled button) or Revert ends it. Skipped by the visual suite; the next story shows it pending. */
+export const ApplyAndRevert: Story = { tags: ["no-visual"], render: () => <Held /> };
+
+/** The same, with a change waiting: the preview, Re-time clips and Revert. */
+export const PendingChange: Story = {
+  render: () => (
+    <div className="max-w-xl">
+      <Field label="Camera clock offset" hint="Changing it re-times every clip.">
+        <PendingDemo />
+      </Field>
+    </div>
+  ),
+};
+
+function PendingDemo() {
+  // A press moves the pending value once, so the story walks to a change the way a person would.
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    ref.current?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse", button: 0 }));
+    ref.current?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerType: "mouse", button: 0 }));
+  }, []);
+  return (
+    <div ref={ref}>
+      <NumberField value={2.4} onChange={() => {}} min={-60} max={60} step={0.1} unit="s" nudge={[1]} preview={(p) => <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - 2.4).toFixed(1)} s later`}.`}</p>} applyLabels={{ idle: "Re-time clips", pending: "Re-timing…", done: "Re-timed" }} />
+    </div>
+  );
+}

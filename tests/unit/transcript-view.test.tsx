@@ -1,13 +1,13 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PlayWindowButton, TranscriptView, type TranscriptGroup, type TranscriptViewProps } from "../../src";
+import { PlayWindowButton, TranscriptView, type TranscriptGroup, type TranscriptViewProps, type TranscriptWord } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #186: timed text against a player.
 
 const phrase = (id: string, start: number, text: string, speaker?: string, alt?: string) => {
-  const words = text.split(" ").map((w, i) => ({ text: w, start: start + i * 0.5, end: start + (i + 1) * 0.5 }));
+  const words: TranscriptWord[] = text.split(" ").map((w, i) => ({ text: w, start: start + i * 0.5, end: start + (i + 1) * 0.5 }));
   return { id, start, end: start + words.length * 0.5, words, speaker, alt: alt ? { translated: alt } : undefined };
 };
 const groups: TranscriptGroup[] = [
@@ -161,5 +161,146 @@ describe("a long transcript", () => {
     expect(document.querySelectorAll("[data-phrase]").length).toBeLessThan(60);
     // Not following (the app turned it off): the heard phrase is far away and nothing offers to go there.
     expect(screen.queryByRole("button", { name: /Jump to now/ })).not.toBeInTheDocument();
+  });
+});
+
+// Issue #223: doubt, a phrase's own state, correcting text, and a hover card.
+describe("TranscriptView doubt, marks, correction and card", () => {
+  const doubtGroups = (): TranscriptGroup[] => {
+    const p1 = phrase("p1", 0, "good morning everyone", "Ada");
+    const p2 = phrase("p2", 3, "thank you for coming", "Ben");
+    const p3 = phrase("p3", 10, "let us begin", "Ada");
+    p1.words[1] = { ...p1.words[1], confidence: 0.3 };
+    p3.words[0] = { ...p3.words[0], doubtful: true };
+    p2.words[2] = { ...p2.words[2], confidence: 0.9 };
+    return [{ id: "g1", title: "Clip one", phrases: [p1, p2] }, { id: "g2", title: "Clip two", phrases: [p3] }];
+  };
+  const notSung = { id: "not-sung", label: "Not sung", tone: "neutral" } as const;
+
+  it("marks doubtful words by more than colour, counts them, and filters to them", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Host groups={doubtGroups()} />);
+    const morning = within(row("p1")).getByRole("button", { name: "morning (doubtful)" });
+    expect(morning).toHaveAttribute("data-doubtful");
+    expect(morning.className).toMatch(/decoration-dotted/);
+    expect(within(row("p1")).getByText("Doubtful")).toBeInTheDocument();
+    expect(within(row("p2")).queryByText("Doubtful")).toBeNull(); // 0.9 is sure enough
+    expect(screen.getByText("2 doubtful")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Only doubtful" }));
+    expect(row("p2")).toBeNull();
+    expect(row("p1")).not.toBeNull();
+    expect(row("p3")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Only doubtful" }));
+    expect(row("p2")).not.toBeNull();
+  });
+
+  it("a threshold is the app's: doubtfulBelow moves it", () => {
+    renderWithStrata(<Host groups={doubtGroups()} doubtfulBelow={0.95} />);
+    expect(screen.getByText("3 doubtful")).toBeInTheDocument(); // p2's 0.9 is now under it
+  });
+
+  it("shows a phrase's own state as a word, counts it, and sets and clears it from the row's menu", async () => {
+    const user = userEvent.setup();
+    const onPhraseState = vi.fn();
+    const g = doubtGroups();
+    const marked = { ...g[0].phrases[0], state: notSung };
+    renderWithStrata(<Host groups={[{ ...g[0], phrases: [marked, g[0].phrases[1]] }, g[1]]} states={[notSung, { id: "not-lyric", label: "Not a lyric", tone: "warning" }]} onPhraseState={onPhraseState} />);
+    expect(within(row("p1")).getByText("Not sung")).toBeInTheDocument();
+    expect(screen.getByText(/1 not sung/)).toBeInTheDocument();
+    await user.click(within(row("p2")).getByRole("button", { name: "Mark the phrase at 0:03" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Not a lyric" }));
+    expect(onPhraseState).toHaveBeenLastCalledWith("p2", "not-lyric");
+    await user.click(await within(row("p1")).findByRole("button", { name: "Mark the phrase at 0:00" }));
+    expect(screen.queryByRole("menuitem", { name: "Not sung" })).toBeNull(); // it has that one
+    await user.click(await screen.findByRole("menuitem", { name: "Clear mark" }));
+    expect(onPhraseState).toHaveBeenLastCalledWith("p1", null);
+  });
+
+  it("Enter on a row opens its text for correction; Save sends it, Cancel and Escape do not, and it is announced", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderWithStrata(<Host onEdit={onEdit} />);
+    const rowEl = row("p2").closest<HTMLElement>('[role="row"]')!;
+    rowEl.focus();
+    await user.keyboard("{Enter}");
+    const box = await screen.findByRole("textbox", { name: "Edit the phrase at 0:03" });
+    expect(box).toHaveValue("thank you for coming");
+    expect(screen.getByRole("status")).toHaveTextContent("Editing the phrase at 0:03");
+    await user.clear(box);
+    await user.type(box, "thanks for coming");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onEdit).toHaveBeenCalledWith("p2", "thanks for coming", { mode: "original" });
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Saved the phrase at 0:03");
+
+    onEdit.mockClear();
+    rowEl.focus();
+    await user.keyboard("{F2}");
+    await user.type(await screen.findByRole("textbox"), " extra");
+    await user.keyboard("{Escape}");
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Edit cancelled");
+  });
+
+  it("Ctrl+Enter saves from the box, and Enter on a word still plays from it", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onSeek = vi.fn();
+    renderWithStrata(<Host onEdit={onEdit} onSeek={onSeek} />);
+    await user.click(within(row("p2")).getByRole("button", { name: "thank" }));
+    within(row("p2")).getByRole("button", { name: "you" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onSeek).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("textbox")).toBeNull();
+    within(row("p2")).getByRole("button", { name: "you" }).focus();
+    await user.keyboard("{F2}");
+    const box = await screen.findByRole("textbox");
+    await user.type(box, "!{Control>}{Enter}{/Control}");
+    expect(onEdit).toHaveBeenCalledWith("p2", "thank you for coming!", { mode: "original" });
+  });
+
+  it("a read-only transcript (no onEdit) does not edit", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Host />);
+    row("p2").closest<HTMLElement>('[role="row"]')!.focus();
+    await user.keyboard("{F2}");
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("opens a card for the hovered phrase after the delay, only for that one, and Escape closes it", async () => {
+    const user = userEvent.setup();
+    const renderCard = vi.fn((p: { id: string; speaker?: string }) => <p>{`Card for ${p.id}, spoken by ${p.speaker}`}</p>);
+    renderWithStrata(<Host renderCard={renderCard} cardDelay={0} />);
+    expect(renderCard).not.toHaveBeenCalled();
+    await user.hover(row("p2"));
+    expect(await screen.findByText("Card for p2, spoken by Ben")).toBeInTheDocument();
+    expect(renderCard.mock.calls.every(([p]) => p.id === "p2")).toBe(true); // never built for the rows not hovered
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText(/Card for p2/)).toBeNull());
+    await user.unhover(row("p2"));
+    await user.hover(row("p3"));
+    expect(await screen.findByText("Card for p3, spoken by Ada")).toBeInTheDocument();
+  });
+
+  it("opens the card on focus too, so the keyboard reaches it, and closes it on leaving", async () => {
+    renderWithStrata(<Host renderCard={(p) => <p>{`Card for ${p.id}`}</p>} cardDelay={0} />);
+    row("p1").closest<HTMLElement>('[role="row"]')!.focus();
+    expect(await screen.findByText("Card for p1")).toBeInTheDocument();
+    document.body.focus();
+    (document.activeElement as HTMLElement | null)?.blur();
+    await waitFor(() => expect(screen.queryByText("Card for p1")).toBeNull());
+  });
+
+  it("saves a correction against the mode it was opened in, even if the view switches meanwhile", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderWithStrata(<Host onEdit={onEdit} />);
+    row("p2").closest<HTMLElement>('[role="row"]')!.focus();
+    await user.keyboard("{Enter}");
+    await user.type(await screen.findByRole("textbox"), "!");
+    await user.click(screen.getByRole("radio", { name: "Translated" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onEdit).toHaveBeenCalledWith("p2", "thank you for coming!", { mode: "original" });
   });
 });

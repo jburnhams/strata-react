@@ -9,6 +9,9 @@ import {
   SliderTrack,
 } from "react-aria-components";
 import { useFieldControl } from "./field";
+import { AsyncButton, useAsyncAction } from "./async-button";
+import { Button } from "./button";
+import { Toolbar } from "./toolbar";
 import { NBSP, format } from "../lib/format";
 import { contrastRatio, parseHex } from "../lib/number-input";
 import { cn } from "../lib/utils";
@@ -38,6 +41,23 @@ import { controlHeight, type ControlSize } from "../lib/control";
 //   The colour field's text box is ours: React Aria's colour field puts the old colour back when
 //   the text is not a colour, where this one says so under the control; the swatch opens the
 //   platform picker.
+//
+// A value that is set a little at a time, or that costs work to change (strata-react issue #224,
+// from strata-360's camera clock offset, which re-times everything) gets three options on
+// `NumberField`, each an extension of React Aria's field, not a new control:
+// - `nudge={[0.1, 1, 10]}`: a `Toolbar` of "−10 −1 −0.1 +0.1 +1 +10" beside the field, each named
+//   ("Subtract 1 s"). A press steps once at once; held, the first repeat comes after 400 ms and then
+//   every 60 ms (React Aria's own stepper buttons repeat too, but it exposes no hook to put that
+//   on buttons of ours, checked in `useNumberField`/`useSpinButton`; the timer here is the same
+//   idea). The result is rounded to the field's places (0.1 + 0.2 is 0.3) and held at `min`/`max`;
+//   a button that would go past a limit is disabled.
+// - `suggestion={{ value, label, reason }}`: a row under the field that says what the app suggests
+//   and why, in text, with "Use this value". It never changes the field by itself, and it goes
+//   away once the field holds the suggestion.
+// - `preview`: the field stops committing as it goes. `value` is the saved one, an entry or nudge
+//   is only pending, and while it differs the preview (a node, or a function of the pending value)
+//   is shown with Apply, the view's one filled button, and Revert. `onChange` is called once, by
+//   Apply, and may return a promise, which Apply shows through `AsyncButton`.
 
 const box =
   "flex w-full min-w-0 items-center rounded-control border border-input bg-background px-3 type-body text-foreground transition-state disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-muted has-[input:disabled]:opacity-70 aria-invalid:border-danger has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring";
@@ -96,8 +116,8 @@ export type RangeProps = {
 export type NumberFieldProps = RangeProps & {
   /** The current value; `null` when it is not known (shown as an en dash, not 0). */
   value: number | null;
-  /** Receives a number inside the limits, or `null` when the field is cleared. Never NaN, never out of range. */
-  onChange: (value: number | null) => void;
+  /** Receives a number inside the limits, or `null` when the field is cleared. Never NaN, never out of range. With `preview`, only Apply calls it, and it may return a promise. */
+  onChange: (value: number | null) => void | Promise<unknown>;
   /** Decimal places to show and keep. Default the places in `step` (and `min`). */
   places?: number;
   /** An empty field is an error ("Enter a value.") rather than `null`. */
@@ -109,6 +129,14 @@ export type NumberFieldProps = RangeProps & {
   name?: string;
   /** `sm` is --control-h-sm, the height of a small `Toggle` or `IconButton` beside it. Default --control-h. */
   size?: ControlSize;
+  /** Step buttons beside the field, each a size in the field's unit: `[0.1, 1, 10]` draws "−10 −1 −0.1 +0.1 +1 +10". Held, they repeat. They honour `min` and `max`. */
+  nudge?: readonly number[];
+  /** What the app suggests, drawn as a row under the field with "Use this value". `label` is the value as the person reads it ("+2.4 s"); `reason` says why, in words. Choosing it sets the field's value, which `preview` still holds back until Apply. */
+  suggestion?: { value: number; label?: string; reason: string };
+  /** Hold changes back until the person applies them: shown while the value differs from `value` (the saved one), as a node or a function of the pending value. `onChange` is then called by Apply only. */
+  preview?: React.ReactNode | ((pending: number | null) => React.ReactNode);
+  /** Apply's words in preview mode, the same verb through its states. Default "Apply" → "Applying…" → "Applied". */
+  applyLabels?: { idle: string; pending: string; done: string };
   className?: string;
 };
 
@@ -121,7 +149,13 @@ function describeRange(min: number | undefined, max: number | undefined, show: (
   return "Enter a number.";
 }
 
-/** A number with a unit on React Aria's number field: typed input is validated, not clamped, so an out-of-range value is explained in the surrounding `Field` and never passed on; empty stays `null`. */
+const REPEAT_AFTER_MS = 400;
+const REPEAT_EVERY_MS = 60;
+
+const round = (n: number, places: number) => Number(n.toFixed(places));
+const signed = (n: number) => (n < 0 ? "\u2212" : "+") + String(Math.abs(n));
+
+/** A number with a unit on React Aria's number field: typed input is validated, not clamped, so an out-of-range value is explained in the surrounding `Field` and never passed on; empty stays `null`. `nudge` adds step buttons that repeat when held, `suggestion` a value the app proposes with its reason, and `preview` holds changes back behind Apply and Revert. */
 export function NumberField({
   value,
   onChange,
@@ -136,11 +170,15 @@ export function NumberField({
   id: idProp,
   name,
   size = "default",
+  nudge,
+  suggestion,
+  preview,
+  applyLabels = { idle: "Apply", pending: "Applying…", done: "Applied" },
   className,
   "aria-label": ariaLabel,
 }: NumberFieldProps) {
   const { field, report } = useFieldControl();
-  const digits = places ?? Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min));
+  const digits = places ?? Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min), ...(nudge ?? []).map(decimalsOf));
   const show = useNumberText(locale, digits);
   const [own, setOwn] = React.useState(false); // invalid, when there is no Field to say so
   const unitId = React.useId();
@@ -148,10 +186,16 @@ export function NumberField({
   // (and can correct) what they typed instead of the field snapping back to the old value.
   const [local, setLocal] = React.useState<number>(value ?? Number.NaN);
   const [seen, setSeen] = React.useState(value);
+  // With `preview`: the accepted entry that is not applied yet. `undefined` is none; `null` is "cleared".
+  const [pending, setPending] = React.useState<number | null | undefined>(undefined);
   if (seen !== value) {
     setSeen(value);
     setLocal(value ?? Number.NaN);
+    setPending(undefined);
   }
+  const held = preview !== undefined;
+  const latest = React.useRef(local);
+  latest.current = local;
 
   const fail = (message: string) => {
     setOwn(true);
@@ -162,21 +206,61 @@ export function NumberField({
     report(undefined);
   };
 
+  const accept = (n: number | null) => {
+    if (held) setPending(n === value ? undefined : n);
+    else if (n !== value) void onChange(n);
+  };
   const handle = (n: number) => {
+    latest.current = n;
     setLocal(n);
     if (Number.isNaN(n)) {
       if (required) return fail("Enter a value.");
       ok();
-      if (value !== null) onChange(null);
+      accept(null);
       return;
     }
     if ((min !== undefined && n < min) || (max !== undefined && n > max)) return fail(describeRange(min, max, show, unit));
     ok();
-    if (n !== value) onChange(n);
+    accept(n);
+  };
+
+  const apply = useAsyncAction(async () => {
+    if (pending === undefined) return;
+    await onChange(pending);
+  });
+  const revert = () => {
+    setLocal(value ?? Number.NaN);
+    setPending(undefined);
+    ok();
+  };
+
+  // Nudging: from what the field shows (a refused entry counts), held at the limits.
+  const timers = React.useRef<{ first?: number; every?: number }>({});
+  const stopNudge = React.useCallback(() => {
+    window.clearTimeout(timers.current.first);
+    window.clearInterval(timers.current.every);
+  }, []);
+  React.useEffect(() => stopNudge, [stopNudge]);
+  const stepBy = (delta: number) => {
+    const base = Number.isNaN(latest.current) ? 0 : latest.current;
+    let next = round(base + delta, digits);
+    if (min !== undefined) next = Math.max(next, min);
+    if (max !== undefined) next = Math.min(next, max);
+    if (next === base) return stopNudge();
+    handle(next);
+  };
+  const startNudge = (delta: number) => {
+    stopNudge();
+    stepBy(delta);
+    timers.current.first = window.setTimeout(() => {
+      timers.current.every = window.setInterval(() => stepBy(delta), REPEAT_EVERY_MS);
+    }, REPEAT_AFTER_MS);
   };
 
   const invalid = field?.invalid || own;
-  return (
+  const name_ = ariaLabel ?? field?.label ?? "value";
+  const current = Number.isNaN(local) ? null : local;
+  const field_ = (
     <I18nProvider locale={locale}>
       <AriaNumberField
         value={local}
@@ -190,7 +274,7 @@ export function NumberField({
         isInvalid={invalid || undefined}
         name={name}
         aria-label={ariaLabel ?? field?.label}
-        className={cn(box, controlHeight[size], className)}
+        className={cn(box, controlHeight[size], nudge ? "min-w-32 flex-1" : undefined, !nudge && !suggestion && !held && className)}
       >
         <AriaInput
           id={idProp ?? field?.id}
@@ -206,6 +290,73 @@ export function NumberField({
         )}
       </AriaNumberField>
     </I18nProvider>
+  );
+  if (!nudge && !suggestion && !held) return field_;
+
+  const sizes = [...new Set(nudge ?? [])].filter((n) => n > 0).sort((a, b) => a - b);
+  const steps = [...sizes.slice().reverse().map((n) => -n), ...sizes];
+  const row = (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {field_}
+      {steps.length > 0 && (
+        <Toolbar label={`Nudge ${name_}`} className="gap-1">
+          {steps.map((delta) => {
+            const base = current ?? 0;
+            const atLimit = delta < 0 ? min !== undefined && base <= min : max !== undefined && base >= max;
+            return (
+              <Button
+                key={delta}
+                size={size === "sm" ? "sm" : "default"}
+                className="tabular-nums"
+                disabled={disabled || atLimit}
+                aria-label={`${delta < 0 ? "Subtract" : "Add"} ${withUnit(show(Math.abs(delta)), unit)}`}
+                onPressStart={() => startNudge(delta)}
+                onPressEnd={stopNudge}
+              >
+                {signed(delta)}
+              </Button>
+            );
+          })}
+        </Toolbar>
+      )}
+    </div>
+  );
+  const shown = suggestion && current !== suggestion.value ? suggestion : undefined;
+  const suggestionId = `${unitId}-suggestion`;
+  const label = shown && (shown.label ?? withUnit(show(shown.value), unit));
+  return (
+    <div className={cn("grid min-w-0 gap-2", className)}>
+      {row}
+      {shown && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p id={suggestionId} className="min-w-0 flex-1 type-body-sm text-muted-foreground">
+            <span className="text-foreground">Suggested {label}:</span> {shown.reason}
+          </p>
+          <Button size="sm" disabled={disabled} aria-describedby={suggestionId} onPress={() => handle(shown.value)}>
+            Use this value
+          </Button>
+        </div>
+      )}
+      {held && pending !== undefined && (
+        <div role="group" aria-label="Change not applied yet" className="grid gap-3 rounded-surface bg-surface-sunken p-3">
+          {typeof preview === "function" ? preview(pending) : preview}
+          <div className="flex flex-wrap items-center gap-2">
+            <AsyncButton
+              variant="default"
+              size="sm"
+              phase={apply.phase}
+              error={apply.error}
+              labels={applyLabels}
+              disabled={disabled || invalid}
+              onPress={() => void apply.run()}
+            />
+            <Button size="sm" variant="ghost" disabled={apply.phase === "pending"} onPress={revert}>
+              Revert
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -273,7 +424,7 @@ export function Slider({
           )}
         </SliderTrack>
         {editable ? (
-          <NumberField className="w-28 shrink-0" aria-label={`${name}, exact value`} value={value} onChange={(v) => v !== null && onChange(v)} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
+          <NumberField className="w-28 shrink-0" aria-label={`${name}, exact value`} value={value} onChange={(v) => { if (v !== null) onChange(v); }} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
         ) : (
           !hideValue && (
             <SliderOutput aria-hidden className="w-16 shrink-0 text-right type-body-sm tabular-nums text-foreground">

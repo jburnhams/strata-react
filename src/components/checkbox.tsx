@@ -120,7 +120,7 @@ function CheckboxBox({ selected, indeterminate, hideLabel }: { selected: boolean
  * fight the table's own selection state. Not exported from the package: `DataTable` uses it.
  * @internal
  */
-export function TableSelectionCheckbox({ label, className, disabled }: { label: string; className?: string; disabled?: boolean }) {
+export function TableSelectionCheckbox({ label, className, disabled, mixed }: { label: string; className?: string; disabled?: boolean; /** Drawn mixed (a tree branch with some of its rows chosen); the surface decides, as React Aria has no parent-child rule. */ mixed?: boolean }) {
   // The table names a row's checkbox from its own label and the row header's text; ours is named
   // by the caller's `rowLabel` alone ("Select Tom Ellery"), so it labels itself.
   const id = React.useId();
@@ -128,6 +128,7 @@ export function TableSelectionCheckbox({ label, className, disabled }: { label: 
     <AriaCheckbox
       slot="selection"
       isDisabled={disabled}
+      isIndeterminate={mixed}
       id={id}
       aria-labelledby={id}
       aria-label={label}

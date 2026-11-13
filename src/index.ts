@@ -74,6 +74,7 @@ export { CompositionBar, type CompositionBarProps, type CompositionPart } from "
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type LoadFailure, type Stale } from "./components/data-view";
 export { NumberField, Slider, ColorField, type NumberFieldProps, type SliderProps, type ColorFieldProps, type RangeProps } from "./components/value-controls";
+export { SecretField, type SecretFieldProps, type SecretTestResult } from "./components/secret-field";
 export { Alert, type AlertProps } from "./components/alert";
 export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type StrataToastRegionProps } from "./components/toast";
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";
@@ -94,7 +95,7 @@ export {
 export { MediaPlayer, useMediaElement, useAttachedSource, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type StreamContext, type StreamAttachment, type SourceAttacher, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
 export { useMediaSpans, SpanActions, type MediaSpanData, type SpanKind, type SpanBehaviour, type SpanOutcome, type SpanWords, type MediaSpansState } from "./components/media-spans";
 export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from "./components/transcript-view";
-export { phraseAt, wordAt, type TranscriptGroup, type TranscriptPhrase, type TranscriptWord } from "./lib/transcript";
+export { phraseAt, wordAt, isDoubtful, phraseDoubtful, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState, type TranscriptWord } from "./lib/transcript";
 export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";
 export { resamplePeaks, toPeakPair, peaksFromAudio, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
 export { MediaGroup, PlayWindowButton, joinMediaGroup, type PlayWindowButtonProps } from "./components/media-group";
@@ -106,7 +107,8 @@ export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./component
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
 export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
-export { BulkBar, useSelection, type InitialSelection } from "./components/selection";
+export { BulkBar, useSelection, useChoices, type InitialSelection, type Choices, type ChoiceCounts } from "./components/selection";
+export type { Implies } from "./lib/choice";
 export {
   SelectableGrid,
   type SelectableGridProps,
