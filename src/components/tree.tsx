@@ -267,9 +267,15 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
   };
   const chooseMany = (keys: Selection) => {
     if (!choices) return;
-    const display = new Set(displayKeys);
-    const next = keys === "all" ? new Set(shown()) : new Set([...keys].map(String).filter((k) => !isNote(k)));
     const wanted = new Set(choices.selected);
+    if (keys === "all") {
+      // Select all shown only adds: rows that are chosen but not shown (a collapsed branch) stay as they are.
+      for (const k of shown()) for (const x of [k, ...below(k)]) wanted.add(x);
+      choices.onChange(wanted);
+      return;
+    }
+    const display = new Set(displayKeys);
+    const next = new Set([...keys].map(String).filter((k) => !isNote(k)));
     // Each row whose box changed sets itself and what is loaded under it to the new state.
     for (const k of new Set([...next, ...display])) {
       if (next.has(k) === display.has(k)) continue;

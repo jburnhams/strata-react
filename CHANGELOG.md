@@ -15,6 +15,7 @@
 - `stories/secret-field.stories.tsx`, `stories/tree-choices.stories.tsx`: **new**. `stories/value-controls.stories.tsx` (`Nudge`, `Suggestion`, `ApplyAndRevert`, `PendingChange`) and `stories/listening.stories.tsx` (doubt and marks, only doubtful, correcting) extended. The interactive ones are `no-visual`.
 - `tests/visual/baselines/`: 22 new PNGs, written here with Chromium 153.0.8010.12 because the pinned 158 build is not installed in this container (a symlink to the installed headless shell let the runner start). No existing baseline was changed: the 34 shots that differ against this browser are the media players' icons (40 to 45 pixels each) and two native `select` labels, none of them touched by this change; if CI's Chromium differs from these within its tolerance the new ones pass, and if not, take CI's rendering as done for the earlier batches.
 - `README.md`, `UPGRADING.md`: the rows and the changes.
+- Review fixes (Codex, P1 and two P2): a correction is saved against the mode it was opened in, not the one shown when Save is pressed (`transcript-view.tsx`); `SecretField` drops a test's answer once the value or editing state it was about has changed; `Tree`'s Select all shown only adds, so a choice under a collapsed branch is kept. A test for each in `tests/unit/`.
 - Looked for and not found: a React Aria number-field stepper hook for custom buttons, a secret or reveal field, a parent-child rule in `Tree` selection.
 
 ## 2026-11-12

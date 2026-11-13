@@ -77,15 +77,21 @@ export function SecretField({ noun, isSet, setAt, onChange, onSave, onRemove, co
   const [shown, setShown] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [result, setResult] = React.useState<SecretTestResult | null>(null);
+  // A test belongs to the value and the editing state it was asked about: any change after it starts
+  // (typing, Cancel, Replace, a new stored key) makes its answer stale, and a stale answer is dropped.
+  const asked = React.useRef(0);
 
   // Typing is the editing state: with nothing set the entry is always shown.
   const entering = editing || !isSet;
   const change = (next: string) => {
+    asked.current++;
     setValue(next);
     setResult(null);
     onChange?.(next === "" ? null : next);
   };
   const stop = () => {
+    asked.current++;
+    setTesting(false);
     setEditing(false);
     setValue("");
     setShown(false);
@@ -111,15 +117,18 @@ export function SecretField({ noun, isSet, setAt, onChange, onSave, onRemove, co
 
   const runTest = async () => {
     if (!test) return;
+    const mine = ++asked.current;
     setTesting(true);
     setResult(null);
+    let outcome: SecretTestResult;
     try {
-      setResult(await test(entering ? value : null));
+      outcome = await test(entering ? value : null);
     } catch (thrown) {
-      setResult({ ok: false, message: thrown instanceof Error && thrown.message ? thrown.message : `The ${noun} could not be tested. Try again.` });
-    } finally {
-      setTesting(false);
+      outcome = { ok: false, message: thrown instanceof Error && thrown.message ? thrown.message : `The ${noun} could not be tested. Try again.` };
     }
+    if (mine !== asked.current) return;
+    setResult(outcome);
+    setTesting(false);
   };
 
   const describedBy = field?.describedBy;

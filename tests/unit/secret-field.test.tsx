@@ -120,4 +120,17 @@ describe("SecretField", () => {
     expect(test).toHaveBeenCalledWith("k1");
     expect(await screen.findByText("The provider could not be reached.")).toBeInTheDocument();
   });
+
+  it("drops a test's answer once the key it was about has been edited", async () => {
+    const user = userEvent.setup();
+    let finish: (r: { ok: true }) => void = () => {};
+    const test = vi.fn(() => new Promise<{ ok: true }>((r) => (finish = r)));
+    renderWithStrata(<Host test={test} />);
+    await user.type(screen.getByLabelText("Map API key"), "A");
+    await user.click(screen.getByRole("button", { name: "Test API key" }));
+    await user.type(screen.getByLabelText("Map API key"), "B");
+    finish({ ok: true });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText("API key accepted")).toBeNull();
+  });
 });

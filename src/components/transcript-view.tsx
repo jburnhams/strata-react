@@ -223,21 +223,23 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
   }, [announce, heardId, heardText]);
 
   // Correcting text: held by phrase id (not by row), so a row that scrolls away and back keeps it.
-  const [editing, setEditing] = React.useState<{ id: string; text: string } | null>(null);
+  const [editing, setEditing] = React.useState<{ id: string; text: string; mode: string } | null>(null);
   const textOf = (p: TranscriptPhrase) => (mode === "original" ? p.words.map((w) => w.text).join(" ") : (p.alt?.[mode] ?? p.words.map((w) => w.text).join(" ")));
   const rowEl = (id: string) => root.current?.querySelector<HTMLElement>(`[data-phrase="${CSS.escape(id)}"]`)?.closest<HTMLElement>('[role="row"]') ?? null;
   const startEdit = (id: string) => {
     const p = phrases.find((x) => x.id === id);
     if (!p || !onEdit) return;
-    setEditing({ id, text: textOf(p) });
+    setEditing({ id, text: textOf(p), mode });
     setSaid(`Editing the phrase at ${format.runningTime(p.start)}. Control Enter saves, Escape cancels.`);
   };
   const stopEdit = (saved: boolean) => {
     const id = editing?.id;
     if (editing && saved) {
       const p = phrases.find((x) => x.id === editing.id);
-      if (p && editing.text.trim() !== textOf(p)) {
-        onEdit?.(editing.id, editing.text.trim(), { mode });
+      // The text is saved against the mode it was opened in, even if the view has switched since.
+      const was = p && (editing.mode === "original" ? p.words.map((w) => w.text).join(" ") : (p.alt?.[editing.mode] ?? p.words.map((w) => w.text).join(" ")));
+      if (p && editing.text.trim() !== was) {
+        onEdit?.(editing.id, editing.text.trim(), { mode: editing.mode });
         setSaid(`Saved the phrase at ${format.runningTime(p.start)}.`);
       } else setSaid("No change.");
     } else if (editing) setSaid("Edit cancelled.");
@@ -343,7 +345,7 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
                 states={states}
                 onPhraseState={onPhraseState}
                 actions={renderActions?.(row.phrase)}
-                edit={editing?.id === row.phrase.id ? { text: editing.text, change: (text) => setEditing({ id: row.phrase.id, text }), done: stopEdit } : undefined}
+                edit={editing?.id === row.phrase.id ? { text: editing.text, change: (text) => setEditing({ ...editing, text }), done: stopEdit } : undefined}
                 onHover={(on) => { if (!on) dismissed.current = null; showCard(on ? row.phrase.id : null); }}
               />
             )

@@ -35,9 +35,9 @@ const implies = (key: string) => {
 };
 const roots: Load<readonly Node[]> = { status: "ready", data: [clip("c1"), clip("c2")], refreshing: false } as never;
 
-function Host({ initial = [] as string[], summary }: { initial?: string[]; summary?: boolean }) {
+function Host({ initial = [] as string[], summary, openKeys = ["c1", "c2"] }: { initial?: string[]; summary?: boolean; openKeys?: string[] }) {
   const choices = useChoices({ initial, implies });
-  const expanded = useExpanded({ initial: ["c1", "c2"] } as never);
+  const expanded = useExpanded({ initial: openKeys } as never);
   return (
     <>
       <Tree
@@ -94,6 +94,17 @@ describe("Tree with choices", () => {
     for (const r of screen.getAllByRole("row").filter((r) => /^(detect|track|render)/.test(r.textContent ?? "")).slice(0, 3)) expect(within(r).getByRole("checkbox")).toBeChecked();
     await user.click(within(c1).getByRole("checkbox"));
     expect(within(c1).getByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("Select all shown only adds: a choice under a collapsed branch is kept", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Host initial={["c2/render"]} openKeys={["c1"]} />);
+    await user.click(screen.getByRole("button", { name: "Select all shown" }));
+    const c2 = screen.getAllByRole("row").find((r) => /^c2/.test(r.textContent ?? ""))!;
+    expect(within(c2).getByRole("checkbox")).toBeChecked(); // c2 is shown, so it is added; nothing chosen under it is lost
+    await user.click(within(c2).getByRole("button"));
+    const render = screen.getAllByRole("row").filter((r) => /^render/.test(r.textContent ?? ""))[1];
+    expect(within(render).getByRole("checkbox")).toBeChecked();
   });
 
   it("Select all shown chooses every row shown, Clear releases them", async () => {

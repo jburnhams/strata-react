@@ -291,4 +291,16 @@ describe("TranscriptView doubt, marks, correction and card", () => {
     (document.activeElement as HTMLElement | null)?.blur();
     await waitFor(() => expect(screen.queryByText("Card for p1")).toBeNull());
   });
+
+  it("saves a correction against the mode it was opened in, even if the view switches meanwhile", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderWithStrata(<Host onEdit={onEdit} />);
+    row("p2").closest<HTMLElement>('[role="row"]')!.focus();
+    await user.keyboard("{Enter}");
+    await user.type(await screen.findByRole("textbox"), "!");
+    await user.click(screen.getByRole("radio", { name: "Translated" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onEdit).toHaveBeenCalledWith("p2", "thank you for coming!", { mode: "original" });
+  });
 });
