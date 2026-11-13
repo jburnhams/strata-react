@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-11-12
+**Flakes: the autosave status test and the visual capture's second look (branch `claude/fix-flakes`)**. Jonathan asked for the flakes to be fixed. The `history.test.tsx` one is fixed at its cause; the RouteMap pin one is not reproduced and is hardened, not proven.
+
+- `tests/unit/history.test.tsx`: "moves saved, unsaved, saving, saved" expected "dirty" right after a click while the hook's real 10 ms wait ran, so a click slower than that on a loaded machine saw "saving". The test now uses a wait that never ends and "Save now", so the same states are walked with no race (13 of 13 pass, three times, under six busy loops).
+- `src/visual/capture.ts`: `stable()` flushes two animation frames before each shot and waits 100, 200, 400, 800 ms between shots (was 100 ms each), so a compositor that lags more than 100 ms still has its pins in the picture the two shots agree on. Looked for and not reproduced: the marker-pin flake did not appear in 5 runs of the 28 RouteMap shots at 12 pages with six busy loops, so this is the same mechanism made harder to miss, not a proven cure; if a pin goes missing again the failing `.actual` is the evidence to look at.
+
 
 **RouteMap: tiles under the last pixel column (branch `claude/routemap-tile-edge`)**. Jonathan asked for the RouteMap flake to be looked at: `data-routemap--centred-later--dark` failed the visual job on #206's first run and passed on the single re-run. It is not the marker flake fixed earlier; the diff is one pixel column at the map's right edge (x=774 of the shot), where the baseline has the map's background and the failing run has a tile.
 

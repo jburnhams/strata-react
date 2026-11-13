@@ -137,11 +137,11 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     }
     let png: Buffer;
     if (shot.clip === "page") {
-      png = await stable(() => page.screenshot({ fullPage: true, animations: "disabled" }));
+      png = await stable(page, () => page.screenshot({ fullPage: true, animations: "disabled" }));
     } else {
       const clip = await page.evaluate(paintedBox, { root: shot.root, margin: 8 });
       if (!clip) throw new Error("rendered nothing visible");
-      png = await stable(() => page.screenshot({ fullPage: true, clip, animations: "disabled" }));
+      png = await stable(page, () => page.screenshot({ fullPage: true, clip, animations: "disabled" }));
     }
     const systemFonts = options.checkFonts === false ? [] : await platformFonts(page);
     return { png, problems, systemFonts };
@@ -156,12 +156,18 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
  * a map's pins (all in the DOM, visible, opacity 1) were missing from the PNG in about one run in ten
  * (the flaky RouteMap shots; a pixel read at each pin's centre gave the map's background). A second
  * shot a moment later has them. So a shot is taken again until two in a row are the same, at most
- * five times; a page that never stops changing gives the last one and the comparison decides.
+ * five times, with a longer wait each time and two animation frames before each (not reproduced again locally
+ * in 5 runs at 12 pages under full CPU load, so this is the same mechanism made harder to miss, not a proven cure); a page that never stops changing gives the last one and the comparison decides.
  */
-async function stable(take: () => Promise<Buffer>): Promise<Buffer> {
+async function stable(page: Page, take: () => Promise<Buffer>): Promise<Buffer> {
+  // Two frames through requestAnimationFrame make the compositor present what the DOM has before each shot; the wait
+  // between shots doubles (100, 200, 400, 800 ms), so a compositor that lags more than the first gap still gets agreed on late.
+  const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  await frames();
   let last = await take();
   for (let i = 0; i < 4; i++) {
-    await new Promise((done) => setTimeout(done, 100));
+    await new Promise((done) => setTimeout(done, 100 * 2 ** i));
+    await frames();
     const next = await take();
     if (next.equals(last)) return next;
     last = next;
