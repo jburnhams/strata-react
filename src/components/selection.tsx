@@ -231,12 +231,23 @@ export function useChoices({ initial = [], implies, format: fmt = defaultFormat 
     [],
   );
   const clear = React.useCallback(() => setState({ raw: new Set(), note: "" }), []);
+  // Choose more keys without restating the rest: for rows that arrive after a tick (a branch read
+  // as it opens), several of which can land together, so none may overwrite another's.
+  const add = React.useCallback(
+    (keys: Iterable<string>) =>
+      setState((s) => {
+        const change = applyChange(s.raw, new Set([...resolve(s.raw, impliesRef.current).all, ...keys]), impliesRef.current);
+        return { raw: change.explicit, note: noteFor(change) };
+      }),
+    [],
+  );
   const counts: ChoiceCounts = { chosen: state.raw.size, dependents: resolved.dependents.size, total: resolved.all.size };
   return {
     /** Everything chosen: what the person chose and what that implies. */
     selected: resolved.all as ReadonlySet<string>,
     count: resolved.all.size,
     onChange,
+    add,
     clear,
     implied: resolved.locked as ReadonlySet<string>,
     because: (key: string): readonly string[] => resolved.because.get(key) ?? [],

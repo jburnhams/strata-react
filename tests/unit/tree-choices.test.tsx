@@ -96,15 +96,26 @@ describe("Tree with choices", () => {
     expect(within(c1).getByRole("checkbox")).not.toBeChecked();
   });
 
-  it("Select all shown only adds: a choice under a collapsed branch is kept", async () => {
+  it("ticking a branch that was never opened reads it, opens it and chooses everything under it", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Host openKeys={[]} summary />);
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+    await user.click(within(screen.getAllByRole("row")[0]).getByRole("checkbox"));
+    const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(5); // c1 opened, its three stages read
+    for (const r of rows.slice(0, 4)) expect(within(r).getByRole("checkbox")).toBeChecked();
+    expect(within(rows[4]).getByRole("checkbox")).not.toBeChecked(); // c2 is untouched
+    expect(screen.getByTestId("summary")).toHaveTextContent(/4\s+results will be forgotten/);
+  });
+
+  it("Select all shown adds to what is chosen, and reads the closed branches it shows", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Host initial={["c2/render"]} openKeys={["c1"]} />);
     await user.click(screen.getByRole("button", { name: "Select all shown" }));
-    const c2 = screen.getAllByRole("row").find((r) => /^c2/.test(r.textContent ?? ""))!;
-    expect(within(c2).getByRole("checkbox")).toBeChecked(); // c2 is shown, so it is added; nothing chosen under it is lost
-    await user.click(within(c2).getByRole("button"));
-    const render = screen.getAllByRole("row").filter((r) => /^render/.test(r.textContent ?? ""))[1];
-    expect(within(render).getByRole("checkbox")).toBeChecked();
+    // c1 was open and is chosen with its stages; c2 was shown closed, so it is read and opened too.
+    const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(8);
+    for (const r of rows) expect(within(r).getByRole("checkbox")).toBeChecked();
   });
 
   it("Select all shown chooses every row shown, Clear releases them", async () => {

@@ -40,8 +40,11 @@ import type { Expanded } from "./disclosure";
 // Ctrl/Cmd+A. React Aria has no parent-child rule, so ours is drawn from what has loaded: a branch
 // is checked when all its loaded descendants are chosen, mixed when only some are (or it is chosen
 // itself and some are not), and ticking it sets itself and everything loaded under it. A branch
-// never opened has nothing under it to set, so ticking it chooses its own key, and an app's
-// `implies` is what carries that further. "Select all shown" chooses every row the open branches
+// never opened is read first (Jonathan, 2026-11-13: "as if it had been expanded and ticked"): ticking
+// it opens it, and when its rows arrive they are chosen too, and any branch among them is opened and
+// chosen the same way, so what is ticked is everything under it, not a key whose rows are unknown.
+// Until the rows arrive the branch is ticked and drawn mixed, and a failed read leaves it open on
+// its own Try again row. "Select all shown" chooses every row the open branches
 // show. A key that something chosen implies stays ticked when cleared (the choice puts it back) and
 // its row says, in words, which chosen row it is included because of; the polite live region says
 // how many more were chosen, or that a clear was refused.
@@ -97,7 +100,7 @@ type TreeCommon<N> = {
   className?: string;
 };
 
-type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height"> & { choices?: Choices; nodes: Map<string, N>; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
+type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height"> & { choices?: Choices; nodes: Map<string, N>; settle: (key: string, kids: readonly N[]) => void; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
 const Context = React.createContext<Ctx<never> | null>(null);
 const useCtx = <N,>() => React.useContext(Context) as unknown as Ctx<N>;
 
@@ -176,6 +179,10 @@ function Children<N>({ node }: { node: N }) {
   const c = useCtx<N>();
   const key = c.nodeKey(node);
   const load = c.useChildren(node);
+  const ready = load.status === "ready" ? load.data : undefined;
+  React.useEffect(() => {
+    if (ready) c.settle(key, ready);
+  }, [ready]);
   if (load.status === "loading") {
     return (
       <TreeItem key="loading" id={`${key}${NOTE}loading`} textValue="Loading" isDisabled className="outline-none">
@@ -229,7 +236,34 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
     if (chosen === ds.length) return "on";
     return chosen === 0 && !own ? "off" : "mixed";
   };
-  const ctx: Ctx<N> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, expanded, loadingRow, emptyRow, nodes, childKeys, choices, stateOf };
+  // Branches ticked before they were read: chosen with everything under them once their rows arrive.
+  const awaiting = React.useRef(new Set<string>()).current;
+  const latest = React.useRef({ expanded, choices });
+  latest.current = { expanded, choices };
+  const opening = React.useRef(new Set<string>()).current; // asked to open, not yet in `expanded`
+  const open = (keys: readonly string[]) => {
+    for (const k of keys) opening.add(k);
+    latest.current.expanded.onChange(new Set([...latest.current.expanded.expanded, ...opening]));
+  };
+  const unread = (key: string) => {
+    const node = nodes.get(key);
+    return node !== undefined && (isBranch ? isBranch(node) : true) && !childKeys.has(key);
+  };
+  // Tick a set of keys: branches among them that have not been read are opened and awaited.
+  const tick = (keys: readonly string[]) => {
+    const toOpen = keys.filter(unread);
+    for (const k of toOpen) awaiting.add(k);
+    if (toOpen.length) open(toOpen);
+  };
+  const settle = (key: string, kids: readonly N[]) => {
+    opening.delete(key);
+    if (!awaiting.delete(key) || !latest.current.choices) return;
+    const keys = kids.map(nodeKey);
+    for (const kid of kids) nodes.set(nodeKey(kid), kid);
+    latest.current.choices.add(keys);
+    tick(keys);
+  };
+  const ctx: Ctx<N> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, expanded, loadingRow, emptyRow, nodes, childKeys, choices, stateOf, settle };
 
   if (roots.status === "loading") {
     return (
@@ -270,8 +304,10 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
     const wanted = new Set(choices.selected);
     if (keys === "all") {
       // Select all shown only adds: rows that are chosen but not shown (a collapsed branch) stay as they are.
-      for (const k of shown()) for (const x of [k, ...below(k)]) wanted.add(x);
+      const rows = shown().flatMap((k) => [k, ...below(k)]);
+      for (const x of rows) wanted.add(x);
       choices.onChange(wanted);
+      tick(rows);
       return;
     }
     const display = new Set(displayKeys);
@@ -279,10 +315,15 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
     // Each row whose box changed sets itself and what is loaded under it to the new state.
     for (const k of new Set([...next, ...display])) {
       if (next.has(k) === display.has(k)) continue;
-      for (const x of [k, ...below(k)]) {
+      const under = [k, ...below(k)];
+      for (const x of under) {
         if (next.has(k)) wanted.add(x);
-        else wanted.delete(x);
+        else {
+          wanted.delete(x);
+          awaiting.delete(x);
+        }
       }
+      if (next.has(k)) tick(under);
     }
     choices.onChange(wanted);
   };
