@@ -35,6 +35,20 @@ export const WithEntityLinks: Story = {
   ),
 };
 
+// Pictures that are the answer (issue #257): drawn under the text, not inside "What it looked up".
+const frame = (hue: number, w = 640, h = 360) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="hsl(${hue} 30% 55%)"/><circle cx="${w / 2}" cy="${h / 2}" r="${h / 4}" fill="hsl(${hue} 40% 80%)"/></svg>`)}`;
+
+export const WithPictures: Story = {
+  render: () => (
+    <Frame
+      turns={[
+        { id: "q2", role: "person", time: at, text: "Show me the longest clip, looking behind the runner." },
+        { id: "a2", role: "answer", time: at, state: "done", text: "The longest clip is **clip 14**, 6 minutes 12 seconds. These two frames look behind the runner.", images: [{ src: frame(30), label: "Clip 14 at 2:41", href: frame(30) }, { src: frame(200), label: "Clip 14 at 5:03" }], lookedUp: <p className="type-body-sm">Read 31 clips.</p> },
+      ]}
+    />
+  ),
+};
+
 export const Streaming: Story = {
   render: () => <Frame answering turns={[question, { id: "a1", role: "answer", time: at, state: "streaming", text: "The hottest was **firing f-0412-b** at 1,243 °C, in" }]} />,
 };

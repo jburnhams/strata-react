@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar, Button, SelectableGrid, Tree, ViewOptions, format, useChoices, useExpanded, useSelection, useViewOptions, type Load } from "../src";
+import { BulkBar, Button, SelectableGrid, SelectableGridSkeleton, Tree, ViewOptions, format, useChoices, useExpanded, useSelection, useViewOptions, type Load } from "../src";
 import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
@@ -75,6 +75,35 @@ export const Grouped: Story = { render: () => <Browser count={120} grouped />, t
 export const ReplaceBehavior: Story = { render: () => <Browser count={40} selectionBehavior="replace" />, tags: ["no-visual"] };
 
 type Folder = { id: string; name: string; pictures: number; inProject?: boolean };
+// Pictures of their own shapes in rows of equal height (`aspect="natural"`, issue #246): panoramas, portraits and landscapes.
+const shapes = [3 / 2, 2 / 3, 3 / 2, 16 / 9, 1, 3 / 4, 3 / 2, 3, 2 / 3, 4 / 3];
+function Natural({ grouped = false }: { grouped?: boolean }) {
+  const all = React.useMemo(() => shelfPhotos(90), []);
+  const selection = useSelection(all, (p) => p.id);
+  const [size, setSize] = React.useState(140);
+  return (
+    <SelectableGrid
+      label="Pictures at their own shapes"
+      rows={all}
+      rowKey={(p) => p.id}
+      renderImage={(p) => <PiecePicture photo={p} />}
+      aspect="natural"
+      naturalAspect={(p) => shapes[Number(p.id.slice(2)) % shapes.length]!}
+      selection={{ ...selection, rowLabel: label }}
+      tileSize={size}
+      onTileSizeChange={setSize}
+      groupBy={grouped ? hourOf : undefined}
+      groupHeading={(g) => `${g} o'clock`}
+      mark={(p) => (Number(p.id.slice(2)) % 4 === 0 ? "RAW+JPG" : undefined)}
+      maxHeight={560}
+    />
+  );
+}
+export const NaturalAspect: Story = { render: () => <Natural />, tags: ["visual-wide"] };
+// While the pictures load: the same rows at the same shapes, so nothing moves when they arrive.
+export const NaturalAspectLoading: Story = { render: () => <SelectableGridSkeleton count={24} shapes={shapes} tileSize={140} />, tags: ["visual-wide"] };
+export const NaturalAspectGrouped: Story = { render: () => <Natural grouped />, tags: ["visual-wide"] };
+
 const years: Folder[] = [
   { id: "2025", name: "2025", pictures: 412 },
   { id: "2026", name: "2026", pictures: 1180, inProject: true },

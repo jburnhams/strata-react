@@ -117,7 +117,7 @@ export {
   type TileSize,
 } from "./components/selectable-grid";
 export { ViewOptions, useViewOptions, sortRows, type ViewOptionsProps, type ViewOptionsConfig, type ViewOptionsState, type ViewSort, type ViewGroup, type ViewGroupRows } from "./components/view-options";
-export { TileGrid, TileGridSkeleton, type TileGridProps } from "./components/tile-grid";
+export { TileGrid, TileGridSkeleton, SelectableGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
 export { LineChart, LineChartGroup, logScale, valueAt, type ChartMark, type ChartSpan, type GroupedChart, type LineChartGroupProps, type LineChartProps, type Point, type SpanTone, type YScale } from "./components/line-chart";
@@ -198,7 +198,7 @@ export {
   type SetOptions,
 } from "./components/history";
 export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
-export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ComposerProps } from "./components/conversation";
+export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ConversationImage, type ComposerProps } from "./components/conversation";
 export { parseRichText, parseInline, matchEntities, safeHref, plainText, type EntityMatch, type EntityMatcher, type Block as RichBlock, type Inline as RichInline } from "./lib/rich-text";
 export { Lightbox, useLightboxUrl, type LightboxProps, type LightboxItem, type LightboxUrl } from "./components/lightbox";
 export { RegionEditor, describeRegion, type RegionEditorProps, type EditableRegion, type RegionTone } from "./components/region-editor";

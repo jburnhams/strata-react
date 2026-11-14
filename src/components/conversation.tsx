@@ -6,6 +6,7 @@ import { parseRichText, plainText, type Block, type EntityMatcher, type Inline }
 import { Button } from "./button";
 import { Disclosure } from "./disclosure";
 import { Textarea } from "./field";
+import { Thumbnail, type AspectRatio } from "./thumbnail";
 
 // A question-and-answer thread: turns, a composer, and answers with a little rich text whose ids
 // are buttons. Issue #192, from strata-360's Ask page. Parts: `RichText` (a safe subset, no HTML),
@@ -94,8 +95,28 @@ export function RichText({ children, entities, onOpen, className }: RichTextProp
   return <div className={cn("space-y-2 break-words type-body", className)}>{renderBlocks(blocks, onOpen)}</div>;
 }
 
+/** A picture shown with an answer (issue #257). */
+export type ConversationImage = {
+  src: string;
+  /** What it shows, in words: the picture's accessible name and its visible caption. */
+  label: string;
+  /** The full-size picture, when it is not `src`: the thumbnail becomes a link that opens it in a new tab. */
+  href?: string;
+  /** Width over height, so the box is its shape before the picture loads. Default 16/9. */
+  aspect?: AspectRatio;
+};
+
 /** One turn of the thread. `failed` cannot be written without the sentence saying what happened. */
-export type ConversationTurn = { id: string; role: "person" | "answer"; time: Date | string | number; text: string; lookedUp?: React.ReactNode } & (
+export type ConversationTurn = {
+  id: string;
+  role: "person" | "answer";
+  time: Date | string | number;
+  text: string;
+  /** What the answer consulted, in a collapsed disclosure. Not for a picture that is the answer: use `images`. */
+  lookedUp?: React.ReactNode;
+  /** Pictures that are part of the answer, drawn under its text, always visible: lazy, each with its label as its name and caption, and a link to the full size when `href` is given. */
+  images?: readonly ConversationImage[];
+} & (
   | { state?: "done" }
   | { state: "streaming" }
   | { state: "failed"; error: string }
@@ -149,7 +170,7 @@ export function Conversation({ label, turns, answerName, personName = "You", ent
   // Follow growth only while at the bottom; a person's own new turn always scrolls.
   React.useLayoutEffect(() => {
     if (last?.role === "person" || following.current) toBottom();
-  }, [turns.length, last?.text, last?.state, last?.role, toBottom]);
+  }, [turns.length, last?.text, last?.state, last?.role, last?.images?.length, toBottom]);
 
   // One polite sentence when an answer ends, never per token.
   const states = React.useRef(new Map<string, string | undefined>());
@@ -180,6 +201,19 @@ export function Conversation({ label, turns, answerName, personName = "You", ent
                   <p className="type-body-sm text-muted-foreground">{answerName} is working on it…</p>
                 ) : (
                   <RichText entities={entities} onOpen={onOpen}>{t.text}</RichText>
+                )}
+                {t.images && t.images.length > 0 && (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {t.images.map((im, i) => {
+                      const pic = <Thumbnail src={im.src} alt={im.label} missing="Picture not available" aspect={im.aspect ?? "16/9"} fit="contain" className="w-56 max-w-full rounded-control bg-muted" />;
+                      return (
+                        <li key={`${i}-${im.src}`} className="flex max-w-full flex-col gap-1">
+                          {im.href ? <a href={im.href} target="_blank" rel="noreferrer" aria-label={`${im.label} (full size, opens in a new tab)`} className="rounded-control">{pic}</a> : pic}
+                          <span className="type-caption text-muted-foreground">{im.label}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
                 {t.state === "streaming" && t.text && <p className="mt-1 type-caption text-muted-foreground">Still writing…</p>}
                 {t.state === "failed" && (

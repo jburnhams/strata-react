@@ -1,6 +1,27 @@
 # Changelog
 
 ## 2026-11-14
+**SelectableGrid: the last of issue #246** (branch `claude/project-thread-nnem56`). Jonathan asked for #246 to be done in full; what was still missing against its list:
+
+- `src/components/selectable-grid.tsx`: `aspect` takes a ratio; `fit` (`cover`, `contain`); `mark`, a second corner on a chip; a tile `isSelectable` refuses says why in its name ("Photo 1, Already in this project"); the marquee keeps tiles seen earlier in the drag (it works in the scroll box's own coordinates) and scrolls the box when the pointer nears its top or bottom edge; zoom holds the tile under the pointer or the focused one where it was (the scroll share is the fallback). Sorting stays in `useViewOptions` (#247), which hands the grid rows already sorted, rather than a second sort in the grid.
+- `src/components/tile-grid.tsx`, `src/index.ts`: `SelectableGridSkeleton` (the `DataView` skeleton at the grid's size, shape or per-picture shapes); `tileLayoutOptions` takes a ratio.
+- `tests/unit/justified-grid.test.tsx`, `stories/photo-browser.stories.tsx` (`NaturalAspectLoading`, a `mark` on `NaturalAspect`), baselines for the loading story and redrawn natural-aspect ones.
+- Not done, and why: a drag that starts on a tile stays a press, because React Aria's press would also toggle that tile.
+
+**SelectableGrid: justified rows, marquee, pinch and a pushed heading (the rest of issue #246)** (branch `claude/project-thread-nnem56`). Jonathan said #246 was only partly done; these were the four parts left.
+
+- `src/lib/grouped-grid-layout.ts`: `justifyRows` (rows of equal height from each picture's width over height, last row kept at the target height) and `stuckHeader` (the heading at the top, pushed up by the next one), both pure and tested; `GroupedGridLayout` takes a `justify` layout option and places each run of tiles with `justifyRows`. React Aria has no justified layout (`GridLayout` is fixed columns, `WaterfallLayout` is columns of unequal height), so it is ours inside its Virtualizer.
+- `src/components/selectable-grid.tsx`: `aspect="natural"` with required `naturalAspect(row)`, always virtualised, `tileSize` read as the row height; marquee (a mouse or pen drag from between tiles chooses the drawn tiles it touches, Ctrl/Cmd or Shift adds; a drag from a tile is a press); two-finger pinch scales the size. The marquee reads drawn tiles' rectangles, so it does not reach tiles outside the view and does not auto-scroll.
+- `tests/unit/justified-grid.test.tsx` (**new**), `stories/photo-browser.stories.tsx` (`NaturalAspect`, `NaturalAspectGrouped`), four new baselines `data-photo-browser--natural-aspect{,-grouped}--{light,dark}`.
+- `README.md`: SelectableGrid row.
+
+**Conversation: pictures shown with an answer (issue #257)** (branch `claude/project-thread-nnem56`). Found migrating strata-360's Ask page: a fetched frame is the answer, but the only slot was `lookedUp`, collapsed. A turn now takes `images`.
+
+- `src/components/conversation.tsx`: `ConversationTurn.images?: ConversationImage[]` (`src`, `label`, `href?`, `aspect?`), drawn under the text, always visible, through `Thumbnail` (lazy, shaped before it loads, a missing state). The label is the picture's name and caption; with `href` the thumbnail is a link to the full size in a new tab. Chosen over a free `attachments` slot so every app gets the labelling and lazy loading and cannot leave a picture unnamed.
+- `src/index.ts`: exports `ConversationImage`.
+- `tests/unit/conversation.test.tsx`, `stories/conversation.stories.tsx`: a test (visible without opening the disclosure, link only when `href`) and a `WithPictures` story (baseline from this change).
+- `README.md`: Conversation row mentions pictures.
+
 **A virtualised grouped photo grid (the rest of issue #246 that could be done on React Aria)** (branch `claude/project-thread-nnem56`). Jonathan asked whether a grouped grid was hard to virtualise and whether it could share a layout; following PR #253. No new dependency.
 
 - `src/lib/grouped-grid-layout.ts` (**new**): `GroupedGridLayout`, a subclass of React Aria's `GridLayout`. Checked in `GridLayout.update`: it works out columns, tile size and gaps and keeps measured heights by key; the subclass runs it, then re-places the items so each group's heading (an item keyed with `groupKey`) takes a full-width row and its tiles start a new one, and `getVisibleLayoutInfos` hands the Virtualizer a copy of the top group's heading moved to the visible top (zIndex above the tiles), so no re-layout while scrolling. React Aria's grid keyboard navigation reads each item's rectangle from the layout, so arrows cross headings (tested).
