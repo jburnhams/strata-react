@@ -79,7 +79,7 @@ type Ctx = {
 const MarksContext = React.createContext<Ctx | null>(null);
 
 /** One word (or phrase, or clip) that can be marked. Draws its mark, its selection and the caret; inside a `MarkableText`. */
-export function Mark({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
+export function Mark({ id, children, className, onClick, onHover }: { id: string; children: React.ReactNode; className?: string; /** A click on the word (a press and release on it), beside selecting it: a correction opens. */ onClick?: () => void; /** The pointer is over the word (its element) or has left (`null`). */ onHover?: (el: HTMLElement | null) => void }) {
   const c = React.useContext(MarksContext);
   if (!c) return <span className={className}>{children}</span>;
   const kind = c.kinds.find((k) => k.key === c.marks[id]);
@@ -92,7 +92,12 @@ export function Mark({ id, children, className }: { id: string; children: React.
       data-selected={on || undefined}
       data-caret={c.caret === id || undefined}
       onPointerDown={(e) => c.press(e, id)}
-      onPointerEnter={() => c.over(id)}
+      onPointerEnter={(e) => {
+        c.over(id);
+        onHover?.(e.currentTarget);
+      }}
+      onPointerLeave={onHover ? () => onHover(null) : undefined}
+      onClick={onClick}
       className={cn("cursor-text rounded-control px-px", on && "bg-primary/20", c.caret === id && "outline-2 outline-primary", className)}
       style={kind && tone ? { backgroundColor: on ? undefined : tone.fill, textDecorationLine: "underline", textDecorationStyle: kind.pattern, textDecorationColor: tone.edge, textDecorationThickness: "2px", textUnderlineOffset: "3px" } : undefined}
     >
@@ -208,6 +213,8 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
   }, [n, caret]);
 
   const keys = (e: React.KeyboardEvent) => {
+    // Keys from something focused inside (a transcript's list of rows) are that thing's own.
+    if (e.target !== e.currentTarget) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const to = e.key === "ArrowRight" ? stepId(ids, caret, 1) : e.key === "ArrowLeft" ? stepId(ids, caret, -1) : e.key === "Home" ? ids[0] ?? null : e.key === "End" ? ids[ids.length - 1] ?? null : undefined;
     if (to !== undefined) {

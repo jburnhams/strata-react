@@ -11,7 +11,14 @@ export type TranscriptWord = {
   confidence?: number;
   /** The recogniser's own verdict, when it gives one instead of a number. Wins over `confidence`. */
   doubtful?: boolean;
+  /** The word was corrected by a person: what the recogniser heard (shown on hover) and who changed it. Drawn as a dotted underline in the primary colour, and said to a screen reader. */
+  correction?: { original: string; by?: string };
 };
+
+/** The id of a word for marking (`TranscriptView`'s `marking`, `Mark`): its phrase and its place in it. */
+export const wordId = (phraseId: string, index: number) => `${phraseId}:${index}`;
+/** The phrase an id made by `wordId` belongs to. */
+export const phraseOfWordId = (id: string) => id.slice(0, id.lastIndexOf(":"));
 
 /** A mark an app puts on a phrase ("Not sung", "Not a lyric"): a word, always, and the tone it is drawn in. */
 export type TranscriptPhraseState = { id: string; label: string; tone: "neutral" | "info" | "success" | "warning" | "danger" };

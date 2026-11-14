@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.46 (2026-11-14)
+
+- `MarkableText` now acts on arrow, Home, End and Escape keys only while its own region has focus; keys from something focusable inside it (a list of rows) are that thing's. Words drawn as `Mark`s with nothing focusable around them behave as before.
+
 ## After v1.0.44 (2026-11-14)
 
 - `SelectableGrid` with `groupBy` is now one virtualised list: a group's heading is a row of the grid (not a `region` with its own list per group), so a test that looked for `getByRole("region", { name })` finds the heading row instead, and only the visible rows are in the DOM. Tiles `isSelectable` refuses are now focusable (not selectable) so the arrow keys land on them and their `unselectableReason` can be read; they were skipped before. The grouped baselines move.

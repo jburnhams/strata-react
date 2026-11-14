@@ -1,7 +1,8 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PlayWindowButton, TranscriptView, type TranscriptGroup, type TranscriptViewProps, type TranscriptWord } from "../../src";
+import { Check, X } from "lucide-react";
+import { PlayWindowButton, TranscriptView, wordId, type MarkKind, type TranscriptGroup, type TranscriptViewProps, type TranscriptWord } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #186: timed text against a player.
@@ -302,5 +303,53 @@ describe("TranscriptView doubt, marks, correction and card", () => {
     await user.click(screen.getByRole("radio", { name: "Translated" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(onEdit).toHaveBeenCalledWith("p2", "thank you for coming!", { mode: "original" });
+  });
+});
+
+// Issue #260: a review transcript with no player, marking words, corrected words.
+describe("TranscriptView without a player, with marking and corrections", () => {
+  const kinds: MarkKind[] = [
+    { key: "use", label: "Must use", tone: "success", pattern: "solid", icon: Check, keys: ["g"] },
+    { key: "never", label: "Never use", tone: "danger", pattern: "dashed", icon: X, keys: ["r"] },
+  ];
+
+  it("with no time and no onSeek there is nothing heard and no seek button", () => {
+    renderWithStrata(<TranscriptView label="Transcript" groups={groups} />);
+    expect(document.querySelector("[aria-current]")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Play from/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "thank" })).toBeNull();
+    expect(screen.getByText("thank")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clip one" })).toBeInTheDocument();
+  });
+
+  it("marking: a drag across words selects their ids, in order, across phrases, and onMark is told", async () => {
+    const onMark = vi.fn();
+    renderWithStrata(<TranscriptView label="Transcript" groups={groups} marking={{ kinds, marks: { [wordId("p1", 0)]: "use" }, onMark }} />);
+    const word = (phraseId: string, t: string) => within(row(phraseId)).getByText(t, { selector: "[data-mark-id]" });
+    expect(word("p1", "good")).toHaveAttribute("data-mark", "use");
+    fireEvent.pointerDown(word("p1", "everyone"), { button: 0 });
+    fireEvent.pointerEnter(word("p2", "thank"));
+    fireEvent.pointerEnter(word("p2", "you"));
+    fireEvent.pointerUp(window);
+    expect(screen.getByText("3 words selected", { selector: "[aria-live]" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Never use" }));
+    expect(onMark).toHaveBeenCalledWith([wordId("p1", 2), wordId("p2", 0), wordId("p2", 1)], "never");
+  });
+
+  it("a corrected word is underlined, says what it was, and shows the original on hover; a click opens it", async () => {
+    const corrected: TranscriptGroup[] = [{ id: "g", title: "Clip", phrases: [{ ...phrase("c1", 0, "good morning"), words: [{ text: "good", start: 0, end: 0.5 }, { text: "morning", start: 0.5, end: 1, correction: { original: "mourning", by: "Ada" } }] }] }];
+    const onCorrectionPress = vi.fn();
+    const onSeek = vi.fn();
+    renderWithStrata(<TranscriptView label="Transcript" groups={corrected} onSeek={onSeek} onCorrectionPress={onCorrectionPress} />);
+    const word = screen.getByRole("button", { name: /morning/ });
+    expect(word).toHaveTextContent("morning (corrected, was mourning)");
+    expect(word.className).toMatch(/decoration-dotted/);
+    await userEvent.hover(word);
+    expect(await screen.findByText("Was “mourning”, corrected by Ada")).toBeInTheDocument();
+    await userEvent.click(word);
+    expect(onCorrectionPress).toHaveBeenCalledWith("c1", 1);
+    expect(onSeek).not.toHaveBeenCalled(); // the click is the correction's, not a seek
+    await userEvent.click(screen.getByRole("button", { name: "good" }));
+    expect(onSeek).toHaveBeenCalledWith(0, { phraseId: "c1", wordIndex: 0 });
   });
 });
