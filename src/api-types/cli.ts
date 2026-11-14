@@ -35,7 +35,7 @@ export async function main(argv: readonly string[], out: (text: string) => void 
   }
   const output = values.output ?? "src/api.generated.ts";
   try {
-    const next = await generateApiTypes(await loadSchema(positionals[0]!, fetcher));
+    const next = await generateApiTypes(await loadSchema(positionals[0]!, fetcher), positionals[0]!);
     if (values.check) {
       const current = existsSync(output) ? (await readFile(output, "utf8")).replace(/\r\n/g, "\n") : null;
       if (current === next) {

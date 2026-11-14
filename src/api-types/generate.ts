@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // The types behind `strata-api-types` (strata-react issue #263). A strata app's FastAPI server
 // publishes its routes, the shared contracts (`strata_python.contracts`: Health, Task, Page, ErrorBody…)
@@ -48,12 +50,20 @@ const footer = `
 export type Schema<K extends keyof components["schemas"]> = components["schemas"][K];
 `;
 
-/** The TypeScript types for an OpenAPI document, as the text of the generated file. */
-export async function generateApiTypes(schema: OpenApiDocument): Promise<string> {
+/** The URL relative references resolve against: the document's own URL, or its file's location. */
+function baseOf(source: string): URL {
+  return /^https?:\/\//i.test(source) ? new URL(source) : pathToFileURL(resolve(source));
+}
+
+/**
+ * The TypeScript types for an OpenAPI document, as the text of the generated file. `source` is where the
+ * document was read from (a URL or file path): relative `$ref`s to other files resolve against it.
+ */
+export async function generateApiTypes(schema: OpenApiDocument, source?: string): Promise<string> {
   const mod = await import("openapi-typescript").catch(() => {
     throw new Error("strata-api-types needs openapi-typescript: npm install --save-dev openapi-typescript (it also wants TypeScript 5 or an override that points it at yours).");
   });
   const { default: openapiTS, astToString } = mod;
-  const ast = await openapiTS(schema as never);
+  const ast = await openapiTS(schema as never, source ? { cwd: baseOf(source) } : undefined);
   return `${header}\n${astToString(ast).trimEnd()}\n${footer}`;
 }

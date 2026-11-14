@@ -24,6 +24,18 @@ describe("generateApiTypes", () => {
   });
 });
 
+describe("relative references", () => {
+  it("resolve against the schema file's folder", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "strata-api-"));
+    writeFileSync(join(dir, "shared.json"), JSON.stringify({ Shared: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } }));
+    const doc = { openapi: "3.1.0", info: { title: "t", version: "1" }, paths: {}, components: { schemas: { Wrapper: { $ref: "./shared.json#/Shared" } } } };
+    const file = join(dir, "openapi.json");
+    writeFileSync(file, JSON.stringify(doc));
+    const text = await generateApiTypes(await loadSchema(file), file);
+    expect(text).toMatch(/id: string/);
+  });
+});
+
 describe("loadSchema", () => {
   it("reads a URL and says what is wrong with a docs page or a non-OpenAPI file", async () => {
     const answer = (body: string, init?: ResponseInit) => (async () => new Response(body, init)) as unknown as typeof fetch;
