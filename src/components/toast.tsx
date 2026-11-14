@@ -1,3 +1,4 @@
+import * as React from "react";
 import { UNSTABLE_Toast as AriaToast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion, Button as AriaButton, Text } from "react-aria-components";
 import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import { Button } from "./button";
@@ -20,6 +21,12 @@ import { overlaySurface } from "../lib/overlay";
 // - The queue is module-level, so `toast.show()` works from a mutation's `onSuccess` outside any
 //   component; `toast.clear()` empties it for a test. React Aria marks its toast API unstable; it
 //   is used only here, behind this small surface, so a change upstream stays in this file.
+// - One region at a time, enforced (issue #230): the first mounted owns the queue and a second one draws nothing and
+//   says so in development, naming the fix. Two regions on one queue show every toast twice, which looks like a bug in
+//   the toast and (in a test) fails `findByText` with "Found multiple elements"; the usual cause is a route tree that
+//   draws the region in its root layout while a test helper draws one too (`renderRoutes(..., { toasts: false })`),
+//   or an app with a region in a layout and another in a page. Ownership is held by a mounted-order list, not by the
+//   queue, so unmounting the owner hands it to the next region.
 // Toasts are rare and brief, so they get the overlay entrance and nothing else (character.md §3).
 
 /** What a toast says. */
@@ -68,8 +75,42 @@ export type StrataToastRegionProps = {
   className?: string;
 };
 
-/** The one place toasts appear. Render it once at the app root. A labelled landmark (F6), polite, above panes and the undo bar. */
+// The regions mounted now, oldest first: the first draws, the rest stay empty.
+const mounted: string[] = [];
+const watchers = new Set<() => void>();
+const changed = () => watchers.forEach((w) => w());
+const watch = (w: () => void) => {
+  watchers.add(w);
+  return () => void watchers.delete(w);
+};
+
+/** True while this region is the one that draws. The server and the first client render say yes, so hydration matches. */
+function useOwnsQueue(): boolean {
+  const id = React.useId();
+  React.useLayoutEffect(() => {
+    mounted.push(id);
+    changed();
+    return () => {
+      mounted.splice(mounted.indexOf(id), 1);
+      changed();
+    };
+  }, [id]);
+  const owns = React.useSyncExternalStore(watch, () => mounted[0] === id, () => true);
+  const [warned, setWarned] = React.useState(false);
+  React.useEffect(() => {
+    if (owns || warned || mounted.indexOf(id) < 1) return;
+    setWarned(true);
+    if (import.meta.env?.DEV) {
+      console.warn("strata-react: a StrataToastRegion is already mounted, so this one draws nothing. Render it once at the app root; in a test of a route tree that draws its own, pass `toasts: false` to renderRoutes.");
+    }
+  }, [owns, warned, id]);
+  return owns;
+}
+
+/** The one place toasts appear. Render it once at the app root; a second one mounted at the same time draws nothing and warns in development. A labelled landmark (F6), polite, above panes and the undo bar. */
 export function StrataToastRegion({ label = "Notifications", className }: StrataToastRegionProps) {
+  const owns = useOwnsQueue();
+  if (!owns) return null;
   return (
     <ToastRegion
       queue={queue}

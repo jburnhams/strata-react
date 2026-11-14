@@ -6,8 +6,13 @@
      @import "./theme.generated.css";   (palette.mjs output: shadcn roles + 12-step ramps)
      @import "./theme.css";             (status roles, fonts, any subject colours, with reasons)
 
+   An app that already has its own Tailwind colours and sizes imports "strata-react/strata.migrate.css"
+   instead: this file without the reset below, so its stock classes keep compiling while it moves
+   screens over (the build writes it from this file: scripts/copy-css.mjs). The README says when.
+
    The research behind every value is in jburnhams/ux-research, ui-library/tokens.md. */
 
+/* strata:strict-begin */
 /* Clear Tailwind's stock namespaces right after Tailwind's own theme loads. With these gone,
    `bg-indigo-500`, `text-sm`, `rounded-xl` and `shadow-lg` do not compile at all: the only colours,
    type steps, radii and shadows that exist are the ones the product's theme names. That is the
@@ -19,6 +24,7 @@
   --shadow-*: initial;
   --font-*: initial;
 }
+/* strata:strict-end */
 
 /* React Aria's state variants (`selected:`, `pressed:`, `hover:`, `focus-visible:`, `disabled:`, `open:`,
    `invalid:`, `expanded:`, `sort-ascending:`…): each reads the `data-*` attribute React Aria Components

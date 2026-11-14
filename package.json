@@ -38,6 +38,10 @@
       "style": "./dist/strata.css",
       "default": "./dist/strata.css"
     },
+    "./strata.migrate.css": {
+      "style": "./dist/strata.migrate.css",
+      "default": "./dist/strata.migrate.css"
+    },
     "./package.json": "./package.json",
     "./hls": {
       "types": "./dist/hls/index.d.ts",
@@ -179,6 +183,7 @@
     ]
   },
   "bin": {
-    "strata-visual": "./bin/strata-visual.js"
+    "strata-visual": "./bin/strata-visual.js",
+    "strata-stock-classes": "./bin/strata-stock-classes.js"
   }
 }

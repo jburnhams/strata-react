@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, makePicker, useWidth, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
+import { Caption, FullscreenButton, ZoomControls, frameCap, makePicker, useFitHeight, useWidth, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
 import type { Candidate, CompareMode, VideoMedia } from "./compare";
 import { SLOW_RATES, VideoControls, useVideoClock, type VideoLoop } from "./video-clock";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
@@ -116,8 +116,10 @@ export type CompareVideoProps = {
   audio?: "a" | "b" | "none";
   /** Draw nearest-neighbour when shown larger than the video's own pixels (`zoomed`, default), always, or never. */
   pixelated?: "zoomed" | "always" | "never";
-  /** How tall a frame may be: a CSS length or `"viewport"`, as in `Compare`. */
+  /** How tall a frame may be: a CSS length, `"viewport"` (a fixed guess) or `"fit"` (measured), as in `Compare`; full screen fills what the controls leave. */
   maxHeight?: string;
+  /** With `maxHeight="fit"`: pixels of the page below this that it cannot measure, as in `Compare`. Default 0. */
+  reserve?: number;
   /** Bind the keys on the window. Default true. */
   keys?: boolean;
   /** Shortcuts of the surrounding screen, bound with these and listed first in the same legend. */
@@ -128,7 +130,7 @@ export type CompareVideoProps = {
 };
 
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
-export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", onPick, pick = true, pickWords, autoPlay = false, loopWhole = false, pixelated = "zoomed", maxHeight, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
+export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", onPick, pick = true, pickWords, autoPlay = false, loopWhole = false, pixelated = "zoomed", maxHeight, reserve, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
   const clock = useVideoClock({ fps: a.media.fps ?? 30, loop: loopProp, onLoopChange, audio: audio === "none" ? null : audio === "a" ? 0 : 1, autoPlay, loopWhole, pairKey: `${a.media.src}|${b.media.src}` });
   const picker = pick && onPick ? makePicker(a, b, onPick, pickWords) : null;
   const { viewport, setViewport } = useViewport();
@@ -142,6 +144,8 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
 
   // ---- the picture ----
   const aspect = a.media.width / a.media.height;
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const fit = useFitHeight(sectionRef, { enabled: maxHeight === "fit" || full, full, reserve });
   const natural = [a.media.width, a.media.height] as const;
   // Each video against its own pixels: the one drawn larger than its pixels is nearest-neighbour, the other not.
   const frameHeight = frameWidth / aspect;
@@ -170,7 +174,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   );
   const loading = !failed && !clock.loaded;
   const skeleton = loading && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />;
-  const frameProps = { viewport, setViewport: rg.setViewport, onBox: wanted ? undefined : rg.add, outline: rg.peek, aspect, maxHeight: maxHeight === "viewport" ? VIEWPORT_HEIGHT : maxHeight };
+  const frameProps = { viewport, setViewport: rg.setViewport, onBox: wanted ? undefined : rg.add, outline: rg.peek, aspect, maxHeight: frameCap(maxHeight, fit, full) };
 
   const shortcuts: Shortcut[] = [
     ...extraShortcuts,
@@ -234,7 +238,7 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} className={className}>
-      <section aria-label={label} className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}>
+      <section ref={sectionRef} aria-label={label} className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}>
         <Toolbar label="Comparison view" className="items-center gap-2">
           <ToggleGroup label="View" options={MODES.map((m) => ({ value: m, label: MODE_LABEL[m] }))} value={mode} onChange={(v) => onModeChange(v as VideoMode)} size="sm" />
           <ToolbarSeparator />
