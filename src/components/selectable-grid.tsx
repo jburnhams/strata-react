@@ -242,7 +242,8 @@ export function SelectableGrid<T>({
     const key = rowKey(row);
     const index = indexOf.get(key) ?? 0;
     const name = selection.rowLabel(row);
-    const why = unselectableReason && !(selection.isSelectable?.(row) ?? true) ? unselectableReason(row) : undefined;
+    const unselectable = !(selection.isSelectable?.(row) ?? true);
+    const why = unselectableReason && unselectable ? unselectableReason(row) : undefined;
     const corner = badge?.(row);
     return (
       <GridListItem
@@ -253,8 +254,9 @@ export function SelectableGrid<T>({
         className={cn(
           // select-none: a Shift-click range would otherwise also select the text between the tiles.
           "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none outline-offset-2 transition-state",
-          "selected:border-primary selected:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50",
-          "cursor-pointer hover:bg-surface-sunken disabled:hover:bg-transparent",
+          "selected:border-primary selected:bg-surface-sunken",
+          // `disabledBehavior="selection"` keeps such a tile focusable and so it is not `disabled`: dim it here.
+          unselectable ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
         )}
       >
         <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
