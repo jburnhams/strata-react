@@ -3,9 +3,15 @@
 // index.html, as a host like Pages or Netlify would serve it) and its Vite `base`. Requests that
 // do not ask for HTML are never given index.html, so a missed API route fails loudly as a 404
 // instead of a JSON parse error.
+//
+// An app built with a relative Vite `base: './'` (python-app-template, for reverse proxies) gets a
+// `<base href>` back to its root from its own server in production. A plain file server does not,
+// so `/books/1` would ask for `/books/assets/index.js` and paint an empty page (issue #242). In
+// spa mode the index.html this server sends therefore gets `<base href="{prefix}">` unless it
+// already has a base tag, which is what the app's server does for it.
 import { createServer } from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { basename, extname, join, normalize, resolve, sep } from "node:path";
 
 const types: Record<string, string> = {
   ".html": "text/html",
@@ -37,6 +43,13 @@ export interface StaticServer {
   close(): Promise<void>;
 }
 
+/** The page with `<base href="{href}">` first in its head, unless it already has a base tag. */
+export function withBaseTag(html: string, href: string): string {
+  if (/<base[\s>]/i.test(html)) return html;
+  const tag = `<base href="${href}">`;
+  return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => `${m}${tag}`) : `${tag}${html}`;
+}
+
 /** Serves `dir` on 127.0.0.1 under `base`, with history fallback to `index.html` when `spa` is set. */
 export async function serveStatic(dir: string, { spa = false, base = "/" }: { spa?: boolean; base?: string } = {}): Promise<StaticServer> {
   const root = resolve(dir);
@@ -61,6 +74,11 @@ export async function serveStatic(dir: string, { spa = false, base = "/" }: { sp
         return;
       }
       file = join(root, "index.html");
+    }
+    if (spa && extname(file) === ".html" && basename(file) === "index.html") {
+      const html = withBaseTag(readFileSync(file, "utf8"), prefix);
+      res.writeHead(200, { "Content-Type": "text/html", "Service-Worker-Allowed": "/" }).end(html);
+      return;
     }
     res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream", "Service-Worker-Allowed": "/" });
     createReadStream(file).pipe(res);

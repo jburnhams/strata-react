@@ -1,8 +1,9 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useLocation } from "react-router";
 import userEvent from "@testing-library/user-event";
-import { Lightbox, PropertyList, type LightboxItem } from "../../src";
+import { Button, Lightbox, PropertyList, useLightboxUrl, type LightboxItem } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const items: LightboxItem[] = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, src: `/pic/${i}.jpg`, label: `Bowl ${i + 1}`, natural: [3000, 2000] as const }));
@@ -126,5 +127,66 @@ describe("Lightbox", () => {
     screen.getByRole("button", { name: "Zoom in" }).focus();
     await user.keyboard("{ArrowRight}");
     expect(screen.getByText("2 of 5")).toBeInTheDocument();
+  });
+});
+
+describe("Lightbox for a book (issue #239)", () => {
+  const book: LightboxItem[] = items.map((it, i) => ({ ...it, position: `Page ${i + 20} (${i + 10})` }));
+  function Url() {
+    const url = useLightboxUrl(book);
+    const location = useLocation();
+    return (
+      <>
+        <output aria-label="Search">{location.search}</output>
+        <button onClick={() => url.show("p2")}>Open page 3</button>
+        <Lightbox
+          title="Pages"
+          items={book}
+          index={url.index}
+          onIndexChange={url.onIndexChange}
+          open={url.open}
+          onOpenChange={url.onOpenChange}
+          missing="This page could not be loaded."
+          strip
+          overlay={(item, natural) => <i data-testid="layer">{`${item.id} ${natural ? natural.join("x") : "?"}`}</i>}
+          actions={(item) => <Button size="sm">Edit {item.label}</Button>}
+        />
+      </>
+    );
+  }
+
+  it("opens from ?view=, names the position with both numbers, draws the layer and the item's action", async () => {
+    renderWithStrata(<Url />, { route: "/book?view=p1" });
+    expect(await screen.findByRole("dialog", { name: "Pages" })).toBeInTheDocument();
+    expect(screen.getByText("Page 21 (11) of 5")).toBeInTheDocument();
+    expect(screen.getByTestId("layer")).toHaveTextContent("p1 3000x2000");
+    expect(screen.getByRole("button", { name: "Edit Bowl 2" })).toBeInTheDocument();
+  });
+
+  it("keeps the open item in the URL: stepping replaces it and closing removes it", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Url />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Open page 3" }));
+    expect(screen.getByLabelText("Search")).toHaveTextContent("?view=p2");
+    await user.click(screen.getByRole("button", { name: "Next picture" }));
+    expect(screen.getByLabelText("Search")).toHaveTextContent("?view=p3");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.getByLabelText("Search")).toBeEmptyDOMElement());
+  });
+
+  it("treats an id that is not in the set as closed", () => {
+    renderWithStrata(<Url />, { route: "/book?view=nope" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("has a thumbnail strip that jumps and follows the current picture", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Url />, { route: "/book?view=p0" });
+    const strip = await screen.findByRole("listbox", { name: "Pictures in this set" });
+    expect(strip.querySelectorAll("[role=option]")).toHaveLength(5);
+    await user.click(within(strip).getByRole("option", { name: "Page 23 (13), Bowl 4" }));
+    expect(screen.getByLabelText("Search")).toHaveTextContent("?view=p3");
+    expect(within(strip).getByRole("option", { name: "Page 23 (13), Bowl 4" })).toHaveAttribute("aria-selected", "true");
   });
 });

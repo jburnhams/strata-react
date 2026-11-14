@@ -184,4 +184,38 @@ describe("strata-react/visual from the built package", () => {
       await server.close();
     }
   });
+
+  // Issue #242: an app built with a relative `base: './'` finds its assets on a nested route because its
+  // own server gives every page a <base href>; the runner's file server does the same, and a build whose
+  // assets are missing fails the shot instead of writing an empty baseline.
+  describe("a build with a relative base on a nested route", () => {
+    const relative = () => {
+      mkdirSync(join(app, "dist-relative"), { recursive: true });
+      writeFileSync(join(app, "dist-relative/index.html"), `<!doctype html><html><head><title>x</title></head><body><div id="root"></div><script type="module" src="./main.js"></script></body></html>`);
+      writeFileSync(join(app, "dist-relative/main.js"), `document.getElementById("root").innerHTML = "<h1>The book</h1>";`);
+      writeFileSync(
+        join(app, "strata-visual.config.ts"),
+        `import { defineVisualConfig } from "strata-react/visual";
+export default defineVisualConfig({ themes: ["light"], systemFonts: "allow", app: { dir: "dist-relative", routes: [{ name: "book", path: "/books/1", states: { ready: [] } }] } });
+`,
+      );
+    };
+
+    it("loads its script and writes a real baseline", () => {
+      relative();
+      rmSync(join(app, "tests/visual/baselines"), { recursive: true, force: true });
+      const r = run(["--update"]);
+      expect(r.out).toContain("Wrote 1 baseline");
+      expect(r.code).toBe(0);
+    }, 120_000);
+
+    it("fails a shot whose script never arrived", () => {
+      relative();
+      rmSync(join(app, "dist-relative/main.js"));
+      writeFileSync(join(app, "dist-relative/index.html"), `<!doctype html><html><head><title>x</title></head><body><div id="root"><p>shell</p></div><script type="module" src="./gone.js"></script></body></html>`);
+      const r = run(["--update"]);
+      expect(r.code).toBe(1);
+      expect(r.out).toMatch(/script \/gone\.js failed with 404/);
+    }, 120_000);
+  });
 });

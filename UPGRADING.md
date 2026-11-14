@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.42 (2026-11-14)
+
+- `strata-visual` serves an app build's `index.html` with `<base href="/">` (the target's `base`) added when the page has no base tag, as python-app-template's server does, so a build with `base: './'` finds its assets on a nested route; drop a `visual` Vite mode that injected the tag yourself (it is left alone if the page already has one).
+- A shot now fails when a script or stylesheet request returns 4xx/5xx or HTML. A route that used to write an empty baseline because its assets never loaded fails now: fix the build or the server, then run `test:visual:update` and look at the diff.
+
 ## After v1.0.40 (2026-11-13 to 2026-11-14)
 
 - Two `StrataToastRegion`s mounted at once no longer draw every toast twice: the first mounted draws and a second draws nothing (and warns in development, naming `renderRoutes(..., { toasts: false })`). A test that worked around the doubling with `findAllByText` can use `findByText`; an app with a region in a layout and another in a page loses the page's.

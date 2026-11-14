@@ -57,6 +57,14 @@ import { Tooltip } from "./tooltip";
 // - `LineChartGroup` stacks charts on one x axis: one shared range, one `CursorScope` (see cursor.tsx),
 //   so hovering or arrowing in any chart puts a rule and its own reading in every chart, and one
 //   `current` and `onPick` for all.
+//
+// `range` (issue #244, from strata-360's elevation and speed tracks): a downsampled series loses its
+// extremes, so each reading may carry the lowest and highest value it stands for, as `low` and `high`
+// arrays that line up with `series` by index. They are drawn as one translucent area in the series
+// colour behind the line, widen the y-axis (a chart that hides an extreme is worse than an untidy
+// scale), and are said wherever the reading is: the hover and keyboard readout ("2 km: 340 m (310 m
+// to 372 m)"), a column of the screen-reader table, and a key entry. The same fill rule as `area`:
+// flat and pale, never a gradient. It is named `range` because `band` is already the threshold.
 export type Point = { x: number; y: number };
 
 /** Shading tones for `spans`: the role's subtle fill. */
@@ -84,6 +92,8 @@ export type LineChartProps = {
   planned?: Point[];
   plannedLabel?: string;
   band?: { below: number; label: string };
+  /** The lowest and highest value each reading stands for, by index into `series` (a downsampled track keeps its extremes). Drawn as a pale area behind the line, included in the y-axis, said in the readout and the table. `label` names it in the key: "Lowest to highest in each stretch". */
+  range?: { low: readonly number[]; high: readonly number[]; label: string };
   formatX: (x: number) => string;
   /** What x is, as the screen-reader table's first column heading: "Distance", "Day". Default "Time". */
   xLabel?: string;
@@ -232,6 +242,31 @@ export function logScale(values: number[], pin: { min?: number; max?: number } =
   return { min, max, ticks, at: (v) => (Math.log10(v) - Math.log10(min)) / span, log: true };
 }
 
+type Limit = { x: number; low: number; high: number };
+
+/** The range of each reading, sorted by x; a reading without two finite numbers has none, and arrays of different lengths use the shorter. */
+function rangeLimits(series: readonly Point[], range: LineChartProps["range"]): Limit[] {
+  if (!range) return [];
+  const out: Limit[] = [];
+  for (let i = 0; i < Math.min(series.length, range.low.length, range.high.length); i++) {
+    const a = range.low[i];
+    const b = range.high[i];
+    if (Number.isFinite(a) && Number.isFinite(b)) out.push({ x: series[i].x, low: Math.min(a, b), high: Math.max(a, b) });
+  }
+  return out.sort((p, q) => p.x - q.x);
+}
+
+function rangePath(limits: readonly Limit[], sx: (x: number) => number, sy: (v: number) => number): string {
+  const top = limits.map((l, i) => `${i ? "L" : "M"}${sx(l.x).toFixed(1)},${sy(l.high).toFixed(1)}`);
+  const bottom = [...limits].reverse().map((l) => `L${sx(l.x).toFixed(1)},${sy(l.low).toFixed(1)}`);
+  return `${top.join("")}${bottom.join("")}Z`;
+}
+
+function rangeText(limits: readonly Limit[], x: number, formatY: (y: number) => string, joiner = "–"): string {
+  const l = limits.find((r) => r.x === x);
+  return l ? `${formatY(l.low)}${joiner}${formatY(l.high)}` : "";
+}
+
 /** The value of a series at x, read between the two readings either side (flat beyond the ends). Series need not be sorted. */
 export function valueAt(series: readonly Point[], x: number): number {
   const sorted = [...series].sort((p, q) => p.x - q.x);
@@ -296,6 +331,7 @@ export function LineChart({
   readout,
   onPick,
   area,
+  range,
   height = 280,
   className,
 }: LineChartProps) {
@@ -304,7 +340,8 @@ export function LineChart({
   const joined = Boolean(cursorProp) && shared !== null;
   const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
   const gradientId = `heat-${React.useId().replace(/[^\w-]/g, "")}`;
-  const all = [...series, ...(planned ?? [])];
+  const limits = React.useMemo(() => rangeLimits(series, range), [series, range]);
+  const all = [...series, ...(planned ?? []), ...limits.flatMap((l) => [{ x: l.x, y: l.low }, { x: l.x, y: l.high }])];
   const xMin = xDomain ? xDomain[0] : Math.min(...all.map((p) => p.x));
   const xMax = xDomain ? xDomain[1] : Math.max(...all.map((p) => p.x));
   const log = yMode === "log";
@@ -407,6 +444,10 @@ export function LineChart({
             {planned && (
               <path d={path(planned)} fill="none" stroke="var(--muted-foreground)" strokeWidth={1.5} strokeDasharray="4 4" />
             )}
+            {limits.length > 1 && (
+              // The extremes as one flat translucent area in the line's own colour, behind the line.
+              <path d={rangePath(limits, sx, sy)} fill={colour} fillOpacity={0.18} stroke="none" data-chart-range="" />
+            )}
             {area && series.length > 1 && (
               // One flat pale tint, never a gradient: the area is the meaning, so it is a plain fill.
               <path d={`${path(series)}L${sx(series[series.length - 1].x).toFixed(1)},${sy(y.min).toFixed(1)}L${sx(series[0].x).toFixed(1)},${sy(y.min).toFixed(1)}Z`} fill={colour} fillOpacity={0.12} stroke="none" />
@@ -432,7 +473,7 @@ export function LineChart({
             )}
       </>
     ),
-    [width, height, series, planned, band, tickList, xMin, xMax, yMode, yInvert, xAxis, spans, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
+    [width, height, series, limits, planned, band, tickList, xMin, xMax, yMode, yInvert, xAxis, spans, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -448,6 +489,7 @@ export function LineChart({
             <tr>
               <th scope="col">{xLabel}</th>
               <th scope="col">{seriesLabel}</th>
+              {range && <th scope="col">{range.label}</th>}
             </tr>
           </thead>
           <tbody>
@@ -455,6 +497,7 @@ export function LineChart({
               <tr key={p.x}>
                 <td>{formatX(p.x)}</td>
                 <td>{formatY(p.y)}</td>
+                {range && <td>{rangeText(limits, p.x, formatY)}</td>}
               </tr>
             ))}
           </tbody>
@@ -475,7 +518,7 @@ export function LineChart({
         )}
       </div>
     ),
-    [label, seriesLabel, series, formatX, formatY, xLabel, spans, marks],
+    [label, seriesLabel, series, formatX, formatY, xLabel, spans, marks, range, limits],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -485,7 +528,7 @@ export function LineChart({
   const [hover, setHover] = React.useState<number | null>(null);
   const [kbd, setKbd] = React.useState<number | null>(null);
   const [focused, setFocused] = React.useState(false);
-  const readoutText = (pt: Point) => (typeof readout === "function" ? readout(pt) : `${formatX(pt.x)}: ${formatY(pt.y)}`);
+  const readoutText = (pt: Point) => (typeof readout === "function" ? readout(pt) : `${formatX(pt.x)}: ${formatY(pt.y)}${range ? ` (${rangeText(limits, pt.x, formatY, " to ")})` : ""}`);
   const nearest = (px: number) => {
     const target = xMin + ((px - pad.left) / (w || 1)) * (xMax - xMin || 1);
     let best = 0;
@@ -638,6 +681,14 @@ export function LineChart({
           {seriesLabel}
           {stops.length > 0 && colourScaleLabel && <span>({colourScaleLabel})</span>}
         </span>
+        {range && limits.length > 0 && (
+          <span className="inline-flex items-center gap-2">
+            <svg width="14" height="10" aria-hidden>
+              <rect width="14" height="10" rx="2" fill={colour} fillOpacity={0.18} />
+            </svg>
+            {range.label}
+          </span>
+        )}
         {spans?.map((sp) => (
           <span key={`${sp.from}-${sp.to}-${sp.label}`} className="inline-flex items-center gap-2">
             <svg width="14" height="10" aria-hidden>

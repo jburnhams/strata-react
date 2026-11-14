@@ -318,3 +318,32 @@ describe("a shared x domain", () => {
     expect(slider).toHaveAttribute("min", "0");
   });
 });
+
+describe("range (issue #244)", () => {
+  const low = [10, 30, 70, 40, 20, 45];
+  const high = [30, 60, 100, 80, 45, 70];
+  const range = { low, high, label: "Lowest to highest in each stretch" };
+  it("draws one area behind the line, names it in the key, and puts it in the table", () => {
+    const { container } = renderWithStrata(<LineChart {...props} range={range} />);
+    expect(container.querySelectorAll("path[data-chart-range]")).toHaveLength(1);
+    expect(screen.getByText("Lowest to highest in each stretch", { selector: "span" })).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Elevation" });
+    expect(within(table).getByRole("columnheader", { name: "Lowest to highest in each stretch" })).toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /200 m/ })).toHaveTextContent("70 m up–100 m up");
+  });
+  it("widens the y-axis to the extremes, so a peak above every reading still shows", () => {
+    const { container } = renderWithStrata(<LineChart {...props} series={[{ x: 0, y: 5 }, { x: 100, y: 6 }]} range={{ low: [0, 1], high: [500, 5], label: "Extremes" }} />);
+    expect(container.textContent).toContain("500 m up");
+  });
+  it("is said in the readout", async () => {
+    renderWithStrata(<LineChart {...props} range={range} readout />);
+    const thumb = screen.getAllByRole("slider")[0];
+    thumb.focus();
+    await userEvent.keyboard("{Home}{ArrowRight}{ArrowRight}");
+    expect(document.body.textContent).toContain("200 m: 87 m up (70 m up to 100 m up)");
+  });
+  it("draws nothing for a reading whose extremes are missing", () => {
+    const { container } = renderWithStrata(<LineChart {...props} range={{ low: [1], high: [2], label: "x" }} />);
+    expect(container.querySelectorAll("path[data-chart-range]")).toHaveLength(0);
+  });
+});

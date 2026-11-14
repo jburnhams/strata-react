@@ -13,13 +13,13 @@ const ids = ["f-0412", "f-0412-b", "k-2"];
 const at = "2026-11-12T09:30:00Z";
 const question: ConversationTurn = { id: "q1", role: "person", time: at, text: "Which firing ran hottest this week, and was it kiln 2?" };
 
-function Frame({ turns, answering = false }: { turns: ConversationTurn[]; answering?: boolean }) {
+function Frame({ turns, answering = false, notReady }: { turns: ConversationTurn[]; answering?: boolean; notReady?: string }) {
   const [opened, setOpened] = React.useState<string | null>(null);
   return (
     <div className="flex h-[30rem] max-w-2xl flex-col gap-3">
       <Conversation label="Questions about the kiln" answerName="Assistant" turns={turns} entities={ids} onOpen={setOpened} onRetry={() => {}} empty={<p className="type-body-sm text-muted-foreground">Ask about a firing or a kiln.</p>} />
       {opened && <p className="type-caption text-muted-foreground">Opened {opened}</p>}
-      <Composer label="Ask about the kiln" onSend={() => {}} onStop={() => {}} answering={answering} answeringReason="Waiting for the answer. Stop it to ask something else." suggestions={["Which firing ran hot?", "What is booked next week?"]} />
+      <Composer label="Ask about the kiln" onSend={() => {}} onStop={() => {}} answering={answering} answeringReason="Waiting for the answer. Stop it to ask something else." disabled={notReady} suggestions={["Which firing ran hot?", "What is booked next week?"]} />
     </div>
   );
 }
@@ -42,6 +42,9 @@ export const Streaming: Story = {
 export const Failed: Story = {
   render: () => <Frame turns={[question, { id: "a1", role: "answer", time: at, state: "failed", text: "", error: "The firing log did not answer in time, so nothing was looked up." }]} />,
 };
+
+/** Not ready, and why: the box, Send and the suggestions are off, with the app's reason under the box (issue #243). */
+export const NotReady: Story = { render: () => <Frame turns={[]} notReady="The footage is still being indexed." /> };
 
 export const Empty: Story = { render: () => <Frame turns={[]} /> };
 

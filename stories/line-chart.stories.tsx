@@ -215,3 +215,31 @@ function LiveGroupStage() {
 
 /** The stack with a position moving every frame. Skipped by the visual suite. */
 export const LiveGroup: Story = { tags: ["no-visual"], render: () => <LiveGroupStage /> };
+
+// Issue #244: the elevation track downsampled to a point per 400 m, each still carrying the lowest and
+// highest reading it stands for, drawn as a pale area behind the line.
+const trackBuckets = (() => {
+  const step = Math.ceil(riverElevation.length / 20);
+  const out: { x: number; y: number; low: number; high: number }[] = [];
+  for (let i = 0; i < riverElevation.length; i += step) {
+    const bucket = riverElevation.slice(i, i + step);
+    const ys = bucket.map((p) => p.y);
+    out.push({ x: bucket[0]!.x, y: Math.round(ys.reduce((a, b) => a + b, 0) / ys.length), low: Math.min(...ys), high: Math.max(...ys) });
+  }
+  return out;
+})();
+
+/** A downsampled track keeps its extremes: the area is the lowest to the highest reading in each stretch, said in the readout and the table. */
+export const RangeBehindTheLine: Story = {
+  args: {
+    label: "Elevation along the river run",
+    series: trackBuckets.map(({ x, y }) => ({ x, y })),
+    seriesLabel: "Elevation",
+    range: { low: trackBuckets.map((b) => b.low), high: trackBuckets.map((b) => b.high), label: "Lowest to highest in each stretch" },
+    formatX: (m: number) => `${(m / 1000).toFixed(1)} km`,
+    formatY: (y: number) => `${y} m`,
+    xTicks: [0, 2000, 4000, 6000, 8000],
+    end: "none",
+    readout: true,
+  },
+};

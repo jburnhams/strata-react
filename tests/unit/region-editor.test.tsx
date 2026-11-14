@@ -215,3 +215,62 @@ describe("RegionEditor, from and to", () => {
     expect(container.querySelector("line")).toBeNull();
   });
 });
+
+describe("RegionEditor turning (issue #241)", () => {
+  it("draws the picture turned on the canvas it needs and works in that canvas's units", () => {
+    renderWithStrata(<Editor angle={90} initial={[{ id: "crop", label: "Crop", x: 100, y: 100, w: 200, h: 100 }]} />);
+    const turned = screen.getByTestId("picture").parentElement!;
+    expect(turned.style.transform).toContain("rotate(90deg)");
+    // The canvas is 500 wide by 1000 high at 90°: the picture (1000 by 500) is 2× its width and half its height.
+    expect(turned.style.width).toBe("200%");
+    expect(turned.style.height).toBe("50%");
+  });
+
+  it("turns the windows with the picture when the angle changes, in the same step", async () => {
+    const onAngleChange = vi.fn();
+    const onKept = vi.fn();
+    renderWithStrata(<Editor angle={0} onAngleChange={onAngleChange} onKept={onKept} initial={[{ id: "crop", label: "Crop", x: 0, y: 0, w: 200, h: 100 }]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Turn right 90°" }));
+    expect(onAngleChange).toHaveBeenCalledWith(90);
+    const kept = onKept.mock.calls[0][0][0];
+    expect(kept).toMatchObject({ w: 200, h: 100 });
+    expect(kept.x + kept.w).toBeLessThanOrEqual(500);
+    expect(screen.getByRole("group", { name: "Turn the picture" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Fine turn" })).toBeInTheDocument();
+  });
+
+  it("has Level once the picture is turned a little, and a guide of level lines on request", async () => {
+    const onAngleChange = vi.fn();
+    const { container } = renderWithStrata(<Editor angle={1.5} onAngleChange={onAngleChange} guide />);
+    expect(container.querySelector("svg[data-guide]")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Level" }));
+    expect(onAngleChange).toHaveBeenCalledWith(0);
+  });
+});
+
+describe("RegionEditor spread (issue #241)", () => {
+  const spreadWindows: EditableRegion[] = [
+    { id: "left", label: "Left page", x: 0, y: 0, w: 500, h: 500 },
+    { id: "right", label: "Right page", x: 500, y: 0, w: 500, h: 500, tone: "info" },
+  ];
+  it("splits one window in two and makes two one again", async () => {
+    const onKept = vi.fn();
+    renderWithStrata(<Editor mode="spread" onKept={onKept} initial={[{ id: "page", label: "Page", x: 0, y: 0, w: 1000, h: 500 }]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Split into two" }));
+    expect(onKept.mock.calls[0][0].map((r: EditableRegion) => [r.label, r.x, r.w])).toEqual([["Left page", 0, 500], ["Right page", 500, 500]]);
+    await userEvent.click(screen.getByRole("button", { name: "Make one" }));
+    expect(onKept.mock.calls[1][0]).toEqual([expect.objectContaining({ id: "page", label: "Page", x: 0, w: 1000 })]);
+  });
+  it("moves the gutter from the keyboard so both windows resize together", async () => {
+    const onKept = vi.fn();
+    renderWithStrata(<Editor mode="spread" onKept={onKept} initial={spreadWindows} />);
+    const gutter = screen.getByRole("separator", { name: "Gutter between the two pages" });
+    expect(gutter).toHaveAttribute("aria-valuenow", "500");
+    gutter.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    const [l, r] = onKept.mock.calls[0][0];
+    expect(l.w).toBe(510);
+    expect(r.x).toBe(510);
+    expect(r.w).toBe(490);
+  });
+});

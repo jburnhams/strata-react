@@ -1,10 +1,10 @@
 import * as React from "react";
-import { Play, Square } from "lucide-react";
+import { Columns2, Play, RotateCcw, RotateCw, Square } from "lucide-react";
 import { cn } from "../lib/utils";
 import { format } from "../lib/format";
-import { HANDLES, drawRect, lerpRect, moveRect, resizeRect, sameRect, type Easing, type Handle, type Rect } from "../lib/region";
+import { HANDLES, drawRect, gutterOf, joinRects, lerpRect, moveGutter, moveRect, normaliseAngle, resizeRect, sameRect, splitRect, turnRect, turnedSize, type Easing, type Handle, type Rect } from "../lib/region";
 import { Button } from "./button";
-import { NumberField } from "./value-controls";
+import { NumberField, Slider } from "./value-controls";
 import { PropertyRow } from "./inspector";
 
 // Draw and move one or two windows on a picture: a crop, or the start and end of a pan. Issue
@@ -34,6 +34,22 @@ import { PropertyRow } from "./inspector";
 // Watch button. The editor does not know what it is moving, so it supplies the rectangle at time
 // `t` (`onPreview(rect, t)`, eased) and draws that rectangle itself; the app moves its own picture.
 // With reduced motion the preview jumps to the end instead of travelling.
+//
+// Turning the picture (issue #241, from strata-scan's cut editor, where a page is a crop of a scan
+// turned by an angle). `angle` (degrees, clockwise) and `onAngleChange` make the editor draw the
+// picture turned in the browser (a CSS rotation, so there is no round trip per degree) on the canvas a
+// turned picture needs, and every window is then in the *turned canvas's* units: `size` stays the
+// picture's own, and the editor works on `turnedSize(size, angle)`. When the angle changes it turns the
+// windows with the picture (`turnRect`: centres rotate about the canvas centre, sizes stay, held
+// inside the canvas) and gives them to `onChange` in the same step, so the app does no geometry. The
+// geometry is `turnedSize`/`turnRect` in `lib/region.ts`, the same numbers a server needs. The control
+// is Strata's `Slider` (React Aria's, 0.1 steps with a typed value) for the fine skew a scan needs, and
+// two quarter-turn buttons; `guide` draws level lines across the picture to line text up against.
+//
+// A spread (`mode="spread"`): two windows of one scan with a gutter between. The gutter is a separator
+// you can drag (or move with the arrows), and moving it resizes both windows, which is what a spread
+// is. "Split into two" cuts one window down the middle and "Make one" joins the two into their union.
+// Both are actions on the editor so no app writes `halves`/`union`.
 //
 // A name tag on every window carries its label, so a tone (`success` for start, `danger` for end)
 // never has to be told apart by colour alone.
@@ -88,7 +104,7 @@ export type RegionEditorProps = {
   /** A drag on the empty picture draws a new window and calls this with it; the app adds it. Without it nothing can be drawn. */
   onDraw?: (rect: Rect) => void;
   /** "move": the first window is the start and the second the end; draws a line between them and a Watch button. */
-  mode?: "single" | "move";
+  mode?: "single" | "move" | "spread";
   /** Called as Watch plays, with the rectangle at `t` (0 to 1) and `t`. Also drawn by the editor. */
   onPreview?: (rect: Rect, t: number) => void;
   /** How long Watch takes, in milliseconds. Default 1500. */
@@ -100,6 +116,14 @@ export type RegionEditorProps = {
   unit?: string;
   /** The windows as they began; with it a Reset appears while they differ. */
   defaults?: readonly EditableRegion[];
+  /** The picture is turned by this many degrees (clockwise, -180 to 180): drawn turned on a canvas that holds it, and every window is in that canvas's units. Default 0. */
+  angle?: number;
+  /** Shows the turn control (a fine slider, quarter turns, Level) and receives the new angle; the windows are turned with the picture through `onChange` in the same step. Needs `angle`. */
+  onAngleChange?: (angle: number) => void;
+  /** Level lines across the picture, to line text up against while turning. */
+  guide?: boolean;
+  /** `mode="spread"`: the words for one window, and for each half. Default "Page", "Left page", "Right page". */
+  spreadLabels?: { one: string; left: string; right: string };
   className?: string;
 };
 
@@ -116,9 +140,9 @@ type Gesture =
 /** Draw and move one or two named windows on a picture, with pointer, keyboard and numbers kept in step; aspect and bounds hold through all three; two windows make a from/to move with a Watch preview. */
 export function RegionEditor({
   label, children, size, regions, onChange, selectedId, onSelectedChange, aspect, min, bounds, step, onDraw, mode = "single",
-  onPreview, duration = 1500, easing = "ease-in-out", fields = true, unit = "px", defaults, className,
+  onPreview, duration = 1500, easing = "ease-in-out", fields = true, unit = "px", defaults, angle = 0, onAngleChange, guide, spreadLabels = { one: "Page", left: "Left page", right: "Right page" }, className,
 }: RegionEditorProps) {
-  const [w, h] = size;
+  const [w, h] = angle ? turnedSize(size, angle) : size;
   const limits = React.useMemo(
     () => ({ bounds: bounds ?? { x: 0, y: 0, w, h }, min: min ?? { w: w / 20, h: h / 20 }, aspect }),
     [bounds, min, w, h, aspect],
@@ -138,7 +162,7 @@ export function RegionEditor({
   const hintId = React.useId();
 
   const rectOf = (r: EditableRegion): Rect => (draft?.id === r.id ? draft.rect : r);
-  const shown = regions.map((r) => ({ ...r, ...rectOf(r) }));
+  const shownBase = regions.map((r) => ({ ...r, ...rectOf(r) }));
 
   const keep = (id: string, rect: Rect) => {
     const before = regions.find((r) => r.id === id);
@@ -230,6 +254,49 @@ export function RegionEditor({
     say({ ...r, ...next });
   };
 
+  // --- turning
+  const turnTo = (next: number) => {
+    const to = normaliseAngle(next);
+    if (to === angle) return;
+    setDraft(null);
+    onAngleChange?.(to);
+    onChange(regions.map((r) => ({ ...r, ...turnRect(r, size, angle, to) })));
+    setSaid(`Turned to ${to}°`);
+  };
+  const quarter = Math.round(angle / 90) * 90;
+  const fine = Math.round((angle - quarter) * 10) / 10;
+
+  // --- spread: two windows, a gutter between
+  const spread = mode === "spread";
+  const [gutterDraft, setGutterDraft] = React.useState<number | null>(null);
+  const pair = spread && regions.length === 2 ? ([rectOf(regions[0]), rectOf(regions[1])] as const) : null;
+  const gutter = pair ? (gutterDraft === null ? gutterOf(pair[0], pair[1]) : gutterDraft) : 0;
+  const gutterRects = (at: number): [Rect, Rect] | null => (pair ? moveGutter(pair[0], pair[1], at - gutterOf(pair[0], pair[1]), limits) : null);
+  const keepGutter = (at: number) => {
+    const moved = gutterRects(at);
+    setGutterDraft(null);
+    if (moved && regions.length === 2) {
+      onChange([{ ...regions[0], ...moved[0] }, { ...regions[1], ...moved[1] }]);
+      setSaid(`Gutter at ${round(gutterOf(moved[0], moved[1]))}: ${spreadLabels.left} ${round(moved[0].w)} wide, ${spreadLabels.right} ${round(moved[1].w)} wide`);
+    }
+  };
+  const split = () => {
+    const only = regions[0];
+    if (!only) return;
+    const [l, r] = splitRect(rectOf(only));
+    onChange([{ ...only, ...l, label: spreadLabels.left }, { ...only, ...r, id: `${only.id}-right`, label: spreadLabels.right, tone: "info" }]);
+    setSaid(`Split into ${spreadLabels.left} and ${spreadLabels.right}`);
+  };
+  const join = () => {
+    if (regions.length !== 2) return;
+    onChange([{ ...regions[0], ...joinRects(rectOf(regions[0]), rectOf(regions[1])), label: spreadLabels.one }]);
+    select(regions[0].id);
+    setSaid(`Made one ${spreadLabels.one}`);
+  };
+
+  const moving = gutterDraft !== null ? gutterRects(gutterDraft) : null;
+  const shown = shownBase.map((r, i) => (moving && i < 2 ? { ...r, ...moving[i] } : r));
+
   // --- numbers
   const chosen = shown.find((r) => r.id === selected);
   const setSide = (key: "x" | "y" | "w" | "h", value: number | null) => {
@@ -279,7 +346,20 @@ export function RegionEditor({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="relative overflow-hidden rounded-surface border border-border bg-surface-sunken" style={{ aspectRatio: `${w} / ${h}` }}>
-        {children}
+        {angle ? (
+          <div className="absolute" style={{ left: "50%", top: "50%", width: `${(size[0] / w) * 100}%`, height: `${(size[1] / h) * 100}%`, transform: `translate(-50%, -50%) rotate(${angle}deg)` }}>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+        {guide && (
+          <svg aria-hidden data-guide className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 8 8" preserveAspectRatio="none">
+            {Array.from({ length: 7 }, (_, i) => (
+              <line key={i} x1="0" x2="8" y1={i + 1} y2={i + 1} stroke="var(--foreground)" strokeOpacity={0.35} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            ))}
+          </svg>
+        )}
         <div
           ref={overlay}
           role="group"
@@ -345,6 +425,48 @@ export function RegionEditor({
               </div>
             );
           })}
+          {pair && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Gutter between the two pages"
+              aria-valuenow={Math.round(gutter)}
+              aria-valuemin={Math.round(limits.bounds.x + limits.min.w)}
+              aria-valuemax={Math.round(limits.bounds.x + limits.bounds.w - limits.min.w)}
+              tabIndex={0}
+              data-gutter=""
+              onKeyDown={(e) => {
+                const dir = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
+                if (!dir) return;
+                e.preventDefault();
+                e.stopPropagation();
+                keepGutter(gutter + dir * stride * (e.shiftKey ? 5 : 1));
+              }}
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                capture(e);
+                setGutterDraft(gutter);
+              }}
+              onPointerMove={(e) => {
+                if (gutterDraft === null) return;
+                e.stopPropagation();
+                setGutterDraft(unitsAt(e).x);
+              }}
+              onPointerUp={(e) => {
+                if (gutterDraft === null) return;
+                e.stopPropagation();
+                keepGutter(gutterDraft);
+              }}
+              className="absolute z-20 -ml-2 w-4 cursor-col-resize touch-none outline-offset-2"
+              style={{ left: `${(gutter / w) * 100}%`, top: `${(Math.min(shown[0].y, shown[1].y) / h) * 100}%`, height: `${((Math.max(shown[0].y + shown[0].h, shown[1].y + shown[1].h) - Math.min(shown[0].y, shown[1].y)) / h) * 100}%` }}
+            >
+              <span aria-hidden className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-foreground" />
+              <span aria-hidden className="absolute top-1/2 left-1/2 grid size-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-pill border-2 border-foreground bg-background">
+                <Columns2 className="size-3" />
+              </span>
+            </div>
+          )}
           {drawing && <div aria-hidden className="pointer-events-none absolute border-2 border-dashed border-foreground bg-foreground/10" style={pct(drawing)} />}
           {watching && <div aria-hidden data-preview className="pointer-events-none absolute z-20 border-2 border-foreground bg-foreground/15" style={pct(watching)} />}
         </div>
@@ -353,6 +475,23 @@ export function RegionEditor({
       <p id={hintId} className="type-caption text-muted-foreground">
         {onDraw ? "Drag on the picture to draw a window. " : ""}Drag a window to move it, or its handles to resize. Keys: arrows move, Shift and arrows resize, Enter keeps, Escape undoes.
       </p>
+
+      {onAngleChange && (
+        <div role="group" aria-label="Turn the picture" className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onPress={() => turnTo(angle - 90)}><RotateCcw /> Turn left 90°</Button>
+          <Button size="sm" variant="outline" onPress={() => turnTo(angle + 90)}><RotateCw /> Turn right 90°</Button>
+          <Slider aria-label="Fine turn" className="min-w-48 flex-1" value={fine} onChange={(v) => turnTo(quarter + v)} min={-45} max={45} step={0.1} unit="°" editable />
+          {fine !== 0 && <Button size="sm" variant="ghost" onPress={() => turnTo(quarter)}>Level</Button>}
+        </div>
+      )}
+
+      {spread && (regions.length === 1 || regions.length === 2) && (
+        <div>
+          <Button size="sm" variant="outline" onPress={regions.length === 1 ? split : join}>
+            <Columns2 /> {regions.length === 1 ? "Split into two" : "Make one"}
+          </Button>
+        </div>
+      )}
 
       {(mode === "move" || (defaults && modified)) && (
         <div className="flex flex-wrap items-center gap-2">
