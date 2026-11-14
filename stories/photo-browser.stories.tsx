@@ -65,6 +65,9 @@ function Browser({ count, grouped = false, selectionBehavior }: { count: number;
 /** 2,000 pictures in one scroll box, drawn only as far as the window. Sorted newest first; the size slider, `-` and `+` and Ctrl+wheel zoom; the filter says "N of 2,000". */
 export const TwoThousand: Story = { render: () => <Browser count={2000} />, tags: ["no-visual"] };
 
+/** 2,000 pictures grouped by hour in one virtualised scroll box: the group's heading stays at the top while its tiles scroll, and Enter folds it. */
+export const TwoThousandGrouped: Story = { render: () => <Browser count={2000} grouped />, tags: ["no-visual"] };
+
 /** 120 pictures grouped by hour under sticky headings (with the count beside each), each with a box for the group (mixed when part of it is chosen) and a fold button. */
 export const Grouped: Story = { render: () => <Browser count={120} grouped />, tags: ["visual-wide"] };
 
