@@ -164,6 +164,7 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
     <div
       ref={ref}
       role="group"
+      data-viewport-frame=""
       aria-label={label}
       aria-roledescription="zoomable picture"
       tabIndex={0}

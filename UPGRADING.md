@@ -11,6 +11,12 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.40 (2026-11-13)
+
+- Two `StrataToastRegion`s mounted at once no longer draw every toast twice: the first mounted draws and a second draws nothing (and warns in development, naming `renderRoutes(..., { toasts: false })`). A test that worked around the doubling with `findAllByText` can use `findByText`; an app with a region in a layout and another in a page loses the page's.
+- Full screen on `Compare` and `CompareVideo` now fills what the controls leave (measured), whatever `maxHeight` was, where a caller's `maxHeight` used to cap it too, and where no `maxHeight` left the frame as tall as its width made it. New `maxHeight="fit"` and `reserve` measure the page; `"viewport"` is still the fixed guess.
+- A picture that loads with no size (an SVG without one) no longer sets `Compare`'s aspect to NaN; the 3:2 box stays.
+
 ## After v1.0.39 (2026-11-13)
 
 - `Tree`'s props are now a union: give `selected` and `onSelect` (one chosen node) or `choices` from `useChoices` (several). Code that passed `selected` and `onSelect` compiles as before.

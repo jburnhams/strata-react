@@ -82,6 +82,26 @@ export const FitsTheScreen: Story = { args: { mode: "swipe", maxHeight: "viewpor
 
 export const Phone: Story = { tags: ["visual-phone"] };
 
+/** Measured, not guessed (issue #229): a page with its own header above and an answer bar below. `maxHeight="fit"` takes the window, less what the Compare draws besides its pictures and what follows it, so the whole page ends at the bottom of the window with nothing to scroll. */
+export const FitsTheWholePage: Story = {
+  tags: ["visual-wide"],
+  args: { mode: "swipe", maxHeight: "fit", reserve: 16 },
+  render: (args) => (
+    <div className="grid w-full max-w-3xl gap-3">
+      <header className="grid gap-0.5">
+        <h2 className="type-title">Shelf 3, bowl 12</h2>
+        <p className="type-body-sm text-muted-foreground">Which glaze reads as celadon on the shelf?</p>
+      </header>
+      <Stateful {...args} />
+      <footer className="flex gap-2">
+        <Button variant="outline">Prefer {final.label}</Button>
+        <Button variant="outline">Prefer {auto.label}</Button>
+      </footer>
+    </div>
+  ),
+};
+
+
 const warm: Candidate = { id: "warm", label: "auto3", note: "11 s", media: { kind: "image", src: "/api/renderings/warm.svg", alt: "Celadon bowl, auto3", size: [400, 300] } };
 
 /** Every candidate for one item at once, one zoom for all of them. What a tile offers beyond looking is the caller's (`actions`). */
