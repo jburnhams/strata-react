@@ -2,7 +2,7 @@ import * as React from "react";
 import { Button as AriaButton, Popover as AriaPopover } from "react-aria-components";
 import { Ellipsis } from "lucide-react";
 import { format } from "../lib/format";
-import { isDoubtful, phraseAt, phraseDoubtful, wordAt, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState } from "../lib/transcript";
+import { isDoubtful, phraseAt, phraseDoubtful, phraseOfWordId, wordAt, wordId, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState } from "../lib/transcript";
 import { cn } from "../lib/utils";
 import { overlaySurface } from "../lib/overlay";
 import { Button, IconButton } from "./button";
@@ -10,6 +10,7 @@ import { Menu, type Command, type MenuEntry } from "./commands";
 import { NativeSelect, Textarea } from "./field";
 import { Status } from "./status";
 import { Toggle, ToggleGroup } from "./toggle";
+import { Mark, MarkableText, type MarkKind } from "./markable-text";
 import { VirtualList } from "./virtual-list";
 import { VisuallyHidden } from "react-aria";
 
@@ -66,6 +67,27 @@ import { VisuallyHidden } from "react-aria";
 //   row. As with a tooltip it is never the only way to its data: what it holds is a detail the
 //   app also reaches another way (its details panel), and it holds nothing to press.
 //
+// A review transcript with no player, and marking words (issue #260, from strata-360's whole-race
+// transcript: select words and mark them "must use" or "never use", with a dotted underline where a
+// word was corrected):
+// - **No player.** `time` and `onSeek` are optional. Without `time` nothing is heard (no bar, no follow,
+//   no "Jump to now"); without `onSeek` the words, the phrase times and a translation are text, not
+//   buttons. Modes, speakers, doubt, phrase marks, editing and cards work as before.
+// - **Marking** (`marking`: `kinds`, `marks`, `onMark`, `clearKeys`) puts the transcript in a
+//   `MarkableText`, which is the selection model (ids, drag, Shift+click and arrows, the toolbar, the
+//   legend, the summary), and draws each word as a `Mark` with the id `wordId(phraseId, index)`. The ids
+//   are every word of the phrases shown, in order, so a drag or Shift+click over rows that are not
+//   mounted still selects them all. A word is then a mark target and not a seek button (a press starts a
+//   selection): a phrase is played from its time. In a translation there are no words to mark, so the
+//   mode shows the text as it is. The caret scrolls its phrase into view the way following does. The
+//   region is one tab stop of its own, before the list; keys act on it only while it has focus, so the
+//   list keeps its arrows. Enter on the caret's word opens its correction (`onCorrectionPress`), as a
+//   click does, so a corrected word is reachable without a pointer.
+// - **A corrected word** (`word.correction`) has a dotted underline in the primary colour and says
+//   "corrected, was …" to a screen reader; hovering it shows the original in a non-modal popover (the
+//   same part as the phrase card). `onCorrectionPress(phraseId, wordIndex)` makes a click on it open
+//   the correction (instead of seeking, where the word would seek).
+//
 // Checked: React Aria has no transcript or timed-text part; `GridList` (through `VirtualList`) and the
 // toggle buttons are used as they are.
 
@@ -77,10 +99,14 @@ export type TranscriptViewProps = {
   label: string;
   /** Phrases by clip, in time order. */
   groups: readonly TranscriptGroup[];
-  /** The player's time, seconds. */
-  time: number;
-  /** A word or phrase was pressed: seconds to play from, and which. */
-  onSeek: (time: number, from: TranscriptSeek) => void;
+  /** The player's time, seconds. Leave out for a transcript with no player: nothing is heard or followed. */
+  time?: number;
+  /** A word or phrase was pressed: seconds to play from, and which. Leave out and the words and times are text. */
+  onSeek?: (time: number, from: TranscriptSeek) => void;
+  /** Mark words (`MarkableText`): the kinds, the mark on each word id (`wordId(phraseId, index)`), and `onMark(ids, kind | null)`. Words become marks to select, not seek buttons. */
+  marking?: { kinds: readonly MarkKind[]; marks: Readonly<Record<string, string | undefined>>; onMark: (ids: readonly string[], kind: string | null) => void; clearKeys?: string[]; summary?: boolean };
+  /** A corrected word was pressed (a click, with no drag): open it for editing. Takes the click on that word from seeking. */
+  onCorrectionPress?: (phraseId: string, wordIndex: number) => void;
   /** The mode shown: "original" (the words) or a key of the phrases' `alt`. Leave out to let the component hold it. */
   mode?: string;
   onModeChange?: (mode: string) => void;
@@ -121,7 +147,7 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const range = (a: number, b: number) => `${format.runningTime(a)}–${format.runningTime(b)}`;
 
 /** Timed text that follows playback: the heard word marked, any word or phrase pressed to play from, modes, speakers, follow and Jump to now. */
-export function TranscriptView({ label, groups, time, onSeek, mode: controlledMode, onModeChange, modeLabels = {}, speaker: controlledSpeaker, onSpeakerChange, follow = true, announce = false, renderPlay, doubtfulBelow = 0.6, states = [], onPhraseState, renderActions, onEdit, renderCard, cardDelay = 500, height = 480, className }: TranscriptViewProps) {
+export function TranscriptView({ label, groups, time, onSeek, marking, onCorrectionPress, mode: controlledMode, onModeChange, modeLabels = {}, speaker: controlledSpeaker, onSpeakerChange, follow = true, announce = false, renderPlay, doubtfulBelow = 0.6, states = [], onPhraseState, renderActions, onEdit, renderCard, cardDelay = 500, height = 480, className }: TranscriptViewProps) {
   const [ownMode, setOwnMode] = React.useState("original");
   const [ownSpeaker, setOwnSpeaker] = React.useState(ALL);
   const mode = controlledMode ?? ownMode;
@@ -158,9 +184,9 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
     return { rows, phrases };
   }, [groups, speaker, filtering, doubtfulBelow]);
 
-  const heard = phraseAt(phrases, time);
+  const heard = time === undefined ? -1 : phraseAt(phrases, time);
   const heardPhrase = heard >= 0 ? phrases[heard] : null;
-  const heardWord = heardPhrase ? wordAt(heardPhrase, time) : -1;
+  const heardWord = heardPhrase && time !== undefined ? wordAt(heardPhrase, time) : -1;
   const heardText = heardPhrase ? (mode === "original" ? heardPhrase.words.map((w) => w.text).join(" ") : (heardPhrase.alt?.[mode] ?? heardPhrase.words.map((w) => w.text).join(" "))) : "";
 
   // Follow.
@@ -292,13 +318,62 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
     if (controlledSpeaker === undefined) setOwnSpeaker(s);
     onSpeakerChange?.(s);
   };
-  const seek = (t: number, from: TranscriptSeek) => {
-    setFollowing(follow);
-    onSeek(t, from);
-  };
+  const seek = onSeek
+    ? (t: number, from: TranscriptSeek) => {
+        setFollowing(follow);
+        onSeek(t, from);
+      }
+    : undefined;
+
+  // Marking: every word of the phrases shown, in order (also those in rows not mounted), and the
+  // original words only: a translation has no words to mark.
+  const marks = marking && mode === "original" ? marking : null;
+  const wordIds = React.useMemo(() => (marks ? phrases.flatMap((p) => p.words.map((_, i) => wordId(p.id, i))) : []), [marks, phrases]);
+  // A corrected word's original, shown on hover in the same kind of popover as the phrase card.
+  const [hint, setHint] = React.useState<{ el: HTMLElement; text: string } | null>(null);
 
   const modeOptions = modes.map((m) => ({ value: m, label: m === "original" ? (modeLabels.original ?? "Original") : (modeLabels[m] ?? capital(m)) }));
   const speakerOptions = [{ value: ALL, label: "Everyone" }, ...speakers.map((s) => ({ value: s, label: s }))];
+
+  const list = (
+        <div className="relative" onKeyDown={onKeys} onFocus={(e) => showCard(phraseOfEvent(e.target))} onBlur={(e) => { if (!root.current?.contains(e.relatedTarget as Node | null)) showCard(null); }} onPointerLeave={() => { dismissed.current = null; showCard(null); }}>
+        <VirtualList label={label} items={rows} itemKey={(r) => r.key} estimateSize={72} height={height} virtualizeFrom={100}>
+          {(row) =>
+            row.kind === "heading" ? (
+              <div className="flex items-baseline gap-3 bg-surface-sunken px-3 py-2">
+                <h3 className="type-label text-foreground">{row.group.title}</h3>
+                <span className="type-caption tabular-nums text-muted-foreground">{range(row.group.start!, row.group.end!)}</span>
+              </div>
+            ) : (
+              <PhraseRow
+                phrase={row.phrase}
+                marking={Boolean(marks)}
+                onCorrectionPress={onCorrectionPress}
+                onHint={setHint}
+                mode={mode}
+                active={row.index === heard}
+                word={row.index === heard ? heardWord : -1}
+                onSeek={seek}
+                play={renderPlay?.(row.phrase)}
+                doubtfulBelow={doubtfulBelow}
+                states={states}
+                onPhraseState={onPhraseState}
+                actions={renderActions?.(row.phrase)}
+                edit={editing?.id === row.phrase.id ? { text: editing.text, change: (text) => setEditing({ ...editing, text }), done: stopEdit } : undefined}
+                onHover={(on) => { if (!on) dismissed.current = null; showCard(on ? row.phrase.id : null); }}
+              />
+            )
+          }
+        </VirtualList>
+        {follow && !following && heardPhrase && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+            <Button className="pointer-events-auto max-w-full shadow-overlay" onPress={() => setFollowing(true)}>
+              <span className="truncate">Jump to now: {heardText}</span>
+            </Button>
+          </div>
+        )}
+      </div>
+  );
 
   return (
     <div ref={root} className={cn("grid min-w-0 gap-3", className)}>
@@ -325,43 +400,21 @@ export function TranscriptView({ label, groups, time, onSeek, mode: controlledMo
           {summary.doubtful > 0 && <Toggle label="Only doubtful" size="sm" pressed={onlyDoubtful} onChange={setOnlyDoubtful} />}
         </div>
       )}
-      <div className="relative" onKeyDown={onKeys} onFocus={(e) => showCard(phraseOfEvent(e.target))} onBlur={(e) => { if (!root.current?.contains(e.relatedTarget as Node | null)) showCard(null); }} onPointerLeave={() => { dismissed.current = null; showCard(null); }}>
-        <VirtualList label={label} items={rows} itemKey={(r) => r.key} estimateSize={72} height={height} virtualizeFrom={100}>
-          {(row) =>
-            row.kind === "heading" ? (
-              <div className="flex items-baseline gap-3 bg-surface-sunken px-3 py-2">
-                <h3 className="type-label text-foreground">{row.group.title}</h3>
-                <span className="type-caption tabular-nums text-muted-foreground">{range(row.group.start!, row.group.end!)}</span>
-              </div>
-            ) : (
-              <PhraseRow
-                phrase={row.phrase}
-                mode={mode}
-                active={row.index === heard}
-                word={row.index === heard ? heardWord : -1}
-                onSeek={seek}
-                play={renderPlay?.(row.phrase)}
-                doubtfulBelow={doubtfulBelow}
-                states={states}
-                onPhraseState={onPhraseState}
-                actions={renderActions?.(row.phrase)}
-                edit={editing?.id === row.phrase.id ? { text: editing.text, change: (text) => setEditing({ ...editing, text }), done: stopEdit } : undefined}
-                onHover={(on) => { if (!on) dismissed.current = null; showCard(on ? row.phrase.id : null); }}
-              />
-            )
-          }
-        </VirtualList>
-        {follow && !following && heardPhrase && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-            <Button className="pointer-events-auto max-w-full shadow-overlay" onPress={() => setFollowing(true)}>
-              <span className="truncate">Jump to now: {heardText}</span>
-            </Button>
-          </div>
-        )}
-      </div>
+      {marks ? (
+        <MarkableText label={`${label}, for marking`} ids={wordIds} marks={marks.marks} kinds={marks.kinds} onMark={marks.onMark} clearKeys={marks.clearKeys} summary={marks.summary} onActivate={onCorrectionPress ? (id) => { const pid = phraseOfWordId(id); const i = Number(id.slice(pid.length + 1)); if (phrases.find((x) => x.id === pid)?.words[i]?.correction) onCorrectionPress(pid, i); } : undefined} onCaretChange={(id) => scrollToHeard(phraseOfWordId(id))}>
+          {list}
+        </MarkableText>
+      ) : (
+        list
+      )}
       <VisuallyHidden>
         <span role="status">{said}</span>
       </VisuallyHidden>
+      {hint && (
+        <AriaPopover triggerRef={{ current: hint.el }} isOpen isNonModal placement="top" offset={4} className={cn("layer-overlay max-w-xs px-2 py-1 type-caption", overlaySurface)}>
+          {hint.text}
+        </AriaPopover>
+      )}
       {card && renderCard && (() => {
         const p = phrases.find((x) => x.id === card);
         const anchor = rowEl(card);
@@ -381,6 +434,9 @@ function PhraseRow({
   active,
   word,
   onSeek,
+  marking,
+  onCorrectionPress,
+  onHint,
   play,
   doubtfulBelow,
   states,
@@ -393,7 +449,11 @@ function PhraseRow({
   mode: string;
   active: boolean;
   word: number;
-  onSeek: (time: number, from: TranscriptSeek) => void;
+  onSeek?: (time: number, from: TranscriptSeek) => void;
+  marking: boolean;
+  onCorrectionPress?: (phraseId: string, wordIndex: number) => void;
+  /** The pointer is over a corrected word (its element and what to say), or left. */
+  onHint: (hint: { el: HTMLElement; text: string } | null) => void;
   play?: React.ReactNode;
   doubtfulBelow: number;
   states: readonly TranscriptPhraseState[];
@@ -422,9 +482,13 @@ function PhraseRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
           {phrase.speaker && <span className="type-label text-muted-foreground">{phrase.speaker}</span>}
-          <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className="rounded-control type-caption tabular-nums text-muted-foreground hover:text-foreground" aria-label={`Play from ${format.runningTime(phrase.start)}`}>
-            {format.runningTime(phrase.start)}
-          </AriaButton>
+          {onSeek ? (
+            <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className="rounded-control type-caption tabular-nums text-muted-foreground hover:text-foreground" aria-label={`Play from ${format.runningTime(phrase.start)}`}>
+              {format.runningTime(phrase.start)}
+            </AriaButton>
+          ) : (
+            <span className="type-caption tabular-nums text-muted-foreground">{format.runningTime(phrase.start)}</span>
+          )}
           {doubtful && <Status tone="warning">Doubtful</Status>}
           {phrase.state && <Status tone={phrase.state.tone}>{phrase.state.label}</Status>}
         </div>
@@ -449,25 +513,59 @@ function PhraseRow({
             </div>
           </div>
         ) : alt !== null ? (
-          <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className={cn("rounded-control text-left type-body", active && "font-medium underline decoration-2 underline-offset-4")}>
-            {alt}
-          </AriaButton>
+          onSeek ? (
+            <AriaButton onPress={() => onSeek(phrase.start, { phraseId: phrase.id })} className={cn("rounded-control text-left type-body", active && "font-medium underline decoration-2 underline-offset-4")}>
+              {alt}
+            </AriaButton>
+          ) : (
+            <p className={cn("type-body", active && "font-medium underline decoration-2 underline-offset-4")}>{alt}</p>
+          )
         ) : (
           <p className="type-body">
-            {phrase.words.map((w, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && " "}
-                <AriaButton
-                  aria-current={i === word ? "true" : undefined}
-                  data-doubtful={isDoubtful(w, doubtfulBelow) ? "" : undefined}
-                  onPress={() => onSeek(w.start, { phraseId: phrase.id, wordIndex: i })}
-                  className={cn("rounded-control hover:bg-muted", isDoubtful(w, doubtfulBelow) && "underline decoration-dotted decoration-2 underline-offset-4", i === word && "font-medium underline decoration-2 underline-offset-4")}
-                >
+            {phrase.words.map((w, i) => {
+              const doubt = isDoubtful(w, doubtfulBelow);
+              const looks = cn(doubt && "underline decoration-dotted decoration-2 underline-offset-4", w.correction && "underline decoration-dotted decoration-primary decoration-2 underline-offset-4");
+              const said = (
+                <>
                   {w.text}
-                  {isDoubtful(w, doubtfulBelow) && <VisuallyHidden> (doubtful)</VisuallyHidden>}
-                </AriaButton>
-              </React.Fragment>
-            ))}
+                  {doubt && <VisuallyHidden> (doubtful)</VisuallyHidden>}
+                  {w.correction && <VisuallyHidden> (corrected, was {w.correction.original})</VisuallyHidden>}
+                </>
+              );
+              const hint = w.correction ? (el: HTMLElement | null) => onHint(el ? { el, text: `Was “${w.correction!.original}”${w.correction!.by ? `, corrected by ${w.correction!.by}` : ""}` } : null) : undefined;
+              const press = w.correction && onCorrectionPress ? () => onCorrectionPress(phrase.id, i) : onSeek ? () => onSeek(w.start, { phraseId: phrase.id, wordIndex: i }) : undefined;
+              return (
+                <React.Fragment key={i}>
+                  {i > 0 && " "}
+                  {marking ? (
+                    <Mark id={wordId(phrase.id, i)} className={cn(looks, i === word && "font-medium")} onClick={w.correction && onCorrectionPress ? press : undefined} onHover={hint}>
+                      {said}
+                    </Mark>
+                  ) : press ? (
+                    <AriaButton
+                      aria-current={i === word ? "true" : undefined}
+                      data-doubtful={doubt ? "" : undefined}
+                      onPress={press}
+                      onHoverStart={hint ? (e) => hint(e.target as HTMLElement) : undefined}
+                      onHoverEnd={hint ? () => hint(null) : undefined}
+                      className={cn("rounded-control hover:bg-muted", looks, i === word && "font-medium underline decoration-2 underline-offset-4")}
+                    >
+                      {said}
+                    </AriaButton>
+                  ) : (
+                    <span
+                      aria-current={i === word ? "true" : undefined}
+                      data-doubtful={doubt ? "" : undefined}
+                      onPointerEnter={hint ? (e) => hint(e.currentTarget) : undefined}
+                      onPointerLeave={hint ? () => hint(null) : undefined}
+                      className={cn("rounded-control", looks, i === word && "font-medium underline decoration-2 underline-offset-4")}
+                    >
+                      {said}
+                    </span>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </p>
         )}
       </div>

@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-11-14
+**TranscriptView: word marking, a mode with no player and corrected words (issue #260)** (branch `claude/project-thread-nnem56`). Found moving strata-360's whole-race transcript onto `TranscriptView`, which needed words selected and marked and no clock.
+
+- `src/components/transcript-view.tsx`: `time` and `onSeek` optional (without them nothing is heard, and words, phrase times and a translation are text); `marking` (`kinds`, `marks`, `onMark`, `clearKeys`, `summary`) wraps the list in `MarkableText` and draws each word as a `Mark` with id `wordId(phraseId, index)`, ids being every word of the phrases shown so a selection spans rows that are not mounted; `word.correction` draws a dotted primary underline, says "corrected, was …" and shows the original on hover in a non-modal popover; `onCorrectionPress` takes the click on a corrected word. Chosen over `renderWord` so every app gets the id scheme, the virtualised selection and the keyboard for free; a free `renderWord` can follow if an app needs a different word.
+- `src/components/markable-text.tsx`: `Mark` takes `onClick` and `onHover`; the region ignores keys that come from something focused inside it, so a list's own arrows are not also moved as a caret.
+- `src/lib/transcript.ts`, `src/index.ts`: `TranscriptWord.correction`, `wordId`, `phraseOfWordId`.
+- `tests/unit/transcript-view.test.tsx`, `stories/listening.stories.tsx` (`TranscriptReviewMarking`), two new baselines.
+- `README.md`, `UPGRADING.md`: the Transcript row; the `MarkableText` key note.
+- Not done: marking in a translation (there are no words to mark there, so the mode shows the text as it is).
+
 **SelectableGrid: the last of issue #246** (branch `claude/project-thread-nnem56`). Jonathan asked for #246 to be done in full; what was still missing against its list:
 
 - `src/components/selectable-grid.tsx`: `aspect` takes a ratio; `fit` (`cover`, `contain`); `mark`, a second corner on a chip; a tile `isSelectable` refuses says why in its name ("Photo 1, Already in this project"); the marquee keeps tiles seen earlier in the drag (it works in the scroll box's own coordinates) and scrolls the box when the pointer nears its top or bottom edge; zoom holds the tile under the pointer or the focused one where it was (the scroll share is the fallback). Sorting stays in `useViewOptions` (#247), which hands the grid rows already sorted, rather than a second sort in the grid.

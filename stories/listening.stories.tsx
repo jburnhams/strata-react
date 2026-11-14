@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, MediaGroup, MediaPlayer, PlayWindowButton, TranscriptView, Waveform, useMediaElement, type TranscriptGroup, type TranscriptViewProps, type WaveformProps } from "../src";
+import { Check, X } from "lucide-react";
+import { Button, MediaGroup, MediaPlayer, PlayWindowButton, TranscriptView, Waveform, useMediaElement, type MarkKind, type TranscriptGroup, type TranscriptViewProps, type WaveformProps } from "../src";
 import { longTalk, talkGroups, talkLength, trackDuration, trackMarks, trackPeaks, trackSpans } from "./fixtures/listening";
 import { silentWav } from "./fixtures/media";
 
@@ -240,3 +241,29 @@ function CorrectingTalk() {
 
 /** Correcting by hand: focus a row and press Enter or F2 for its text, Ctrl+Enter saves, Escape cancels; the menu at the end of a row marks it; hover or focus a phrase for its card. Skipped by the visual suite. */
 export const TranscriptCorrecting: Story = { name: "Transcript, correcting", tags: ["no-visual"], render: () => <CorrectingTalk /> };
+
+// A review transcript with no player (issue #260): no time and no seek, words selected and marked
+// "must use" or "never use", and a dotted underline where a person corrected a word.
+const reviewKinds: MarkKind[] = [
+  { key: "use", label: "Must use", tone: "success", pattern: "solid", icon: Check, keys: ["g"] },
+  { key: "never", label: "Never use", tone: "danger", pattern: "dashed", icon: X, keys: ["r"] },
+];
+const reviewGroups: TranscriptGroup[] = talkGroups.map((g, gi) => ({
+  ...g,
+  phrases: g.phrases.map((p, pi) => ({
+    ...p,
+    words: p.words.map((w, wi) => (gi === 0 && pi === 1 && wi === 1 ? { ...w, correction: { original: "mourning", by: "Ada" } } : w)),
+  })),
+}));
+function ReviewTranscript() {
+  const [marks, setMarks] = React.useState<Record<string, string | undefined>>({ "t0:0": "use", "t0:1": "use", "t2:2": "never" });
+  return (
+    <TranscriptView
+      label="Whole-race transcript"
+      groups={reviewGroups}
+      marking={{ kinds: reviewKinds, marks, clearKeys: ["w"], onMark: (ids, kind) => setMarks((m) => ({ ...m, ...Object.fromEntries(ids.map((id) => [id, kind ?? undefined])) })) }}
+      onCorrectionPress={() => {}}
+    />
+  );
+}
+export const TranscriptReviewMarking: Story = { name: "Transcript, review with marking", render: () => <ReviewTranscript /> };
