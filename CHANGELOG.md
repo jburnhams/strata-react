@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-11-14
+**SelectableGrid: justified rows, marquee, pinch and a pushed heading (the rest of issue #246)** (branch `claude/project-thread-nnem56`). Jonathan said #246 was only partly done; these were the four parts left.
+
+- `src/lib/grouped-grid-layout.ts`: `justifyRows` (rows of equal height from each picture's width over height, last row kept at the target height) and `stuckHeader` (the heading at the top, pushed up by the next one), both pure and tested; `GroupedGridLayout` takes a `justify` layout option and places each run of tiles with `justifyRows`. React Aria has no justified layout (`GridLayout` is fixed columns, `WaterfallLayout` is columns of unequal height), so it is ours inside its Virtualizer.
+- `src/components/selectable-grid.tsx`: `aspect="natural"` with required `naturalAspect(row)`, always virtualised, `tileSize` read as the row height; marquee (a mouse or pen drag from between tiles chooses the drawn tiles it touches, Ctrl/Cmd or Shift adds; a drag from a tile is a press); two-finger pinch scales the size. The marquee reads drawn tiles' rectangles, so it does not reach tiles outside the view and does not auto-scroll.
+- `tests/unit/justified-grid.test.tsx` (**new**), `stories/photo-browser.stories.tsx` (`NaturalAspect`, `NaturalAspectGrouped`), four new baselines `data-photo-browser--natural-aspect{,-grouped}--{light,dark}`.
+- `README.md`: SelectableGrid row.
+
 **Conversation: pictures shown with an answer (issue #257)** (branch `claude/project-thread-nnem56`). Found migrating strata-360's Ask page: a fetched frame is the answer, but the only slot was `lookedUp`, collapsed. A turn now takes `images`.
 
 - `src/components/conversation.tsx`: `ConversationTurn.images?: ConversationImage[]` (`src`, `label`, `href?`, `aspect?`), drawn under the text, always visible, through `Thumbnail` (lazy, shaped before it loads, a missing state). The label is the picture's name and caption; with `href` the thumbnail is a link to the full size in a new tab. Chosen over a free `attachments` slot so every app gets the labelling and lazy loading and cannot leave a picture unnamed.

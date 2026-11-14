@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar, Button, SelectableGrid, format, useSelection, type SelectableGridProps } from "../src";
+import { BulkBar, Button, SelectableGrid, format, useSelection, type SelectableGridProps, type TileAspect } from "../src";
 import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
@@ -10,7 +10,7 @@ const photos = shelfPhotos();
 const rowLabel = (p: ShelfPhoto) => `${p.member}, ${p.piece}`;
 const uncollected = (p: ShelfPhoto) => !p.collected;
 
-function PieceGrid(props: Partial<SelectableGridProps<ShelfPhoto>>) {
+function PieceGrid(props: Partial<Omit<SelectableGridProps<ShelfPhoto>, "aspect" | "naturalAspect">> & { aspect?: TileAspect }) {
   return (
     <SelectableGrid
       label="Pieces from kiln 2, Tuesday's glaze firing"

@@ -63,13 +63,35 @@ import { isTypingTarget } from "./hotkeys";
 //   be chosen. Choices that a filter hides stay chosen and are counted ("3 chosen are hidden by
 //   the filter"), with Clear hidden beside the count.
 //
-// Not here yet, and left in the issue: a justified layout for pictures of their own shapes
-// (`aspect="natural"`), a marquee, and touch pinch (Ctrl+wheel covers a trackpad). The sticky
-// heading does not yet get pushed up by the next one as it arrives.
+// - `aspect="natural"` draws each picture at its own shape in rows of equal height that fill the width
+//   (`justifyRows` in `lib/grouped-grid-layout.ts`, run by the same layout class), from `naturalAspect`
+//   (the record's pixel size) so nothing moves as pictures load. `tileSize` is the row height to aim
+//   for. React Aria has no justified layout (checked: `GridLayout` is fixed columns, `WaterfallLayout`
+//   columns of unequal height), so this is ours, inside its Virtualizer.
+// - Marquee and pinch. A mouse or pen drag from between tiles draws a rectangle that chooses the tiles
+//   it touches (Ctrl/Cmd or Shift adds), and two fingers scale the size. Neither is in React Aria's
+//   GridList; both are pointer and touch listeners on our wrapper. The marquee reads the drawn tiles'
+//   rectangles, so in a virtualised grid it reaches what is in view; it does not auto-scroll.
+// - The heading at the top is pushed up by the next one as it arrives.
 
 export type { TileAspect, TileSize };
 
-export type SelectableGridProps<T> = {
+export type SelectableGridProps<T> = SelectableGridBase<T> &
+  (
+    | {
+        /** Default `square`. `portrait` is 3:4, `landscape` 4:3. */
+        aspect?: TileAspect;
+        naturalAspect?: never;
+      }
+    | {
+        /** Each picture at its own shape, in rows of equal height that fill the width (Google Photos, Lightroom). `tileSize` is then the row height to aim for, and every row's pictures and heights are worked out from `naturalAspect` before anything loads, so nothing moves as pictures arrive. Virtualised always. */
+        aspect: "natural";
+        /** A picture's width over height, from the record (its pixel size), never from the loaded image. */
+        naturalAspect: (row: T) => number;
+      }
+  );
+
+type SelectableGridBase<T> = {
   /** Names the grid of tiles. */
   label: string;
   rows: T[];
@@ -80,8 +102,6 @@ export type SelectableGridProps<T> = {
   detail?: (row: T) => React.ReactNode;
   /** The chosen keys and how to change them, as `DataTable` takes them; `rowLabel` names each tile's box. */
   selection: RowSelection<T>;
-  /** Default `square`. `portrait` is 3:4, `landscape` 4:3. */
-  aspect?: TileAspect;
   /** Default `md`. Pixels for a continuous size: the minimum tile width, growing to fill the row. */
   tileSize?: TileSize | number;
   /** Asked to change the size by Ctrl/Cmd+wheel, `+` and `-`. Give a `useViewOptions` size back to `tileSize`; omit to leave the size fixed. */
@@ -118,6 +138,7 @@ export function SelectableGrid<T>({
   detail,
   selection,
   aspect = "square",
+  naturalAspect,
   tileSize = "md",
   onTileSizeChange,
   zoomRange = [64, 320],
@@ -146,7 +167,8 @@ export function SelectableGrid<T>({
     return [...out].map(([key, list]) => ({ key, rows: list }));
   }, [rows, groupBy]);
   const [folded, setFolded] = React.useState<ReadonlySet<string>>(new Set());
-  const virtual = Boolean(groups) || rows.length >= virtualizeFrom;
+  const natural = aspect === "natural";
+  const virtual = natural || Boolean(groups) || rows.length >= virtualizeFrom;
   const px = tileWidth(tileSize);
   const outer = React.useRef<HTMLDivElement>(null);
   const hidden = [...selection.selected].filter((k) => !shownKeys.has(k)).length;
@@ -182,7 +204,80 @@ export function SelectableGrid<T>({
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [px, Boolean(onTileSizeChange)]);
+  const pinch = React.useRef<{ distance: number; px: number } | null>(null);
+  // Touch pinch: two fingers on the grid scale the size by the change in their distance. A
+  // non-passive touchmove refuses the browser's page zoom for the gesture.
+  React.useEffect(() => {
+    const el = outer.current;
+    if (!el || !onTileSizeChange) return;
+    const distance = (t: TouchList) => Math.hypot(t[0]!.clientX - t[1]!.clientX, t[0]!.clientY - t[1]!.clientY);
+    const onStart = (e: TouchEvent) => void (pinch.current = e.touches.length === 2 ? { distance: distance(e.touches), px } : null);
+    const onMove = (e: TouchEvent) => {
+      const start = pinch.current;
+      if (!start || e.touches.length !== 2 || start.distance === 0) return;
+      e.preventDefault();
+      zoomRef.current(start.px * (distance(e.touches) / start.distance));
+    };
+    const onEnd = (e: TouchEvent) => void (e.touches.length < 2 && (pinch.current = null));
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+    // `px` is read at the start of each gesture only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(onTileSizeChange)]);
+
+  // Marquee: a mouse or pen drag that starts between tiles (not on one, which is a press) draws a
+  // rectangle and chooses the tiles it touches; Ctrl/Cmd or Shift adds to what was chosen. Only
+  // tiles that are drawn can be touched (a virtualised grid draws what is in view). A drag on a tile
+  // is left alone, so it keeps its press and focus.
+  const [marquee, setMarquee] = React.useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const startMarquee = (e: React.PointerEvent) => {
+    if (selectionMode !== "multiple" || e.button !== 0 || e.pointerType === "touch") return;
+    const target = e.target as HTMLElement;
+    if (!target.closest("[data-strata-scroll]") || target.closest("[data-key], button, input, a")) return;
+    const root = outer.current;
+    if (!root) return;
+    const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+    const base = new Set([...selection.selected].filter((k) => additive || !shownKeys.has(k)));
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    let moved = false;
+    const hit = (x1: number, y1: number) => {
+      const l = Math.min(x0, x1), r = Math.max(x0, x1), t = Math.min(y0, y1), b = Math.max(y0, y1);
+      const chosen = new Set(base);
+      for (const el of root.querySelectorAll<HTMLElement>("[data-key]")) {
+        const key = el.getAttribute("data-key")!;
+        if (isGroupKey(key) || !byKey.has(key) || disabledSet.has(key)) continue;
+        const box = el.getBoundingClientRect();
+        if (box.left < r && box.right > l && box.top < b && box.bottom > t) chosen.add(key);
+      }
+      selection.onChange(chosen);
+    };
+    const move = (m: PointerEvent) => {
+      if (!moved && Math.hypot(m.clientX - x0, m.clientY - y0) < 4) return;
+      moved = true;
+      setMarquee({ x0, y0, x1: m.clientX, y1: m.clientY });
+      hit(m.clientX, m.clientY);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      setMarquee(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
   const disabledKeys = rows.filter((r) => !(selection.isSelectable?.(r) ?? true)).map(rowKey);
+  const disabledSet = new Set(disabledKeys);
 
   // React Aria owns the selection of tiles: a press anywhere on a tile toggles it, Shift extends a
   // range from the last one, Space toggles from the keyboard. Our `RowSelection` holds keys only, and
@@ -210,7 +305,13 @@ export function SelectableGrid<T>({
     selection.onChange(new Set([...outside, ...picked]));
   };
 
-  const layoutOptions = React.useMemo(() => tileLayoutOptions(px, aspect), [px, aspect]);
+  const hasDetail = Boolean(detail);
+  const layoutOptions = React.useMemo(() => {
+    if (aspect !== "natural") return tileLayoutOptions(px, aspect);
+    const aspects = new Map(rows.map((r) => [rowKey(r), Math.max(0.1, naturalAspect?.(r) ?? 1)]));
+    return { ...tileLayoutOptions(px, "square"), justify: { aspects, rowHeight: px, padding: 14, chrome: hasDetail ? 40 : 14 } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [px, aspect, rows, hasDetail]);
   const byKey = React.useMemo(() => new Map(rows.map((r) => [rowKey(r), r])), [rows, rowKey]);
   const indexOf = React.useMemo(() => new Map(rows.map((r, i) => [rowKey(r), i])), [rows, rowKey]);
 
@@ -259,7 +360,7 @@ export function SelectableGrid<T>({
           unselectable ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
         )}
       >
-        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
+        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", !natural && aspectClass[aspect as TileAspect])} style={natural ? { aspectRatio: Math.max(0.1, naturalAspect?.(row) ?? 1) } : undefined}>
           {renderImage(row)}
         </span>
         {selectionMode === "multiple" && <TileBox label={`Select ${name}`} />}
@@ -311,6 +412,7 @@ export function SelectableGrid<T>({
     <div
       ref={outer}
       className={cn("grid min-w-0 gap-3", className)}
+      onPointerDown={startMarquee}
       onMouseDownCapture={(e) => {
         shift.handlers.onMouseDown(e);
         notePress(e);
@@ -348,8 +450,15 @@ export function SelectableGrid<T>({
           )}
         </div>
       )}
+      {marquee && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed z-50 border border-primary bg-primary/10"
+          style={{ left: Math.min(marquee.x0, marquee.x1), top: Math.min(marquee.y0, marquee.y1), width: Math.abs(marquee.x1 - marquee.x0), height: Math.abs(marquee.y1 - marquee.y0) }}
+        />
+      )}
       {virtual ? (
-        <Virtualizer layout={groups ? GroupedGridLayout : GridLayout} layoutOptions={layoutOptions}>
+        <Virtualizer layout={groups || natural ? GroupedGridLayout : GridLayout} layoutOptions={layoutOptions}>
           {grid}
         </Virtualizer>
       ) : (
