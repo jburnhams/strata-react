@@ -42,6 +42,18 @@ describe("package exports", () => {
     }
     expect(js).not.toContain("__SECRET_INTERNALS");
   });
+
+  it("leaves the development check to the app's bundler, so the warnings survive in the published build", () => {
+    // `import.meta.env.DEV` is replaced by this package's own library build (always false), which
+    // silently removed every development warning for apps. `process.env.NODE_ENV` is left alone.
+    const js = readdirSync(join(root, "dist"))
+      .filter((f) => f.endsWith(".js"))
+      .map((f) => readFileSync(join(root, "dist", f), "utf8"))
+      .join("\n");
+    expect(js).not.toContain("import.meta.env");
+    expect(js).toContain("process.env.NODE_ENV");
+    expect(js).toContain("does not pass `title` through");
+  });
 });
 
 // What an app must install follows from what each entry imports. Walk every entry's module graph

@@ -210,3 +210,31 @@ describe("AsyncButton", () => {
     expect(screen.getByText("Kiln 2 is offline.", { selector: "p" })).toHaveFocus();
   });
 });
+
+describe("Button title (issue #231)", () => {
+  it("is refused by the type, and an untyped caller is told once what to use", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // @ts-expect-error a title is not accepted: wrap the button in a Tooltip
+    render(<Button title="Delete the take">Delete</Button>);
+    // @ts-expect-error IconButton derives from ButtonProps and refuses it too
+    render(<IconButton icon={RefreshCw} label="Reload" title="Reload now" />);
+    expect(screen.getByRole("button", { name: "Delete" })).not.toHaveAttribute("title");
+    expect(screen.getByRole("button", { name: "Reload" })).not.toHaveAttribute("title");
+    const titled = warn.mock.calls.filter(([m]) => String(m).includes("`title`"));
+    expect(titled).toHaveLength(1);
+    expect(String(titled[0][0])).toContain("Tooltip");
+    warn.mockRestore();
+  });
+
+  it("warns about a button whose only content is a symbol, unless it is named", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    render(<Button aria-label="Close panel">✕</Button>);
+    expect(warn).not.toHaveBeenCalled();
+    render(<Button>Save</Button>);
+    expect(warn).not.toHaveBeenCalled();
+    render(<Button>✕</Button>);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain("accessible name");
+    warn.mockRestore();
+  });
+});

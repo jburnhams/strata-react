@@ -208,3 +208,66 @@ describe("Tree", () => {
     await waitFor(() => expect(screen.getByRole("treegrid", { name: "Sections" })).toBeInTheDocument());
   });
 });
+
+describe("FolderPicker: what the app knows about a folder (issue #233)", () => {
+  const rules = {
+    chooseLabel: "Create project here",
+    canChoose: (path: string) => (path.endsWith("/rushes") ? (true as const) : "Open a folder that holds camera files."),
+  };
+
+  it("badges a project in words, in the row's name", async () => {
+    renderWithStrata(<FolderChooser start="/home/ada/Projects" />);
+    const project = await row(/^film-2026, project$/);
+    expect(within(project).getByText("project")).toBeInTheDocument();
+    expect(await row("notes")).not.toHaveTextContent("project");
+  });
+
+  it("disables choosing with the reason beside it, names the action, and enables it where it may", async () => {
+    const user = userEvent.setup();
+    const onChoose = vi.fn();
+    renderWithStrata(<FolderChooser start="/home/ada/Pictures" onChoose={onChoose} {...rules} />);
+    const button = await screen.findByRole("button", { name: "Create project here" });
+    expect(button).toBeDisabled();
+    const reason = screen.getByText("Open a folder that holds camera files.");
+    expect(button).toHaveAccessibleDescription("Open a folder that holds camera files.");
+    expect(reason).toBeVisible();
+    await user.click(button);
+    expect(onChoose).not.toHaveBeenCalled();
+  });
+
+  it("enables the button for a folder canChoose accepts, with no reason shown", async () => {
+    const user = userEvent.setup();
+    const onChoose = vi.fn();
+    renderWithStrata(<FolderChooser start="/home/ada/Projects/film-2026/rushes" onChoose={onChoose} {...rules} />);
+    const button = await screen.findByRole("button", { name: "Create project here" });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(screen.queryByText("Open a folder that holds camera files.")).not.toBeInTheDocument();
+    await user.click(button);
+    expect(onChoose).toHaveBeenCalledWith("/home/ada/Projects/film-2026/rushes");
+  });
+
+  it("gives canChoose the folder the listing returned", async () => {
+    const seen: Array<string | undefined> = [];
+    renderWithStrata(<FolderChooser start="/home/ada/Projects/film-2026" canChoose={(_p, f) => (seen.push(f?.badge), f?.badge === "project" ? true : "No")} />);
+    await waitFor(() => expect(seen).toContain("project"));
+    expect(screen.getByRole("button", { name: "Choose this folder" })).toBeEnabled();
+  });
+
+  it("takes a folder as chosen when onOpen says so, and does not open it", async () => {
+    const user = userEvent.setup();
+    const onChoose = vi.fn();
+    renderWithStrata(<FolderChooser start="/home/ada/Projects" onChoose={onChoose} onOpen={(f) => (f.badge === "project" ? "choose" : "enter")} />);
+    const project = await row(/^film-2026, project$/);
+    await user.click(within(project).getByRole("button"));
+    expect(onChoose).toHaveBeenCalledWith("/home/ada/Projects/film-2026");
+    expect(project).toHaveAttribute("aria-expanded", "false");
+    // an ordinary folder still opens
+    await user.click(within(await row("notes")).getByRole("button"));
+    expect(onChoose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the listing's footer for the folder being looked at, under the tree", async () => {
+    renderWithStrata(<FolderChooser start="/home/ada/Projects/film-2026/rushes" />);
+    expect(await screen.findByText("3 camera files here.")).toBeInTheDocument();
+  });
+});

@@ -26,6 +26,7 @@ import { cn } from "../lib/utils";
 import { overlaySurface } from "../lib/overlay";
 import { formatChord, detectPlatform, isReservedChord, matchesChord, type Platform } from "../lib/chords";
 import { isTypingTarget } from "./hotkeys";
+import { isDev } from "../lib/dev";
 
 // One command, declared once, used everywhere a person can reach it: a dropdown or menu-bar menu,
 // a context menu, the command menu, the key handler and the legend. Each of those reads the same
@@ -116,7 +117,7 @@ export function useCommands(commands: readonly Command[], { enabled = true, plat
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [enabled, where]);
 
-  if (import.meta.env?.DEV) warnOnClashes(commands, where);
+  if (isDev()) warnOnClashes(commands, where);
 }
 
 function warnOnClashes(commands: readonly Command[], platform: Platform) {

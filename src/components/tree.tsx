@@ -91,6 +91,8 @@ type TreeCommon<N> = {
   renderNode?: (node: N, state: TreeNodeState) => React.ReactNode;
   /** Which nodes are open; from `useExpanded`, optionally in the URL. */
   expanded: Expanded;
+  /** Asked when the person opens a branch (chevron or Right arrow): return `false` to keep it closed, having done something else with it (a folder that is a project is chosen, not entered). Not asked for opens the app makes itself. */
+  beforeOpen?: (node: N) => boolean;
   /** The skeleton row while a node's children load. Default: a muted bar. */
   loadingRow?: React.ReactNode;
   /** What an open node with nothing in it says: "No folders". Required, so an empty branch is never blank. */
@@ -221,7 +223,7 @@ function Children<N>({ node }: { node: N }) {
 }
 
 /** A hierarchy whose children load as each node opens (a `useChildren` hook per open node): a skeleton row, a Try again row and an "empty" row per node, type-ahead and arrow keys, single selection, open state optionally in the URL, always virtualised. */
-export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, expanded, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
+export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, expanded, beforeOpen, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
   const nodes = React.useRef(new Map<string, N>()).current;
   const childKeys = React.useRef(new Map<string, string[]>()).current;
 
@@ -336,7 +338,14 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
       selectedKeys={choices ? displayKeys : selected === null ? [] : [selected as string]}
       onSelectionChange={choices ? chooseMany : choose}
       expandedKeys={expanded.expanded}
-      onExpandedChange={(keys) => expanded.onChange(new Set([...keys].map(String).filter((k) => !isNote(k))))}
+      onExpandedChange={(keys) => {
+        const next = new Set([...keys].map(String).filter((k) => !isNote(k)));
+        if (beforeOpen) for (const k of [...next]) {
+          const node = nodes.get(k);
+          if (!expanded.isOpen(k) && node !== undefined && beforeOpen(node) === false) next.delete(k);
+        }
+        expanded.onChange(next);
+      }}
       renderEmptyState={() => <p className="p-3 type-body-sm text-muted-foreground">{emptyRow}</p>}
       className={cn("min-w-0 overflow-y-auto outline-none", !choices && className)}
       style={{ maxHeight: height }}

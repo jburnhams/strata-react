@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14
+**Button `title` refused; FolderPicker knows about projects (issues #231, #233)** (branch `claude/button-title-folder-picker`). The eighth batch: a native `title` on a button was dropped silently, and strata-360's folder chooser needs more than `{ path, name, count }`. `kind` from #233 is not added: the badge's `tone` is its kind, and a second field would repeat it.
+
+- `src/components/button.tsx`: `title` is `never` on `ButtonProps` (so `IconButton` and `RowAction` refuse it too) and, in development, an untyped `title` and a button whose only child is one symbol with no `aria-label` each warn once. Reason 5 in the opening comment: React Aria's button does not forward `title`, and passing it on would give a tip with no keyboard focus or touch.
+- `src/components/folder-picker.tsx`: `Folder` gains `badge` and `tone` (a `Status` beside the name, and `name, badge` as the row's name); `FolderListing` is what `useFolders` may return, `{ folders, footer }`, the footer shown under the tree for the folder being looked at; `canChoose(path, folder)` disables the filled button and shows the reason beside it with `aria-describedby`; `chooseLabel`; `onOpen(folder)` answers `"choose"` to take a folder at once and keep it closed. The crumb and recent buttons now use `Tooltip` instead of `title`.
+- `src/components/tree.tsx`: `beforeOpen(node)`, asked when the person opens a branch; `false` keeps it closed. Opens the app makes itself (ancestors of a chosen folder, ticking a branch) are not asked.
+- `src/index.ts`: exports `FolderListing`.
+- `tests/unit/actions.test.tsx`, `tests/unit/folder-picker.test.tsx`: **new cases** for the title refusal and the glyph warning; the badge, the disabled button with its reason, `canChoose` given the folder, `onOpen` choosing a project without opening it, and the footer.
+- `stories/fixtures/folders.ts`, `stories/mocks/handlers.ts`, `stories/screens/folder-chooser.tsx`, `stories/folder-picker.stories.tsx`: two projects (badged), camera files in `rushes` with a footer; stories `ProjectBadges`, `CannotChoose`, `FooterNote`. Baselines: new for those three, and the folder picker stories that show the Projects folder gain the badges.
+- `src/lib/dev.ts`: **new**, `isDev()` from `process.env.NODE_ENV`, left for the app's bundler. **Correction to earlier work:** `import.meta.env?.DEV` is replaced by this package's own library build with `false`, so the development warnings added with `StrataToastRegion`, `useCommands` and the new `Button` ones never ran in an app (found by review of this PR; `dist` had no `import.meta.env` left). `toast.tsx`, `commands.tsx`, `button.tsx` and `media-player.tsx` use `isDev()`; `tests/integration/package.test.ts` checks the built files keep `process.env.NODE_ENV` and no `import.meta.env`.
+- `README.md`, `UPGRADING.md`: the Actions and Browsing rows, and an "After v1.0.40" entry.
+
 ## 2026-11-13
 **Toast regions, fitting the screen, and adopting Strata one screen at a time (issues #230, #229, #225)** (branch `claude/fit-toasts-migrate`). Jonathan asked for the open issues to be taken as one batch; each came from moving an app onto Strata (strata-stills, strata-360). #225 changed the plan: the migration list is a text scan (no Tailwind build, no dependency), and the stock-screen acceptance test is an integration fixture, not a screen in the kiln example app.
 

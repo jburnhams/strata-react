@@ -10,6 +10,7 @@ import { joinMediaGroup, useMediaGroupName } from "./media-group";
 import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
+import { isDev } from "../lib/dev";
 
 // Playing a file without writing the glue (strata-react issue #134, from strata-listory, whose two
 // players stayed `<audio controls>` because the parts of #78 take state in and requests out, and
@@ -542,7 +543,7 @@ const keyPlayers = (() => {
     get: () => snapshot,
     add(id: string) {
       ids.add(id);
-      if (ids.size === 2 && !warned && typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
+      if (ids.size === 2 && !warned && isDev()) {
         warned = true;
         console.warn("strata-react: several MediaPlayers are on this page, so Space, K, J, L and M go to the one last played or focused. Pass shortcuts={false} to one you bind your own keys for.");
       }

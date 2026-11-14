@@ -2,7 +2,15 @@
 // 500 entries, one that is slow, one that refuses. Paths use `/`. Made folders are kept in memory so
 // a story and a test can see a folder appear; `resetFolders()` puts the disk back.
 
-export type DiskFolder = { path: string; name: string; count: number };
+export type DiskFolder = { path: string; name: string; count: number; badge?: string; tone?: "success" };
+
+// A project is a folder an app already made one in: it is badged, and the chooser takes it as
+// chosen when it is opened. A folder with camera files can have a project made in it (issue #233).
+const projects = new Set(["/home/ada/Projects/kiln-room", "/home/ada/Projects/film-2026"]);
+const cameraFiles: Record<string, number> = { "/home/ada/Projects/film-2026/rushes": 3 };
+
+/** The sentence about the folder itself that a listing may carry. */
+export const noteFor = (path: string): string | undefined => (cameraFiles[path] ? `${cameraFiles[path]} camera files here.` : undefined);
 
 const base: Record<string, string[]> = {
   "/": ["archive", "home", "media", "srv"],
@@ -35,7 +43,7 @@ const kids = (path: string): string[] | undefined => {
 export function listDisk(path: string): DiskFolder[] {
   return [...(kids(path) ?? [])]
     .sort((x, y) => x.localeCompare(y))
-    .map((name) => ({ path: join(path, name), name, count: kids(join(path, name))?.length ?? 0 }));
+    .map((name) => ({ path: join(path, name), name, count: kids(join(path, name))?.length ?? 0, ...(projects.has(join(path, name)) ? { badge: "project", tone: "success" as const } : {}) }));
 }
 
 /** Makes a folder; returns the reason when it cannot be made. */

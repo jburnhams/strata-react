@@ -203,6 +203,6 @@ export { moveRect, resizeRect, fitRect, drawRect, lerpRect, ease, type Rect, typ
 export { SequenceTimeline, type SequenceTimelineProps, type SequenceItem, type CutRoom, type CutChange } from "./components/sequence-timeline";
 export { snapToGrid, stepOnGrid, gridPoints, clampToRoom, settleCut, type Grid, type CutLimit } from "./lib/sequence";
 export { Tree, type TreeProps, type TreeNodeState } from "./components/tree";
-export { FolderPicker, parentOf, ancestorsOf, type FolderPickerProps, type Folder } from "./components/folder-picker";
+export { FolderPicker, parentOf, ancestorsOf, type FolderPickerProps, type Folder, type FolderListing } from "./components/folder-picker";
 export { MarkableText, Mark, MarkSummary, type MarkableTextProps, type MarkKind, type MarkTone, type MarkPattern } from "./components/markable-text";
 export { rangeBetween, countMarks, stepId } from "./lib/marks";

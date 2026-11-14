@@ -4,6 +4,7 @@ import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import { Button } from "./button";
 import { cn } from "../lib/utils";
 import { overlaySurface } from "../lib/overlay";
+import { isDev } from "../lib/dev";
 
 // A toast confirms background work that finished ("Export finished", "3 pieces synced"). It is a
 // polite live region; it never carries an error a person must act on, which goes inline as an
@@ -100,7 +101,7 @@ function useOwnsQueue(): boolean {
   React.useEffect(() => {
     if (owns || warned || mounted.indexOf(id) < 1) return;
     setWarned(true);
-    if (import.meta.env?.DEV) {
+    if (isDev()) {
       console.warn("strata-react: a StrataToastRegion is already mounted, so this one draws nothing. Render it once at the app root; in a test of a route tree that draws its own, pass `toasts: false` to renderRoutes.");
     }
   }, [owns, warned, id]);
