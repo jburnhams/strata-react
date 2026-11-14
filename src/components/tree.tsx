@@ -3,6 +3,8 @@ import { Button as AriaButton, ListLayout, Tree as AriaTree, TreeItem, TreeItemC
 import { ChevronRight, CircleAlert, Folder, FolderOpen, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
+import { Status, type Tone } from "./status";
+import { format } from "../lib/format";
 import { TableSelectionCheckbox } from "./checkbox";
 import type { Choices } from "./selection";
 import type { Load } from "./data-view";
@@ -48,6 +50,18 @@ import type { Expanded } from "./disclosure";
 // show. A key that something chosen implies stays ticked when cleared (the choice puts it back) and
 // its row says, in words, which chosen row it is included because of; the polite live region says
 // how many more were chosen, or that a clear was refused.
+//
+// The row in view, beside the ticked rows (issue #245, strata-stills' Browser: open a folder to see
+// its pictures, tick folders to add them to a project). `current` + `onCurrentChange` use React
+// Aria's `onAction` (checked: with a checkbox column a press on the row is the row's action and the
+// box alone ticks; Enter fires the action too), so a press on the name moves the current row and
+// a press on the box ticks. The current row is drawn highlighted and carries `aria-current`.
+// `count` and `badge` are per-row props drawn after the name, so they are in the row's accessible
+// name; `sortChildren` orders every level once, so each `useChildren` need not. `reveal` is the keys
+// from the top down to a node: the ancestors open and the scroll box moves to the row (rows are
+// 32px, so the position is a calculation and not a measure of a row the Virtualizer has not drawn).
+// `resolveBranch` answers "what is under this?" for a branch ticked before it was read, so the tree
+// ticks a year and says "2019 and its 91 folders" without opening 91 branches.
 //
 // Names that do not fit are cut with an ellipsis and carry the whole text as the row's title, so a
 // long path segment is readable on hover without widening the pane.
@@ -97,12 +111,27 @@ type TreeCommon<N> = {
   loadingRow?: React.ReactNode;
   /** What an open node with nothing in it says: "No folders". Required, so an empty branch is never blank. */
   emptyRow: string;
+  /** The row in view (not the same as ticked): highlighted, `aria-current`, moved by a press on a row's name or Enter. Works with `selected` or `choices`. */
+  current?: string | null;
+  onCurrentChange?: (key: string, node: N) => void;
+  /** How many items a node holds ("81 pictures"), drawn right aligned in tabular figures and part of the row's name. `null` draws nothing. */
+  count?: (node: N) => string | number | null | undefined;
+  /** A word on a tint after the name ("in project"), part of the row's name. */
+  badge?: (node: N) => { label: string; tone?: Tone } | null | undefined;
+  /** Orders the children of every node, and the top level. */
+  sortChildren?: (a: N, b: N) => number;
+  /** The keys from the top down to a node to bring into view: its ancestors open and the tree scrolls to it. Give the same array to reveal again. */
+  reveal?: readonly string[];
+  /** What is under a branch, as keys (not the branch itself), for a branch ticked before it was read. When given, ticking it does not open it: the keys are chosen and the live region says "2019 and its 91 folders". */
+  resolveBranch?: (node: N) => Promise<readonly string[]>;
+  /** What `resolveBranch`'s keys are, for the live region: `["folder", "folders"]`. Default item, items. */
+  coverNoun?: readonly [string, string];
   /** The tallest the tree may be before it scrolls, as a CSS length. Default 24rem. */
   height?: string;
   className?: string;
 };
 
-type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height"> & { choices?: Choices; nodes: Map<string, N>; settle: (key: string, kids: readonly N[]) => void; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
+type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height" | "reveal" | "resolveBranch" | "coverNoun" | "sortChildren"> & { choices?: Choices; nodes: Map<string, N>; settle: (key: string, kids: readonly N[]) => void; current?: string | null; sorted: (nodes: readonly N[]) => readonly N[]; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
 const Context = React.createContext<Ctx<never> | null>(null);
 const useCtx = <N,>() => React.useContext(Context) as unknown as Ctx<N>;
 
@@ -121,6 +150,8 @@ function Node<N>({ node }: { node: N }) {
   const branch = c.isBranch ? c.isBranch(node) : true;
   const open = branch && c.expanded.isOpen(key);
   const name = c.nodeLabel(node);
+  const nodeCount = c.count?.(node);
+  const badge = c.badge?.(node);
   const because = c.choices?.implied.has(key) ? c.choices.because(key).map((k) => (c.nodes.has(k) ? c.nodeLabel(c.nodes.get(k) as N) : k)) : [];
   return (
     <TreeItem id={key} textValue={name} hasChildItems={branch} className="outline-none">
@@ -128,9 +159,11 @@ function Node<N>({ node }: { node: N }) {
         {({ level, isSelected, isExpanded }) => (
           <div
             title={name}
-            className={cn(ROW, "cursor-pointer outline-offset-[-2px] hover:bg-muted", isSelected && "bg-surface-sunken font-medium")}
+            className={cn(ROW, "cursor-pointer outline-offset-[-2px] hover:bg-muted", (isSelected || c.current === key) && "bg-surface-sunken font-medium")}
             style={{ paddingInlineStart: `${(level - 1) * 1.25 + 0.25}rem` }}
             data-selected={isSelected || undefined}
+            aria-current={c.current === key ? "true" : undefined}
+            data-current={c.current === key || undefined}
           >
             {c.choices && <TableSelectionCheckbox label={`Choose ${name}`} mixed={c.stateOf(key) === "mixed"} />}
             {branch ? (
@@ -144,6 +177,8 @@ function Node<N>({ node }: { node: N }) {
             <span className="min-w-0 flex-1 truncate">
               {c.renderNode ? c.renderNode(node, { expanded: isExpanded, selected: isSelected, level, branch }) : name}
             </span>
+            {badge && <Status tone={badge.tone ?? "info"}>{badge.label}</Status>}
+            {nodeCount != null && <span className="shrink-0 type-caption text-muted-foreground tabular-nums">{typeof nodeCount === "number" ? format.integer(nodeCount) : nodeCount}</span>}
             {because.length > 0 && (
               <span className="flex max-w-[50%] shrink-0 items-center gap-1 truncate type-caption text-muted-foreground" title={`Included because of ${because.join(", ")}`}>
                 <Lock aria-hidden className="size-3 shrink-0" />
@@ -173,7 +208,7 @@ function ClosedChild({ id }: { id: string }) {
 
 function Nodes<N>({ nodes }: { nodes: readonly N[] }) {
   const c = useCtx<N>();
-  return <>{nodes.map((n) => <Node key={c.nodeKey(n)} node={n} />)}</>;
+  return <>{c.sorted(nodes).map((n) => <Node key={c.nodeKey(n)} node={n} />)}</>;
 }
 
 // The children of one open node. Its own component, so the hook runs only while it is open.
@@ -218,17 +253,24 @@ function Children<N>({ node }: { node: N }) {
       </TreeItem>
     );
   }
-  c.childKeys.set(key, load.data.map(c.nodeKey));
+  c.childKeys.set(key, c.sorted(load.data).map(c.nodeKey));
   return <Nodes nodes={load.data} />;
 }
 
 /** A hierarchy whose children load as each node opens (a `useChildren` hook per open node): a skeleton row, a Try again row and an "empty" row per node, type-ahead and arrow keys, single selection, open state optionally in the URL, always virtualised. */
-export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, expanded, beforeOpen, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
+export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, current, onCurrentChange, count, badge, sortChildren, reveal, resolveBranch, coverNoun = ["item", "items"], expanded, beforeOpen, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
   const nodes = React.useRef(new Map<string, N>()).current;
+  const [covered, setCovered] = React.useState("");
+  const scroller = React.useRef<HTMLDivElement>(null);
+  const scrollToReveal = React.useRef<() => void>(() => {});
+  const sorted = React.useCallback((list: readonly N[]) => (sortChildren ? [...list].sort(sortChildren) : list), [sortChildren]);
   const childKeys = React.useRef(new Map<string, string[]>()).current;
 
   // Loaded descendants of a key, from what each open branch has read.
-  const below = (key: string): string[] => (childKeys.get(key) ?? []).flatMap((k) => [k, ...below(k)]);
+  // `resolved` holds what `resolveBranch` named under a branch that was ticked unread, so unticking
+  // it takes those keys with it as well as the loaded ones.
+  const resolved = React.useRef(new Map<string, readonly string[]>()).current;
+  const below = (key: string): string[] => [...new Set([...(childKeys.get(key) ?? []).flatMap((k) => [k, ...below(k)]), ...(resolved.get(key) ?? [])])];
   const stateOf = (key: string): "on" | "mixed" | "off" => {
     const all = choices?.selected;
     const own = all?.has(key) ?? false;
@@ -253,19 +295,45 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
   };
   // Tick a set of keys: branches among them that have not been read are opened and awaited.
   const tick = (keys: readonly string[]) => {
-    const toOpen = keys.filter(unread);
+    const toResolve = resolveBranch ? keys.filter(unread) : [];
+    for (const k of toResolve) {
+      const node = nodes.get(k) as N;
+      resolveBranch!(node).then((under) => {
+        resolved.set(k, under);
+        latest.current.choices?.add([k, ...under]);
+        setCovered(`${nodeLabel(node)} and its ${under.length === 1 ? `1 ${coverNoun[0]}` : `${format.integer(under.length)} ${coverNoun[1]}`}`);
+      });
+    }
+    const toOpen = keys.filter((k) => unread(k) && !toResolve.includes(k));
     for (const k of toOpen) awaiting.add(k);
     if (toOpen.length) open(toOpen);
   };
   const settle = (key: string, kids: readonly N[]) => {
     opening.delete(key);
+    scrollToReveal.current();
     if (!awaiting.delete(key) || !latest.current.choices) return;
     const keys = kids.map(nodeKey);
     for (const kid of kids) nodes.set(nodeKey(kid), kid);
     latest.current.choices.add(keys);
     tick(keys);
   };
-  const ctx: Ctx<N> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, expanded, loadingRow, emptyRow, nodes, childKeys, choices, stateOf, settle };
+  const ctx: Ctx<N> = { useChildren, nodeKey, nodeLabel, isBranch, renderNode, expanded, loadingRow, emptyRow, nodes, childKeys, choices, stateOf, settle, current, sorted, count, badge };
+
+  const revealed = reveal?.join("\u0001");
+  React.useEffect(() => {
+    if (!reveal || reveal.length === 0) return;
+    const ancestors = reveal.slice(0, -1).filter((k) => !latest.current.expanded.isOpen(k));
+    if (ancestors.length) latest.current.expanded.onChange(new Set([...latest.current.expanded.expanded, ...ancestors]));
+  }, [revealed]);
+  // Scroll once the rows above the node have loaded: its index in the open branches times 32px.
+  // Run after every render and each time a branch settles (a settle does not re-render the tree).
+  scrollToReveal.current = () => {
+    if (!reveal || reveal.length === 0 || roots.status !== "ready" || !scroller.current) return;
+    const walk = (keys: readonly string[]): string[] => sorted(keys.map((k) => nodes.get(k)).filter((n): n is N => n !== undefined)).map(nodeKey).flatMap((k) => (latest.current.expanded.isOpen(k) && childKeys.has(k) ? [k, ...walk(childKeys.get(k)!)] : [k]));
+    const i = walk(sorted(roots.data).map(nodeKey)).indexOf(reveal[reveal.length - 1]!);
+    if (i >= 0) scroller.current.scrollTop = Math.max(0, i * 32 - 32);
+  };
+  React.useEffect(() => scrollToReveal.current());
 
   if (roots.status === "loading") {
     return (
@@ -332,7 +400,13 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
 
   const tree = (
     <AriaTree
+      ref={scroller}
       aria-label={label}
+      onAction={onCurrentChange ? (key) => {
+        const k = String(key);
+        const node = nodes.get(k);
+        if (!isNote(k) && node !== undefined) onCurrentChange(k, node);
+      } : undefined}
       selectionMode={choices ? "multiple" : "single"}
       disallowEmptySelection={!choices}
       selectedKeys={choices ? displayKeys : selected === null ? [] : [selected as string]}
@@ -367,7 +441,7 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
         {choices.count > 0 && <Button size="sm" variant="ghost" onPress={choices.clear}>Clear</Button>}
       </div>
       {body}
-      <p role="status" className="sr-only">{choices.note}</p>
+      <p role="status" className="sr-only">{covered || choices.note}</p>
     </div>
   );
 }

@@ -65,12 +65,22 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`.
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
-export function Button({ className, variant, size, type = "button", disabled, children, ...props }: ButtonProps) {
+export function Button({ className, variant, size, type = "button", disabled, children, "aria-busy": ariaBusy, ...props }: ButtonProps) {
+  // React Aria's button drops `aria-busy` (it forwards only the aria props it knows), so it is set
+  // on the element here; a pending row action says it is busy to a screen reader (issue #248).
+  const ref = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (ariaBusy) el.setAttribute("aria-busy", String(ariaBusy));
+    else el.removeAttribute("aria-busy");
+  }, [ariaBusy]);
   if (isDev()) warnOnLoss(props as Record<string, unknown>, children);
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
     <AriaButton
+      ref={ref}
       type={type}
       isDisabled={disabled}
       data-variant={variant ?? "outline"}

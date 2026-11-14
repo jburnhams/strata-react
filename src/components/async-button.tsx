@@ -53,7 +53,7 @@ export function AsyncButton({
 
   return (
     <>
-      <Button {...props} data-phase={phase} disabled={disabled || phase === "pending"} aria-disabled={phase === "pending" || undefined}>
+      <Button {...props} data-phase={phase} disabled={disabled || phase === "pending"} aria-disabled={phase === "pending" || undefined} aria-busy={phase === "pending" || undefined}>
         {Icon && <Icon aria-hidden className={phase === "pending" ? "motion-safe:animate-spin" : undefined} />}
         <span className="grid">
           {[labels.idle, labels.pending, labels.done, errorLabel].map((l) => (

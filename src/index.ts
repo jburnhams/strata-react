@@ -78,7 +78,8 @@ export { SecretField, type SecretFieldProps, type SecretTestResult } from "./com
 export { Alert, type AlertProps } from "./components/alert";
 export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type StrataToastRegionProps } from "./components/toast";
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";
-export { JobStatus, type JobStatusProps, type JobFailure, type JobWords } from "./components/job-status";
+export { JobStatus, jobProgressText, type JobStatusProps, type JobFailure, type JobProgress, type JobWords } from "./components/job-status";
+export { useJobAction, type JobAction, type JobActionOptions } from "./components/job-action";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {
   DataTable,
@@ -115,6 +116,7 @@ export {
   type TileAspect,
   type TileSize,
 } from "./components/selectable-grid";
+export { ViewOptions, useViewOptions, sortRows, type ViewOptionsProps, type ViewOptionsConfig, type ViewOptionsState, type ViewSort, type ViewGroup, type ViewGroupRows } from "./components/view-options";
 export { TileGrid, TileGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";

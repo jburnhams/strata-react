@@ -12,6 +12,10 @@ import { isTypingTarget } from "./hotkeys";
 // hidden behind an overflow menu, which keeps every control reachable with no extra state
 // (an overflow menu is the later step, once the Menu exists).
 
+// A slider keeps its own Home and End (to its ends), as a typing target keeps its own: a size slider
+// in a toolbar (`ViewOptions`) would otherwise lose them to "first control".
+const isRange = (t: EventTarget | null) => t instanceof HTMLInputElement && t.type === "range";
+
 /** Props for `Toolbar`. */
 export type ToolbarProps = {
   /** Names the toolbar for screen readers: "Preview options". Required. */
@@ -29,7 +33,7 @@ export function Toolbar({ label, orientation = "horizontal", children, className
   const jump = (e: React.KeyboardEvent<HTMLElement>) => {
     // Only events from inside the toolbar's own DOM: a Popover opened from a control here renders in
     // a portal, and its events still reach this handler through React's tree.
-    if ((e.key !== "Home" && e.key !== "End") || isTypingTarget(e.target) || !e.currentTarget.contains(e.target as Node)) return;
+    if ((e.key !== "Home" && e.key !== "End") || isTypingTarget(e.target) || isRange(e.target) || !e.currentTarget.contains(e.target as Node)) return;
     const items = [...e.currentTarget.querySelectorAll<HTMLElement>("button, input, select, textarea, a[href], [tabindex]")].filter(
       (el) => !el.hasAttribute("disabled") && el.getAttribute("aria-disabled") !== "true" && el.tabIndex >= -1 && el.getAttribute("role") !== "separator",
     );

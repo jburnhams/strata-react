@@ -11,6 +11,13 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.43 (2026-11-14)
+
+- `toast.show(...)` with no `StrataToastRegion` mounted warns once in development ("nothing will be drawn") and still queues the toast; an app that called it before its region mounted will see the warning, and `renderWithStrata` keeps its region on by default so a test is unchanged.
+- A pending `AsyncButton` (and any `Button` given `aria-busy`) now carries `aria-busy="true"` on the element; React Aria's button had been dropping it. A test that matched the button's attributes exactly may need the new one.
+- `Toolbar` leaves Home and End to a slider inside it (they went to the first and last control before).
+- `SelectableGrid`: a `tileSize` may be a number of pixels; with `groupBy` the grid is not virtualised and each group is its own list (an arrow key stops at a group's edge). A grid that sets none of the new props is unchanged.
+
 ## After v1.0.42 (2026-11-14)
 
 - `strata-visual` serves an app build's `index.html` with `<base href="/">` (the target's `base`) added when the page has no base tag, as python-app-template's server does, so a build with `base: './'` finds its assets on a nested route; drop a `visual` Vite mode that injected the tag yourself (it is left alone if the page already has one).

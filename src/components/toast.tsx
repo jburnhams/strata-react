@@ -57,6 +57,11 @@ export function toastTimeout(content: Pick<ToastContentProps, "title" | "descrip
 export const toast = {
   /** Shows a toast and returns its key. */
   show(content: ToastContentProps): string {
+    // Nothing appears without a region, and nothing says so: in development the first such call does (issue #249).
+    if (mounted.length === 0 && !warnedNoRegion && isDev()) {
+      warnedNoRegion = true;
+      console.warn("strata-react: toast.show() was called but no StrataToastRegion is mounted, so nothing will appear. Render <StrataToastRegion /> once at the app root.");
+    }
     return queue.add(content, { timeout: toastTimeout(content) });
   },
   close(key: string) {
@@ -78,6 +83,11 @@ export type StrataToastRegionProps = {
 
 // The regions mounted now, oldest first: the first draws, the rest stay empty.
 const mounted: string[] = [];
+let warnedNoRegion = false;
+/** For tests: forget that the missing-region warning was given. */
+export function resetToastWarnings() {
+  warnedNoRegion = false;
+}
 const watchers = new Set<() => void>();
 const changed = () => watchers.forEach((w) => w());
 const watch = (w: () => void) => {

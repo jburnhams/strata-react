@@ -38,6 +38,15 @@ import { Status, type Tone } from "./status";
 /** An item a job could not do, and why, in the product's words. */
 export type JobFailure = { key: string; label: string; reason: string };
 
+/** How far a job has got, in the one shape every job uses (issue #250): items done, items in all, and what it is on now. `JobStatus` renders it as "3 of 9 done, 6 remaining · Night Sky". */
+export type JobProgress = { done: number; total: number; current?: string };
+
+/** The sentence for a job's progress: "3 of 9 done, 6 remaining · Night Sky". */
+export function jobProgressText({ done, total, current }: JobProgress): string {
+  const d = Math.min(total, Math.max(0, done));
+  return `${format.integer(d)} of ${format.integer(total)} done, ${format.integer(total - d)} remaining${current ? ` · ${current}` : ""}`;
+}
+
 /** A job's three states as words, all required: "Syncing", "Finished", "Finished with failures". */
 export type JobWords = { running: string; finished: string; failed: string; /** Shown when `cancelled`. Default "Cancelled". */ cancelled?: string };
 
@@ -50,6 +59,8 @@ export type JobStatusProps = {
   words: JobWords;
   /** The app's sentence for where the job is or how it went: "Syncing 2 of 3: Night Sky." */
   summary: string;
+  /** How far it has got, in the shared shape (`{ done, total, current }`): the bar and the sentence "3 of 9 done, 6 remaining · Night Sky" under the summary. Wins over `current` and `total`. */
+  progress?: JobProgress;
   /** Items done or being done, with `total`, for the bar. */
   current?: number;
   /** Items in all, when known. No bar without it. */
@@ -81,8 +92,9 @@ export function JobStatus({
   running,
   words,
   summary,
-  current,
-  total,
+  progress,
+  current: currentProp,
+  total: totalProp,
   failures = [],
   failed = false,
   failuresLabel = "Failures",
@@ -100,6 +112,9 @@ export function JobStatus({
       ? { tone: "warning", icon: TriangleAlert, word: words.failed }
       : { tone: "success", icon: Check, word: words.finished };
   const { tone, icon, word } = running ? { tone: "info" as const, icon: Spinner, word: words.running } : ended;
+
+  const current = progress ? progress.done : currentProp;
+  const total = progress ? progress.total : totalProp;
 
   // What is announced changes only with the item or the end, not with every poll's sentence.
   const moment = running ? `running:${current ?? ""}` : `ended:${word}`;
@@ -127,6 +142,7 @@ export function JobStatus({
           </Button>
         )}
       </div>
+      {running && progress && <p className="type-caption text-muted-foreground tabular-nums">{jobProgressText(progress)}</p>}
       {bar && (
         <div
           role="progressbar"
