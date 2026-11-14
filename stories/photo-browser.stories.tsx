@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar, Button, SelectableGrid, Tree, ViewOptions, format, useChoices, useExpanded, useSelection, useViewOptions, type Load } from "../src";
+import { BulkBar, Button, SelectableGrid, SelectableGridSkeleton, Tree, ViewOptions, format, useChoices, useExpanded, useSelection, useViewOptions, type Load } from "../src";
 import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
@@ -94,11 +94,14 @@ function Natural({ grouped = false }: { grouped?: boolean }) {
       onTileSizeChange={setSize}
       groupBy={grouped ? hourOf : undefined}
       groupHeading={(g) => `${g} o'clock`}
+      mark={(p) => (Number(p.id.slice(2)) % 4 === 0 ? "RAW+JPG" : undefined)}
       maxHeight={560}
     />
   );
 }
 export const NaturalAspect: Story = { render: () => <Natural />, tags: ["visual-wide"] };
+// While the pictures load: the same rows at the same shapes, so nothing moves when they arrive.
+export const NaturalAspectLoading: Story = { render: () => <SelectableGridSkeleton count={24} shapes={shapes} tileSize={140} />, tags: ["visual-wide"] };
 export const NaturalAspectGrouped: Story = { render: () => <Natural grouped />, tags: ["visual-wide"] };
 
 const years: Folder[] = [

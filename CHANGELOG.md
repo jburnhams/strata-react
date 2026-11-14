@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-11-14
+**SelectableGrid: the last of issue #246** (branch `claude/project-thread-nnem56`). Jonathan asked for #246 to be done in full; what was still missing against its list:
+
+- `src/components/selectable-grid.tsx`: `aspect` takes a ratio; `fit` (`cover`, `contain`); `mark`, a second corner on a chip; a tile `isSelectable` refuses says why in its name ("Photo 1, Already in this project"); the marquee keeps tiles seen earlier in the drag (it works in the scroll box's own coordinates) and scrolls the box when the pointer nears its top or bottom edge; zoom holds the tile under the pointer or the focused one where it was (the scroll share is the fallback). Sorting stays in `useViewOptions` (#247), which hands the grid rows already sorted, rather than a second sort in the grid.
+- `src/components/tile-grid.tsx`, `src/index.ts`: `SelectableGridSkeleton` (the `DataView` skeleton at the grid's size, shape or per-picture shapes); `tileLayoutOptions` takes a ratio.
+- `tests/unit/justified-grid.test.tsx`, `stories/photo-browser.stories.tsx` (`NaturalAspectLoading`, a `mark` on `NaturalAspect`), baselines for the loading story and redrawn natural-aspect ones.
+- Not done, and why: a drag that starts on a tile stays a press, because React Aria's press would also toggle that tile.
+
 **SelectableGrid: justified rows, marquee, pinch and a pushed heading (the rest of issue #246)** (branch `claude/project-thread-nnem56`). Jonathan said #246 was only partly done; these were the four parts left.
 
 - `src/lib/grouped-grid-layout.ts`: `justifyRows` (rows of equal height from each picture's width over height, last row kept at the target height) and `stuckHeader` (the heading at the top, pushed up by the next one), both pure and tested; `GroupedGridLayout` takes a `justify` layout option and places each run of tiles with `justifyRows`. React Aria has no justified layout (`GridLayout` is fixed columns, `WaterfallLayout` is columns of unequal height), so it is ours inside its Virtualizer.

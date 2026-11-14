@@ -1,7 +1,7 @@
 import * as React from "react";
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
-import { SelectableGrid, useSelection } from "../../src";
+import { SelectableGrid, SelectableGridSkeleton, DataView, useSelection } from "../../src";
 import { LayoutInfo, Rect } from "react-stately";
 import { justifyRows, stuckHeader } from "../../src/lib/grouped-grid-layout";
 import { renderWithStrata } from "../../src/testing";
@@ -61,8 +61,8 @@ describe("SelectableGrid aspect natural", () => {
     expect(rows.length).toBeGreaterThan(0);
     const wide = rows.find((r) => r.getAttribute("data-key") === "p0")!;
     const normal = rows.find((r) => r.getAttribute("data-key") === "p1")!;
-    expect((wide.querySelector("span.block") as HTMLElement).style.aspectRatio).toBe("1.5 / 1");
-    expect((normal.querySelector("span.block") as HTMLElement).style.aspectRatio).toBe("1 / 1");
+    expect((wide.querySelector("span[style]") as HTMLElement).style.aspectRatio).toBe("1.5 / 1");
+    expect((normal.querySelector("span[style]") as HTMLElement).style.aspectRatio).toBe("1 / 1");
   });
 });
 
@@ -123,5 +123,40 @@ describe("stuckHeader", () => {
     expect(stuckHeader(headers, 100)!.key).toBe("h0");
     expect(stuckHeader(headers, 280)!.rect.y).toBe(260); // 300 - 40: the next heading is arriving
     expect(stuckHeader(headers, 310)!.key).toBe("h300");
+  });
+});
+
+describe("tile slots, fit, ratio and loading (#246)", () => {
+  function Slots(props: Record<string, unknown>) {
+    const selection = useSelection(photos, (p) => p.id);
+    return (
+      <SelectableGrid<P>
+        label="Photos"
+        rows={photos.slice(0, 4)}
+        rowKey={(p) => p.id}
+        renderImage={() => <img alt="" src="/x.jpg" />}
+        selection={{ ...selection, rowLabel: (p) => p.name, isSelectable: (p) => p.id !== "p1" }}
+        unselectableReason={() => "Already in this project"}
+        {...props}
+      />
+    );
+  }
+
+  it("takes a ratio, a fit, a second corner and names why a tile cannot be chosen", () => {
+    renderWithStrata(<Slots aspect={16 / 9} fit="contain" mark={(p: P) => `n${p.id.slice(1)}`} />);
+    const rows = screen.getAllByRole("row");
+    expect((rows[0]!.querySelector("span[style]") as HTMLElement).style.aspectRatio).toBe("1.77778 / 1");
+    expect(rows[0]!.querySelector("img")!.parentElement!.className).toContain("object-contain");
+    expect(screen.getByText("n2")).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "Photo 1, Already in this project" })).toBeInTheDocument();
+  });
+
+  it("has a loading shape for DataView, in rows at their own shapes when given them", () => {
+    const { container } = renderWithStrata(
+      <DataView state={{ status: "loading" }} isEmpty={(r: P[]) => r.length === 0} skeleton={<SelectableGridSkeleton count={5} shapes={[1.5, 0.66]} tileSize={100} />} empty={<p>No pictures</p>}>
+        {() => <span />}
+      </DataView>,
+    );
+    expect(container.querySelectorAll("div.p-1\\.5")).toHaveLength(5);
   });
 });

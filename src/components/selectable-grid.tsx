@@ -71,16 +71,24 @@ import { isTypingTarget } from "./hotkeys";
 // - Marquee and pinch. A mouse or pen drag from between tiles draws a rectangle that chooses the tiles
 //   it touches (Ctrl/Cmd or Shift adds), and two fingers scale the size. Neither is in React Aria's
 //   GridList; both are pointer and touch listeners on our wrapper. The marquee reads the drawn tiles'
-//   rectangles, so in a virtualised grid it reaches what is in view; it does not auto-scroll.
+//   rectangles in the scroll box's own coordinates, so it keeps tiles seen earlier in the drag and scrolls
+//   the box when the pointer nears its top or bottom edge, which reaches the tiles of a virtualised grid
+//   that were not drawn at the start. A drag that starts on a tile is its press, not a marquee.
 // - The heading at the top is pushed up by the next one as it arrives.
+// - What was left over in the issue: `aspect` takes a ratio, `fit` is `cover` or `contain`, `mark` is a
+//   second corner on a chip, a tile that cannot be chosen says why in its name, and `SelectableGridSkeleton`
+//   (tile-grid.tsx) is the `DataView` skeleton at the grid's size and shapes. Zoom holds the tile under
+//   the pointer (or the focused one) where it was; the scroll share is the fallback when that tile is not drawn.
+// - Sorting is `useViewOptions` (#247), which hands the grid its rows already sorted, with natural order and
+//   nulls last; the grid keeps selection by key so a re-sort never drops it. It is not a second sort in the grid.
 
 export type { TileAspect, TileSize };
 
 export type SelectableGridProps<T> = SelectableGridBase<T> &
   (
     | {
-        /** Default `square`. `portrait` is 3:4, `landscape` 4:3. */
-        aspect?: TileAspect;
+        /** Default `square`. `portrait` is 3:4, `landscape` 4:3, or a width over height (`16 / 9`). */
+        aspect?: TileAspect | number;
         naturalAspect?: never;
       }
     | {
@@ -114,8 +122,12 @@ type SelectableGridBase<T> = {
   selectionBehavior?: "toggle" | "replace";
   /** Opens a tile: Enter, or a double click with `selectionBehavior="replace"`. */
   onAction?: (row: T) => void;
-  /** A corner badge on the picture (top right): a `Status`. */
+  /** A corner badge on the picture (top right): a `Status`, "RAW+JPG". */
   badge?: (row: T) => React.ReactNode;
+  /** A second corner (bottom right of the picture) for a count or a mark ("12", a flag), on a chip so it reads on any picture. */
+  mark?: (row: T) => React.ReactNode;
+  /** `cover` (default) crops the picture to fill its frame; `contain` fits the whole picture in it, letterboxed. */
+  fit?: "cover" | "contain";
   /** Puts tiles under full-width headings, in the order the rows first show them. Virtualised like the ungrouped grid. */
   groupBy?: (row: T) => string;
   /** The words for a group's heading; default the group text. */
@@ -146,6 +158,8 @@ export function SelectableGrid<T>({
   selectionBehavior = "toggle",
   onAction,
   badge,
+  mark,
+  fit = "cover",
   groupBy,
   groupHeading,
   unselectableReason,
@@ -168,6 +182,7 @@ export function SelectableGrid<T>({
   }, [rows, groupBy]);
   const [folded, setFolded] = React.useState<ReadonlySet<string>>(new Set());
   const natural = aspect === "natural";
+  const ratio = typeof aspect === "number" ? aspect : null;
   const virtual = natural || Boolean(groups) || rows.length >= virtualizeFrom;
   const px = tileWidth(tileSize);
   const outer = React.useRef<HTMLDivElement>(null);
@@ -175,22 +190,39 @@ export function SelectableGrid<T>({
 
   // Zoom. The scroll position is kept as a share of the content across the change (applied in a
   // layout effect, after the new tiles have their sizes), so the picture in view stays in view.
-  const keep = React.useRef<number | null>(null);
+  const keep = React.useRef<{ share: number | null; key: string | null; offset: number }>({ share: null, key: null, offset: 0 });
+  const pointerAt = React.useRef<{ x: number; y: number } | null>(null);
   const scrollBox = () => outer.current?.querySelector<HTMLElement>("[data-strata-scroll]") ?? null;
   const zoom = (next: number) => {
     if (!onTileSizeChange) return;
     const clamped = Math.round(Math.min(zoomRange[1], Math.max(zoomRange[0], next)));
     if (clamped === px) return;
     const box = scrollBox();
-    keep.current = box && box.scrollHeight > 0 ? box.scrollTop / box.scrollHeight : null;
+    // The tile to hold in place: the one under the pointer if it is over the grid, else the focused one.
+    const p = pointerAt.current;
+    const under = p ? document.elementFromPoint?.(p.x, p.y)?.closest<HTMLElement>("[data-key]") : null;
+    const anchor = under && outer.current?.contains(under) ? under : (document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-key]") ?? null;
+    keep.current = {
+      share: box && box.scrollHeight > 0 ? box.scrollTop / box.scrollHeight : null,
+      key: anchor && !isGroupKey(anchor.getAttribute("data-key")) ? anchor.getAttribute("data-key") : null,
+      offset: box && anchor ? anchor.getBoundingClientRect().top - box.getBoundingClientRect().top : 0,
+    };
     onTileSizeChange(clamped);
   };
   const zoomRef = React.useRef(zoom);
   zoomRef.current = zoom;
   React.useLayoutEffect(() => {
     const box = scrollBox();
-    if (box && keep.current !== null) box.scrollTop = keep.current * box.scrollHeight;
-    keep.current = null;
+    const { share, key, offset } = keep.current;
+    if (box && share !== null) box.scrollTop = share * box.scrollHeight;
+    keep.current = { share: null, key: null, offset: 0 };
+    if (!box || !key) return;
+    // Once the new layout has drawn its rows, move so that tile is where it was under the pointer.
+    const frame = requestAnimationFrame(() => {
+      const el = [...box.querySelectorAll<HTMLElement>("[data-key]")].find((n) => n.getAttribute("data-key") === key);
+      if (el) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - offset;
+    });
+    return () => cancelAnimationFrame(frame);
   }, [px]);
   // A wheel listener has to be non-passive to refuse the browser's own page zoom.
   React.useEffect(() => {
@@ -199,6 +231,7 @@ export function SelectableGrid<T>({
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
+      pointerAt.current = { x: e.clientX, y: e.clientY };
       zoomRef.current(px * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -243,30 +276,58 @@ export function SelectableGrid<T>({
     const target = e.target as HTMLElement;
     if (!target.closest("[data-strata-scroll]") || target.closest("[data-key], button, input, a")) return;
     const root = outer.current;
-    if (!root) return;
+    const scroller = scrollBox();
+    if (!root || !scroller) return;
     const additive = e.ctrlKey || e.metaKey || e.shiftKey;
     const base = new Set([...selection.selected].filter((k) => additive || !shownKeys.has(k)));
-    const x0 = e.clientX;
-    const y0 = e.clientY;
+    // Everything is held in the scroll box's own coordinates, so the rectangle stays on the content
+    // while the box scrolls, and tiles seen earlier in the drag are still counted after they scroll
+    // out of the drawn rows (a virtualised grid draws only what is in view).
+    const origin = () => {
+      const r = scroller.getBoundingClientRect();
+      return { x: r.left - scroller.scrollLeft, y: r.top - scroller.scrollTop };
+    };
+    const o0 = origin();
+    const start = { x: e.clientX - o0.x, y: e.clientY - o0.y };
+    const seen = new Map<string, { l: number; r: number; t: number; b: number }>();
+    let pointer = { x: e.clientX, y: e.clientY };
     let moved = false;
-    const hit = (x1: number, y1: number) => {
-      const l = Math.min(x0, x1), r = Math.max(x0, x1), t = Math.min(y0, y1), b = Math.max(y0, y1);
-      const chosen = new Set(base);
+    let frame = 0;
+    const update = () => {
+      const o = origin();
       for (const el of root.querySelectorAll<HTMLElement>("[data-key]")) {
         const key = el.getAttribute("data-key")!;
         if (isGroupKey(key) || !byKey.has(key) || disabledSet.has(key)) continue;
         const box = el.getBoundingClientRect();
-        if (box.left < r && box.right > l && box.top < b && box.bottom > t) chosen.add(key);
+        seen.set(key, { l: box.left - o.x, r: box.right - o.x, t: box.top - o.y, b: box.bottom - o.y });
       }
+      const cur = { x: pointer.x - o.x, y: pointer.y - o.y };
+      const l = Math.min(start.x, cur.x), r = Math.max(start.x, cur.x), t = Math.min(start.y, cur.y), b = Math.max(start.y, cur.y);
+      const chosen = new Set(base);
+      for (const [key, box] of seen) if (box.l < r && box.r > l && box.t < b && box.b > t) chosen.add(key);
       selection.onChange(chosen);
+      setMarquee({ x0: start.x + o.x, y0: start.y + o.y, x1: pointer.x, y1: pointer.y });
+    };
+    // While the pointer is near the top or bottom edge of the box, the box scrolls, faster nearer the edge.
+    const tick = () => {
+      const r = scroller.getBoundingClientRect();
+      const edge = 40;
+      const delta = pointer.y < r.top + edge ? -(r.top + edge - pointer.y) : pointer.y > r.bottom - edge ? pointer.y - (r.bottom - edge) : 0;
+      if (delta) scroller.scrollTop += Math.max(-24, Math.min(24, delta / 2));
+      update();
+      frame = requestAnimationFrame(tick);
     };
     const move = (m: PointerEvent) => {
-      if (!moved && Math.hypot(m.clientX - x0, m.clientY - y0) < 4) return;
-      moved = true;
-      setMarquee({ x0, y0, x1: m.clientX, y1: m.clientY });
-      hit(m.clientX, m.clientY);
+      pointer = { x: m.clientX, y: m.clientY };
+      if (!moved && Math.hypot(m.clientX - e.clientX, m.clientY - e.clientY) < 4) return;
+      if (!moved) {
+        moved = true;
+        frame = requestAnimationFrame(tick);
+      }
+      update();
     };
     const up = () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
@@ -346,11 +407,14 @@ export function SelectableGrid<T>({
     const unselectable = !(selection.isSelectable?.(row) ?? true);
     const why = unselectableReason && unselectable ? unselectableReason(row) : undefined;
     const corner = badge?.(row);
+    const second = mark?.(row);
     return (
       <GridListItem
         key={key}
         id={key}
         textValue={name}
+        // A tile that cannot be chosen says why in its name too, not only in the line on it.
+        aria-label={why ? `${name}, ${why}` : undefined}
         data-index={index}
         className={cn(
           // select-none: a Shift-click range would otherwise also select the text between the tiles.
@@ -360,8 +424,14 @@ export function SelectableGrid<T>({
           unselectable ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-surface-sunken",
         )}
       >
-        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", !natural && aspectClass[aspect as TileAspect])} style={natural ? { aspectRatio: Math.max(0.1, naturalAspect?.(row) ?? 1) } : undefined}>
-          {renderImage(row)}
+        <span className="relative block">
+          <span
+            className={cn("block overflow-hidden rounded-control bg-muted *:size-full", fit === "contain" ? "*:object-contain" : "*:object-cover", !natural && ratio === null && aspectClass[aspect as TileAspect])}
+            style={natural ? { aspectRatio: Math.max(0.1, naturalAspect?.(row) ?? 1) } : ratio !== null ? { aspectRatio: ratio } : undefined}
+          >
+            {renderImage(row)}
+          </span>
+          {second != null && <span className="absolute right-1.5 bottom-1.5 rounded-control bg-background/90 px-1.5 type-caption text-foreground tabular-nums">{second}</span>}
         </span>
         {selectionMode === "multiple" && <TileBox label={`Select ${name}`} />}
         {corner != null && <span className="absolute top-3 right-3">{corner}</span>}
@@ -413,6 +483,7 @@ export function SelectableGrid<T>({
       ref={outer}
       className={cn("grid min-w-0 gap-3", className)}
       onPointerDown={startMarquee}
+      onPointerMove={(e) => void (pointerAt.current = { x: e.clientX, y: e.clientY })}
       onMouseDownCapture={(e) => {
         shift.handlers.onMouseDown(e);
         notePress(e);

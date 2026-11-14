@@ -117,7 +117,7 @@ export {
   type TileSize,
 } from "./components/selectable-grid";
 export { ViewOptions, useViewOptions, sortRows, type ViewOptionsProps, type ViewOptionsConfig, type ViewOptionsState, type ViewSort, type ViewGroup, type ViewGroupRows } from "./components/view-options";
-export { TileGrid, TileGridSkeleton, type TileGridProps } from "./components/tile-grid";
+export { TileGrid, TileGridSkeleton, SelectableGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
 export { LineChart, LineChartGroup, logScale, valueAt, type ChartMark, type ChartSpan, type GroupedChart, type LineChartGroupProps, type LineChartProps, type Point, type SpanTone, type YScale } from "./components/line-chart";

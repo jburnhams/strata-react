@@ -52,8 +52,9 @@ const TILE_CHROME = 40;
 export const tileWidth = (size: TileSize | number): number => (typeof size === "number" ? size : minWidth[size]);
 
 /** `GridLayout` options for tiles of this size and aspect: they grow from the minimum width to fill the row, and each row is as tall as its tallest tile as measured. */
-export function tileLayoutOptions(tileSize: TileSize | number, aspect: TileAspect) {
+export function tileLayoutOptions(tileSize: TileSize | number, aspect: TileAspect | number) {
   const w = tileWidth(tileSize);
+  if (typeof aspect === "number") return { minItemSize: new Size(w, Math.round(w / aspect) + TILE_CHROME), minSpace: new Size(GAP, GAP) };
   return {
     minItemSize: new Size(w, Math.round(w * aspectRatio[aspect]) + TILE_CHROME),
     minSpace: new Size(GAP, GAP),
@@ -177,6 +178,32 @@ export function TileGridSkeleton({ count = 12, aspect = "square", tileSize = "md
         <div key={i} className="grid gap-1.5 p-1.5">
           <ThumbnailSkeleton aspect={thumbnailAspect[aspect]} />
           <span className="h-4 w-2/3 rounded-control bg-muted" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The loading shape of a `SelectableGrid`: `count` picture boxes at the grid's tile size and shape, for a `DataView` skeleton. With `shapes` (widths over heights, cycled) the boxes are in rows at their own shapes, as `aspect="natural"` draws them. */
+export function SelectableGridSkeleton({ count = 24, aspect = "square", tileSize = "md", shapes, className }: { count?: number; aspect?: TileAspect | number; tileSize?: TileSize | number; shapes?: readonly number[]; className?: string }) {
+  const px = tileWidth(tileSize);
+  if (shapes?.length) {
+    return (
+      <div aria-hidden className={cn("flex min-w-0 flex-wrap gap-3", className)}>
+        {Array.from({ length: count }, (_, i) => (
+          <div key={i} className="p-1.5" style={{ width: Math.round(shapes[i % shapes.length]! * px) + 14 }}>
+            <ThumbnailSkeleton aspect={shapes[i % shapes.length]!} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const ratio = typeof aspect === "number" ? aspect : thumbnailAspect[aspect];
+  return (
+    <div aria-hidden className={cn("grid min-w-0 gap-3", className)} style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}>
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="p-1.5">
+          <ThumbnailSkeleton aspect={ratio} />
         </div>
       ))}
     </div>
