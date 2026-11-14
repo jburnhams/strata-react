@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.40 (2026-11-14)
+
+- `Button`, `IconButton` and `RowAction` refuse `title` (the type is `never`; React Aria's button never forwarded it, so a tip carried over from a native button silently vanished). Wrap the button in a `Tooltip`, or give `IconButton` a `label` and `hint`. In development a `title` that gets through (an untyped caller) and a button whose only content is one symbol with no `aria-label` log a warning once.
+- `FolderPicker`'s `useFolders` may return `{ folders, footer }` as well as an array; a row with a `badge` has `, badge` in its name (`name: "film-2026, project"`). `FolderPicker` and `Tree` gain props only; a picker that sets none of them is unchanged, except that a chosen folder's own listing is now read for its footer (cached, so no second request when the tree has it open).
+
 ## After v1.0.39 (2026-11-13)
 
 - `Tree`'s props are now a union: give `selected` and `onSelect` (one chosen node) or `choices` from `useChoices` (several). Code that passed `selected` and `onSelect` compiles as before.

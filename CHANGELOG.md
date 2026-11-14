@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-14
+**Button `title` refused; FolderPicker knows about projects (issues #231, #233)** (branch `claude/button-title-folder-picker`). The eighth batch: a native `title` on a button was dropped silently, and strata-360's folder chooser needs more than `{ path, name, count }`. `kind` from #233 is not added: the badge's `tone` is its kind, and a second field would repeat it.
+
+- `src/components/button.tsx`: `title` is `never` on `ButtonProps` (so `IconButton` and `RowAction` refuse it too) and, in development, an untyped `title` and a button whose only child is one symbol with no `aria-label` each warn once. Reason 5 in the opening comment: React Aria's button does not forward `title`, and passing it on would give a tip with no keyboard focus or touch.
+- `src/components/folder-picker.tsx`: `Folder` gains `badge` and `tone` (a `Status` beside the name, and `name, badge` as the row's name); `FolderListing` is what `useFolders` may return, `{ folders, footer }`, the footer shown under the tree for the folder being looked at; `canChoose(path, folder)` disables the filled button and shows the reason beside it with `aria-describedby`; `chooseLabel`; `onOpen(folder)` answers `"choose"` to take a folder at once and keep it closed. The crumb and recent buttons now use `Tooltip` instead of `title`.
+- `src/components/tree.tsx`: `beforeOpen(node)`, asked when the person opens a branch; `false` keeps it closed. Opens the app makes itself (ancestors of a chosen folder, ticking a branch) are not asked.
+- `src/index.ts`: exports `FolderListing`.
+- `tests/unit/actions.test.tsx`, `tests/unit/folder-picker.test.tsx`: **new cases** for the title refusal and the glyph warning; the badge, the disabled button with its reason, `canChoose` given the folder, `onOpen` choosing a project without opening it, and the footer.
+- `stories/fixtures/folders.ts`, `stories/mocks/handlers.ts`, `stories/screens/folder-chooser.tsx`, `stories/folder-picker.stories.tsx`: two projects (badged), camera files in `rushes` with a footer; stories `ProjectBadges`, `CannotChoose`, `FooterNote`. Baselines: new for those three, and the folder picker stories that show the Projects folder gain the badges.
+- `README.md`, `UPGRADING.md`: the Actions and Browsing rows, and an "After v1.0.40" entry.
+
 ## 2026-11-13
 **Four components from strata-360 (issues #221, #222, #223, #224)** (branch `claude/project-thread-7y4dy2`). The seventh batch: a key the server keeps, a number set a little at a time, a tree that chooses several with what depends on a choice ticked for the person, and a transcript with doubt, marks, correction and a card. No dependency was added; each is React Aria's part extended, and where we write our own element the file's opening comment says why.
 

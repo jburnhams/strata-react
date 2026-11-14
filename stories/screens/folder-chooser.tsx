@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FolderPicker, fetchJson, useExpanded, useLoad, type Folder, type FolderPickerProps } from "../../src";
+import { FolderPicker, fetchJson, useExpanded, useLoad, type FolderListing, type FolderPickerProps } from "../../src";
 
 // The folder picker wired to the pretend disk through the real query bridge, for the stories and the
 // tests alike: the reads are `useLoad` over `fetchJson`, the write is a POST then an invalidation.
 
 export function useFolders(path: string | null) {
-  return useLoad<readonly Folder[]>({
+  return useLoad<FolderListing>({
     queryKey: ["folders", path ?? "/"],
-    queryFn: async () => (await fetchJson<{ folders: Folder[] }>(`/api/folders?path=${encodeURIComponent(path ?? "/")}`)).folders,
+    queryFn: () => fetchJson<FolderListing>(`/api/folders?path=${encodeURIComponent(path ?? "/")}`),
     retry: false,
   });
 }

@@ -17,6 +17,12 @@ import { Tooltip } from "./tooltip";
 //    from it, the look from our tokens. `asChild`/`Slot` is gone; a button that navigates is a link.
 // 4. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
 //    times a day, so that is all the motion they get (character.md, the frequency budget).
+// 5. `title` is refused, not passed through (issue #231). React Aria's `Button` does not forward it,
+//    so a tip moved over from a native button vanished with nothing said. Passing it through would
+//    give a tip that has no keyboard focus, no touch and a long, unstyled delay; the answer is a
+//    `Tooltip` (and `IconButton`'s `label` and `hint`). The type says so (`title?: never`) and, for
+//    an untyped caller, so does a development warning. A button whose only child is one symbol
+//    (`✕`, `−`, `+`) has no accessible name from its text and gets a development warning too.
 export const buttonVariants = cva(
   "inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control type-label transition-state press disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-(--control-icon) [&_svg]:shrink-0",
   {
@@ -40,9 +46,11 @@ export const buttonVariants = cva(
   },
 );
 
-export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "style"> &
+export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "style" | "title"> &
   VariantProps<typeof buttonVariants> & {
     className?: string;
+    /** Not accepted: a `title` is a poor tooltip (no keyboard focus, no touch) and React Aria's button drops it. Wrap the button in a `Tooltip`, or use `IconButton`'s `label` and `hint`. */
+    title?: never;
     /** React Aria's press event (mouse, touch, pen and keyboard alike). `onClick` also works. */
     onPress?: (event: PressEvent) => void;
     /** When a press begins and ends: for a control that acts while held (a nudge that repeats). */
@@ -57,6 +65,7 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
 export function Button({ className, variant, size, type = "button", disabled, children, ...props }: ButtonProps) {
+  if (import.meta.env?.DEV) warnOnLoss(props as Record<string, unknown>, children);
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
@@ -72,6 +81,20 @@ export function Button({ className, variant, size, type = "button", disabled, ch
     </AriaButton>
   );
 }
+
+/** Development only: what a native button had that this one loses or cannot name (issue #231). */
+function warnOnLoss(props: Record<string, unknown>, children: React.ReactNode) {
+  if (props.title !== undefined && !warned.has("title")) {
+    warned.add("title");
+    console.warn("strata-react: Button does not pass `title` through (React Aria's button drops it, and a title has no keyboard or touch). Wrap the button in a `Tooltip`, or use IconButton's `label` and `hint`.");
+  }
+  const glyph = typeof children === "string" ? children.trim() : "";
+  if (glyph && Array.from(glyph).length === 1 && !/[\p{L}\p{N}]/u.test(glyph) && !props["aria-label"] && !props["aria-labelledby"] && !warned.has("glyph")) {
+    warned.add("glyph");
+    console.warn(`strata-react: a Button whose only content is "${glyph}" has no accessible name. Give it an aria-label, or use an IconButton with a label.`);
+  }
+}
+const warned = new Set<string>();
 
 // An icon-only button cannot be written without a name: `label` is required by the type, becomes
 // the accessible name and is shown as a `Tooltip` on hover and keyboard focus, so the name and the

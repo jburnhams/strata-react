@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import { listDisk, makeFolder } from "../fixtures/folders";
+import { listDisk, makeFolder, noteFor } from "../fixtures/folders";
 import { bookings, firedWork, firings, glazeSwatches, piecePhotos, readings, type Booking, type Firing } from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
 
@@ -176,7 +176,7 @@ const folders = [
     const path = new URL(request.url).searchParams.get("path") || "/";
     if (path.endsWith("/slow-share")) await delay(1500);
     if (path.endsWith("/locked")) return HttpResponse.json({ detail: `You do not have permission to open ${path}.` }, { status: 403, statusText: "Forbidden" });
-    return HttpResponse.json({ folders: listDisk(path) });
+    return HttpResponse.json({ folders: listDisk(path), footer: noteFor(path) });
   }),
   http.post("/api/folders", async ({ request }) => {
     const { parent, name } = (await request.json()) as { parent: string; name: string };
