@@ -81,7 +81,8 @@ import { VisuallyHidden } from "react-aria";
 //   selection): a phrase is played from its time. In a translation there are no words to mark, so the
 //   mode shows the text as it is. The caret scrolls its phrase into view the way following does. The
 //   region is one tab stop of its own, before the list; keys act on it only while it has focus, so the
-//   list keeps its arrows.
+//   list keeps its arrows. Enter on the caret's word opens its correction (`onCorrectionPress`), as a
+//   click does, so a corrected word is reachable without a pointer.
 // - **A corrected word** (`word.correction`) has a dotted underline in the primary colour and says
 //   "corrected, was …" to a screen reader; hovering it shows the original in a non-modal popover (the
 //   same part as the phrase card). `onCorrectionPress(phraseId, wordIndex)` makes a click on it open
@@ -400,7 +401,7 @@ export function TranscriptView({ label, groups, time, onSeek, marking, onCorrect
         </div>
       )}
       {marks ? (
-        <MarkableText label={`${label}, for marking`} ids={wordIds} marks={marks.marks} kinds={marks.kinds} onMark={marks.onMark} clearKeys={marks.clearKeys} summary={marks.summary} onCaretChange={(id) => scrollToHeard(phraseOfWordId(id))}>
+        <MarkableText label={`${label}, for marking`} ids={wordIds} marks={marks.marks} kinds={marks.kinds} onMark={marks.onMark} clearKeys={marks.clearKeys} summary={marks.summary} onActivate={onCorrectionPress ? (id) => { const pid = phraseOfWordId(id); const i = Number(id.slice(pid.length + 1)); if (phrases.find((x) => x.id === pid)?.words[i]?.correction) onCorrectionPress(pid, i); } : undefined} onCaretChange={(id) => scrollToHeard(phraseOfWordId(id))}>
           {list}
         </MarkableText>
       ) : (

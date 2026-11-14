@@ -139,6 +139,8 @@ export type MarkableTextProps = {
   onMark: (ids: readonly string[], kind: string | null) => void;
   /** Chords that clear the selection's marks: `["w"]`. */
   clearKeys?: string[];
+  /** Enter on the caret's id (a word that has something to open, such as a correction). Leave out and Enter does nothing. */
+  onActivate?: (id: string) => void;
   /** The caret moved to this id (so a virtualised list can scroll it into view). */
   onCaretChange?: (id: string) => void;
   /** What one id is called in counts: `["word", "words"]`. */
@@ -151,7 +153,7 @@ export type MarkableTextProps = {
 };
 
 /** Selects ids over `<Mark>` words by drag, Shift+click and Shift+arrows (a run in the app's order, so it holds across virtualised rows), offers the app's marks as chorded commands in a bar, says each change in words, and lists what is marked. */
-export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [], onCaretChange, unit = ["word", "words"], summary = true, children, className }: MarkableTextProps) {
+export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [], onActivate, onCaretChange, unit = ["word", "words"], summary = true, children, className }: MarkableTextProps) {
   const [anchor, setAnchor] = React.useState<string | null>(null);
   const [caret, setCaret] = React.useState<string | null>(null);
   const [said, setSaid] = React.useState("");
@@ -220,6 +222,9 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
     if (to !== undefined) {
       e.preventDefault();
       moveCaret(to, e.shiftKey);
+    } else if (e.key === "Enter" && caret !== null && onActivate) {
+      e.preventDefault();
+      onActivate(caret);
     } else if (e.key === "Escape" && (anchor !== null || caret !== null)) {
       e.preventDefault();
       setAnchor(null);

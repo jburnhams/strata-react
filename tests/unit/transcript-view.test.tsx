@@ -307,6 +307,19 @@ describe("TranscriptView doubt, marks, correction and card", () => {
 });
 
 // Issue #260: a review transcript with no player, marking words, corrected words.
+describe("TranscriptView corrections while marking", () => {
+  it("Enter on the caret's corrected word opens its correction, so no pointer is needed", async () => {
+    const corrected: TranscriptGroup[] = [{ id: "g", title: "Clip", phrases: [{ ...phrase("c1", 0, "good morning"), words: [{ text: "good", start: 0, end: 0.5 }, { text: "morning", start: 0.5, end: 1, correction: { original: "mourning" } }] }] }];
+    const onCorrectionPress = vi.fn();
+    renderWithStrata(<TranscriptView label="Transcript" groups={corrected} marking={{ kinds: [{ key: "use", label: "Must use", tone: "success", pattern: "solid" }], marks: {}, onMark: () => {} }} onCorrectionPress={onCorrectionPress} />);
+    screen.getByRole("group", { name: "Transcript, for marking" }).focus();
+    await userEvent.keyboard("{ArrowRight}{Enter}"); // the caret goes to the first word: nothing to open
+    expect(onCorrectionPress).not.toHaveBeenCalled();
+    await userEvent.keyboard("{ArrowRight}{Enter}");
+    expect(onCorrectionPress).toHaveBeenCalledWith("c1", 1);
+  });
+});
+
 describe("TranscriptView without a player, with marking and corrections", () => {
   const kinds: MarkKind[] = [
     { key: "use", label: "Must use", tone: "success", pattern: "solid", icon: Check, keys: ["g"] },
