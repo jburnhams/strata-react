@@ -48,10 +48,14 @@ const GAP = 12;
 // The caption, detail line and the tile's padding, for the first estimate of a tile's height.
 const TILE_CHROME = 40;
 
+/** A tile size as pixels: a named size's minimum width, or the number itself (a continuous size, issue #246). */
+export const tileWidth = (size: TileSize | number): number => (typeof size === "number" ? size : minWidth[size]);
+
 /** `GridLayout` options for tiles of this size and aspect: they grow from the minimum width to fill the row, and each row is as tall as its tallest tile as measured. */
-export function tileLayoutOptions(tileSize: TileSize, aspect: TileAspect) {
+export function tileLayoutOptions(tileSize: TileSize | number, aspect: TileAspect) {
+  const w = tileWidth(tileSize);
   return {
-    minItemSize: new Size(minWidth[tileSize], Math.round(minWidth[tileSize] * aspectRatio[aspect]) + TILE_CHROME),
+    minItemSize: new Size(w, Math.round(w * aspectRatio[aspect]) + TILE_CHROME),
     minSpace: new Size(GAP, GAP),
   };
 }
