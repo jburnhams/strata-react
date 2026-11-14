@@ -117,6 +117,14 @@ describe("Conversation", () => {
     }
   });
 
+  it("shows pictures with an answer, visible without opening anything, linked to full size when asked (#257)", () => {
+    renderWithStrata(<Thread turns={[{ id: "1", role: "answer", time: t0, text: "Here it is.", state: "done", lookedUp: <p>Read 3 clips</p>, images: [{ src: "/a.jpg", label: "Frame at 0:42", href: "/a-full.jpg" }, { src: "/b.jpg", label: "Frame at 1:10" }] }]} />);
+    expect(screen.getByText("Frame at 0:42")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Frame at 0:42/ })).toHaveAttribute("href", "/a-full.jpg");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByText("Read 3 clips")).toBeNull();
+  });
+
   it("shows what it looked up behind a disclosure once the answer is done", async () => {
     renderWithStrata(<Thread turns={[{ id: "1", role: "answer", time: t0, text: "Done.", state: "done", lookedUp: <p>Read 3 firings</p> }]} />);
     expect(screen.queryByText("Read 3 firings")).toBeNull();

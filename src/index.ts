@@ -198,7 +198,7 @@ export {
   type SetOptions,
 } from "./components/history";
 export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
-export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ComposerProps } from "./components/conversation";
+export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ConversationImage, type ComposerProps } from "./components/conversation";
 export { parseRichText, parseInline, matchEntities, safeHref, plainText, type EntityMatch, type EntityMatcher, type Block as RichBlock, type Inline as RichInline } from "./lib/rich-text";
 export { Lightbox, useLightboxUrl, type LightboxProps, type LightboxItem, type LightboxUrl } from "./components/lightbox";
 export { RegionEditor, describeRegion, type RegionEditorProps, type EditableRegion, type RegionTone } from "./components/region-editor";

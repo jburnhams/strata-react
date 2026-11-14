@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-11-14
+**Conversation: pictures shown with an answer (issue #257)** (branch `claude/project-thread-nnem56`). Found migrating strata-360's Ask page: a fetched frame is the answer, but the only slot was `lookedUp`, collapsed. A turn now takes `images`.
+
+- `src/components/conversation.tsx`: `ConversationTurn.images?: ConversationImage[]` (`src`, `label`, `href?`, `aspect?`), drawn under the text, always visible, through `Thumbnail` (lazy, shaped before it loads, a missing state). The label is the picture's name and caption; with `href` the thumbnail is a link to the full size in a new tab. Chosen over a free `attachments` slot so every app gets the labelling and lazy loading and cannot leave a picture unnamed.
+- `src/index.ts`: exports `ConversationImage`.
+- `tests/unit/conversation.test.tsx`, `stories/conversation.stories.tsx`: a test (visible without opening the disclosure, link only when `href`) and a `WithPictures` story (baseline from this change).
+- `README.md`: Conversation row mentions pictures.
+
 **A virtualised grouped photo grid (the rest of issue #246 that could be done on React Aria)** (branch `claude/project-thread-nnem56`). Jonathan asked whether a grouped grid was hard to virtualise and whether it could share a layout; following PR #253. No new dependency.
 
 - `src/lib/grouped-grid-layout.ts` (**new**): `GroupedGridLayout`, a subclass of React Aria's `GridLayout`. Checked in `GridLayout.update`: it works out columns, tile size and gaps and keeps measured heights by key; the subclass runs it, then re-places the items so each group's heading (an item keyed with `groupKey`) takes a full-width row and its tiles start a new one, and `getVisibleLayoutInfos` hands the Virtualizer a copy of the top group's heading moved to the visible top (zIndex above the tiles), so no re-layout while scrolling. React Aria's grid keyboard navigation reads each item's rectangle from the layout, so arrows cross headings (tested).
