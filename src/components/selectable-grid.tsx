@@ -218,9 +218,9 @@ export function SelectableGrid<T>({
     selection.onChange(new Set([...outside, ...picked.slice(-1)]));
   };
 
-  const list = (listRows: T[], scroll: boolean) => (
+  const list = (listRows: T[], scroll: boolean, groupKey?: string) => (
     <GridList
-      aria-label={groups ? `${label}, ${groupHeading ? groupHeading(groupBy!(listRows[0] as T), listRows) : groupBy!(listRows[0] as T)}` : label}
+      aria-label={groupKey !== undefined ? `${label}, ${groupHeading ? groupHeading(groupKey, listRows) : groupKey}` : label}
       layout="grid"
       selectionMode={selectionMode}
       selectionBehavior={selectionBehavior}
@@ -263,7 +263,7 @@ export function SelectableGrid<T>({
       })}
     </GridList>
   );
-  const grid = list(rows, true);
+  const grid = groups ? null : list(rows, true);
 
   return (
     <div
@@ -311,7 +311,7 @@ export function SelectableGrid<T>({
               onFold={() => setFolded((f) => { const n = new Set(f); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}
               multiple={selectionMode === "multiple"}
             >
-              {list(g.rows, false)}
+              {list(g.rows, false, g.key)}
             </GroupSection>
           ))}
         </div>

@@ -14,9 +14,8 @@ import { toast, type ToastContentProps } from "./toast";
 // while the start request is in flight: a job is "running" long after its request returned, and a
 // button that came back at once would invite a second press. `error` is only a failure to start (the
 // job's own failures are `JobStatus`'s, named item by item). The "finished" toast fires once, when a
-// job this hook started goes from running to not running; the status must report running at least
-// once after the start (it is polled once straight away to make that likely, and `useJob` keeps
-// polling while it runs). `done` is told what the status said, to word the result ("Scanned 12 of 14").
+// job this hook started stops running: it was seen running, or its status changed after the start (a
+// job that finished before the first poll returned is a new status that is not running). `done` is told what the status said, to word the result ("Scanned 12 of 14").
 // Where the toast's action goes is `jobsHref`, a route in the app (React Router's navigate).
 
 /** Options for `useJobAction`. */
@@ -51,6 +50,7 @@ export function useJobAction<A extends unknown[], R, S>({ start, job, queued, do
   const navigate = useNavigate();
   const [waiting, setWaiting] = React.useState(false);
   const seen = React.useRef(false);
+  const baseline = React.useRef<unknown>(undefined);
   const latest = React.useRef({ queued, done, jobsHref, jobsLabel, navigate, job });
   React.useLayoutEffect(() => {
     latest.current = { queued, done, jobsHref, jobsLabel, navigate, job };
@@ -62,6 +62,9 @@ export function useJobAction<A extends unknown[], R, S>({ start, job, queued, do
       const l = latest.current;
       toast.show({ ...l.queued(result), tone: "info", ...(l.jobsHref !== undefined ? { action: { label: l.jobsLabel, onPress: () => void l.navigate(l.jobsHref!) } } : {}) });
       seen.current = false;
+      // The status as it was before the start (when there was one): a different one afterwards is the job's, even when it
+      // was never seen running (it finished before the first poll came back).
+      baseline.current = l.job.status === "ready" ? l.job.data : undefined;
       setWaiting(true);
       l.job.poll();
     },
@@ -69,19 +72,21 @@ export function useJobAction<A extends unknown[], R, S>({ start, job, queued, do
   );
 
   const running = job.running;
+  const data = job.status === "ready" ? job.data : undefined;
   React.useEffect(() => {
     if (!waiting) return;
     if (running) {
       seen.current = true;
       return;
     }
+    if (baseline.current !== undefined && data !== baseline.current) seen.current = true;
     if (!seen.current) return;
     setWaiting(false);
     seen.current = false;
     const status = latest.current.job.status === "ready" ? latest.current.job.data : undefined;
     const content = status === undefined ? null : latest.current.done(status);
     if (content) toast.show({ tone: "success", ...content });
-  }, [waiting, running]);
+  }, [waiting, running, data]);
 
   const busy = action.phase === "pending" || waiting;
   const phase: Phase = action.phase === "error" ? "error" : busy ? "pending" : "idle";

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,9 +18,12 @@ function fakeJob(status: Status, poll = () => {}): Job<Status> {
 }
 
 function Row({ status, start, poll }: { status: Status; start: () => Promise<{ id: string }>; poll?: () => void }) {
+  // The same object for the same status, as TanStack Query's structural sharing gives `useJob`.
+  const key = JSON.stringify(status);
+  const stable = React.useMemo(() => status, [key]);
   const action = useJobAction({
     start,
-    job: fakeJob(status, poll),
+    job: fakeJob(stable, poll),
     queued: () => ({ title: "Scan queued", description: "Kiln roll 12" }),
     done: (s) => ({ title: `Scanned ${s.done} pictures` }),
     jobsHref: "/jobs",
@@ -31,6 +35,25 @@ function Row({ status, start, poll }: { status: Status; start: () => Promise<{ i
     </>
   );
 }
+
+describe("useJobAction, a job that ends before it is seen running (#250)", () => {
+  it("finishes on a new status that is not running", async () => {
+    const user = userEvent.setup();
+    const start = vi.fn().mockResolvedValue({ id: "j1" });
+    const ui = (s: Status) => (
+      <>
+        <StrataToastRegion />
+        <Row status={s} start={start} />
+      </>
+    );
+    const { rerender } = renderWithStrata(ui({ running: false, done: 0 }), { toasts: false });
+    await user.click(screen.getByRole("button", { name: "Scan" }));
+    expect(await screen.findByText("Scan queued")).toBeInTheDocument();
+    rerender(ui({ running: false, done: 14 }));
+    expect(await screen.findByText("Scanned 14 pictures")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Scan" })).toBeEnabled();
+  });
+});
 
 describe("AsyncButton as a row action (#248)", () => {
   it("takes variant and size, and says it is busy while pending", () => {

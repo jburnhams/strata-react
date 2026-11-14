@@ -189,6 +189,30 @@ export function useViewOptions<T>(config: ViewOptionsConfig<T>): ViewOptionsStat
   });
   const [query, setQuery] = React.useState("");
 
+  // A change of address after mount (Back, Forward, a link on the same route) moves the view too. Our
+  // own writes make the address agree with the state, so they do nothing here.
+  const urlSort = urlState?.get("sort") ?? null;
+  const urlGroup = urlState?.get("group") ?? null;
+  const urlSize = urlState?.get("size") ?? null;
+  React.useEffect(() => {
+    if (!urlState) return;
+    setState((s) => {
+      const parsed = parseSort(urlSort, sorts as never);
+      // An address that carries any of the view's parameters is the whole view: no group there is no group.
+      const carries = urlSort !== null || urlGroup !== null || urlSize !== null;
+      const g = urlGroup && groups.some((x) => x.key === urlGroup) ? urlGroup : carries ? null : s.group;
+      const n = Number(urlSize);
+      const next = {
+        ...s,
+        sort: parsed?.key ?? s.sort,
+        descending: parsed ? parsed.descending : s.descending,
+        group: g,
+        size: n > 0 && sizeRange ? Math.min(sizeRange.max, Math.max(sizeRange.min, n)) : s.size,
+      };
+      return next.sort === s.sort && next.descending === s.descending && next.group === s.group && next.size === s.size ? s : next;
+    });
+  }, [urlSort, urlGroup, urlSize]);
+
   const size = state.size ?? sizeRange?.default ?? 144;
   const aspect = state.aspect ?? defaultAspect;
 

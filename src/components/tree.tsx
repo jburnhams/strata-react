@@ -267,7 +267,10 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
   const childKeys = React.useRef(new Map<string, string[]>()).current;
 
   // Loaded descendants of a key, from what each open branch has read.
-  const below = (key: string): string[] => (childKeys.get(key) ?? []).flatMap((k) => [k, ...below(k)]);
+  // `resolved` holds what `resolveBranch` named under a branch that was ticked unread, so unticking
+  // it takes those keys with it as well as the loaded ones.
+  const resolved = React.useRef(new Map<string, readonly string[]>()).current;
+  const below = (key: string): string[] => [...new Set([...(childKeys.get(key) ?? []).flatMap((k) => [k, ...below(k)]), ...(resolved.get(key) ?? [])])];
   const stateOf = (key: string): "on" | "mixed" | "off" => {
     const all = choices?.selected;
     const own = all?.has(key) ?? false;
@@ -296,6 +299,7 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
     for (const k of toResolve) {
       const node = nodes.get(k) as N;
       resolveBranch!(node).then((under) => {
+        resolved.set(k, under);
         latest.current.choices?.add([k, ...under]);
         setCovered(`${nodeLabel(node)} and its ${under.length === 1 ? `1 ${coverNoun[0]}` : `${format.integer(under.length)} ${coverNoun[1]}`}`);
       });

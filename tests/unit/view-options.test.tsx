@@ -117,3 +117,24 @@ describe("ViewOptions", () => {
     expect(names()).toEqual(["IMG_1", "IMG_2", "IMG_3", "IMG_10"]);
   });
 });
+
+describe("ViewOptions and the address", () => {
+  it("follows a change of address after mount", async () => {
+    const { Link } = await import("react-router");
+    function Nav() {
+      return <Link to="/?sort=name-desc&group=hour">go</Link>;
+    }
+    const user = userEvent.setup();
+    renderWithStrata(
+      <>
+        <Nav />
+        <Host cfg={config({ url: true })} />
+      </>,
+      { route: "/?sort=name-asc" },
+    );
+    expect(names()).toEqual(["IMG_1", "IMG_2", "IMG_3", "IMG_10"]);
+    await user.click(screen.getByRole("link", { name: "go" }));
+    expect(names()).toEqual(["IMG_10", "IMG_3", "IMG_2", "IMG_1"]);
+    expect(screen.getByTestId("groups")).toHaveTextContent("09:00:2,08:00:2");
+  });
+});

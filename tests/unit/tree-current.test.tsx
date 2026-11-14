@@ -85,3 +85,34 @@ describe("Tree current + choices", () => {
     expect(screen.queryByText("2019-01")).toBeNull();
   });
 });
+
+describe("resolveBranch untick", () => {
+  it("unticking a branch ticked unread clears the keys that were resolved for it", async () => {
+    const user = userEvent.setup();
+    let chosen = 0;
+    function H() {
+      const choices = useChoices({ initial: [] });
+      const expanded = useExpanded({ initial: [] } as never);
+      chosen = choices.count;
+      return (
+        <Tree<N>
+          label="Archive"
+          roots={ready(years)}
+          useChildren={(n) => ready(kids(n.id))}
+          nodeKey={(n) => n.id}
+          nodeLabel={(n) => n.name}
+          isBranch={(n) => !n.id.includes("/")}
+          expanded={expanded}
+          emptyRow="No folders"
+          choices={choices}
+          resolveBranch={async (n) => kids(n.id).map((k) => k.id)}
+        />
+      );
+    }
+    renderWithStrata(<H />);
+    await user.click(screen.getByRole("checkbox", { name: "Choose 2019" }));
+    await waitFor(() => expect(chosen).toBe(4));
+    await user.click(screen.getByRole("checkbox", { name: "Choose 2019" }));
+    await waitFor(() => expect(chosen).toBe(0));
+  });
+});

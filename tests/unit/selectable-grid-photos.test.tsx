@@ -134,4 +134,9 @@ describe("SelectableGrid as a photo grid", () => {
     expect(screen.getByText("In a project")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Select Photo 1" })).toBeDisabled();
   });
+
+  it("a grouped grid filtered to nothing renders, with no group to call groupBy on", () => {
+    renderWithStrata(<Grid rows={[]} groupBy={(p) => p.hour} />);
+    expect(screen.queryAllByRole("row")).toHaveLength(0);
+  });
 });
