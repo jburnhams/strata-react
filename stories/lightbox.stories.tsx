@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Lightbox, PropertyList, SelectableGrid, useSelection, format, type LightboxItem } from "../src";
+import { BoxOverlay, Button, Lightbox, PropertyList, SelectableGrid, useBoxes, useSelection, format, pageName, type LightboxItem } from "../src";
+import { bookPages, pageLines, PAGE_SIZE } from "./fixtures/book";
 import { glazeNames, shelfPhotos } from "./fixtures/kiln";
 import { PiecePicture, piecePictureUrl } from "./fixtures/piece-photo";
 
@@ -72,3 +73,33 @@ export const Open: Story = { args: { startOpen: true, start: 2 }, tags: ["visual
 
 /** Closed: the grid, whose tiles open it. Focus returns to the tile on close. */
 export const FromGrid: Story = { tags: ["no-visual"] };
+
+// Issue #239: a book's pages. The position has two names, the item has its own actions, an overlay
+// of the reader's lines zooms with the page, and a strip along the bottom jumps through the set.
+function BookPages() {
+  const [open, setOpen] = React.useState(true);
+  const [index, setIndex] = React.useState(5);
+  const state = useBoxes();
+  const pages: LightboxItem[] = bookPages.map((p) => ({ id: p.id, src: p.src, thumb: p.thumb, label: p.label, natural: p.natural, position: pageName(p) }));
+  return (
+    <>
+      <p className="type-body-sm text-muted-foreground">The book opens in the viewer.</p>
+      <Lightbox
+      title="Pages of the Punch book"
+      items={pages}
+      index={index}
+      onIndexChange={setIndex}
+      open={open}
+      onOpenChange={setOpen}
+      missing="This page could not be loaded."
+      aspect={2 / 3}
+      strip
+      actions={(item) => <Button size="sm" variant="outline">Edit {item.position}</Button>}
+      overlay={(item) => <BoxOverlay label="Lines the reader found" of={{ w: PAGE_SIZE[0], h: PAGE_SIZE[1] }} boxes={pageLines(Number(item.id.replace("scan-", "")))} state={state} />}
+      />
+    </>
+  );
+}
+
+/** A page of a scanned book: "Page 6 (iv) of 12", its own Edit action, the lines drawn over it, and a strip of the other pages. */
+export const BookPage: StoryObj = { render: () => <BookPages />, tags: ["visual-wide"] };

@@ -115,6 +115,7 @@ export {
   type TileAspect,
   type TileSize,
 } from "./components/selectable-grid";
+export { TileGrid, TileGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
 export { LineChart, LineChartGroup, logScale, valueAt, type ChartMark, type ChartSpan, type GroupedChart, type LineChartGroupProps, type LineChartProps, type Point, type SpanTone, type YScale } from "./components/line-chart";
@@ -197,9 +198,13 @@ export {
 export { useAutoSave, useLeaveGuard, SaveStatus, type AutoSave, type AutoSaveOptions, type SaveState } from "./components/save";
 export { RichText, Conversation, Composer, type RichTextProps, type ConversationProps, type ConversationTurn, type ComposerProps } from "./components/conversation";
 export { parseRichText, parseInline, matchEntities, safeHref, plainText, type EntityMatch, type EntityMatcher, type Block as RichBlock, type Inline as RichInline } from "./lib/rich-text";
-export { Lightbox, type LightboxProps, type LightboxItem } from "./components/lightbox";
+export { Lightbox, useLightboxUrl, type LightboxProps, type LightboxItem, type LightboxUrl } from "./components/lightbox";
 export { RegionEditor, describeRegion, type RegionEditorProps, type EditableRegion, type RegionTone } from "./components/region-editor";
-export { moveRect, resizeRect, fitRect, drawRect, lerpRect, ease, type Rect, type Handle, type RectLimits, type Easing } from "./lib/region";
+export { BookViewer, useBookUrl, type BookPage, type BookUrl, type BookViewerProps } from "./components/book-viewer";
+export { findPage, pageName, sayPosition, viewOf, viewsOf, type PageNames } from "./lib/book";
+export { BoxOverlay, BoxList, useBoxes, type BoxOverlayProps, type BoxListProps, type BoxesState, type BoxSource } from "./components/box-overlay";
+export { readingOrder, zoomToBox, type PictureBox, type BoxTone } from "./lib/boxes";
+export { moveRect, resizeRect, fitRect, drawRect, lerpRect, ease, turnedSize, turnRect, normaliseAngle, splitRect, joinRects, gutterOf, moveGutter, type Rect, type Handle, type RectLimits, type Easing } from "./lib/region";
 export { SequenceTimeline, type SequenceTimelineProps, type SequenceItem, type CutRoom, type CutChange } from "./components/sequence-timeline";
 export { snapToGrid, stepOnGrid, gridPoints, clampToRoom, settleCut, type Grid, type CutLimit } from "./lib/sequence";
 export { Tree, type TreeProps, type TreeNodeState } from "./components/tree";

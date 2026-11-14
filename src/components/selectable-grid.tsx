@@ -1,11 +1,11 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { Checkbox as AriaCheckbox, GridLayout, GridList, GridListItem, Virtualizer, type Selection } from "react-aria-components";
-import { Size } from "react-stately";
 import { Check } from "lucide-react";
 import { Checkbox, useShiftNote } from "./checkbox";
 import type { RowSelection } from "./data-table";
 import { useSelectRows } from "./selection";
+import { aspectClass, minWidth, tileLayoutOptions, type TileAspect, type TileSize } from "./tile-grid";
 
 // Choosing from pictures: a review screen of face crops, a set of glaze test tiles, photos to
 // archive. It is `DataTable`'s selection drawn as a grid (strata-react issue #32, from the Bright
@@ -35,11 +35,7 @@ import { useSelectRows } from "./selection";
 // and measuring each row of tiles. (Its tiles keep a margin of one gap at the edges of the box, which
 // the plain grid does not have.)
 
-/** The frame each picture is drawn in. */
-export type TileAspect = "square" | "portrait" | "landscape";
-
-/** Smallest tile width: `sm` 96px (dense crops), `md` 144px, `lg` 192px. Tiles grow to fill the row. */
-export type TileSize = "sm" | "md" | "lg";
+export type { TileAspect, TileSize };
 
 export type SelectableGridProps<T> = {
   /** Names the grid of tiles. */
@@ -62,14 +58,6 @@ export type SelectableGridProps<T> = {
   maxHeight?: number;
   className?: string;
 };
-
-const minWidth: Record<TileSize, number> = { sm: 96, md: 144, lg: 192 };
-const aspectClass: Record<TileAspect, string> = { square: "aspect-square", portrait: "aspect-3/4", landscape: "aspect-4/3" };
-const aspectRatio: Record<TileAspect, number> = { square: 1, portrait: 4 / 3, landscape: 3 / 4 };
-// gap-3, in px.
-const GAP = 12;
-// The detail line and the tile's padding, for the first estimate of a tile's height.
-const TILE_CHROME = 40;
 
 /** A grid of pictures to choose from: each tile one labelled target, "Select all shown", Shift-click ranges, virtualised from `virtualizeFrom` tiles. Pair with `useSelection` and a `BulkBar`. */
 export function SelectableGrid<T>({
@@ -116,15 +104,7 @@ export function SelectableGrid<T>({
     selection.onChange(new Set([...outside, ...picked]));
   };
 
-  // Tiles grow from `tileSize` to fill the row, and each row is as tall as its tallest tile as
-  // measured (the first guess is the frame at the minimum width plus the detail line).
-  const layoutOptions = React.useMemo(
-    () => ({
-      minItemSize: new Size(minWidth[tileSize], Math.round(minWidth[tileSize] * aspectRatio[aspect]) + TILE_CHROME),
-      minSpace: new Size(GAP, GAP),
-    }),
-    [tileSize, aspect],
-  );
+  const layoutOptions = React.useMemo(() => tileLayoutOptions(tileSize, aspect), [tileSize, aspect]);
 
   const grid = (
     <GridList

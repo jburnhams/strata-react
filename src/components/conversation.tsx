@@ -29,6 +29,12 @@ import { Textarea } from "./field";
 // neither. While an answer is on its way the text box is disabled with the reason written under
 // it (not just greyed), and the send button becomes Stop. Suggested questions are buttons that
 // send. Send is the view's one filled button.
+//
+// Not ready, for a reason that is not an answer in flight (issue #243: "The footage is still being
+// indexed"). `disabled` is the reason itself, a string, never a bare boolean, so a disabled box
+// cannot be written without saying why. It disables the box, the send button and the suggestions,
+// and is shown under the box and linked with aria-describedby, the same place `answeringReason`
+// uses. Stop already existed for a running reply (`answering` + `onStop`).
 
 const LINK = "text-primary underline underline-offset-2 hover:no-underline";
 
@@ -214,25 +220,28 @@ export type ComposerProps = {
   /** Questions to start from; each is a button that sends. */
   suggestions?: readonly string[];
   sendLabel?: string;
+  /** The box cannot be used yet, and why, in the app's words: "The footage is still being indexed." Disables the box, send and suggestions; shown under the box. */
+  disabled?: string;
   className?: string;
 };
 
 /** The box a question is typed in: Enter sends, Shift+Enter is a new line, disabled with its reason while answering (and Stop), suggestions as buttons. */
-export function Composer({ label, onSend, answering = false, onStop, answeringReason, suggestions, sendLabel = "Send", className }: ComposerProps) {
+export function Composer({ label, onSend, answering = false, onStop, answeringReason, suggestions, sendLabel = "Send", disabled, className }: ComposerProps) {
   const [text, setText] = React.useState("");
   const reasonId = React.useId();
   const send = (value: string) => {
     const v = value.trim();
-    if (!v || answering) return;
+    if (!v || answering || disabled) return;
     onSend(v);
     setText("");
   };
+  const reason = answering ? answeringReason : disabled;
   return (
     <div className={cn("space-y-2", className)}>
       {suggestions && suggestions.length > 0 && !answering && (
         <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-2">
           {suggestions.map((s) => (
-            <Button key={s} size="sm" onClick={() => send(s)}>{s}</Button>
+            <Button key={s} size="sm" disabled={!!disabled} onClick={() => send(s)}>{s}</Button>
           ))}
         </div>
       )}
@@ -245,10 +254,10 @@ export function Composer({ label, onSend, answering = false, onStop, answeringRe
       >
         <Textarea
           aria-label={label}
-          aria-describedby={answering ? reasonId : undefined}
+          aria-describedby={reason ? reasonId : undefined}
           rows={2}
           value={text}
-          disabled={answering}
+          disabled={answering || !!disabled}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -261,10 +270,10 @@ export function Composer({ label, onSend, answering = false, onStop, answeringRe
         {answering ? (
           <Button onClick={onStop}><Square /> Stop</Button>
         ) : (
-          <Button type="submit" variant="default" disabled={!text.trim()}><Send /> {sendLabel}</Button>
+          <Button type="submit" variant="default" disabled={!text.trim() || !!disabled}><Send /> {sendLabel}</Button>
         )}
       </form>
-      {answering && <p id={reasonId} className="type-caption text-muted-foreground">{answeringReason}</p>}
+      {reason && <p id={reasonId} className="type-caption text-muted-foreground">{reason}</p>}
     </div>
   );
 }

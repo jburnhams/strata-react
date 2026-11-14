@@ -164,4 +164,16 @@ describe("Composer", () => {
     expect(onSend).toHaveBeenCalledWith("What is next?");
     expect(document.querySelectorAll('[data-variant="default"]')).toHaveLength(1);
   });
+
+  it("is disabled with the app's reason when it is not ready, without an answer in flight (issue #243)", async () => {
+    const onSend = vi.fn();
+    renderWithStrata(<Composer {...base} onSend={onSend} disabled="The footage is still being indexed." suggestions={["Which ran hot?"]} />);
+    const box = screen.getByRole("textbox", { name: "Ask about the kiln" });
+    expect(box).toBeDisabled();
+    expect(box).toHaveAccessibleDescription("The footage is still being indexed.");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Which ran hot?" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Which ran hot?" }));
+    expect(onSend).not.toHaveBeenCalled();
+  });
 });

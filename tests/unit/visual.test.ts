@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { http, HttpResponse } from "msw";
 import { boxBlur, compare, decode, encode } from "../../src/visual/compare";
 import { routeShots, storybookShots } from "../../src/visual/targets";
+import { withBaseTag } from "../../src/visual/serve";
 import { resolveShotUrl, toFetchRequest } from "../../src/visual/capture";
 import { formatReport, pinWarnings } from "../../src/visual/run";
 import type { VisualReport } from "../../src/visual/types";
@@ -225,5 +226,18 @@ describe("report", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("serving an app build with a relative base (issue #242)", () => {
+  it("puts a base tag first in the head, so a nested route finds its assets", () => {
+    expect(withBaseTag('<html><head><meta charset="utf-8"></head></html>', "/")).toBe('<html><head><base href="/"><meta charset="utf-8"></head></html>');
+  });
+  it("leaves a page that has its own base tag alone", () => {
+    const html = '<head><base href="/app/"></head>';
+    expect(withBaseTag(html, "/")).toBe(html);
+  });
+  it("adds the tag to a page with no head", () => {
+    expect(withBaseTag("<div></div>", "/x/")).toBe('<base href="/x/"><div></div>');
   });
 });

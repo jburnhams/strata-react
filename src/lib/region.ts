@@ -129,3 +129,72 @@ export function lerpRect(a: Rect, b: Rect, t: number, easing: Easing = "ease-in-
 
 /** True when two rectangles are the same to the unit's thousandth. */
 export const sameRect = (a: Rect, b: Rect) => ["x", "y", "w", "h"].every((k) => Math.abs(a[k as keyof Rect] - b[k as keyof Rect]) < 0.001);
+
+// --- turning the picture (issue #241) ----------------------------------------------------------
+// A scan is often a little crooked, and the page is a crop of it turned by an angle. The convention
+// here is the one a browser draws and a server's `rotate(expand=True)` makes: degrees, positive
+// clockwise, about the picture's centre, on a canvas grown to the turned picture's bounding box
+// (nothing is cut off, and the corners are empty). Windows are in the turned canvas's units, so the
+// editor, the server and the app agree on one set of numbers and no one writes this geometry again.
+
+/** The canvas a picture of `size` needs once turned by `angle` degrees: the bounding box of the turned picture. Zero degrees is the picture's own size. */
+export function turnedSize(size: readonly [number, number], angle: number): [number, number] {
+  const a = (angle * Math.PI) / 180;
+  const c = Math.abs(Math.cos(a));
+  const s = Math.abs(Math.sin(a));
+  // Rounded off the floating-point dust that a quarter turn would leave (1000.0000000000001).
+  const clean = (n: number) => Math.round(n * 1e6) / 1e6;
+  return [clean(size[0] * c + size[1] * s), clean(size[0] * s + size[1] * c)];
+}
+
+/**
+ * Where a window goes when the picture under it is turned from `from` to `to` degrees. The window's
+ * centre turns with the picture about the canvas centre, its size stays, and it is held inside the
+ * new canvas (shrunk if it no longer fits). `size` is the picture's own, unturned size.
+ */
+export function turnRect(rect: Rect, size: readonly [number, number], from: number, to: number): Rect {
+  const [w0, h0] = turnedSize(size, from);
+  const [w1, h1] = turnedSize(size, to);
+  const d = ((to - from) * Math.PI) / 180;
+  const vx = rect.x + rect.w / 2 - w0 / 2;
+  const vy = rect.y + rect.h / 2 - h0 / 2;
+  const cx = w1 / 2 + vx * Math.cos(d) - vy * Math.sin(d);
+  const cy = h1 / 2 + vx * Math.sin(d) + vy * Math.cos(d);
+  const w = Math.min(rect.w, w1);
+  const h = Math.min(rect.h, h1);
+  return moveRect({ x: cx - w / 2, y: cy - h / 2, w, h }, 0, 0, { x: 0, y: 0, w: w1, h: h1 });
+}
+
+/** An angle in degrees brought into -180 to 180 and rounded to a tenth, the step the turn control works in. */
+export function normaliseAngle(angle: number): number {
+  const a = ((((angle + 180) % 360) + 360) % 360) - 180;
+  return Math.round(a * 10) / 10 || 0;
+}
+
+// --- a spread: two windows of one scan with a gutter between ------------------------------------
+
+/** One window cut into a left and a right half at `at` (0 to 1 across it, default the middle). */
+export function splitRect(r: Rect, at = 0.5): [Rect, Rect] {
+  const cut = r.w * Math.min(Math.max(at, 0), 1);
+  return [{ ...r, w: cut }, { ...r, x: r.x + cut, w: r.w - cut }];
+}
+
+/** The one window that holds both (their union): a spread made one page again. */
+export function joinRects(a: Rect, b: Rect): Rect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
+/** The x of the gutter between two windows: halfway between the left one's right edge and the right one's left edge. */
+export const gutterOf = (left: Rect, right: Rect) => (left.x + left.w + right.x) / 2;
+
+/** Moves the gutter by `dx`: the left window's right edge and the right window's left edge both move, so they resize together and the gap between them is kept. Neither shrinks below `min` wide, and neither leaves the bounds. */
+export function moveGutter(left: Rect, right: Rect, dx: number, { bounds, min }: RectLimits): [Rect, Rect] {
+  const mw = min?.w ?? 0;
+  // Right: the right window shrinks, so it may give up all but `min`. Left: the left window shrinks to `min`, and the right one grows left only as far as the bounds.
+  const lo = Math.max(mw - left.w, bounds.x - right.x);
+  const hi = right.w - mw;
+  const d = Math.min(Math.max(dx, lo), Math.max(lo, hi));
+  return [{ ...left, w: left.w + d }, { ...right, x: right.x + d, w: right.w - d }];
+}

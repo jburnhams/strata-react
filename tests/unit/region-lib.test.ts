@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drawRect, ease, lerpRect, moveRect, resizeRect, type Rect } from "../../src";
+import { drawRect, ease, lerpRect, moveRect, gutterOf, joinRects, moveGutter, normaliseAngle, readingOrder, splitRect, turnRect, turnedSize, resizeRect, zoomToBox, type Rect } from "../../src";
 
 const bounds: Rect = { x: 0, y: 0, w: 1000, h: 500 };
 const r: Rect = { x: 100, y: 100, w: 200, h: 100 };
@@ -97,5 +97,66 @@ describe("lerpRect and ease", () => {
     expect(ease(0.9, "ease-in-out")).toBeGreaterThan(0.9);
     expect(ease(-1)).toBe(0);
     expect(ease(2)).toBe(1);
+  });
+});
+
+describe("boxes (issue #237)", () => {
+  const b = (id: string, x: number, y: number, w = 100, h = 20) => ({ id, x, y, w, h, label: id });
+  it("reads rows top to bottom and left to right, tolerating a wobble", () => {
+    const boxes = [b("c", 300, 102), b("a", 20, 100), b("d", 20, 140), b("b", 160, 96), b("e", 300, 138)];
+    expect(readingOrder(boxes)).toEqual(["a", "b", "c", "d", "e"]);
+  });
+  it("zooms to a box on a picture drawn contained in a frame of another shape", () => {
+    // A 1000×500 picture in a 400×400 frame: scale 0.4, 100px bars above and below.
+    const v = zoomToBox({ x: 0, y: 0, w: 1000, h: 500 }, { w: 1000, h: 500 }, { width: 400, height: 400 });
+    expect(v.scale).toBeCloseTo(1, 0);
+    const near = zoomToBox({ x: 400, y: 200, w: 100, h: 50 }, { w: 1000, h: 500 }, { width: 400, height: 400 });
+    expect(near.scale).toBeGreaterThan(2);
+  });
+});
+
+describe("turning and spreads (issue #241)", () => {
+  it("makes the canvas a turned picture needs, and leaves a quarter turn as the swapped size", () => {
+    expect(turnedSize([1000, 500], 0)).toEqual([1000, 500]);
+    expect(turnedSize([1000, 500], 90)).toEqual([500, 1000]);
+    const [w, h] = turnedSize([1000, 500], 2);
+    expect(w).toBeCloseTo(1000 * Math.cos(Math.PI / 90) + 500 * Math.sin(Math.PI / 90), 3);
+    expect(h).toBeGreaterThan(500);
+  });
+  it("turns a window's centre with the picture and keeps its size, inside the new canvas", () => {
+    // The top-left window of a 1000×500 picture turned clockwise: its centre goes to (450, 100) of the 500×1000 canvas, and the window, which keeps its size, is held inside.
+    const quarter = turnRect({ x: 0, y: 0, w: 200, h: 100 }, [1000, 500], 0, 90);
+    expect(quarter).toMatchObject({ x: expect.closeTo(300, 3), y: expect.closeTo(50, 3), w: 200, h: 100 });
+    // A window that stays inside turns there and back again to where it started.
+    const small = { x: 100, y: 100, w: 100, h: 50 };
+    const there = turnRect(small, [1000, 500], 0, 90);
+    expect(there).toMatchObject({ x: expect.closeTo(325, 3), w: 100, h: 50 });
+    const back = turnRect(there, [1000, 500], 90, 0);
+    expect(back).toMatchObject({ x: expect.closeTo(100, 3), y: expect.closeTo(100, 3), w: 100, h: 50 });
+  });
+  it("shrinks a window that no longer fits the canvas", () => {
+    const r = turnRect({ x: 0, y: 0, w: 1000, h: 500 }, [1000, 500], 0, 90);
+    expect(r.w).toBe(500);
+  });
+  it("brings an angle into range and to a tenth", () => {
+    expect(normaliseAngle(190)).toBe(-170);
+    expect(normaliseAngle(1.04)).toBe(1);
+    expect(normaliseAngle(-180)).toBe(-180);
+  });
+  it("splits a window down the middle and joins two into their union", () => {
+    const [l, r] = splitRect({ x: 10, y: 20, w: 400, h: 300 });
+    expect(l).toEqual({ x: 10, y: 20, w: 200, h: 300 });
+    expect(r).toEqual({ x: 210, y: 20, w: 200, h: 300 });
+    expect(joinRects(l, r)).toEqual({ x: 10, y: 20, w: 400, h: 300 });
+  });
+  it("moves a gutter so both windows resize, and stops at the minimum", () => {
+    const [l, r] = splitRect({ x: 0, y: 0, w: 400, h: 300 });
+    const limits = { bounds: { x: 0, y: 0, w: 400, h: 300 }, min: { w: 50, h: 50 } };
+    const [l2, r2] = moveGutter(l, r, 60, limits);
+    expect([l2.w, r2.x, r2.w]).toEqual([260, 260, 140]);
+    expect(gutterOf(l2, r2)).toBe(260);
+    const [l3, r3] = moveGutter(l, r, 1000, limits);
+    expect(r3.w).toBe(50);
+    expect(l3.w + r3.w).toBe(400);
   });
 });

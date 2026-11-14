@@ -120,6 +120,14 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     }
     const page = await context.newPage();
     page.on("pageerror", (e) => problems.push(e.message));
+    // A script or stylesheet that did not arrive makes a page that paints something else (an empty shell) and
+    // still passes: it is a fault of the build or the server, so it fails the shot (issue #242).
+    page.on("response", (r) => {
+      const type = r.request().resourceType();
+      if (type !== "script" && type !== "stylesheet") return;
+      const html = (r.headers()["content-type"] ?? "").includes("text/html");
+      if (r.status() >= 400 || html) problems.push(`${type} ${new URL(r.url()).pathname} ${html ? "came back as HTML (a fallback page)" : `failed with ${r.status()}`}`);
+    });
     // Error responses a state serves on purpose (4xx/5xx) are logged by Chromium; not a fault.
     page.on("console", (m) => {
       if (m.type() === "error" && !m.text().startsWith("Failed to load resource")) problems.push(m.text());
