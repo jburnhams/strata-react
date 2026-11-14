@@ -61,8 +61,10 @@ export type InfiniteLoadOptions<T, Page, Cursor, K extends QueryKey> = {
   items: (page: Page) => T[];
   /** A stable key per item: merges pages, and is what `dismiss` takes. */
   itemKey: (item: T) => string;
-  /** Whether the server says there is a page after this one. */
-  hasMore: (lastPage: Page) => boolean;
+  /** Whether the server says there is a page after this one. Not needed with `nextCursor`. */
+  hasMore?: (lastPage: Page) => boolean;
+  /** For a server whose page carries its own cursor for the next one (`{ items, next }`): that cursor, or `null` on the last page. Replaces `hasMore` and `cursorAfter`; `apiPage` is this for the shared `Page<T>` shape. */
+  nextCursor?: (lastPage: Page) => Cursor | null;
   /** The cursor that asks for the items after this one; usually its id. Defaults to `itemKey`. */
   cursorAfter?: (item: T) => Cursor;
   /** Items hidden by someone else, usually `useUndoable().isRemoved`: treated like dismissed ones. */
@@ -81,7 +83,8 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   queryFn,
   items,
   itemKey,
-  hasMore,
+  hasMore = () => false,
+  nextCursor,
   cursorAfter = itemKey as unknown as (item: T) => Cursor,
   isRemoved,
   describeError = describeHttpError,
@@ -93,8 +96,8 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   const dismissed = stored.query === queryHash ? stored.keys : none;
   const hidden = React.useCallback((key: string) => dismissed.has(key) || (isRemoved?.(key) ?? false), [dismissed, isRemoved]);
   // TanStack calls getNextPageParam outside render; it reads the latest hidden set and accessors.
-  const latest = React.useRef({ hidden, items, itemKey, hasMore, cursorAfter });
-  latest.current = { hidden, items, itemKey, hasMore, cursorAfter };
+  const latest = React.useRef({ hidden, items, itemKey, hasMore, cursorAfter, nextCursor });
+  latest.current = { hidden, items, itemKey, hasMore, cursorAfter, nextCursor };
 
   const query = useInfiniteQuery({
     queryKey,
@@ -102,6 +105,11 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
     initialPageParam: { cursor: undefined } as PageParam<Cursor>,
     getNextPageParam: (lastPage, pages): PageParam<Cursor> | null => {
       const l = latest.current;
+      if (l.nextCursor) {
+        // The server's own cursor for the page after this one: opaque, so nothing held or dismissed changes it.
+        const next = l.nextCursor(lastPage);
+        return next === null ? null : { cursor: next };
+      }
       if (!l.hasMore(lastPage)) return null;
       const after = nextAfter(pages, l.items, l.itemKey, l.hidden);
       return { cursor: after === undefined ? undefined : l.cursorAfter(after) };
@@ -176,4 +184,12 @@ function nextAfter<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: 
   const { held, last, lastPageAddedAny } = merge(pages, items, itemKey, hidden);
   if (held.length === 0 || (pages.length > 1 && !lastPageAddedAny)) return last;
   return held[held.length - 1];
+}
+
+/** The shared cursor-paged response of the strata apps' servers (`strata_python.contracts.Page`): the items, the cursor for the page after this one (`null` on the last) and, when the server counts, how many there are in all. */
+export type ApiPage<T> = { items: T[]; next: string | null; total?: number | null };
+
+/** `useInfiniteLoad`'s `items` and `nextCursor` for the shared `Page<T>` shape: `useInfiniteLoad({ queryKey, queryFn, itemKey, ...apiPage<Item>() })`. */
+export function apiPage<T>(): { items: (page: ApiPage<T>) => T[]; nextCursor: (page: ApiPage<T>) => string | null } {
+  return { items: (page) => page.items, nextCursor: (page) => page.next };
 }

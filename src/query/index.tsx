@@ -8,9 +8,9 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type { Load, Stale } from "../components/data-view";
-import { HttpError, describeHttpError, readErrorBody, type DescribeError, type ErrorBody } from "../lib/errors";
+import { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody } from "../lib/errors";
 
-export { HttpError, describeHttpError, readErrorBody, type DescribeError, type ErrorBody };
+export { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody };
 
 // Data loading, the Strata way: TanStack Query fetches and caches, and every view of the result
 // goes through DataView, which takes a Load<T>. `toLoad` is the one bridge between them, so a
@@ -101,5 +101,5 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit, { re
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-export { useInfiniteLoad, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
-export { useJob, type Job, type JobOptions } from "./job";
+export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
+export { useJob, isTaskRunning, type Job, type JobOptions } from "./job";

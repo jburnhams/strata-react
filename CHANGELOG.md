@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-11-14
+**The shared server contracts meeting the hooks, before the type generator (the dependency-free part of issue #263)** (branch `claude/project-thread-nnem56`). The issue asks for a command that generates an app's TypeScript API types from its OpenAPI schema, which adds a dependency, so that waits for Jonathan's choice (a card is on the thread). These three parts need none:
+
+- `src/query/infinite.ts`: `nextCursor` option on `useInfiniteLoad` (the page carries its own cursor for the next one; replaces `hasMore` and `cursorAfter`, which are no longer both required), `ApiPage<T>` (`{ items, next, total? }`) and `apiPage<T>()`, the `items` and `nextCursor` of the shared `Page<T>`. The server's cursor is opaque, so unlike `cursorAfter` it is not affected by what is held or dismissed.
+- `src/query/job.ts`: `isTaskRunning(task, finished)`; the finished states are passed in (the generated `FINISHED`), not guessed here, since `strata_python.contracts` is not in these repositories to check.
+- `src/lib/errors.ts`: `ErrorBody.payload`, `HttpError.payload` and `errorPayload<T>(error)` for the contract's `{ detail, payload }`.
+- `tests/unit/api-contracts.test.tsx` (**new**): the three against MSW, including a real 409 and a two-page walk by `next`.
+- `README.md`: the Data loading row.
+
 **TranscriptView: word marking, a mode with no player and corrected words (issue #260)** (branch `claude/project-thread-nnem56`). Found moving strata-360's whole-race transcript onto `TranscriptView`, which needed words selected and marked and no clock.
 
 - `src/components/transcript-view.tsx`: `time` and `onSeek` optional (without them nothing is heard, and words, phrase times and a translation are text); `marking` (`kinds`, `marks`, `onMark`, `clearKeys`, `summary`) wraps the list in `MarkableText` and draws each word as a `Mark` with id `wordId(phraseId, index)`, ids being every word of the phrases shown so a selection spans rows that are not mounted; `word.correction` draws a dotted primary underline, says "corrected, was …" and shows the original on hover in a non-modal popover; `onCorrectionPress` takes the click on a corrected word. Chosen over `renderWord` so every app gets the id scheme, the virtualised selection and the keyboard for free; a free `renderWord` can follow if an app needs a different word.

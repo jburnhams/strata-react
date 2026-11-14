@@ -21,6 +21,8 @@ export type ErrorBody = {
   reason?: string;
   /** Messages for individual fields, keyed by field name (`"name"`, `"address.city"`). */
   fields?: Record<string, string>;
+  /** The structured part of the body (`ErrorBody.payload` of the shared contract): what the app can act on, such as what is already running on a 409. Typed by the caller with `errorPayload`. */
+  payload?: unknown;
 };
 
 /** Thrown by `fetchJson` on a non-2xx response; carries the status, the response body and the server's reason for `describeHttpError` and `describeActionError`. */
@@ -29,6 +31,8 @@ export class HttpError extends Error {
   readonly reason?: string;
   /** Messages for individual fields from the body (FastAPI's 422 `detail: [{loc, msg}]`), keyed by field name. Empty when there are none. */
   readonly fieldErrors: Readonly<Record<string, string>>;
+  /** The body's `payload`, when it has one (`{ detail, payload }`): data for the app, not words for the person. Read it typed with `errorPayload`. */
+  readonly payload?: unknown;
 
   constructor(
     readonly status: number,
@@ -42,6 +46,7 @@ export class HttpError extends Error {
     this.name = "HttpError";
     this.reason = found.reason;
     this.fieldErrors = found.fields ?? {};
+    this.payload = found.payload;
   }
 }
 
@@ -68,6 +73,7 @@ export function readErrorBody(body: unknown): ErrorBody {
   }
   if (!body || typeof body !== "object") return {};
   const b = body as Record<string, unknown>;
+  const payload = b.payload !== undefined && b.payload !== null ? { payload: b.payload } : {};
   if (Array.isArray(b.detail)) {
     const fields: Record<string, string> = {};
     for (const item of b.detail as unknown[]) {
@@ -76,10 +82,10 @@ export function readErrorBody(body: unknown): ErrorBody {
       const msg = text(entry?.msg);
       if (name && msg && !fields[name]) fields[name] = msg;
     }
-    return { fields };
+    return { fields, ...payload };
   }
   const nested = b.error && typeof b.error === "object" ? text((b.error as Record<string, unknown>).message) : undefined;
-  return { reason: text(b.detail) ?? text(b.message) ?? text(b.error) ?? nested };
+  return { reason: text(b.detail) ?? text(b.message) ?? text(b.error) ?? nested, ...payload };
 }
 
 /** Writes an error for a person: what happened, in a sentence. A product passes its own words. */
@@ -117,4 +123,9 @@ export const describeActionError = (error: unknown): string | undefined =>
 /** Messages for individual fields carried by what was thrown: an `HttpError`'s `fieldErrors`, else none. */
 export function fieldErrorsOf(error: unknown): Readonly<Record<string, string>> {
   return error instanceof HttpError ? error.fieldErrors : {};
+}
+
+/** The payload of an error from the server as the type the app expects (`errorPayload<{ running: string }>(error)`), or `undefined` when it is not an `HttpError` or carries none. The type is the caller's claim: check it against the API's schema. */
+export function errorPayload<T>(error: unknown): T | undefined {
+  return error instanceof HttpError ? (error.payload as T | undefined) : undefined;
 }
