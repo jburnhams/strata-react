@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BoxList, BoxOverlay, ViewportFrame, useBoxes, useViewport, type PictureBox } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -88,5 +88,28 @@ describe("BoxOverlay and BoxList", () => {
     expect(svg.getAttribute("viewBox")).toBe("0 0 600 900");
     expect(svg.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
     expect(svg.querySelectorAll("rect")).toHaveLength(3);
+  });
+});
+
+describe("a box inside a frame that picks on a click (review of #251)", () => {
+  it("does not let a box press reach the frame's click-to-choose", async () => {
+    const picked = vi.fn();
+    function Framed() {
+      const state = useBoxes();
+      const view = useViewport();
+      return (
+        <ViewportFrame label="Page" aspect={2 / 3} {...view} pick={{ zoneAt: () => ({ value: "next", from: 0, to: 1, hint: "Next" }), onPick: picked, describe: "Click to turn" }}>
+          <BoxOverlay label="Lines" of={{ w: 600, h: 900 }} boxes={lines} state={state} />
+        </ViewportFrame>
+      );
+    }
+    renderWithStrata(<Framed />);
+    const box = screen.getByRole("button", { name: /^Line 1/ });
+    await act(async () => {
+      box.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1 }));
+      box.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, button: 0, pointerId: 1 }));
+      await new Promise((r) => setTimeout(r, 350));
+    });
+    expect(picked).not.toHaveBeenCalled();
   });
 });

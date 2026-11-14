@@ -137,6 +137,8 @@ export function BoxOverlay({ label, of, boxes, state, onChoose }: BoxOverlayProp
             onPointerLeave={() => state.point(null)}
             onFocus={() => state.point(id)}
             onBlur={() => state.point(null)}
+            // A box is its own target: its press must not reach a frame that turns pages or picks on a click.
+            onPointerUp={(e) => e.stopPropagation()}
             onClick={() => choose(id)}
             onKeyDown={(e) => move(id, e)}
           />

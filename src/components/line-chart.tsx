@@ -245,13 +245,14 @@ export function logScale(values: number[], pin: { min?: number; max?: number } =
 type Limit = { x: number; low: number; high: number };
 
 /** The range of each reading, sorted by x; a reading without two finite numbers has none, and arrays of different lengths use the shorter. */
-function rangeLimits(series: readonly Point[], range: LineChartProps["range"]): Limit[] {
+function rangeLimits(series: readonly Point[], range: LineChartProps["range"], log: boolean): Limit[] {
   if (!range) return [];
   const out: Limit[] = [];
   for (let i = 0; i < Math.min(series.length, range.low.length, range.high.length); i++) {
     const a = range.low[i];
     const b = range.high[i];
-    if (Number.isFinite(a) && Number.isFinite(b)) out.push({ x: series[i].x, low: Math.min(a, b), high: Math.max(a, b) });
+    // On a log axis a bound at or below zero has no place, so that reading has no range (as the line leaves such a reading undrawn).
+    if (Number.isFinite(a) && Number.isFinite(b) && (!log || (a > 0 && b > 0))) out.push({ x: series[i].x, low: Math.min(a, b), high: Math.max(a, b) });
   }
   return out.sort((p, q) => p.x - q.x);
 }
@@ -340,7 +341,7 @@ export function LineChart({
   const joined = Boolean(cursorProp) && shared !== null;
   const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
   const gradientId = `heat-${React.useId().replace(/[^\w-]/g, "")}`;
-  const limits = React.useMemo(() => rangeLimits(series, range), [series, range]);
+  const limits = React.useMemo(() => rangeLimits(series, range, yMode === "log"), [series, range, yMode]);
   const all = [...series, ...(planned ?? []), ...limits.flatMap((l) => [{ x: l.x, y: l.low }, { x: l.x, y: l.high }])];
   const xMin = xDomain ? xDomain[0] : Math.min(...all.map((p) => p.x));
   const xMax = xDomain ? xDomain[1] : Math.max(...all.map((p) => p.x));

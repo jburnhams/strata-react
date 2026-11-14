@@ -347,3 +347,11 @@ describe("range (issue #244)", () => {
     expect(container.querySelectorAll("path[data-chart-range]")).toHaveLength(0);
   });
 });
+
+describe("range on a log axis (review of #251)", () => {
+  it("leaves out a reading whose bound is at or below zero instead of drawing NaN", () => {
+    const { container } = renderWithStrata(<LineChart {...props} series={pace} yScale="log" range={{ low: [250, 0, 400, 450, 280, 250], high: [320, 300, 600, 600, 340, 300], label: "Extremes" }} />);
+    const d = container.querySelector("path[data-chart-range]")?.getAttribute("d") ?? "";
+    expect(d).not.toMatch(/NaN|Infinity/);
+  });
+});
