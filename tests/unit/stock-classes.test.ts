@@ -36,6 +36,16 @@ describe("findStockClasses", () => {
     expect(names(css, "app.tsx")).toContain("bg-stone-900");
   });
 
+  it("follows an @apply written over several lines to its semicolon, with each line's number", () => {
+    const css = `.card {\n  @apply\n    bg-stone-100\n    text-sm;\n  color: red;\n}\n.b { @apply rounded-xl\n    shadow-lg; }\n.c { margin: 0 bg-stone-900; }`;
+    expect(findStockClasses(css, "app.css").map((f) => [f.line, f.className])).toEqual([
+      [3, "bg-stone-100"],
+      [4, "text-sm"],
+      [7, "rounded-xl"],
+      [8, "shadow-lg"],
+    ]);
+  });
+
   it("says what to use instead", () => {
     expect(findStockClasses("text-sm")[0].instead).toContain("type-");
     expect(findStockClasses("bg-red-500")[0].instead).toContain("bg-danger-subtle");

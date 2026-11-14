@@ -1,6 +1,6 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Compare, type CompareMode } from "../../src";
 import { MIN_FIT, fitFrames, frameCap } from "../../src/components/compare-parts";
@@ -29,16 +29,18 @@ describe("fitFrames and frameCap", () => {
 
 const box = (top: number, height: number) => ({ top, bottom: top + height, height, left: 0, right: 100, width: 100, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
 let restore: () => void;
+let sectionBottom = 800;
 
 // The page: the Compare's section starts at 100, draws 400 px besides its two frames (one row, 300 px) and ends at 800;
 // a 60 px footer follows it; the window is 900 px high.
 beforeEach(() => {
+  sectionBottom = 800;
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (this: Element) {
     if (this.hasAttribute("data-viewport-frame")) return box(200, 300);
     if (this.tagName === "SECTION") return box(100, 700);
     if (this.tagName === "FOOTER") return box(800, 60);
-    if (this.parentElement?.tagName === "SECTION" && this === this.parentElement.lastElementChild) return box(740, 60); // ends at 800
+    if (this.parentElement?.tagName === "SECTION" && this === this.parentElement.lastElementChild) return box(sectionBottom - 60, 60);
     return original.call(this);
   };
   const height = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight");
@@ -95,6 +97,19 @@ describe("Compare maxHeight=fit", () => {
     unmount();
     render(<Page maxHeight="viewport" />);
     expect(frameWidthCap()).toContain("max(16rem"); // the fixed guess, not a measurement
+  });
+
+  it("measures again when the view changes what the component draws, though nothing was resized", async () => {
+    render(<Page />);
+    expect(frameHeightCap(frameWidthCap())).toBeCloseTo(340);
+    // Let the measurement the first render schedules (the shim's observer reports on observe) run before the page changes.
+    await act(async () => {
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(null))));
+    });
+    sectionBottom = 900; // fade adds a slider row: 100 px more besides the frames
+    await userEvent.click(screen.getByRole("radio", { name: "Fade" }));
+    // Fade is one frame (named "A over B"), so find it by its handle.
+    await vi.waitFor(() => expect(frameHeightCap((document.querySelector("[data-viewport-frame]") as HTMLElement).style.maxWidth)).toBeCloseTo(240));
   });
 
   it("in full screen fills what the controls leave, whatever the caller passed", async () => {

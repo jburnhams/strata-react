@@ -31,8 +31,13 @@ const rules: { kind: StockKind; test: RegExp; instead: string }[] = [
 export function findStockClasses(source: string, file = ""): StockClass[] {
   const css = /\.css$/.test(file);
   const found: StockClass[] = [];
+  // In a stylesheet an `@apply` runs to its `;` (or the closing brace), however many lines it is written over.
+  let applying = false;
   source.split("\n").forEach((text, i) => {
-    if (css && !text.includes("@apply")) return;
+    if (css) {
+      if (!applying && !text.includes("@apply")) return;
+      applying = !/[;}]/.test(text.slice(Math.max(0, text.indexOf("@apply"))));
+    }
     for (const token of text.match(/[^\s"'`<>{}()=,;]+/g) ?? []) {
       // The utility is what follows the last variant (`dark:hover:bg-stone-100`), without an important mark.
       const className = token.slice(token.lastIndexOf(":") + 1).replace(/^!|!$/g, "");

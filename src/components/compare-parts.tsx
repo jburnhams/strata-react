@@ -86,11 +86,16 @@ export function useFitHeight(root: React.RefObject<HTMLElement | null>, { enable
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(el);
     observer?.observe(document.body);
+    // A change of view adds or removes controls and frames (fade's slider, difference's tolerance, side by side's second row)
+    // without resizing the section or the body, and in full screen the section scrolls instead of growing: measure again.
+    const changes = new MutationObserver(schedule);
+    changes.observe(el, { childList: true, subtree: true });
     window.addEventListener("resize", schedule);
     document.addEventListener("fullscreenchange", schedule);
     return () => {
       cancelAnimationFrame(frame);
       observer?.disconnect();
+      changes.disconnect();
       window.removeEventListener("resize", schedule);
       document.removeEventListener("fullscreenchange", schedule);
     };
