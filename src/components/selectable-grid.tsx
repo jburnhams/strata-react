@@ -5,6 +5,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { Checkbox, useShiftNote } from "./checkbox";
 import type { RowSelection } from "./data-table";
 import { useSelectRows } from "./selection";
+import { GroupedGridLayout, groupKey, isGroupKey, } from "../lib/grouped-grid-layout";
 import { aspectClass, tileLayoutOptions, tileWidth, type TileAspect, type TileSize } from "./tile-grid";
 import { Button } from "./button";
 import { isTypingTarget } from "./hotkeys";
@@ -49,20 +50,22 @@ import { isTypingTarget } from "./hotkeys";
 //   and Shift extends (the Finder and Photos rules), Ctrl/Cmd+A chooses all and Escape clears. The
 //   box is drawn only for multiple. `onAction` (Enter, or a double click with `replace`) opens a
 //   tile; it is GridList's `onAction`, and with `toggle` a plain press still toggles.
-// - Groups. `groupBy` puts tiles under sticky headings in the order the rows first show them. A
-//   heading has a box for the group (mixed when some of it is chosen) and a fold button that
-//   removes the group's tiles from the page while it is folded. Each group is its own list, so an
-//   arrow key stops at a group's edge, and a grouped grid is not virtualised (folding is how a
-//   long one is kept short); Shift ranges and select-all run across groups as they use the flat
-//   order of `rows`.
+// - Groups. `groupBy` puts tiles under full-width headings in the order the rows first show them.
+//   A heading is one more item of the same list, laid out by `GroupedGridLayout`
+//   (`lib/grouped-grid-layout.ts`, a subclass of React Aria's `GridLayout` that lets it work out the
+//   columns and then starts each group on a new row), so a grouped grid is virtualised like any
+//   other: 2,000 pictures in 12 groups draw only the visible rows. The heading of the group at the
+//   top stays there while its tiles scroll. A heading has a box for the group (mixed when some of
+//   it is chosen) and a fold button that removes the group's tiles from the list. Keyboard: arrows
+//   cross headings (the layout's rectangles are what React Aria's grid navigation reads), Enter on a
+//   heading folds, Space chooses its tiles. Shift ranges and select-all use the flat order of `rows`.
 // - `badge` is a corner slot, as `TileGrid`'s. `unselectableReason` says in words why a tile cannot
 //   be chosen. Choices that a filter hides stay chosen and are counted ("3 chosen are hidden by
 //   the filter"), with Clear hidden beside the count.
 //
 // Not here yet, and left in the issue: a justified layout for pictures of their own shapes
-// (`aspect="natural"`), a marquee, touch pinch (Ctrl+wheel covers a trackpad) and virtualising
-// across groups, which React Aria's `GridLayout` has no section for. Checked: its layouts take
-// items in one flat collection.
+// (`aspect="natural"`), a marquee, and touch pinch (Ctrl+wheel covers a trackpad). The sticky
+// heading does not yet get pushed up by the next one as it arrives.
 
 export type { TileAspect, TileSize };
 
@@ -93,7 +96,7 @@ export type SelectableGridProps<T> = {
   onAction?: (row: T) => void;
   /** A corner badge on the picture (top right): a `Status`. */
   badge?: (row: T) => React.ReactNode;
-  /** Puts tiles under sticky headings, in the order the rows first show them. The grid is not virtualised while grouped. */
+  /** Puts tiles under full-width headings, in the order the rows first show them. Virtualised like the ungrouped grid. */
   groupBy?: (row: T) => string;
   /** The words for a group's heading; default the group text. */
   groupHeading?: (group: string, rows: T[]) => string;
@@ -143,7 +146,7 @@ export function SelectableGrid<T>({
     return [...out].map(([key, list]) => ({ key, rows: list }));
   }, [rows, groupBy]);
   const [folded, setFolded] = React.useState<ReadonlySet<string>>(new Set());
-  const virtual = !groups && rows.length >= virtualizeFrom;
+  const virtual = Boolean(groups) || rows.length >= virtualizeFrom;
   const px = tileWidth(tileSize);
   const outer = React.useRef<HTMLDivElement>(null);
   const hidden = [...selection.selected].filter((k) => !shownKeys.has(k)).length;
@@ -218,52 +221,89 @@ export function SelectableGrid<T>({
     selection.onChange(new Set([...outside, ...picked.slice(-1)]));
   };
 
-  const list = (listRows: T[], scroll: boolean, groupKey?: string) => (
+  const selectableIn = (list: readonly T[]) => list.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey);
+  const groupChecked = (list: readonly T[]): boolean | "mixed" => {
+    const keys = selectableIn(list);
+    const chosen = keys.filter((k) => selection.selected.has(k)).length;
+    return chosen === 0 ? false : chosen === keys.length ? true : "mixed";
+  };
+  const toggleGroup = (list: readonly T[]) => {
+    const next = new Set(selection.selected);
+    const on = groupChecked(list) === false;
+    for (const k of selectableIn(list)) {
+      if (on) next.add(k);
+      else next.delete(k);
+    }
+    selection.onChange(next);
+  };
+  const foldGroup = (key: string) => setFolded((f) => { const n = new Set(f); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+
+  const tile = (row: T) => {
+    const key = rowKey(row);
+    const index = indexOf.get(key) ?? 0;
+    const name = selection.rowLabel(row);
+    const why = unselectableReason && !(selection.isSelectable?.(row) ?? true) ? unselectableReason(row) : undefined;
+    const corner = badge?.(row);
+    return (
+      <GridListItem
+        key={key}
+        id={key}
+        textValue={name}
+        data-index={index}
+        className={cn(
+          // select-none: a Shift-click range would otherwise also select the text between the tiles.
+          "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none outline-offset-2 transition-state",
+          "selected:border-primary selected:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50",
+          "cursor-pointer hover:bg-surface-sunken disabled:hover:bg-transparent",
+        )}
+      >
+        <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
+          {renderImage(row)}
+        </span>
+        {selectionMode === "multiple" && <TileBox label={`Select ${name}`} />}
+        {corner != null && <span className="absolute top-3 right-3">{corner}</span>}
+        {detail?.(row) != null && <span className="truncate type-body-sm text-muted-foreground">{detail(row)}</span>}
+        {why && <span className="truncate type-caption text-muted-foreground">{why}</span>}
+      </GridListItem>
+    );
+  };
+
+  // A group's heading is one more item of the list (full width, from `GroupedGridLayout`): not
+  // chosen, but focusable (`disabledBehavior="selection"`), so the arrow keys land on it; Enter
+  // folds it and Space chooses its tiles (the outer key handler), as its button and box do by pointer.
+  const header = (g: { key: string; rows: T[] }) => {
+    const heading = groupHeading ? groupHeading(g.key, g.rows) : g.key;
+    const isFolded = folded.has(g.key);
+    return (
+      <GridListItem key={groupKey(g.key)} id={groupKey(g.key)} textValue={heading} onAction={() => foldGroup(g.key)} className="flex min-w-0 items-center gap-2 bg-background outline-offset-[-2px]">
+        <Button size="sm" variant="ghost" aria-expanded={!isFolded} aria-label={`${isFolded ? "Unfold" : "Fold"} ${heading}`} onPress={() => foldGroup(g.key)}>
+          <ChevronDown aria-hidden className={cn("transition-state", isFolded && "-rotate-90")} />
+        </Button>
+        {selectionMode === "multiple" && <Checkbox label={`Select ${heading}`} hideLabel checked={groupChecked(g.rows)} disabled={selectableIn(g.rows).length === 0} onCheckedChange={() => toggleGroup(g.rows)} />}
+        <h3 className="type-label">{heading}</h3>
+        <span className="type-caption text-muted-foreground tabular-nums">{g.rows.length}</span>
+      </GridListItem>
+    );
+  };
+
+  const grid = (
     <GridList
-      aria-label={groupKey !== undefined ? `${label}, ${groupHeading ? groupHeading(groupKey, listRows) : groupKey}` : label}
+      aria-label={label}
       layout="grid"
       selectionMode={selectionMode}
       selectionBehavior={selectionBehavior}
+      disabledBehavior="selection"
       selectedKeys={new Set([...selection.selected].filter((k) => shownKeys.has(k)))}
       onSelectionChange={selectionMode === "single" ? changeOne : changeSelection}
       onAction={onAction ? (key) => void (byKey.has(String(key)) && onAction(byKey.get(String(key)) as T)) : undefined}
-      disabledKeys={disabledKeys}
-      data-strata-scroll={scroll ? "" : undefined}
-      className={cn("min-w-0 outline-none", virtual && scroll ? "overflow-y-auto" : "grid gap-3")}
-      style={virtual && scroll ? { height: maxHeight } : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}
+      disabledKeys={groups ? [...disabledKeys, ...groups.map((g) => groupKey(g.key))] : disabledKeys}
+      data-strata-scroll=""
+      className={cn("min-w-0 outline-none", virtual ? "overflow-y-auto" : "grid gap-3")}
+      style={virtual ? { height: maxHeight } : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}
     >
-      {listRows.map((row) => {
-        const key = rowKey(row);
-        const index = indexOf.get(key) ?? 0;
-        const name = selection.rowLabel(row);
-        const why = unselectableReason && !(selection.isSelectable?.(row) ?? true) ? unselectableReason(row) : undefined;
-        const corner = badge?.(row);
-        return (
-          <GridListItem
-            key={key}
-            id={key}
-            textValue={name}
-            data-index={index}
-            className={cn(
-              // select-none: a Shift-click range would otherwise also select the text between the tiles.
-              "group relative grid min-w-0 gap-1.5 rounded-surface border border-transparent p-1.5 select-none outline-offset-2 transition-state",
-              "selected:border-primary selected:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50",
-              "cursor-pointer hover:bg-surface-sunken disabled:hover:bg-transparent",
-            )}
-          >
-            <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
-              {renderImage(row)}
-            </span>
-            {selectionMode === "multiple" && <TileBox label={`Select ${name}`} />}
-            {corner != null && <span className="absolute top-3 right-3">{corner}</span>}
-            {detail?.(row) != null && <span className="truncate type-body-sm text-muted-foreground">{detail(row)}</span>}
-            {why && <span className="truncate type-caption text-muted-foreground">{why}</span>}
-          </GridListItem>
-        );
-      })}
+      {groups ? groups.map((g) => [header(g), ...(folded.has(g.key) ? [] : g.rows.map(tile))]) : rows.map(tile)}
     </GridList>
   );
-  const grid = groups ? null : list(rows, true);
 
   return (
     <div
@@ -276,6 +316,14 @@ export function SelectableGrid<T>({
       onKeyDownCapture={(e) => {
         shift.handlers.onKeyDown(e);
         notePress(e);
+        // Space on a group's heading chooses its tiles (React Aria would do nothing: it is not selectable).
+        const onHeader = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key");
+        if (e.key === " " && groups && isGroupKey(onHeader) && (e.target as HTMLElement).getAttribute("data-key") === onHeader && selectionMode === "multiple") {
+          toggleGroup(groups.find((g) => groupKey(g.key) === onHeader)?.rows ?? []);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
       }}
       onKeyDown={(e) => {
         if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -298,25 +346,8 @@ export function SelectableGrid<T>({
           )}
         </div>
       )}
-      {groups ? (
-        <div data-strata-scroll="" className="min-w-0 overflow-y-auto" style={{ maxHeight }}>
-          {groups.map((g) => (
-            <GroupSection
-              key={g.key}
-              heading={groupHeading ? groupHeading(g.key, g.rows) : g.key}
-              rows={g.rows}
-              rowKey={rowKey}
-              selection={selection}
-              folded={folded.has(g.key)}
-              onFold={() => setFolded((f) => { const n = new Set(f); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}
-              multiple={selectionMode === "multiple"}
-            >
-              {list(g.rows, false, g.key)}
-            </GroupSection>
-          ))}
-        </div>
-      ) : virtual ? (
-        <Virtualizer layout={GridLayout} layoutOptions={layoutOptions}>
+      {virtual ? (
+        <Virtualizer layout={groups ? GroupedGridLayout : GridLayout} layoutOptions={layoutOptions}>
           {grid}
         </Virtualizer>
       ) : (
@@ -346,26 +377,5 @@ function TileBox({ label }: { label: string }) {
         </span>
       )}
     </AriaCheckbox>
-  );
-}
-
-// One group: a sticky heading with a box for the group (mixed when some of it is chosen), a fold
-// button that takes the tiles off the page, and the group's tiles. The box is `useSelectRows` for the
-// group's rows, so it follows the same rules as "Select all shown": selectable tiles only, tiles
-// outside the group left alone.
-function GroupSection<T>({ heading, rows, rowKey, selection, folded, onFold, multiple, children }: { heading: string; rows: T[]; rowKey: (row: T) => string; selection: RowSelection<T>; folded: boolean; onFold: () => void; multiple: boolean; children: React.ReactNode }) {
-  const group = useSelectRows(rows, rowKey, selection);
-  return (
-    <section aria-label={heading} className="grid gap-2 pb-3">
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-background py-1">
-        <Button size="sm" variant="ghost" aria-expanded={!folded} aria-label={`${folded ? "Unfold" : "Fold"} ${heading}`} onPress={onFold}>
-          <ChevronDown aria-hidden className={cn("transition-state", folded && "-rotate-90")} />
-        </Button>
-        {multiple && <Checkbox label={`Select ${heading}`} hideLabel checked={group.all.checked} disabled={group.all.disabled} onCheckedChange={group.all.toggle} />}
-        <h3 className="type-label">{heading}</h3>
-        <span className="type-caption text-muted-foreground tabular-nums">{rows.length}</span>
-      </header>
-      {!folded && children}
-    </section>
   );
 }

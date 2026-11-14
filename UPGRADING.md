@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.44 (2026-11-14)
+
+- `SelectableGrid` with `groupBy` is now one virtualised list: a group's heading is a row of the grid (not a `region` with its own list per group), so a test that looked for `getByRole("region", { name })` finds the heading row instead, and only the visible rows are in the DOM. Tiles `isSelectable` refuses are now focusable (not selectable) so the arrow keys land on them and their `unselectableReason` can be read; they were skipped before. The grouped baselines move.
+
 ## After v1.0.43 (2026-11-14)
 
 - `toast.show(...)` with no `StrataToastRegion` mounted warns once in development ("nothing will be drawn") and still queues the toast; an app that called it before its region mounted will see the warning, and `renderWithStrata` keeps its region on by default so a test is unchanged.

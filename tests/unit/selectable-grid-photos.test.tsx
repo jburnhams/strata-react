@@ -1,6 +1,6 @@
 import * as React from "react";
 import { describe, expect, it } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SelectableGrid, useSelection } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -90,11 +90,12 @@ describe("SelectableGrid as a photo grid", () => {
     expect(screen.getByTestId("count")).toHaveTextContent("0");
   });
 
-  it("groups under headings with a mixed group box and a fold button", async () => {
+  it("groups under full-width headings with a mixed group box and a fold button", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Grid groupBy={(p) => p.hour} groupHeading={(g) => `At ${g}`} />);
-    const early = screen.getByRole("region", { name: "At 08:00" });
-    expect(within(early).getAllByRole("row")).toHaveLength(4);
+    const rows = () => screen.getAllByRole("row").map((r) => r.textContent ?? "");
+    expect(screen.getAllByRole("row")).toHaveLength(8); // two headings and six tiles
+    expect(rows()[0]).toContain("At 08:00");
     await user.click(screen.getByRole("checkbox", { name: "Select Photo 0" }));
     expect(screen.getByRole("checkbox", { name: "Select At 08:00" })).toBePartiallyChecked();
     await user.click(screen.getByRole("checkbox", { name: "Select At 08:00" }));
@@ -102,9 +103,28 @@ describe("SelectableGrid as a photo grid", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select At 08:00" }));
     expect(screen.getByTestId("count")).toHaveTextContent("4");
     await user.click(screen.getByRole("button", { name: "Fold At 08:00" }));
-    expect(within(screen.getByRole("region", { name: "At 08:00" })).queryAllByRole("row")).toHaveLength(0);
+    expect(screen.getAllByRole("row")).toHaveLength(4); // two headings and the two 09:00 tiles
     expect(screen.getByRole("button", { name: "Unfold At 08:00" })).toBeInTheDocument();
     expect(screen.getByTestId("count")).toHaveTextContent("4");
+  });
+
+  it("Enter on a heading folds its group, Space chooses it", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Grid groupBy={(p) => p.hour} groupHeading={(g) => `At ${g}`} />);
+    const heading = screen.getAllByRole("row")[0]!;
+    heading.focus();
+    await user.keyboard(" ");
+    expect(screen.getByTestId("count")).toHaveTextContent("4");
+    await user.keyboard("{Enter}");
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+  });
+
+  it("draws only the visible rows of a long grouped grid", () => {
+    const many = Array.from({ length: 2000 }, (_, i) => ({ id: `p${i}`, name: `Photo ${i}`, hour: `${String(Math.floor(i / 200)).padStart(2, "0")}:00` }));
+    renderWithStrata(<Grid rows={many} groupBy={(p) => p.hour} />);
+    const drawn = screen.getAllByRole("row").length;
+    expect(drawn).toBeGreaterThan(1);
+    expect(drawn).toBeLessThan(200);
   });
 
   it("counts what a filter hides and clears it", async () => {
