@@ -117,6 +117,23 @@ describe("Conversation", () => {
     }
   });
 
+  it("follows pictures that arrive after the text while the reader is at the bottom (#257)", () => {
+    const geometry = { scrollHeight: 1000 };
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => geometry.scrollHeight });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 400 });
+    try {
+      const a = { id: "1", role: "answer" as const, time: t0, text: "Here.", state: "done" as const };
+      const { rerender } = renderWithStrata(<Thread turns={[a]} />);
+      const box = screen.getByRole("region", { name: "Questions" });
+      geometry.scrollHeight = 1400;
+      rerender(<Thread turns={[{ ...a, images: [{ src: "/a.jpg", label: "Frame" }] }]} />);
+      expect(box.scrollTop).toBe(1400);
+    } finally {
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientHeight;
+    }
+  });
+
   it("shows pictures with an answer, visible without opening anything, linked to full size when asked (#257)", () => {
     renderWithStrata(<Thread turns={[{ id: "1", role: "answer", time: t0, text: "Here it is.", state: "done", lookedUp: <p>Read 3 clips</p>, images: [{ src: "/a.jpg", label: "Frame at 0:42", href: "/a-full.jpg" }, { src: "/b.jpg", label: "Frame at 1:10" }] }]} />);
     expect(screen.getByText("Frame at 0:42")).toBeVisible();

@@ -170,7 +170,7 @@ export function Conversation({ label, turns, answerName, personName = "You", ent
   // Follow growth only while at the bottom; a person's own new turn always scrolls.
   React.useLayoutEffect(() => {
     if (last?.role === "person" || following.current) toBottom();
-  }, [turns.length, last?.text, last?.state, last?.role, toBottom]);
+  }, [turns.length, last?.text, last?.state, last?.role, last?.images?.length, toBottom]);
 
   // One polite sentence when an answer ends, never per token.
   const states = React.useRef(new Map<string, string | undefined>());
