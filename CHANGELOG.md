@@ -9,6 +9,7 @@
 - `src/index.ts`: exports `FolderListing`.
 - `tests/unit/actions.test.tsx`, `tests/unit/folder-picker.test.tsx`: **new cases** for the title refusal and the glyph warning; the badge, the disabled button with its reason, `canChoose` given the folder, `onOpen` choosing a project without opening it, and the footer.
 - `stories/fixtures/folders.ts`, `stories/mocks/handlers.ts`, `stories/screens/folder-chooser.tsx`, `stories/folder-picker.stories.tsx`: two projects (badged), camera files in `rushes` with a footer; stories `ProjectBadges`, `CannotChoose`, `FooterNote`. Baselines: new for those three, and the folder picker stories that show the Projects folder gain the badges.
+- `src/lib/dev.ts`: **new**, `isDev()` from `process.env.NODE_ENV`, left for the app's bundler. **Correction to earlier work:** `import.meta.env?.DEV` is replaced by this package's own library build with `false`, so the development warnings added with `StrataToastRegion`, `useCommands` and the new `Button` ones never ran in an app (found by review of this PR; `dist` had no `import.meta.env` left). `toast.tsx`, `commands.tsx`, `button.tsx` and `media-player.tsx` use `isDev()`; `tests/integration/package.test.ts` checks the built files keep `process.env.NODE_ENV` and no `import.meta.env`.
 - `README.md`, `UPGRADING.md`: the Actions and Browsing rows, and an "After v1.0.40" entry.
 
 ## 2026-11-13

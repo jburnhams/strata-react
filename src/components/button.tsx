@@ -5,6 +5,7 @@ import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
 import type { ControlSize } from "../lib/control";
 import { Tooltip } from "./tooltip";
+import { isDev } from "../lib/dev";
 
 // Variant names are shadcn's, so copied code and agents' prior knowledge still work. Two things
 // differ on purpose:
@@ -65,7 +66,7 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
 export function Button({ className, variant, size, type = "button", disabled, children, ...props }: ButtonProps) {
-  if (import.meta.env?.DEV) warnOnLoss(props as Record<string, unknown>, children);
+  if (isDev()) warnOnLoss(props as Record<string, unknown>, children);
   // data-variant says which variant was drawn, so a test can check "one filled button per view"
   // without reading class names (strata-react issue #48, `filledButtons` in strata-react/testing).
   return (
