@@ -23,6 +23,8 @@ export default defineConfig({
         panorama: resolve(__dirname, "src/panorama/index.ts"),
         visual: resolve(__dirname, "src/visual/index.ts"),
         "visual-cli": resolve(__dirname, "src/visual/cli.ts"),
+        "api-types": resolve(__dirname, "src/api-types/index.ts"),
+        "api-types-cli": resolve(__dirname, "src/api-types/cli.ts"),
         "migrate-cli": resolve(__dirname, "src/migrate/cli.ts"),
       },
       formats: ["es"],

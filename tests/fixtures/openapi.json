@@ -1,0 +1,99 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Kiln API", "version": "0.1.0" },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": { "200": { "description": "Successful Response", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } } } }
+      }
+    },
+    "/api/firings": {
+      "get": {
+        "operationId": "list_firings_api_firings_get",
+        "parameters": [
+          { "name": "after", "in": "query", "required": false, "schema": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "After" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 50, "title": "Limit" } }
+        ],
+        "responses": {
+          "200": { "description": "Successful Response", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Page_Firing_" } } } },
+          "422": { "description": "Validation Error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HTTPValidationError" } } } }
+        }
+      },
+      "post": {
+        "operationId": "start_firing_api_firings_post",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartFiring" } } } },
+        "responses": {
+          "202": { "description": "Successful Response", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } },
+          "409": { "description": "Conflict", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "properties": { "detail": { "type": "string", "title": "Detail" }, "payload": { "anyOf": [{ "additionalProperties": true, "type": "object" }, { "type": "null" }], "title": "Payload" } },
+        "type": "object",
+        "required": ["detail"],
+        "title": "ErrorBody"
+      },
+      "Firing": {
+        "properties": { "id": { "type": "string", "title": "Id" }, "kiln": { "type": "string", "title": "Kiln" }, "peak_c": { "type": "number", "title": "Peak C" } },
+        "type": "object",
+        "required": ["id", "kiln", "peak_c"],
+        "title": "Firing"
+      },
+      "HTTPValidationError": {
+        "properties": { "detail": { "items": { "$ref": "#/components/schemas/ValidationError" }, "type": "array", "title": "Detail" } },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": { "ok": { "type": "boolean", "title": "Ok" }, "version": { "type": "string", "title": "Version" } },
+        "type": "object",
+        "required": ["ok", "version"],
+        "title": "Health"
+      },
+      "Page_Firing_": {
+        "properties": {
+          "items": { "items": { "$ref": "#/components/schemas/Firing" }, "type": "array", "title": "Items" },
+          "next": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Next" },
+          "total": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Total" }
+        },
+        "type": "object",
+        "required": ["items", "next"],
+        "title": "Page[Firing]"
+      },
+      "Progress": {
+        "properties": { "done": { "type": "integer", "title": "Done" }, "total": { "type": "integer", "title": "Total" }, "item": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Item" } },
+        "type": "object",
+        "required": ["done", "total"],
+        "title": "Progress"
+      },
+      "StartFiring": {
+        "properties": { "kiln": { "type": "string", "title": "Kiln" } },
+        "type": "object",
+        "required": ["kiln"],
+        "title": "StartFiring"
+      },
+      "Task": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "state": { "$ref": "#/components/schemas/TaskState" },
+          "progress": { "anyOf": [{ "$ref": "#/components/schemas/Progress" }, { "type": "null" }] }
+        },
+        "type": "object",
+        "required": ["id", "state"],
+        "title": "Task"
+      },
+      "TaskState": { "type": "string", "enum": ["queued", "running", "done", "failed", "cancelled"], "title": "TaskState" },
+      "ValidationError": {
+        "properties": { "loc": { "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] }, "type": "array", "title": "Location" }, "msg": { "type": "string", "title": "Message" }, "type": { "type": "string", "title": "Error Type" } },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-11-14
+**`strata-api-types`: an app's TypeScript API types from its OpenAPI schema (the rest of issue #263)** (branch `claude/project-thread-nnem56`). Jonathan chose openapi-typescript behind its own entry (2026-11-14, on the thread's decision card).
+
+- `package.json`, `package-lock.json`: `openapi-typescript` ^7.13.0 as a devDependency and an optional peer; `exports["./api-types"]`; `bin["strata-api-types"]`; `overrides` pointing its `typescript@^5` peer at this repository's TypeScript (the generator uses the TypeScript API, which TypeScript 7 does not ship, so it runs on the TypeScript 6 package). **Catch for apps**: they need the same override on a TypeScript other than 5, or npm reports a peer conflict when `openapi-typescript` is installed; written in the README and UPGRADING.
+- `src/api-types/generate.ts`, `cli.ts`, `index.ts` (**new**), `bin/strata-api-types.js` (**new**), `vite.config.ts`: `loadSchema` (a URL or a JSON file, with a sentence for a docs page or a non-OpenAPI file), `generateApiTypes`, and the command with `-o` and `--check` (exit 1 and how to regenerate when the file is missing or stale). The output has no URL or date, so `--check` is exact, and adds `Schema<"Name">`.
+- `tests/fixtures/openapi.json` (**new**): a FastAPI-and-pydantic-shaped schema with the contract shapes (Health, Task and TaskState, Page, Progress, ErrorBody, a 409). It is written by hand to those conventions, not captured from `strata_python`, which is not in the repositories available here; replace it with a captured schema when one is at hand.
+- `tests/unit/api-types.test.ts` (**new**), `tests/integration/package.test.ts`: generation, determinism, URL loading and its errors, `--check` through a real file; `openapi-typescript` is reached only through `./api-types`, so the main entry's peer contract is unchanged. The generated file type-checks under `strict`.
+- `README.md` ("API types from the server"), `CLAUDE.md` (stack table), `UPGRADING.md`.
+- Not done: `strata-python` side, runtime validation (both out of scope in the issue).
+
 **The shared server contracts meeting the hooks, before the type generator (the dependency-free part of issue #263)** (branch `claude/project-thread-nnem56`). The issue asks for a command that generates an app's TypeScript API types from its OpenAPI schema, which adds a dependency, so that waits for Jonathan's choice (a card is on the thread). These three parts need none:
 
 - `src/query/infinite.ts`: `nextCursor` option on `useInfiniteLoad` (the page carries its own cursor for the next one; replaces `hasMore` and `cursorAfter`, which are no longer both required), `ApiPage<T>` (`{ items, next, total? }`) and `apiPage<T>()`, the `items` and `nextCursor` of the shared `Page<T>`. The server's cursor is opaque, so unlike `cursorAfter` it is not affected by what is held or dismissed.

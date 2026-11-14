@@ -186,10 +186,25 @@ thousands of lines. Such an app imports the same stylesheet **without the reset*
 | Feedback | `UndoBar`, `useUndoable`, `Done` | Undo before confirm; the hook owns which rows are out of view (`isRemoved`), a failed commit brings the row back with Try again in the same bar, and `flush()` commits before a dependent action; `Done` is the one celebration, and it must say what happens next |
 | Helpers | `cn`, `format`, `createFormat`, `NBSP` | `cn` knows `type-*`; all numbers and dates through `Intl`; `format.integer(n)`, `.decimal(n)`, `.percent(n)` are callable and keep Intl's methods; `format.bytes(n, unit?)` writes sizes in decimal units (`byteUnit` shares one unit across figures); `format.date(at)` ("8 Nov 2026") and `format.dateTime(at)` ("8 Nov 2026, 06:05"), like `clock`, `day` and `shortDay`, take a Date, ISO string or epoch ms; `format.ago(at, now?)` ("3 weeks ago"), `format.compact(n)` ("1.2k", and `count(n, one, many, { compact: true })`), `format.runningTime(seconds)` ("1:02:09") and `format.share(n)` ("<1%" for a part that rounds to 0); every number and date formatter prints the placeholder (`format.missing`, an en dash) for `null` or `undefined`; `createFormat(locale, { timeZone, missing })` fixes the zone and the placeholder; units and counts join with a non-breaking space |
 | Testing | `strata-react/testing`: `renderWithStrata`, `renderRoutes`, `createTestQueryClient`, `installLayoutShims`, `installFakeIntersectionObserver`, `filledButtons`, `expectOneFilledButton`, `asyncButtonPhase` | Router + query client around Testing Library's `render`; `renderRoutes(routes, { route, basename })` renders the app's own `RouteObject[]` in a memory data router, so layout routes, redirects, loaders and error elements run, and returns the `router` (where a redirect landed is `router.state.location`) and an act-wrapped `navigate`; a fixed box and ResizeObserver so measuring components render in jsdom; an IntersectionObserver the test fires with `scrollToEnd()` or `intersect(el)`; `filledButtons()` and `expectOneFilledButton()` check "one filled button per view" from `data-variant`, and `asyncButtonPhase(el)` reads an `AsyncButton`'s phase. Role names keep the non-breaking space from `format.count`, so match them with the same call or a `\s` regex |
+| API types | `strata-react/api-types` and the `strata-api-types` command | See "API types from the server" below |
 | Visual regression | `strata-react/visual` and the `strata-visual` command | Screenshots an app's Storybook and its routes in each MSW state, light and dark, against baselines in the app's repo |
 
 Specs for the components not built yet (menus, toasts, command menu, prose)
 are in ux-research `ui-library/components.md`.
+
+## API types from the server
+
+An app's FastAPI server publishes its routes, the shared contracts (`strata_python.contracts`: `Health`, `Task`, `Page`, `ErrorBody`…) and its typed settings at `/api/openapi.json`. `strata-api-types` writes the TypeScript types from that schema, so they follow the Python ones instead of being written again by hand:
+
+```sh
+npm install --save-dev openapi-typescript        # once; see the TypeScript note below
+npx strata-api-types http://localhost:8360/api/openapi.json -o src/api.generated.ts
+npx strata-api-types openapi.json -o src/api.generated.ts --check   # CI: exits 1 when the file is stale
+```
+
+The schema is a URL (a running server) or a JSON file the server's CLI wrote, so CI needs no server. Commit the output and never edit it, as with `theme.generated.css`; it holds nothing of the machine (no URL, no date), so `--check` is exact. The file exports `paths`, `components` and `Schema<"Task">`. Then use the shared shapes with the hooks made for them: `useInfiniteLoad({ …, ...apiPage<Item>() })` pages by `Page<T>`'s own `next` cursor, `useJob({ isRunning: (t) => isTaskRunning(t, FINISHED) })` ends when a `Task`'s state is a finished one, and `errorPayload<T>(error)` reads an error body's `payload` (what is already running, on a 409).
+
+`openapi-typescript` does the reading (types only, nothing in the app's bundle) and is an optional peer, so an app that never runs the command installs nothing. It declares `typescript@^5` as a peer; an app on another TypeScript (7, or the TypeScript 6 package) points it at its own with an `overrides` entry, `"openapi-typescript": { "typescript": "$typescript" }`, as this repository does (the generator uses the TypeScript 6 API and is tested on it).
 
 ## Visual regression for apps
 
