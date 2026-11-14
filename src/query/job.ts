@@ -74,3 +74,8 @@ export function useJob<T, K extends QueryKey = QueryKey>({
   const poll = React.useCallback(() => void refetch(), [refetch]);
   return { ...toLoad(query, describeError), running, poll };
 }
+
+/** Whether a task of the shared contract (`strata_python.contracts.Task`) is still going: its `state` is not one of the finished ones. Pass the generated `FINISHED`; for `useJob({ isRunning: (t) => isTaskRunning(t, FINISHED) })`. */
+export function isTaskRunning(task: { state: string }, finished: ReadonlySet<string> | readonly string[]): boolean {
+  return !(Array.isArray(finished) ? finished.includes(task.state) : (finished as ReadonlySet<string>).has(task.state));
+}

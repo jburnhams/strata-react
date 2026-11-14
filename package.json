@@ -52,6 +52,11 @@
       "types": "./dist/panorama/index.d.ts",
       "import": "./dist/panorama.js",
       "default": "./dist/panorama.js"
+    },
+    "./api-types": {
+      "types": "./dist/api-types/index.d.ts",
+      "import": "./dist/api-types.js",
+      "default": "./dist/api-types.js"
     }
   },
   "files": [
@@ -95,6 +100,7 @@
     "hls.js": "^1.6.0",
     "leaflet": "^1.9.4",
     "msw": "^2.7.0 || ^3.0.0",
+    "openapi-typescript": "^7.13.0",
     "playwright": ">=1.49.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -113,6 +119,9 @@
       "optional": true
     },
     "msw": {
+      "optional": true
+    },
+    "openapi-typescript": {
       "optional": true
     },
     "playwright": {
@@ -161,6 +170,7 @@
     "leaflet-node": "^3.0.2",
     "msw": "^3.0.4",
     "msw-storybook-addon": "^3.0.3",
+    "openapi-typescript": "^7.13.0",
     "playwright": "1.65.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -184,6 +194,12 @@
   },
   "bin": {
     "strata-visual": "./bin/strata-visual.js",
-    "strata-stock-classes": "./bin/strata-stock-classes.js"
+    "strata-stock-classes": "./bin/strata-stock-classes.js",
+    "strata-api-types": "./bin/strata-api-types.js"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }

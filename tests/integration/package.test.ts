@@ -110,6 +110,7 @@ describe("peer contract", () => {
     expect([...reached("./hls")].filter((p) => optional.has(p))).toEqual(["hls.js"]);
     expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual(["@testing-library/react"]);
     expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual(["msw", "playwright"]);
+    expect([...reached("./api-types")].filter((p) => optional.has(p))).toEqual(["openapi-typescript"]);
   });
 });
 

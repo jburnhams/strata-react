@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## After v1.0.47 (2026-11-14)
+
+- New, optional: the `strata-api-types` command (`strata-react/api-types`) generates API types from a server's OpenAPI schema. It needs `openapi-typescript` installed in the app (an optional peer) and, on a TypeScript other than 5, an `overrides` entry for its `typescript@^5` peer; see the README. Apps that do not run it change nothing.
+
 ## After v1.0.46 (2026-11-14)
 
 - `MarkableText` now acts on arrow, Home, End and Escape keys only while its own region has focus; keys from something focusable inside it (a list of rows) are that thing's. Words drawn as `Mark`s with nothing focusable around them behave as before.
