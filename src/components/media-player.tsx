@@ -108,6 +108,9 @@ export type MediaElementOptions = {
 
 type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry" | "playWindow" | "window" | "reportProblem">;
 
+/** How far one notch of the wheel over a focused video moves the volume, in percent. */
+const WHEEL_VOLUME_STEP = 5;
+
 const idle: Snapshot = { ready: 0, waitingForMore: false, playing: false, time: 0, duration: null, buffered: 0, volume: 100, muted: false, rate: 1, ended: false, loading: false, error: null };
 
 const LOAD_MESSAGES: Record<number, string> = {
@@ -753,6 +756,22 @@ export function MediaPlayer({
   const [fullApi, setFullApi] = React.useState(false);
   React.useEffect(() => setFullApi(canFullscreen()), []);
   const canFull = fullscreen && fullApi && kind === "video" && !native;
+  // On the picture: a click plays or pauses and a double click toggles full screen (two clicks cancel out, so the double click leaves playback as it was); the wheel sets the volume, but only while the player has focus, so scrolling past a video still scrolls the page. With the browser's own controls its click and double click are left alone (they do this already); the wheel works there too. The wheel listener is not passive, to stop the page scrolling.
+  const stage = React.useRef<HTMLDivElement>(null);
+  const latest = React.useRef(media);
+  latest.current = media;
+  React.useEffect(() => {
+    const el = stage.current;
+    if (!el || kind !== "video") return;
+    const onWheel = (e: WheelEvent) => {
+      if (!el.contains(document.activeElement) || e.ctrlKey || !e.deltaY) return;
+      e.preventDefault();
+      const m = latest.current;
+      m.setVolume(Math.min(100, Math.max(0, m.volume + (e.deltaY < 0 ? WHEEL_VOLUME_STEP : -WHEEL_VOLUME_STEP))));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [kind]);
   const keys = React.useMemo<Shortcut[]>(
     () => [
       { keys: [" ", "k"], label: "Play or pause", run: media.toggle },
@@ -815,8 +834,15 @@ export function MediaPlayer({
   // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
   const element =
     kind === "video" ? (
-      <div className={cn("relative w-full overflow-hidden rounded-surface bg-surface-sunken", full && "min-h-0 flex-1")} style={full ? undefined : { aspectRatio: aspect ?? natural ?? 16 / 9 }}>
-        <video {...common} poster={poster} playsInline className="absolute inset-0 size-full object-contain" />
+      <div ref={stage} tabIndex={-1} className={cn("relative w-full overflow-hidden rounded-surface bg-surface-sunken outline-none", full && "min-h-0 flex-1")} style={full ? undefined : { aspectRatio: aspect ?? natural ?? 16 / 9 }}>
+        <video
+          {...common}
+          poster={poster}
+          playsInline
+          onClick={native ? undefined : () => media.toggle()}
+          onDoubleClick={canFull ? () => setFull((f) => !f) : undefined}
+          className="absolute inset-0 size-full object-contain"
+        />
         {(overlay || hasSpans) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {overlay?.(media)}

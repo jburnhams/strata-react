@@ -416,3 +416,37 @@ describe("MediaPlayer full screen", () => {
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
   });
 });
+
+describe("MediaPlayer on the picture", () => {
+  const videoOf = (c: HTMLElement) => c.querySelector("video") as HTMLVideoElement;
+
+  it("plays and pauses on a click, and leaves playback as it was on a double click", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    act(() => media.loaded(videoOf(container), 60));
+    await user.click(videoOf(container));
+    expect(videoOf(container).paused).toBe(false);
+    await user.click(videoOf(container));
+    expect(videoOf(container).paused).toBe(true);
+    await user.dblClick(videoOf(container));
+    expect(videoOf(container).paused).toBe(true);
+  });
+
+  it("sets the volume with the wheel only while the player has focus", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    act(() => media.loaded(videoOf(container), 60));
+    const wheel = (deltaY: number) => {
+      const e = new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true });
+      act(() => void videoOf(container).dispatchEvent(e));
+      return e.defaultPrevented;
+    };
+    expect(wheel(-100)).toBe(false); // not focused: the page scrolls
+    expect(Math.round(videoOf(container).volume * 100)).toBe(100);
+    await user.click(videoOf(container)); // focuses the picture (and plays)
+    expect(wheel(100)).toBe(true);
+    expect(Math.round(videoOf(container).volume * 100)).toBe(95);
+    expect(wheel(-100)).toBe(true);
+    expect(Math.round(videoOf(container).volume * 100)).toBe(100);
+  });
+});

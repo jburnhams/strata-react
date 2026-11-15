@@ -14,6 +14,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 ## 2026-11-15
 
 - `MediaPlayer` (video, Strata's controls) now has a Full screen button after the volume and an `f` key (where the browser has the Fullscreen API); pass `fullscreen={false}` to remove them. The player is wrapped in `FullscreenFrame`, so a test that counts buttons or a baseline of a video player changes.
+- `MediaPlayer` video: click plays or pauses, double click toggles full screen, and the wheel sets the volume while the player has focus. A test that clicks the video now changes playback.
 - `useAsyncAction` no longer sets state or starts its settle timer after unmount; nothing to change.
 
 ## After v1.0.47 (2026-11-14)
