@@ -369,3 +369,25 @@ describe("MediaPlayer", () => {
     }
   });
 });
+
+describe("MediaPlayer full screen", () => {
+  it("offers Full screen on a video by default, and F toggles it (the modal where the browser has no Fullscreen API)", async () => {
+    const user = userEvent.setup();
+    render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    await user.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByRole("dialog", { name: "Tour" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Leave full screen" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.keyboard("f");
+    expect(screen.getByRole("dialog", { name: "Tour" })).toBeInTheDocument();
+  });
+
+  it("has none on audio, with fullscreen={false}, or with the browser's own controls", () => {
+    const { rerender } = render(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" fullscreen={false} />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="native" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+  });
+});

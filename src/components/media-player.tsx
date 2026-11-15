@@ -1,9 +1,10 @@
 import * as React from "react";
-import { LoaderCircle, SkipBack, SkipForward } from "lucide-react";
+import { LoaderCircle, Maximize, Minimize, SkipBack, SkipForward } from "lucide-react";
 import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
 import { Button, IconButton } from "./button";
+import { FullscreenFrame } from "./fullscreen-frame";
 import { useHotkeys, type Shortcut } from "./hotkeys";
 import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
@@ -517,6 +518,8 @@ export type MediaPlayerProps = {
   overlay?: (media: MediaElementState) => React.ReactNode;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
   aspect?: number | `${number}/${number}`;
+  /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
+  fullscreen?: boolean;
   className?: string;
 };
 
@@ -617,6 +620,7 @@ export function MediaPlayer({
   mediaRef,
   overlay,
   aspect,
+  fullscreen = true,
   className,
 }: MediaPlayerProps) {
   const list = React.useMemo<readonly MediaSource[]>(() => sources ?? (src ? [{ src, title: label }] : []), [sources, src, label]);
@@ -743,16 +747,20 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [time]);
 
+  // Full screen is the shared `FullscreenFrame` (the Fullscreen API, a window-filling modal on an iPhone), held here so the button and `f` share it.
+  const [full, setFull] = React.useState(false);
+  const canFull = fullscreen && kind === "video" && !native;
   const keys = React.useMemo<Shortcut[]>(
     () => [
       { keys: [" ", "k"], label: "Play or pause", run: media.toggle },
       { keys: ["j"], label: `Back ${JUMP} s`, run: () => seek(time - JUMP), repeat: true },
       { keys: ["l"], label: `Forward ${JUMP} s`, run: () => seek(time + JUMP), repeat: true },
       { keys: ["m"], label: "Mute", run: () => media.setVolume(media.muted ? 100 : 0) },
+      ...(canFull ? [{ keys: ["f"], label: full ? "Leave full screen" : "Full screen", run: () => setFull((f) => !f) }] : []),
       ...(offer ? [{ keys: ["s"], label: offer.label, run: offer.run }] : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [media, time, offsets, index, offer],
+    [media, time, offsets, index, offer, canFull, full],
   );
   // Several players on a page: the keys follow the last used (see keyPlayers); alone, they are this one's.
   const id = React.useId();
@@ -804,7 +812,7 @@ export function MediaPlayer({
   // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
   const element =
     kind === "video" ? (
-      <div className="relative w-full overflow-hidden rounded-surface bg-surface-sunken" style={{ aspectRatio: aspect ?? natural ?? 16 / 9 }}>
+      <div className={cn("relative w-full overflow-hidden rounded-surface bg-surface-sunken", full && "min-h-0 flex-1")} style={full ? undefined : { aspectRatio: aspect ?? natural ?? 16 / 9 }}>
         <video {...common} poster={poster} playsInline className="absolute inset-0 size-full object-contain" />
         {(overlay || hasSpans) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
@@ -819,7 +827,8 @@ export function MediaPlayer({
   const what = kind === "video" ? "this video" : "this recording";
 
   return (
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", className)}>
+    <FullscreenFrame label={label} active={full} onActiveChange={setFull} className={className}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
       {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
@@ -890,13 +899,15 @@ export function MediaPlayer({
                 {current?.title} ({index + 1} of {list.length})
               </span>
             )}
-            <span className="ml-auto flex items-center gap-3">
+            <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
               <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
               <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
+              {canFull && <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />}
             </span>
           </div>
         </div>
       )}
     </div>
+    </FullscreenFrame>
   );
 }

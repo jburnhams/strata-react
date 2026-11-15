@@ -238,3 +238,32 @@ describe("Button title (issue #231)", () => {
     warn.mockRestore();
   });
 });
+
+describe("useAsyncAction after unmount (issue #267)", () => {
+  function Probe({ action, onError }: { action: () => Promise<unknown>; onError: (e: unknown) => void }) {
+    const { run } = useAsyncAction(action, { onError });
+    return <button onClick={() => void run()}>Go</button>;
+  }
+
+  it.each([
+    ["resolves", () => new Promise<void>((resolve) => resolveLater.push(resolve))],
+    ["rejects", () => new Promise<void>((_, reject) => resolveLater.push(() => reject(new Error("late"))))],
+  ])("does nothing when the action %s after the component has gone", async (_name, action) => {
+    resolveLater.length = 0;
+    const onError = vi.fn();
+    const timers = vi.spyOn(window, "setTimeout");
+    const user = userEvent.setup();
+    const { unmount } = render(<Probe action={action} onError={onError} />);
+    await user.click(screen.getByRole("button", { name: "Go" }));
+    timers.mockClear();
+    unmount();
+    await act(async () => {
+      resolveLater[0]!();
+    });
+    expect(timers).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    timers.mockRestore();
+  });
+});
+
+const resolveLater: Array<() => void> = [];

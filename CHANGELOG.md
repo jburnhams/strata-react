@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-15
+**A full-screen button on the video player (from Jonathan's ask in the thread) and `useAsyncAction` after unmount (issue #267)** (branch `claude/project-thread-nnem56`). Jonathan found the media player in strata-tubes had no full-screen button and asked for one by default; issue #267 is a vitest failure ("window is not defined") when an action settles after its component has unmounted.
+
+- `src/components/media-player.tsx`: a video drawn with Strata's controls has a Full screen / Leave full screen icon button after the volume, and the `f` key (in the player's shortcut list, so `KeysLegend` shows it). It reuses `FullscreenFrame` (Fullscreen API, a window-filling modal on iPhone), so the controls stay around the picture and Escape leaves. New prop `fullscreen` (default true; `false` keeps the picture in place). Not drawn for audio or with the browser's own controls, which have theirs. The right-hand controls now wrap so a phone-width player does not overflow.
+- `src/components/async-button.tsx`: `useAsyncAction`'s `run` keeps a mounted ref and, once unmounted, sets no state and starts no settle timer (issue #267).
+- `tests/unit/media-player.test.tsx`, `tests/unit/actions.test.tsx`: the button, the key, the modal fallback and the cases with none; an action that resolves after unmount sets no state or timer.
+- `tests/visual/baselines/`: the video player stories gain the button (and `video-phone` wraps to a second line). `layout-inspector--phone`, `data-photo-browser--grouped` and `layout-density--toolbar-row` differ on this machine's Chromium (153 against 158) and do not use these components, so they were left.
+- `UPGRADING.md`, `README.md`: the new button, key and prop.
+
 ## 2026-11-14
 **`strata-api-types`: an app's TypeScript API types from its OpenAPI schema (the rest of issue #263)** (branch `claude/project-thread-nnem56`). Jonathan chose openapi-typescript behind its own entry (2026-11-14, on the thread's decision card).
 
