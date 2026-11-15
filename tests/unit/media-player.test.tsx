@@ -371,18 +371,43 @@ describe("MediaPlayer", () => {
 });
 
 describe("MediaPlayer full screen", () => {
-  it("offers Full screen on a video by default, and F toggles it (the modal where the browser has no Fullscreen API)", async () => {
+  it("offers Full screen on a video by default, and F toggles it, without mounting the video again", async () => {
     const user = userEvent.setup();
-    render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
-    await user.click(screen.getByRole("button", { name: "Full screen" }));
-    expect(screen.getByRole("dialog", { name: "Tour" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Leave full screen" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    await user.keyboard("f");
-    expect(screen.getByRole("dialog", { name: "Tour" })).toBeInTheDocument();
+    let full: Element | null = null;
+    Object.defineProperty(document, "fullscreenEnabled", { value: true, configurable: true });
+    Object.defineProperty(document, "fullscreenElement", { get: () => full, configurable: true });
+    Element.prototype.requestFullscreen = function (this: Element) {
+      full = this;
+      return Promise.resolve();
+    };
+    document.exitFullscreen = () => {
+      full = null;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    };
+    try {
+      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+      const video = container.querySelector("video");
+      await user.click(await screen.findByRole("button", { name: "Full screen" }));
+      expect(full).not.toBeNull();
+      expect(container.querySelector("video")).toBe(video);
+      await user.click(screen.getByRole("button", { name: "Leave full screen" }));
+      expect(full).toBeNull();
+      await user.keyboard("f");
+      expect(full).not.toBeNull();
+      expect(container.querySelector("video")).toBe(video);
+    } finally {
+      delete (document as { fullscreenEnabled?: unknown }).fullscreenEnabled;
+      delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+      delete (Element.prototype as { requestFullscreen?: unknown }).requestFullscreen;
+      delete (document as { exitFullscreen?: unknown }).exitFullscreen;
+    }
   });
 
-  it("has none on audio, with fullscreen={false}, or with the browser's own controls", () => {
+  it("has none without the Fullscreen API, on audio, with fullscreen={false}, or with the browser's own controls", () => {
+    const { unmount } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    unmount();
     const { rerender } = render(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" />);
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
     rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" fullscreen={false} />);

@@ -4,7 +4,7 @@ import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
 import { Button, IconButton } from "./button";
-import { FullscreenFrame } from "./fullscreen-frame";
+import { FullscreenFrame, canFullscreen } from "./fullscreen-frame";
 import { useHotkeys, type Shortcut } from "./hotkeys";
 import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
@@ -518,7 +518,7 @@ export type MediaPlayerProps = {
   overlay?: (media: MediaElementState) => React.ReactNode;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
   aspect?: number | `${number}/${number}`;
-  /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
+  /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Only where the browser has the Fullscreen API (the window-filling fallback would mount the video again and lose its place). Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
   fullscreen?: boolean;
   className?: string;
 };
@@ -749,7 +749,10 @@ export function MediaPlayer({
 
   // Full screen is the shared `FullscreenFrame` (the Fullscreen API, a window-filling modal on an iPhone), held here so the button and `f` share it.
   const [full, setFull] = React.useState(false);
-  const canFull = fullscreen && kind === "video" && !native;
+  // Only where the browser has the Fullscreen API: the window-filling fallback would mount the video again and lose its place (and iPhone's own video controls have full screen).
+  const [fullApi, setFullApi] = React.useState(false);
+  React.useEffect(() => setFullApi(canFullscreen()), []);
+  const canFull = fullscreen && fullApi && kind === "video" && !native;
   const keys = React.useMemo<Shortcut[]>(
     () => [
       { keys: [" ", "k"], label: "Play or pause", run: media.toggle },
@@ -827,7 +830,7 @@ export function MediaPlayer({
   const what = kind === "video" ? "this video" : "this recording";
 
   return (
-    <FullscreenFrame label={label} active={full} onActiveChange={setFull} className={className}>
+    <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
     <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
       {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
