@@ -369,3 +369,84 @@ describe("MediaPlayer", () => {
     }
   });
 });
+
+describe("MediaPlayer full screen", () => {
+  it("offers Full screen on a video by default, and F toggles it, without mounting the video again", async () => {
+    const user = userEvent.setup();
+    let full: Element | null = null;
+    Object.defineProperty(document, "fullscreenEnabled", { value: true, configurable: true });
+    Object.defineProperty(document, "fullscreenElement", { get: () => full, configurable: true });
+    Element.prototype.requestFullscreen = function (this: Element) {
+      full = this;
+      return Promise.resolve();
+    };
+    document.exitFullscreen = () => {
+      full = null;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    };
+    try {
+      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+      const video = container.querySelector("video");
+      await user.click(await screen.findByRole("button", { name: "Full screen" }));
+      expect(full).not.toBeNull();
+      expect(container.querySelector("video")).toBe(video);
+      await user.click(screen.getByRole("button", { name: "Leave full screen" }));
+      expect(full).toBeNull();
+      await user.keyboard("f");
+      expect(full).not.toBeNull();
+      expect(container.querySelector("video")).toBe(video);
+    } finally {
+      delete (document as { fullscreenEnabled?: unknown }).fullscreenEnabled;
+      delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+      delete (Element.prototype as { requestFullscreen?: unknown }).requestFullscreen;
+      delete (document as { exitFullscreen?: unknown }).exitFullscreen;
+    }
+  });
+
+  it("has none without the Fullscreen API, on audio, with fullscreen={false}, or with the browser's own controls", () => {
+    const { unmount } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    unmount();
+    const { rerender } = render(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" fullscreen={false} />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="native" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
+  });
+});
+
+describe("MediaPlayer on the picture", () => {
+  const videoOf = (c: HTMLElement) => c.querySelector("video") as HTMLVideoElement;
+
+  it("plays and pauses on a click, and leaves playback as it was on a double click", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    act(() => media.loaded(videoOf(container), 60));
+    await user.click(videoOf(container));
+    expect(videoOf(container).paused).toBe(false);
+    await user.click(videoOf(container));
+    expect(videoOf(container).paused).toBe(true);
+    await user.dblClick(videoOf(container));
+    expect(videoOf(container).paused).toBe(true);
+  });
+
+  it("sets the volume with the wheel only while the player has focus", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+    act(() => media.loaded(videoOf(container), 60));
+    const wheel = (deltaY: number) => {
+      const e = new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true });
+      act(() => void videoOf(container).dispatchEvent(e));
+      return e.defaultPrevented;
+    };
+    expect(wheel(-100)).toBe(false); // not focused: the page scrolls
+    expect(Math.round(videoOf(container).volume * 100)).toBe(100);
+    await user.click(videoOf(container)); // focuses the picture (and plays)
+    expect(wheel(100)).toBe(true);
+    expect(Math.round(videoOf(container).volume * 100)).toBe(95);
+    expect(wheel(-100)).toBe(true);
+    expect(Math.round(videoOf(container).volume * 100)).toBe(100);
+  });
+});

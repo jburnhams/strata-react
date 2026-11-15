@@ -117,7 +117,15 @@ export function useAsyncAction<A extends unknown[]>(
   React.useLayoutEffect(() => {
     latest.current = { action, onError, settleMs, describeError, validate, onInvalid };
   });
-  React.useEffect(() => () => window.clearTimeout(timer.current), []);
+  // An action that settles after the component has gone (a test's teardown, a route change) must not set state or start the settle timer: after jsdom is torn down React reads `window` and throws (issue #267).
+  const mounted = React.useRef(true);
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(timer.current);
+    };
+  }, []);
   const run = React.useCallback(async (...args: A) => {
     window.clearTimeout(timer.current);
     const invalid = messages(latest.current.validate?.(...args));
@@ -129,9 +137,11 @@ export function useAsyncAction<A extends unknown[]>(
     setState({ ...idle, phase: "pending" });
     try {
       await latest.current.action(...args);
+      if (!mounted.current) return;
       setState({ ...idle, phase: "done" });
       timer.current = window.setTimeout(() => setState(idle), latest.current.settleMs);
     } catch (thrown) {
+      if (!mounted.current) return;
       unreported.current = { thrown };
       setState({ phase: "error", error: latest.current.describeError(thrown), thrown, fieldErrors: fieldErrorsOf(thrown) });
     }

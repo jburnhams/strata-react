@@ -25,6 +25,8 @@ export type FullscreenFrameProps = {
   active: boolean;
   /** Called with `false` when the person leaves with Escape or the browser's own control. */
   onActiveChange: (active: boolean) => void;
+  /** Open a window-filling modal where the browser has no Fullscreen API or refuses. Default true. `false` for content that must not be mounted again (a playing video): where the browser cannot or will not, `onActiveChange(false)` is called instead. */
+  modal?: boolean;
   children: React.ReactNode;
   className?: string;
 };
@@ -35,7 +37,7 @@ export function canFullscreen(): boolean {
 }
 
 /** Shows its children full screen while `active`: the browser's Fullscreen API where there is one, a window-filling modal where there is not. */
-export function FullscreenFrame({ label, active, onActiveChange, children, className }: FullscreenFrameProps) {
+export function FullscreenFrame({ label, active, onActiveChange, modal: allowModal = true, children, className }: FullscreenFrameProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [native, setNative] = React.useState(false);
   const [refused, setRefused] = React.useState(false);
@@ -50,11 +52,19 @@ export function FullscreenFrame({ label, active, onActiveChange, children, class
       if (document.fullscreenElement && document.fullscreenElement === el) void document.exitFullscreen();
       return;
     }
-    if (!el || !canFullscreen()) return;
+    if (!el) return;
+    if (!canFullscreen()) {
+      if (!allowModal) change.current(false);
+      return;
+    }
     let cancelled = false;
     el.requestFullscreen().then(
       () => !cancelled && setNative(true),
-      () => !cancelled && setRefused(true), // refused (no recent click or key, say): the modal below opens instead
+      () => {
+        if (cancelled) return;
+        if (allowModal) setRefused(true); // refused (no recent click or key, say): the modal below opens instead
+        else change.current(false);
+      },
     );
     const onChange = () => {
       if (document.fullscreenElement !== el && !cancelled) change.current(false);
@@ -64,10 +74,10 @@ export function FullscreenFrame({ label, active, onActiveChange, children, class
       cancelled = true;
       document.removeEventListener("fullscreenchange", onChange);
     };
-  }, [active]);
+  }, [active, allowModal]);
 
   // The modal is the answer where the browser cannot, or has refused. While a request is in flight the content stays in place.
-  const modal = active && !native && (!canFullscreen() || refused);
+  const modal = allowModal && active && !native && (!canFullscreen() || refused);
   const inner = (
     <div ref={ref} className={cn(active && "flex h-full min-h-0 flex-col bg-background p-4", className)}>
       {children}
