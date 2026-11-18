@@ -808,7 +808,14 @@ export function MediaPlayer({
   React.useEffect(() => {
     if (media.playing && shortcuts && !native) keyPlayers.use(id);
   }, [media.playing, id, shortcuts, native]);
-  useHotkeys(keys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
+  const activeKeys = autoHideControls ? keys.map((shortcut) => ({
+    ...shortcut,
+    run: () => {
+      wakeControls();
+      shortcut.run();
+    },
+  })) : keys;
+  useHotkeys(activeKeys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
 
   // Lock-screen and headset controls.
   React.useEffect(() => {

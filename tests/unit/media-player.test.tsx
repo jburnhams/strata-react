@@ -413,6 +413,13 @@ describe("MediaPlayer full screen", () => {
         act(() => vi.advanceTimersByTime(3000));
         expect(controls).toHaveClass("opacity-0");
 
+        // The active player also handles shortcuts when focus is outside its group.
+        fireEvent.keyDown(document.body, { key: "m" });
+        expect(el.muted).toBe(true);
+        expect(controls).not.toHaveClass("opacity-0");
+        act(() => vi.advanceTimersByTime(3000));
+        expect(controls).toHaveClass("opacity-0");
+
         act(() => el.pause());
         expect(controls).not.toHaveClass("opacity-0");
         act(() => void el.play());
