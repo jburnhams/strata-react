@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, renderHook, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { MediaPlayer, SeekBar, useMediaElement, type MediaSource } from "../../src";
@@ -396,6 +396,35 @@ describe("MediaPlayer full screen", () => {
       await user.keyboard("f");
       expect(full).not.toBeNull();
       expect(container.querySelector("video")).toBe(video);
+
+      vi.useFakeTimers();
+      try {
+        const controls = screen.getByRole("button", { name: "Leave full screen" }).closest(".grid.gap-2")!;
+        const el = video!;
+        act(() => media.loaded(el, 60));
+        act(() => void el.play());
+        act(() => vi.advanceTimersByTime(2999));
+        expect(controls).not.toHaveClass("opacity-0");
+        act(() => vi.advanceTimersByTime(1));
+        expect(controls).toHaveClass("opacity-0");
+
+        fireEvent.mouseMove(el);
+        expect(controls).not.toHaveClass("opacity-0");
+        act(() => vi.advanceTimersByTime(3000));
+        expect(controls).toHaveClass("opacity-0");
+
+        act(() => el.pause());
+        expect(controls).not.toHaveClass("opacity-0");
+        act(() => void el.play());
+        act(() => vi.advanceTimersByTime(3000));
+        expect(controls).toHaveClass("opacity-0");
+
+        act(() => void document.exitFullscreen());
+        act(() => vi.advanceTimersByTime(3000));
+        expect(controls).not.toHaveClass("opacity-0");
+      } finally {
+        vi.useRealTimers();
+      }
     } finally {
       delete (document as { fullscreenEnabled?: unknown }).fullscreenEnabled;
       delete (document as { fullscreenElement?: unknown }).fullscreenElement;
