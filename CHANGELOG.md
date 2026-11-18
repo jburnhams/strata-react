@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-18
+**Full-screen player controls auto-hide** (`fix/fullscreen-control-autohide`).
+
+- `src/components/media-player.tsx`: hide the custom controls after three idle seconds during full-screen playback. Mouse movement or keyboard input reveals them, including player shortcuts when focus is outside the player, keyboard focus keeps them visible, and the picture stays steady as they come and go.
+- The media player unit test covers the idle delay, mouse movement, pause, and fullscreen exit. The example app exercises real browser fullscreen and checks that the controls hide, reappear on mouse movement, and hide again. Its paused and idle states have light and dark baselines.
+
 ## 2026-11-15
 **A full-screen button on the video player (from Jonathan's ask in the thread) and `useAsyncAction` after unmount (issue #267)** (branch `claude/project-thread-nnem56`). Jonathan found the media player in strata-tubes had no full-screen button and asked for one by default; issue #267 is a vitest failure ("window is not defined") when an action settles after its component has unmounted.
 

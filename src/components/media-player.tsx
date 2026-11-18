@@ -756,6 +756,19 @@ export function MediaPlayer({
   const [fullApi, setFullApi] = React.useState(false);
   React.useEffect(() => setFullApi(canFullscreen()), []);
   const canFull = fullscreen && fullApi && kind === "video" && !native;
+  const autoHideControls = full && canFull && media.playing;
+  const [controlsIdle, setControlsIdle] = React.useState(false);
+  const idleTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const wakeControls = React.useCallback(() => {
+    clearTimeout(idleTimer.current);
+    setControlsIdle(false);
+    if (autoHideControls) idleTimer.current = setTimeout(() => setControlsIdle(true), 3000);
+  }, [autoHideControls]);
+  React.useEffect(() => {
+    wakeControls();
+    return () => clearTimeout(idleTimer.current);
+  }, [wakeControls]);
+  const hideControls = autoHideControls && controlsIdle;
   // On the picture: a click plays or pauses and a double click toggles full screen (two clicks cancel out, so the double click leaves playback as it was); the wheel sets the volume, but only while the player has focus, so scrolling past a video still scrolls the page. With the browser's own controls its click and double click are left alone (they do this already); the wheel works there too. The wheel listener is not passive, to stop the page scrolling.
   const stage = React.useRef<HTMLDivElement>(null);
   const latest = React.useRef(media);
@@ -795,7 +808,14 @@ export function MediaPlayer({
   React.useEffect(() => {
     if (media.playing && shortcuts && !native) keyPlayers.use(id);
   }, [media.playing, id, shortcuts, native]);
-  useHotkeys(keys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
+  const activeKeys = autoHideControls ? keys.map((shortcut) => ({
+    ...shortcut,
+    run: () => {
+      wakeControls();
+      shortcut.run();
+    },
+  })) : keys;
+  useHotkeys(activeKeys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
 
   // Lock-screen and headset controls.
   React.useEffect(() => {
@@ -857,7 +877,7 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
       {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
@@ -903,7 +923,7 @@ export function MediaPlayer({
         </>
       )}
       {!native && (
-        <div className="grid gap-2">
+        <div className={cn("grid gap-2", hideControls && "pointer-events-none opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:opacity-100")}>
           <div className="flex min-w-0 items-center gap-3">
             <SeekBar
               time={time}

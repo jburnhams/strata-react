@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-18
+- `MediaPlayer` hides the custom controls after three idle seconds during full-screen playback. Moving the mouse or using the keyboard reveals them.
+
 ## 2026-11-15
 
 - `MediaPlayer` (video, Strata's controls) now has a Full screen button after the volume and an `f` key (where the browser has the Fullscreen API); pass `fullscreen={false}` to remove them. The player is wrapped in `FullscreenFrame`, so a test that counts buttons or a baseline of a video player changes.

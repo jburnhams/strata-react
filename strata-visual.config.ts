@@ -15,6 +15,31 @@ export default defineVisualConfig({
     viewports: ["wide", "phone"],
     routes: [
       {
+        name: "fullscreen-player",
+        path: "/fullscreen-player",
+        viewports: ["default"],
+        setup: async (page) => {
+          await page.getByRole("button", { name: "Full screen", exact: true }).click();
+          await page.waitForFunction(() => document.fullscreenElement !== null);
+        },
+        states: {
+          paused: [],
+          idle: {
+            setup: async (page) => {
+              await page.getByRole("button", { name: "Play", exact: true }).click();
+              const exit = await page.getByRole("button", { name: "Leave full screen" }).elementHandle();
+              const waitForControls = (visible: boolean) =>
+                page.waitForFunction(({ exit, visible }) => exit.checkVisibility({ opacityProperty: true }) === visible, { exit, visible });
+
+              await waitForControls(false);
+              await page.mouse.move(200, 120);
+              await waitForControls(true);
+              await waitForControls(false);
+            },
+          },
+        },
+      },
+      {
         name: "kiln-room",
         path: "/",
         states: {
