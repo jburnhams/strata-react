@@ -519,6 +519,8 @@ export type MediaPlayerProps = {
   mediaRef?: React.Ref<MediaElementState>;
   /** Drawn over the picture only (never the controls) in a box that fills it; the app's classes choose the corner (`absolute bottom-3 right-3`). Anything interactive in it is clickable and focusable. A video's box keeps its shape before the metadata loads, so the overlay has a stable place. */
   overlay?: (media: MediaElementState) => React.ReactNode;
+  /** Content below the controls for playback-related messages and actions. Hides with the controls during idle fullscreen playback. */
+  status?: React.ReactNode;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
   aspect?: number | `${number}/${number}`;
   /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Only where the browser has the Fullscreen API (the window-filling fallback would mount the video again and lose its place). Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
@@ -622,6 +624,7 @@ export function MediaPlayer({
   spanWords,
   mediaRef,
   overlay,
+  status,
   aspect,
   fullscreen = true,
   className,
@@ -900,61 +903,66 @@ export function MediaPlayer({
           {media.error.message}
         </p>
       )}
-      {growing && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Status tone="info" icon={LoaderCircle}>
-            Still being made
-          </Status>
-          {growing.status && <span className="type-body-sm text-muted-foreground">{growing.status}</span>}
-          <span role="status" className="type-body-sm text-muted-foreground">
-            {media.waitingForMore ? "Waiting for more to be made. It will carry on by itself." : ""}
-          </span>
-        </div>
-      )}
-      {bound && (
-        <>
-          <p className="type-caption text-muted-foreground tabular-nums">
-            {format.runningTime(bound.start)} to {format.runningTime(bound.end)}
-            {loop ? ", looping" : ""}
-          </p>
-          <VisuallyHidden>
-            <span role="status">{media.playing ? `Playing ${format.runningTime(bound.start)} to ${format.runningTime(bound.end)}` : ""}</span>
-          </VisuallyHidden>
-        </>
-      )}
-      {/* Keep idle controls tabbable while taking their row out of the video layout. */}
-      {!native && (
+      {/* Keep controls and status actions tabbable without reserving space for the idle panel. */}
+      {(growing || bound || !native || status) && (
         <div className={cn("grid gap-2", hideControls && "pointer-events-none absolute inset-x-0 bottom-0 opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100")}>
-          <div className="flex min-w-0 items-center gap-3">
-            <SeekBar
-              time={time}
-              duration={duration}
-              onSeek={seek}
-              buffered={growing ? media.ready : offsets ? undefined : media.buffered}
-              spans={spanState.bars}
-              marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
-              step={JUMP}
-              bigStep={60}
-              label={`Seek in ${label}`}
-            />
-            <TimeReadout time={time} duration={duration} />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Transport playing={media.playing} onPlayPause={media.toggle}>
-              {list.length > 1 && <IconButton icon={SkipBack} label="Previous chapter" disabled={index === 0} onClick={() => step(-1)} />}
-              {list.length > 1 && <IconButton icon={SkipForward} label="Next chapter" disabled={index === list.length - 1} onClick={() => step(1)} />}
-            </Transport>
-            {list.length > 1 && (
-              <span className="type-body-sm text-muted-foreground">
-                {current?.title} ({index + 1} of {list.length})
+          {growing && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Status tone="info" icon={LoaderCircle}>
+                Still being made
+              </Status>
+              {growing.status && <span className="type-body-sm text-muted-foreground">{growing.status}</span>}
+              <span role="status" className="type-body-sm text-muted-foreground">
+                {media.waitingForMore ? "Waiting for more to be made. It will carry on by itself." : ""}
               </span>
-            )}
-            <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
-              <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
-              <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
-              {canFull && <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />}
-            </span>
-          </div>
+            </div>
+          )}
+          {bound && (
+            <>
+              <p className="type-caption text-muted-foreground tabular-nums">
+                {format.runningTime(bound.start)} to {format.runningTime(bound.end)}
+                {loop ? ", looping" : ""}
+              </p>
+              <VisuallyHidden>
+                <span role="status">{media.playing ? `Playing ${format.runningTime(bound.start)} to ${format.runningTime(bound.end)}` : ""}</span>
+              </VisuallyHidden>
+            </>
+          )}
+          {!native && (
+            <div className="grid gap-2">
+              <div className="flex min-w-0 items-center gap-3">
+                <SeekBar
+                  time={time}
+                  duration={duration}
+                  onSeek={seek}
+                  buffered={growing ? media.ready : offsets ? undefined : media.buffered}
+                  spans={spanState.bars}
+                  marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
+                  step={JUMP}
+                  bigStep={60}
+                  label={`Seek in ${label}`}
+                />
+                <TimeReadout time={time} duration={duration} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <Transport playing={media.playing} onPlayPause={media.toggle}>
+                  {list.length > 1 && <IconButton icon={SkipBack} label="Previous chapter" disabled={index === 0} onClick={() => step(-1)} />}
+                  {list.length > 1 && <IconButton icon={SkipForward} label="Next chapter" disabled={index === list.length - 1} onClick={() => step(1)} />}
+                </Transport>
+                {list.length > 1 && (
+                  <span className="type-body-sm text-muted-foreground">
+                    {current?.title} ({index + 1} of {list.length})
+                  </span>
+                )}
+                <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
+                  <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
+                  <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
+                  {canFull && <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />}
+                </span>
+              </div>
+            </div>
+          )}
+          {status}
         </div>
       )}
     </div>

@@ -386,7 +386,7 @@ describe("MediaPlayer full screen", () => {
       return Promise.resolve();
     };
     try {
-      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" status={<p role="status">Reading playback details</p>} />);
       const video = container.querySelector("video");
       await user.click(await screen.findByRole("button", { name: "Full screen" }));
       expect(full).not.toBeNull();
@@ -399,7 +399,8 @@ describe("MediaPlayer full screen", () => {
 
       vi.useFakeTimers();
       try {
-        const controls = screen.getByRole("button", { name: "Leave full screen" }).closest(".grid.gap-2")!;
+        const controls = screen.getByText("Reading playback details").parentElement!;
+        expect(within(controls).getByRole("button", { name: "Leave full screen" })).toBeInTheDocument();
         const el = video!;
         act(() => media.loaded(el, 60));
         act(() => void el.play());

@@ -36,7 +36,15 @@ export default defineVisualConfig({
               const playerBounds = await page.getByRole("group", { name: "Kiln cam", exact: true }).boundingBox();
               if (!visibleBounds || !playerBounds) throw new Error("Could not measure the fullscreen player");
 
+              const status = await page.getByText("Playback details are loading").elementHandle();
               await waitForControls(false);
+              if (await status.evaluate((node) => node.checkVisibility({ opacityProperty: true }))) {
+                throw new Error("The player status should hide with the controls");
+              }
+              const skip = await page.getByRole("button", { name: "Skip intro" }).elementHandle();
+              if (!(await skip.evaluate((node) => node.checkVisibility({ opacityProperty: true })))) {
+                throw new Error("A timed Skip action should stay visible while the controls are hidden");
+              }
               const idleBounds = await video.boundingBox();
               if (!idleBounds || idleBounds.height <= visibleBounds.height || Math.abs(idleBounds.y + idleBounds.height - playerBounds.y - playerBounds.height) > 1) {
                 throw new Error(`Idle video should fill the player vertically: visible height ${visibleBounds.height}, idle height ${idleBounds?.height}, player height ${playerBounds.height}`);
@@ -44,6 +52,9 @@ export default defineVisualConfig({
 
               await page.mouse.move(200, 120);
               await waitForControls(true);
+              if (!(await status.evaluate((node) => node.checkVisibility({ opacityProperty: true })))) {
+                throw new Error("The player status should reappear with the controls");
+              }
               const restoredBounds = await video.boundingBox();
               if (!restoredBounds || Math.abs(restoredBounds.height - visibleBounds.height) > 1) {
                 throw new Error("The control bar should reclaim its space when the mouse moves");
