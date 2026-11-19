@@ -76,6 +76,7 @@ export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type
 export { NumberField, Slider, ColorField, type NumberFieldProps, type SliderProps, type ColorFieldProps, type RangeProps } from "./components/value-controls";
 export { SecretField, type SecretFieldProps, type SecretTestResult } from "./components/secret-field";
 export { Alert, type AlertProps } from "./components/alert";
+export { usePlayerWarnings, type PlayerWarning, type PlayerWarningEvent } from "./components/player-warning";
 export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type StrataToastRegionProps } from "./components/toast";
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";
 export { JobStatus, jobProgressText, type JobStatusProps, type JobFailure, type JobProgress, type JobWords } from "./components/job-status";

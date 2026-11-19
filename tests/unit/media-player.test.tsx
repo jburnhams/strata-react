@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import { MediaPlayer, SeekBar, useMediaElement, type MediaSource } from "../../src";
+import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Issue #134. jsdom has no media engine, so tests/utils/media.ts plays the browser's decoder;
@@ -370,6 +370,51 @@ describe("MediaPlayer", () => {
   });
 });
 
+it("shows independent player warnings in windowed mode and expires them on the configured timer", () => {
+  vi.useFakeTimers();
+  try {
+    const { result } = renderHook(() => usePlayerWarnings());
+    const { rerender } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" />);
+    const message = { title: "Playback details unavailable", timeout: 900 };
+    act(() => result.current.warn(message));
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
+    const warning = screen.getByText(message.title);
+    act(() => vi.advanceTimersByTime(899));
+    expect(warning.closest("[data-leaving]")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(warning.closest("[data-leaving]")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(250));
+    expect(warning).not.toBeInTheDocument();
+
+    act(() => result.current.warn(message));
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
+    expect(screen.getByText(message.title)).toBeVisible();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it.each(["Dismiss playback warning", "Try again"])("does not show an expired warning again after %s", (button) => {
+  vi.useFakeTimers();
+  try {
+    const retry = vi.fn();
+    render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={{
+      key: 1,
+      title: "Playback details unavailable",
+      timeout: 900,
+      action: { label: "Try again", onPress: retry },
+    }} />);
+    fireEvent.click(screen.getByRole("button", { name: button }));
+    expect(retry).toHaveBeenCalledTimes(button === "Try again" ? 1 : 0);
+    act(() => vi.advanceTimersByTime(250));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(650));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 describe("MediaPlayer full screen", () => {
   it("offers Full screen on a video by default, and F toggles it, without mounting the video again", async () => {
     const user = userEvent.setup();
@@ -386,7 +431,7 @@ describe("MediaPlayer full screen", () => {
       return Promise.resolve();
     };
     try {
-      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
+      const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" status={<p role="status">Reading playback details</p>} />);
       const video = container.querySelector("video");
       await user.click(await screen.findByRole("button", { name: "Full screen" }));
       expect(full).not.toBeNull();
@@ -399,7 +444,8 @@ describe("MediaPlayer full screen", () => {
 
       vi.useFakeTimers();
       try {
-        const controls = screen.getByRole("button", { name: "Leave full screen" }).closest(".grid.gap-2")!;
+        const controls = screen.getByText("Reading playback details").parentElement!;
+        expect(within(controls).getByRole("button", { name: "Leave full screen" })).toBeInTheDocument();
         const el = video!;
         act(() => media.loaded(el, 60));
         act(() => void el.play());

@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-19
+- In fullscreen, `MediaPlayer` grows the video into the controls’ space while they are hidden.
+
 ## 2026-11-18
 - `MediaPlayer` hides the custom controls after three idle seconds during full-screen playback. Moving the mouse or using the keyboard reveals them.
 
