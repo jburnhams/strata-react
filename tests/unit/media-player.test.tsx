@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import { MediaPlayer, SeekBar, useMediaElement, type MediaSource } from "../../src";
+import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Issue #134. jsdom has no media engine, so tests/utils/media.ts plays the browser's decoder;
@@ -368,6 +368,30 @@ describe("MediaPlayer", () => {
       delete (globalThis as unknown as Record<string, unknown>).MediaMetadata;
     }
   });
+});
+
+it("shows independent player warnings in windowed mode and expires them on the configured timer", () => {
+  vi.useFakeTimers();
+  try {
+    const { result } = renderHook(() => usePlayerWarnings());
+    const { rerender } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" />);
+    const message = { title: "Playback details unavailable", timeout: 900 };
+    act(() => result.current.warn(message));
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
+    const warning = screen.getByText(message.title);
+    act(() => vi.advanceTimersByTime(899));
+    expect(warning.closest("[data-leaving]")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(warning.closest("[data-leaving]")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(250));
+    expect(warning).not.toBeInTheDocument();
+
+    act(() => result.current.warn(message));
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
+    expect(screen.getByText(message.title)).toBeVisible();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 describe("MediaPlayer full screen", () => {

@@ -50,6 +50,11 @@ export default defineVisualConfig({
                 throw new Error(`Idle video should fill the player vertically: visible height ${visibleBounds.height}, idle height ${idleBounds?.height}, player height ${playerBounds.height}`);
               }
 
+              const warning = page.getByText("Playback details unavailable");
+              await warning.waitFor({ state: "visible" });
+              await waitForControls(false);
+              await warning.waitFor({ state: "detached" });
+
               await page.mouse.move(200, 120);
               await waitForControls(true);
               if (!(await status.evaluate((node) => node.checkVisibility({ opacityProperty: true })))) {

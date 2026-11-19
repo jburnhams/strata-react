@@ -5,6 +5,7 @@
 
 - `MediaPlayer` gives the video the controls’ space while they are hidden. Mouse movement or keyboard focus brings the controls back into the layout. The new `status` slot lets apps supply playback notices and actions in the player’s panel, which also contains growing-stream progress.
 - Chromium checks that the video grows to the bottom of the player at idle and returns to its original height when the controls reappear. Chromium also checks that a timed Skip button remains visible over the idle picture while the status slot is hidden. Updated the fullscreen baselines in both themes.
+- `usePlayerWarnings` supplies transient, timed warnings with an optional action. They slide in and out above the video in windowed and fullscreen playback, independently of the controls.
 
 ## 2026-11-18
 **Full-screen player controls auto-hide** (`fix/fullscreen-control-autohide`).

@@ -3,6 +3,7 @@ import { LoaderCircle, Maximize, Minimize, SkipBack, SkipForward } from "lucide-
 import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
+import { PlayerWarningToast, type PlayerWarningEvent } from "./player-warning";
 import { Button, IconButton } from "./button";
 import { FullscreenFrame, canFullscreen } from "./fullscreen-frame";
 import { useHotkeys, type Shortcut } from "./hotkeys";
@@ -521,6 +522,8 @@ export type MediaPlayerProps = {
   overlay?: (media: MediaElementState) => React.ReactNode;
   /** Content below the controls for playback-related messages and actions. Hides with the controls during idle fullscreen playback. */
   status?: React.ReactNode;
+  /** A transient warning from `usePlayerWarnings`, shown independently of the controls. */
+  warning?: PlayerWarningEvent;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
   aspect?: number | `${number}/${number}`;
   /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Only where the browser has the Fullscreen API (the window-filling fallback would mount the video again and lose its place). Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
@@ -625,6 +628,7 @@ export function MediaPlayer({
   mediaRef,
   overlay,
   status,
+  warning,
   aspect,
   fullscreen = true,
   className,
@@ -876,12 +880,18 @@ export function MediaPlayer({
     ) : (
       <audio {...common} className={native ? "w-full" : "hidden"} />
     );
+  const warningToast = warning && (
+    <div className="pointer-events-none absolute inset-x-3 top-3 z-10 grid justify-items-end">
+      <PlayerWarningToast key={warning.key} warning={warning} />
+    </div>
+  );
   const what = kind === "video" ? "this video" : "this recording";
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "relative flex h-full min-h-0 flex-col")}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
+      {warningToast}
       {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
       {media.error?.kind === "load" && (
