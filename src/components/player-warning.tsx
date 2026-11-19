@@ -59,15 +59,17 @@ export function PlayerWarningToast({ warning }: { warning: PlayerWarning }) {
       }}
     >
       <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-      <div role="status" className="grid min-w-0 flex-1 gap-0.5">
-        <strong id={titleId} className="type-label">{warning.title}</strong>
-        {warning.description && <span className="type-body-sm text-muted-foreground">{warning.description}</span>}
+      <div className="grid min-w-0 flex-1 justify-items-start gap-2">
+        <div role="status" className="grid min-w-0 gap-0.5">
+          <strong id={titleId} className="type-label">{warning.title}</strong>
+          {warning.description && <span className="type-body-sm text-muted-foreground">{warning.description}</span>}
+        </div>
+        {warning.action && (
+          <Button size="sm" onPress={() => { warning.action?.onPress(); dismiss(); }}>
+            {warning.action.label}
+          </Button>
+        )}
       </div>
-      {warning.action && (
-        <Button size="sm" onPress={() => { warning.action?.onPress(); dismiss(); }}>
-          {warning.action.label}
-        </Button>
-      )}
       <IconButton size="sm" variant="ghost" icon={X} label="Dismiss playback warning" onPress={dismiss} />
     </div>
   );
