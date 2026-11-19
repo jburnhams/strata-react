@@ -35,9 +35,10 @@ export function PlayerWarningToast({ warning }: { warning: PlayerWarning }) {
   const delay = toastTimeout(warning);
   const dismiss = () => setPhase("leaving");
   React.useEffect(() => {
+    if (phase !== "visible") return;
     const id = setTimeout(() => setPhase("leaving"), delay);
     return () => clearTimeout(id);
-  }, [delay]);
+  }, [delay, phase]);
 
   React.useEffect(() => {
     if (phase !== "leaving") return;

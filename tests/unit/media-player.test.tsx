@@ -394,6 +394,27 @@ it("shows independent player warnings in windowed mode and expires them on the c
   }
 });
 
+it.each(["Dismiss playback warning", "Try again"])("does not show an expired warning again after %s", (button) => {
+  vi.useFakeTimers();
+  try {
+    const retry = vi.fn();
+    render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={{
+      key: 1,
+      title: "Playback details unavailable",
+      timeout: 900,
+      action: { label: "Try again", onPress: retry },
+    }} />);
+    fireEvent.click(screen.getByRole("button", { name: button }));
+    expect(retry).toHaveBeenCalledTimes(button === "Try again" ? 1 : 0);
+    act(() => vi.advanceTimersByTime(250));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(650));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 describe("MediaPlayer full screen", () => {
   it("offers Full screen on a video by default, and F toggles it, without mounting the video again", async () => {
     const user = userEvent.setup();
