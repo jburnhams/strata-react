@@ -31,9 +31,23 @@ export default defineVisualConfig({
               const waitForControls = (visible: boolean) =>
                 page.waitForFunction(({ exit, visible }) => exit.checkVisibility({ opacityProperty: true }) === visible, { exit, visible });
 
+              const video = page.locator("video");
+              const visibleBounds = await video.boundingBox();
+              const playerBounds = await page.getByRole("group", { name: "Kiln cam", exact: true }).boundingBox();
+              if (!visibleBounds || !playerBounds) throw new Error("Could not measure the fullscreen player");
+
               await waitForControls(false);
+              const idleBounds = await video.boundingBox();
+              if (!idleBounds || idleBounds.height <= visibleBounds.height || Math.abs(idleBounds.y + idleBounds.height - playerBounds.y - playerBounds.height) > 1) {
+                throw new Error(`Idle video should fill the player vertically: visible height ${visibleBounds.height}, idle height ${idleBounds?.height}, player height ${playerBounds.height}`);
+              }
+
               await page.mouse.move(200, 120);
               await waitForControls(true);
+              const restoredBounds = await video.boundingBox();
+              if (!restoredBounds || Math.abs(restoredBounds.height - visibleBounds.height) > 1) {
+                throw new Error("The control bar should reclaim its space when the mouse moves");
+              }
               await waitForControls(false);
             },
           },

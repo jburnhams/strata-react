@@ -877,7 +877,7 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("grid w-full gap-2", full && "relative flex h-full min-h-0 flex-col")}>
       {element}
       {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
@@ -922,8 +922,9 @@ export function MediaPlayer({
           </VisuallyHidden>
         </>
       )}
+      {/* Keep idle controls tabbable while taking their row out of the video layout. */}
       {!native && (
-        <div className={cn("grid gap-2", hideControls && "pointer-events-none opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:opacity-100")}>
+        <div className={cn("grid gap-2", hideControls && "pointer-events-none absolute inset-x-0 bottom-0 opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100")}>
           <div className="flex min-w-0 items-center gap-3">
             <SeekBar
               time={time}
