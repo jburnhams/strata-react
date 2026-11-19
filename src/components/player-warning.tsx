@@ -31,6 +31,7 @@ export function usePlayerWarnings() {
 
 export function PlayerWarningToast({ warning }: { warning: PlayerWarning }) {
   const [phase, setPhase] = React.useState<"visible" | "leaving" | "gone">("visible");
+  const titleId = React.useId();
   const delay = toastTimeout(warning);
   const dismiss = () => setPhase("leaving");
   React.useEffect(() => {
@@ -49,6 +50,8 @@ export function PlayerWarningToast({ warning }: { warning: PlayerWarning }) {
   return (
     <div
       className={cn("player-warning pointer-events-auto flex w-full max-w-sm items-start gap-3 p-3", overlaySurface)}
+      role="group"
+      aria-labelledby={titleId}
       data-leaving={phase === "leaving" || undefined}
       inert={phase === "leaving"}
       onAnimationEnd={(event) => {
@@ -57,7 +60,7 @@ export function PlayerWarningToast({ warning }: { warning: PlayerWarning }) {
     >
       <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
       <div role="status" className="grid min-w-0 flex-1 gap-0.5">
-        <strong className="type-label">{warning.title}</strong>
+        <strong id={titleId} className="type-label">{warning.title}</strong>
         {warning.description && <span className="type-body-sm text-muted-foreground">{warning.description}</span>}
       </div>
       {warning.action && (
