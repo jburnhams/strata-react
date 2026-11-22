@@ -154,6 +154,11 @@
   letter-spacing: -0.02em;
 }
 
+/* A picture drawn as type: the emoji or numeral on a `ChoiceGrid` tile, or the one a question shows above
+   it. Above the 28px ceiling because it is recognised, not read, by a child at arm's length; the leading
+   is loose because a colour emoji's glyph is taller than the face's em and would run into the word under it. */
+@utility type-picture { font-size: var(--type-picture-size, clamp(2.5rem, 1.75rem + 4vw, 4.5rem)); line-height: var(--type-picture-leading, 1.25); }
+
 /* State transitions: named properties only (never `transition: all`). `scale` is listed for the
    press feedback and runs at the shorter press duration. */
 @utility transition-state {
