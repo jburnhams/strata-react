@@ -85,6 +85,18 @@ describe("progress (#272)", () => {
   });
 });
 
+describe("progress across files", () => {
+  it("reports the file just left to the callback that was counting it", async () => {
+    const calls: [string, MediaProgress][] = [];
+    const sources = [{ src: "/1.mp4", title: "One" }, { src: "/2.mp4", title: "Two" }];
+    const Player = ({ id, index }: { id: string; index: number }) => <MediaPlayer label="Ep" kind="video" sources={sources} index={index} controls="strata" onProgress={(r) => calls.push([id, r])} />;
+    const { el, rerender } = await play(<Player id="A" index={0} />);
+    run(el, 0, 6);
+    rerender(<Player id="B" index={1} />);
+    expect(calls.at(-1)?.[0]).toBe("A");
+  });
+});
+
 describe("start (#271)", () => {
   it("seeks a plain src once the metadata is in, and says so with Start over", async () => {
     const user = userEvent.setup();

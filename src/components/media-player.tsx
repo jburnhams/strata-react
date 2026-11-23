@@ -291,15 +291,16 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
 
   // How much was seen (issue #272). Counted from the element's own events: a second counts when `timeupdate` shows the
   // playhead moved forward a little while playing; a seek (`seeking`) breaks the run, so a jump counts nothing.
-  const seen = React.useRef({ ranges: createWatchedRanges(), last: null as number | null, since: 0, position: 0, duration: null as number | null, reported: "", key: null as string | null });
+  const seen = React.useRef({ ranges: createWatchedRanges(), last: null as number | null, since: 0, position: 0, duration: null as number | null, reported: "", key: null as string | null, call: undefined as MediaElementOptions["onProgress"] });
   const report = React.useCallback(() => {
     const w = seen.current;
     const total = w.ranges.total();
     const signature = `${w.position}:${total}`;
-    if (!opts.current.onProgress || signature === w.reported || (total === 0 && w.position === 0)) return;
+    // The callback of the file being counted, not the newest: a report for the file just left goes to its owner (the app's callback may close over which recording it is).
+    if (!w.call || signature === w.reported || (total === 0 && w.position === 0)) return;
     w.reported = signature;
     w.since = 0;
-    opts.current.onProgress({ position: w.position, watched: total, duration: w.duration });
+    w.call({ position: w.position, watched: total, duration: w.duration });
   }, []);
   useElementListeners(ref, (el) => {
     const w = seen.current;
@@ -347,6 +348,7 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
       w.reported = "";
     }
     w.key = key;
+    w.call = opts.current.onProgress;
   });
   // Leaving the page: hidden (a phone's tab switch may be the last chance), the page going away, and this player unmounting.
   React.useEffect(() => {
