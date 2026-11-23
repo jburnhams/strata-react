@@ -16,7 +16,7 @@ import type { SpanTone } from "./line-chart";
 //   if playback goes back into it, and a muted one unmutes when playback leaves it.
 //
 // Deliberate choices, each from the rules this library already keeps:
-// - Colour is a status role per kind (`tone`), never a colour the library picks, and never the only
+// - Colour is a status role per kind (`tone`), or a custom property of the app's theme (`colour`, issue #270, for kinds with colours of their own), never a colour the library picks, and never the only
 //   carrier: the span is a named image with its times, and the Skip button names the kind in words.
 // - One verb through every state, in the product's words (`words`): "Skip intro", "Skipped intro",
 //   "Undo". A reversible action is done at once and offered back (ux-research patterns, undo over
@@ -42,6 +42,8 @@ export type SpanKind = {
   behaviour?: SpanBehaviour;
   /** Default "info". */
   tone?: SpanTone;
+  /** A colour of the app's theme for this kind, by its custom property (`"--seg-sponsor"`): for kinds whose colours the app's people already know, and more than five of them. Wins over `tone`. The name stays the carrier of meaning; the library never picks a colour. */
+  colour?: string;
 };
 
 /** A stretch of the recording, in seconds on the player's timeline, of one of the `spanKinds`. */
@@ -127,7 +129,7 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
     return out.sort((a, b) => a.start - b.start);
   }, [spans, kinds, duration]);
 
-  const bars = React.useMemo<SeekBarSpan[]>(() => list.map((s) => ({ start: s.start, end: s.end, label: s.def.label, tone: s.def.tone })), [list]);
+  const bars = React.useMemo<SeekBarSpan[]>(() => list.map((s) => ({ start: s.start, end: s.end, label: s.def.label, tone: s.def.tone, kind: s.kind, colour: s.def.colour })), [list]);
 
   // What has been acted on, what is being played through, and the volume a mute took away.
   const acted = React.useRef(new Set<string>());
@@ -229,9 +231,25 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
   return { bars, offer, notice: notice ? { text: notice.text, undoLabel: w.undo, undo: notice.undo } : null };
 }
 
+/** A short notice drawn over a picture (or under an audio player) with one way back: "Skipped intro, Undo", "Picked up at 2:05, Start over". The player's own notices use it, so an overlay of an app's own matches them without copying classes. */
+export function PlayerNotice({ children, action, onAction }: { children: React.ReactNode; action: string; onAction: () => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-overlay border border-border bg-background px-3 py-1 type-body-sm text-foreground shadow-overlay">
+      <span>{children}</span>
+      <Button variant="ghost" size="sm" onClick={onAction}>
+        {action}
+      </Button>
+    </div>
+  );
+}
+
+/** What `SpanActions` can also show in its notice place: a notice that is not about a span (the player's "Picked up at 2:05, Start over"). A span's own notice wins while it shows. */
+export type SpanActionsNotice = { text: string; actionLabel: string; run: () => void };
+
 /** The Skip button and the "Skipped intro, Undo" notice, for the player to draw over a picture or under the bar. The notice's live region is always present, so a screen reader hears what is put in it. */
-export function SpanActions({ state, className }: { state: MediaSpansState; className?: string }) {
+export function SpanActions({ state, other, className }: { state: MediaSpansState; other?: SpanActionsNotice | null; className?: string }) {
   const { offer, notice } = state;
+  const shown = notice ? { text: notice.text, actionLabel: notice.undoLabel, run: notice.undo } : (other ?? null);
   return (
     <div className={className}>
       {offer && (
@@ -240,14 +258,11 @@ export function SpanActions({ state, className }: { state: MediaSpansState; clas
           <span aria-hidden> ›</span>
         </Button>
       )}
-      <div role="status" className={notice ? "flex items-center gap-2 rounded-overlay border border-border bg-background px-3 py-1 type-body-sm text-foreground shadow-overlay" : undefined}>
-        {notice && (
-          <>
-            <span>{notice.text}</span>
-            <Button variant="ghost" size="sm" onClick={notice.undo}>
-              {notice.undoLabel}
-            </Button>
-          </>
+      <div role="status">
+        {shown && (
+          <PlayerNotice action={shown.actionLabel} onAction={shown.run}>
+            {shown.text}
+          </PlayerNotice>
         )}
       </div>
     </div>

@@ -7,12 +7,15 @@ import { PlayerWarningToast, type PlayerWarningEvent } from "./player-warning";
 import { Button, IconButton } from "./button";
 import { FullscreenFrame, canFullscreen } from "./fullscreen-frame";
 import { useHotkeys, type Shortcut } from "./hotkeys";
-import { RateChoice, SeekBar, TimeReadout, Transport, VolumeControl } from "./media";
+import { RateChoice, SeekBar, SpanStrip, TimeReadout, Transport, VolumeControl } from "./media";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
 import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 import { isDev } from "../lib/dev";
+import { createWatchedRanges, type MediaProgress } from "./media-progress";
+
+export type { MediaProgress };
 
 // Playing a file without writing the glue (strata-react issue #134, from strata-listory, whose two
 // players stayed `<audio controls>` because the parts of #78 take state in and requests out, and
@@ -43,6 +46,14 @@ import { isDev } from "../lib/dev";
 // Checked: React Aria has no media element hook (its `VisuallyHidden`, `useSlider` and toolbar are
 // what the parts are built on), so the hook is ours. Volume is 0 to 100 and 0 is muted, the way
 // `VolumeControl` has it; unmuting restores the element's own level.
+
+/** The words of the "Picked up at" notice. */
+export type ResumeWords = {
+  /** Default `Picked up at 2:05`. Takes the time already formatted. */
+  pickedUp?: (time: string) => string;
+  /** Default "Start over". */
+  startOver?: string;
+};
 
 /** Why a player is not playing, for the app to word. */
 export type MediaProblem = { kind: "load"; message: string } | { kind: "blocked"; message: string };
@@ -84,6 +95,8 @@ export type MediaElementState = {
   setRate: (rate: number) => void;
   /** Loads again, and plays if it was playing. For the error state's "Try again". */
   retry: () => void;
+  /** Counts a stretch (seconds in the file) as watched without it being played, for one the app skipped on purpose. See `onProgress`. */
+  markWatched: (start: number, end: number) => void;
 };
 
 /** A stretch of a file, in seconds. */
@@ -105,9 +118,18 @@ export type MediaElementOptions = {
   growing?: boolean;
   /** Loads again from `time`, for a source the element cannot reload itself (a stream engine). Replaces the element's `load()` in `retry`. */
   onRetry?: (time: number) => void;
+  /**
+   * How much has been seen (strata-react issue #272): called every `progressEvery` seconds of playing, and on pause, on the end, when the page is hidden, when it is left and when the player unmounts or changes file.
+   * `watched` counts each second once, when the playhead passes it by playing; a seek or skip counts nothing and going back over a part adds nothing. A report is not repeated while nothing has changed.
+   */
+  onProgress?: (report: MediaProgress) => void;
+  /** Seconds of playing between reports. Default 15. */
+  progressEvery?: number;
+  /** Names what is being played, so the count starts again when it changes. Default the element's `src` attribute; give it for a stream attached by an engine. */
+  progressKey?: string;
 };
 
-type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry" | "playWindow" | "window" | "reportProblem">;
+type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry" | "playWindow" | "window" | "reportProblem" | "markWatched">;
 
 /** How far one notch of the wheel over a focused video moves the volume, in percent. */
 const WHEEL_VOLUME_STEP = 5;
@@ -267,6 +289,79 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
     };
   });
 
+  // How much was seen (issue #272). Counted from the element's own events: a second counts when `timeupdate` shows the
+  // playhead moved forward a little while playing; a seek (`seeking`) breaks the run, so a jump counts nothing.
+  const seen = React.useRef({ ranges: createWatchedRanges(), last: null as number | null, since: 0, position: 0, duration: null as number | null, reported: "", key: null as string | null });
+  const report = React.useCallback(() => {
+    const w = seen.current;
+    const total = w.ranges.total();
+    const signature = `${w.position}:${total}`;
+    if (!opts.current.onProgress || signature === w.reported || (total === 0 && w.position === 0)) return;
+    w.reported = signature;
+    w.since = 0;
+    opts.current.onProgress({ position: w.position, watched: total, duration: w.duration });
+  }, []);
+  useElementListeners(ref, (el) => {
+    const w = seen.current;
+    // Forward and small: a timeupdate is about every 250 ms (about a second in a background tab), more at a faster rate.
+    const count = (to: number) => {
+      if (w.last !== null && to > w.last && to - w.last <= 2 * Math.max(1, el.playbackRate) + 0.5) {
+        w.ranges.add(w.last, to);
+        w.since += to - w.last;
+      }
+      w.last = to;
+    };
+    const on = (e: Event) => {
+      const now = Number.isFinite(el.currentTime) ? el.currentTime : 0;
+      w.position = now;
+      w.duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
+      if (e.type === "play" || e.type === "playing") w.last ??= now;
+      else if (e.type === "seeking") w.last = null;
+      else if (e.type === "seeked") w.last = el.paused ? null : now;
+      else if (e.type === "timeupdate") {
+        if (!el.paused && !el.ended) count(now);
+        if (w.since >= (opts.current.progressEvery ?? 15)) report();
+      } else if (e.type === "pause" || e.type === "ended") {
+        if (e.type === "ended" && w.duration !== null) count(w.duration);
+        else count(now);
+        w.last = null;
+        report();
+      }
+    };
+    const types = ["play", "playing", "seeking", "seeked", "timeupdate", "pause", "ended"];
+    for (const t of types) el.addEventListener(t, on);
+    return () => {
+      for (const t of types) el.removeEventListener(t, on);
+    };
+  });
+  // A different file starts a new count (the old one is reported first); the same file reloaded (Try again) keeps it.
+  React.useEffect(() => {
+    const w = seen.current;
+    const key = opts.current.progressKey ?? ref.current?.getAttribute("src") ?? "";
+    if (w.key !== null && w.key !== key) {
+      report();
+      w.ranges.clear();
+      w.last = null;
+      w.since = 0;
+      w.position = 0;
+      w.reported = "";
+    }
+    w.key = key;
+  });
+  // Leaving the page: hidden (a phone's tab switch may be the last chance), the page going away, and this player unmounting.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const hidden = () => document.visibilityState === "hidden" && report();
+    const leave = () => report();
+    document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("pagehide", leave);
+    return () => {
+      document.removeEventListener("visibilitychange", hidden);
+      window.removeEventListener("pagehide", leave);
+      report();
+    };
+  }, [report]);
+
   // Group: while joined, a `play` here pauses the others. Re-joins if the ref later holds another element.
   const joined = React.useRef<{ el: HTMLMediaElement; name: string; leave: () => void } | null>(null);
   React.useEffect(() => {
@@ -377,6 +472,11 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
         // Speech at 0.75 or 2.5 times is only listenable at its own pitch.
         el.preservesPitch = true;
       },
+      markWatched: (start, end) => {
+        const w = seen.current;
+        const top = w.duration ?? end;
+        w.ranges.add(Math.max(start, 0), Math.min(end, top));
+      },
       retry: () => {
         const el = ref.current;
         if (!el) return;
@@ -429,12 +529,14 @@ export type SourceAttacher = (el: HTMLMediaElement, src: string, context: Stream
  * Use it for a plain `<video>` the app owns, with `useMediaElement`; `MediaPlayer` does it for `attach`.
  * Returns `reload`, for the player's Try again (`useMediaElement`'s `onRetry`), and gives the engine's failures to `onProblem` (`reportProblem`).
  */
-export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void, growing?: boolean): { reload: (at: number) => void } {
+export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void, growing?: boolean, start?: number): { reload: (at: number) => void } {
   const hold = React.useRef<{ el: HTMLMediaElement; src: string; attach: SourceAttacher; attachment: StreamAttachment } | null>(null);
   const problem = React.useRef(onProblem);
   problem.current = onProblem;
   const grows = React.useRef(growing);
   grows.current = growing;
+  // Where the first load begins (issue #271); later sources start at their own beginning.
+  const first = React.useRef(start);
   // Runs after every commit, not only when `src` or `attach` change: a `MediaPlayer` that switches
   // between audio and video replaces the element and keeps the ref object, so the element's identity
   // is checked too, and the engine is moved to the new one.
@@ -445,7 +547,9 @@ export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>,
     now?.attachment.detach();
     hold.current = null;
     if (!el || !attach || !src) return;
-    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: 0, onProblem: (m) => problem.current?.(m), growing: grows.current }) };
+    const begin = first.current;
+    first.current = 0;
+    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: begin ?? 0, onProblem: (m) => problem.current?.(m), growing: grows.current }) };
   });
   React.useEffect(() => () => {
     hold.current?.attachment.detach();
@@ -516,6 +620,14 @@ export type MediaPlayerProps = {
   onSpan?: (span: MediaSpanData, what: SpanOutcome) => void;
   /** The Skip button's and the notice's words, in the product's language. */
   spanWords?: SpanWords;
+  /** Where a first load begins, seconds (strata-react issue #271: "Continue watching"). For an `attach`ed stream it is the attacher's `startAt`; for a plain `src`, a seek once the metadata is in. A reload (Try again) keeps the time reached. While it is more than 0 the player says "Picked up at 2:05" over the picture, with Start over, until the person starts over, plays for a few seconds, or it is dismissed by seeking. */
+  start?: number;
+  /** The words of that notice, in the product's language. */
+  resumeWords?: ResumeWords;
+  /** How much has been seen: every `progressEvery` seconds of playing, and on pause, on the end, when the page is hidden or left and when the player unmounts, with the position and the seconds played through (a span the player skipped counts as watched). `index` is the source in a `sources` sequence, and the times are those of that file (strata-react issue #272). */
+  onProgress?: (report: MediaProgress & { index: number }) => void;
+  /** Seconds of playing between progress reports. Default 15. */
+  progressEvery?: number;
   /** The player's state and requests (`seek`, `setVolume`, `time`, `duration`…), for an app that acts on playback from beside it: a chapter list, comments at a time (strata-react issue #211). An object ref holds the latest state without rendering again; a function ref is called with it on every render. */
   mediaRef?: React.Ref<MediaElementState>;
   /** Drawn over the picture only (never the controls) in a box that fills it; the app's classes choose the corner (`absolute bottom-3 right-3`). Anything interactive in it is clickable and focusable. A video's box keeps its shape before the metadata loads, so the overlay has a stable place. */
@@ -579,6 +691,9 @@ export const SPEECH_RATES: readonly number[] = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5
 
 const JUMP = 10;
 
+/** How long a notice such as "Picked up at 2:05" stays once the player is playing. */
+const NOTICE_MS = 6000;
+
 function useCoarsePointer() {
   const [coarse, setCoarse] = React.useState(false);
   React.useEffect(() => {
@@ -625,6 +740,10 @@ export function MediaPlayer({
   spanKinds,
   onSpan,
   spanWords,
+  start,
+  resumeWords,
+  onProgress,
+  progressEvery,
   mediaRef,
   overlay,
   status,
@@ -639,8 +758,12 @@ export function MediaPlayer({
   const current = list[index];
   const ref = React.useRef<HTMLMediaElement>(null);
   const stream = React.useRef<{ reload: (at: number) => void }>({ reload: () => {} });
-  const media = useMediaElement(ref, { window: bound, loop, group, onTimeUpdate, onWindowEnd, growing: growing !== undefined, onRetry: attach ? (t) => stream.current.reload(t) : undefined });
-  stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem, growing !== undefined);
+  const sourceIndex = React.useRef(index);
+  const progress = React.useCallback((r: MediaProgress) => onProgress?.({ ...r, index: sourceIndex.current }), [onProgress]);
+  const media = useMediaElement(ref, { window: bound, loop, group, onTimeUpdate, onWindowEnd, growing: growing !== undefined, onRetry: attach ? (t) => stream.current.reload(t) : undefined, onProgress: onProgress ? progress : undefined, progressEvery, progressKey: current?.src });
+  // After the hook's own effects, so a report made because the file changed still names the file it is about.
+  React.useEffect(() => void (sourceIndex.current = index), [index]);
+  stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem, growing !== undefined, start);
   const coarse = useCoarsePointer();
   const native = controls === "native" || (controls === "auto" && coarse);
 
@@ -726,7 +849,34 @@ export function MediaPlayer({
     go(to);
   };
 
-  const spanState = useMediaSpans({ spans, kinds: spanKinds, words: spanWords, onSpan, time, playing: media.playing, duration: growing ? null : duration, limit: growing ? media.ready : undefined, seek, volume: media.volume, setVolume: media.setVolume });
+  // Where the element's own time is, from the player's: a skipped span is in the player's timeline (a sequence, a window), what is counted is the file's.
+  const toFile = (t: number) => (cut ? t + cut.start : offsets ? t - offsets[index] : t);
+  const spanSeen = (span: MediaSpanData, what: SpanOutcome) => {
+    // Skipped on purpose counts as seen (issue #272); a muted span was played, so the element's own count has it.
+    if (what === "skipped" && (span.action ?? "skip") === "skip") media.markWatched(toFile(span.start), toFile(span.end));
+    onSpan?.(span, what);
+  };
+
+  // Picking up where the last play stopped (issue #271). A plain `src` seeks to it once the metadata is in (the seek is held until then); a stream engine is given it as `startAt`.
+  const [picked, setPicked] = React.useState(() => (start ?? 0) > 0);
+  const pickedAt = React.useRef(start ?? 0);
+  React.useEffect(() => {
+    if (pickedAt.current > 0 && !attach) media.seek(pickedAt.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // The notice stays until it is answered, then a few seconds once playing; moving on to another source dismisses it.
+  React.useEffect(() => {
+    if (!picked || !media.playing) return;
+    const t = setTimeout(() => setPicked(false), NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [picked, media.playing]);
+  React.useEffect(() => {
+    if (index > 0) setPicked(false);
+  }, [index]);
+  const say = { pickedUp: (t: string) => `Picked up at ${t}`, startOver: "Start over", ...resumeWords };
+  const resumeNotice = picked ? { text: say.pickedUp(format.runningTime(pickedAt.current)), actionLabel: say.startOver, run: () => { setPicked(false); seek(0); } } : null;
+
+  const spanState = useMediaSpans({ spans, kinds: spanKinds, words: spanWords, onSpan: spanSeen, time, playing: media.playing, duration: growing ? null : duration, limit: growing ? media.ready : undefined, seek, volume: media.volume, setVolume: media.setVolume });
   const offer = spanState.offer;
 
   // The app's hold on the state: an object ref keeps the latest (no render of its own), a function ref hears every render.
@@ -857,6 +1007,7 @@ export function MediaPlayer({
 
   const common = { ref: ref as React.Ref<never>, src: attach ? undefined : current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
   const hasSpans = (spans?.length ?? 0) > 0;
+  const showActions = hasSpans || picked;
   // The picture sits in a box of its own shape (the app's `aspect`, else the video's, else 16:9 until it says), so the page does not jump
   // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
   const element =
@@ -870,10 +1021,10 @@ export function MediaPlayer({
           onDoubleClick={canFull ? () => setFull((f) => !f) : undefined}
           className="absolute inset-0 size-full object-contain"
         />
-        {(overlay || hasSpans) && (
+        {(overlay || showActions) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {overlay?.(media)}
-            {hasSpans && <SpanActions state={spanState} className={cn("absolute right-3 flex flex-col items-end gap-2", native ? "bottom-14" : "bottom-3")} />}
+            {showActions && <SpanActions state={spanState} other={resumeNotice} className={cn("absolute right-3 flex flex-col items-end gap-2", native ? "bottom-14" : "bottom-3")} />}
           </div>
         )}
       </div>
@@ -891,8 +1042,9 @@ export function MediaPlayer({
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
     <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
+      {native && hasSpans && <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />}
       {warningToast}
-      {kind === "audio" && hasSpans && <SpanActions state={spanState} className="flex flex-wrap items-center gap-2" />}
+      {kind === "audio" && showActions && <SpanActions state={spanState} other={resumeNotice} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
       {media.error?.kind === "load" && (
         <Alert

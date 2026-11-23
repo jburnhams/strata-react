@@ -149,6 +149,12 @@ export interface VisualConfig {
    */
   systemFonts?: "error" | "warn" | "allow";
   /**
+   * Before a whole-page shot (a route's) of a page taller than the window, show it to the page in a window as tall as itself and wait for the
+   * pictures that start loading, then go back to the window's size, so a `Thumbnail` or any other lazy picture below the fold is in the
+   * baseline, not drawn as its loading box (issue #273). Default `true`; `false` takes the page as it loads.
+   */
+  scrollThrough?: boolean;
+  /**
    * How a screenshot is compared with its baseline. The defaults (a 3×3 blur, then pixelmatch at
    * threshold 0.1 with 4 differing pixels allowed) absorb anti-aliasing differences between
    * machines and still fail on a changed letter; change them only with evidence from your own
