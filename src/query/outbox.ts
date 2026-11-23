@@ -16,6 +16,10 @@ import { fetchJson } from "./index";
 // - Every write through an outbox must be idempotent on the server (a client-made id it dedupes
 //   on): a write whose answer was lost is sent again, and two tabs may both send the head of the
 //   queue (where `navigator.locks` exists one tab sends at a time; elsewhere idempotency is the guard).
+// - Every change to the stored queue (add, a write sent or refused, dismiss) is a read and a write under a second Web
+//   Lock, `strata:outbox:<name>:write`, held only for that moment: two tabs reading the same queue and each writing
+//   it back would lose one tab's write before it was ever sent, which idempotency cannot recover (Codex on #308).
+//   Without `navigator.locks` (very old browsers) the change is still one synchronous read and write.
 // - Two kinds of failure. Refused: the server answered 4xx and will answer the same again, so the
 //   write leaves the queue and is listed with the server's reason until dismissed; never retried,
 //   never silently dropped. Waiting: no answer, a 5xx, 408, 425, 429, or a 401/403 from a login in
@@ -145,7 +149,10 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
   let wait = retryMs;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running: Promise<void> | null = null;
-  const firstTry = new Map<string, (d: Delivery) => void>();
+  // Every caller waiting on a write's first try (the same id can be added twice), and ids whose add is still waiting for
+  // the write lock: a pass that finds the queue empty must not take those for sent by another tab.
+  const firstTry = new Map<string, ((d: Delivery) => void)[]>();
+  const adding = new Set<string>();
   const listeners = new Set<() => void>();
   let snap: OutboxSnapshot | null = null;
 
@@ -175,8 +182,19 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
     for (const l of listeners) l();
   };
   const settle = (id: string, d: Delivery) => {
-    firstTry.get(id)?.(d);
+    for (const resolve of firstTry.get(id) ?? []) resolve(d);
     firstTry.delete(id);
+  };
+  const lockManager = () => (navigator as Navigator & { locks?: LockManager }).locks; // a browser's, and Node's from 22
+  // One change to the stored queue, read and written under the write lock, so no other tab's change falls between.
+  const mutate = (change: (kept: Kept) => Kept): Promise<void> => {
+    const apply = () => write(change(read()));
+    const locks = persisted ? lockManager() : undefined; // in memory, no other tab shares it
+    if (!locks) {
+      apply();
+      return Promise.resolve();
+    }
+    return locks.request(`${key}:write`, apply);
   };
 
   const refuse = (kept: Kept, item: OutboxItem, reason: string): Kept => ({
@@ -193,7 +211,9 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
         const item = kept.items[0];
         if (!item) {
           // Writes this tab queued that another tab sent or refused first (it held the lock): their first try is over.
-          for (const id of [...firstTry.keys()]) settle(id, kept.refused.some((r) => r.id === id) ? "refused" : "sent");
+          for (const id of [...firstTry.keys()]) {
+            if (!adding.has(id)) settle(id, kept.refused.some((r) => r.id === id) ? "refused" : "sent");
+          }
           problem = null;
           retryAt = null;
           wait = retryMs;
@@ -201,14 +221,13 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
         }
         const parent = item.after ? kept.refused.find((r) => r.id === item.after) : undefined;
         if (parent) {
-          write(refuse(kept, item, `Not sent, as what it follows was refused: ${parent.reason}`));
+          await mutate((k) => refuse(k, item, `Not sent, as what it follows was refused: ${parent.reason}`));
           settle(item.id, "refused");
           continue;
         }
         try {
           await post(item);
-          const now = read();
-          write({ ...now, items: now.items.filter((x) => x.id !== item.id) });
+          await mutate((k) => ({ ...k, items: k.items.filter((x) => x.id !== item.id) }));
           settle(item.id, "sent");
         } catch (error) {
           if (!isRefusal(error)) {
@@ -220,7 +239,8 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
             for (const x of read().items) settle(x.id, "waiting");
             return;
           }
-          write(refuse(read(), item, error.reason ?? `${error.status} ${error.statusText}`));
+          const reason = error.reason ?? `${error.status} ${error.statusText}`;
+          await mutate((k) => refuse(k, item, reason));
           settle(item.id, "refused");
         }
       }
@@ -235,7 +255,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
   const flush = (): Promise<void> => {
     if (running) return running.then(flush);
     clearTimeout(timer);
-    const { locks } = navigator as Navigator & { locks?: LockManager }; // a browser's, and Node's from 22 (SSR never flushes)
+    const locks = lockManager(); // SSR never flushes
     const run = locks ? locks.request(key, pass) : pass();
     running = run.finally(() => {
       running = null;
@@ -245,13 +265,16 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
 
   return {
     add({ id = randomId(), ...request }) {
-      const kept = read();
-      if (!kept.items.some((x) => x.id === id)) write({ ...kept, items: [...kept.items, { ...request, id, queuedAt: new Date().toISOString() }] });
-      const delivered = new Promise<Delivery>((resolve) => firstTry.set(id, resolve));
-      // A pass under way picks the new write up; one that already ended on a failure does not, so it waits for the retry
-      // unless no pass is running, when this starts one.
-      if (running) void running.then(() => (firstTry.has(id) ? flush() : undefined));
-      else void flush();
+      const delivered = new Promise<Delivery>((resolve) => firstTry.set(id, [...(firstTry.get(id) ?? []), resolve]));
+      const item: OutboxItem = { ...request, id, queuedAt: new Date().toISOString() };
+      adding.add(id);
+      void mutate((k) => (k.items.some((x) => x.id === id) ? k : { ...k, items: [...k.items, item] })).then(() => {
+        adding.delete(id);
+        // A pass under way picks the new write up; one that already ended on a failure does not, so it waits for the
+        // retry unless no pass is running, when this starts one.
+        if (running) void running.then(() => (firstTry.has(id) ? flush() : undefined));
+        else void flush();
+      });
       return { id, delivered };
     },
     flush,
@@ -267,8 +290,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
       return () => listeners.delete(listener);
     },
     dismiss(id) {
-      const kept = read();
-      write({ ...kept, refused: id === undefined ? [] : kept.refused.filter((r) => r.id !== id) });
+      void mutate((k) => ({ ...k, refused: id === undefined ? [] : k.refused.filter((r) => r.id !== id) }));
     },
     start() {
       // Called from an effect, so in a browser: `window` and `document` are there.

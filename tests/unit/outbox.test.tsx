@@ -223,20 +223,59 @@ describe("createOutbox, the edges", () => {
     expect(createOutbox({ name: "e5" }).snapshot()).toMatchObject({ waiting: 0, refused: [] });
   });
 
-  it("sends under the browser's lock where it has one, so one tab sends at a time", async () => {
+  it("sends under the browser's lock, and changes the stored queue only under its write lock", async () => {
     const seen = serve();
     const names: string[] = [];
     Object.defineProperty(navigator, "locks", {
       configurable: true,
-      value: { request: (name: string, run: () => Promise<void>) => (names.push(name), run()) },
+      value: { request: (name: string, run: () => unknown) => (names.push(name), Promise.resolve(run())) },
     });
     try {
       expect(await createOutbox({ name: "e6" }).add(answer("a")).delivered).toBe("sent");
     } finally {
       Reflect.deleteProperty(navigator, "locks");
     }
-    expect(names).toEqual(["strata:outbox:e6"]);
+    // Added under the write lock, sent under the send lock, taken out under the write lock again.
+    expect(names).toEqual(["strata:outbox:e6:write", "strata:outbox:e6", "strata:outbox:e6:write"]);
     expect(seen.map((x) => x.id)).toEqual(["a"]);
+  });
+
+  it("does not take a write still waiting for the write lock for one another tab sent", async () => {
+    const seen = serve();
+    const held: (() => void)[] = [];
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: {
+        // Another tab holds the write lock until released; the send lock is free.
+        request: (name: string, run: () => unknown) =>
+          name.endsWith(":write") ? new Promise((resolve) => held.push(() => resolve(run()))) : Promise.resolve(run()),
+      },
+    });
+    try {
+      const box = createOutbox({ name: "e9" });
+      const a = box.add(answer("a"));
+      await box.flush(); // finds the queue empty: a is not in it yet
+      held.splice(0).forEach((go) => go());
+      await vi.waitFor(() => expect(held.length).toBeGreaterThan(0)); // sent, and now waiting to come out
+      held.splice(0).forEach((go) => go());
+      expect(await a.delivered).toBe("sent");
+    } finally {
+      Reflect.deleteProperty(navigator, "locks");
+    }
+    expect(seen.map((x) => x.id)).toEqual(["a"]);
+  });
+
+  it("answers every caller that added the same write", async () => {
+    let up = false;
+    serve(() => (up ? HttpResponse.json({ ok: true }) : HttpResponse.error()));
+    const box = createOutbox({ name: "e10", retryMs: 60_000 });
+    const first = box.add(answer("a"));
+    const second = box.add(answer("a"));
+    expect(await Promise.all([first.delivered, second.delivered])).toEqual(["waiting", "waiting"]);
+    up = true;
+    const third = box.add(answer("a"));
+    const fourth = box.add(answer("a"));
+    expect(await Promise.all([third.delivered, fourth.delivered])).toEqual(["sent", "sent"]);
   });
 
   it("sends when the page is shown again, not while it is hidden", async () => {
