@@ -177,6 +177,43 @@ describe("useRecorder", () => {
   });
 });
 
+describe("useRecorder at the edges", () => {
+  it("cuts the last chunk at the limit, so a take is never longer than maxSeconds", async () => {
+    let send: ((c: Float32Array) => void) | undefined;
+    const microphone: Microphone = {
+      open(onSamples) {
+        send = onSamples;
+        return Promise.resolve({ sampleRate: 1000, device: null, close: () => {} });
+      },
+    };
+    const user = userEvent.setup();
+    renderWithStrata(<Booth maxSeconds={1} microphone={microphone} />);
+    await user.click(screen.getByRole("button", { name: "Record" }));
+    await screen.findByRole("button", { name: "Stop" });
+    act(() => send?.(new Float32Array(600).fill(0.1)));
+    act(() => send?.(new Float32Array(600).fill(0.1)));
+    const [, samples, bytes] = (await screen.findByRole("status", { hidden: true })).textContent!.split(" ");
+    expect([samples, bytes]).toEqual(["1000", String(44 + 2000)]);
+  });
+
+  it("closes a microphone that finishes opening after the screen has gone", async () => {
+    let finish: (() => void) | undefined;
+    let closed = 0;
+    const microphone: Microphone = {
+      open: () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ sampleRate: 1000, device: null, close: () => closed++ });
+        }),
+    };
+    const user = userEvent.setup();
+    const { unmount } = renderWithStrata(<Booth microphone={microphone} />);
+    await user.click(screen.getByRole("button", { name: "Record" }));
+    unmount();
+    await act(async () => finish?.());
+    expect(closed).toBe(1);
+  });
+});
+
 describe("level views", () => {
   it("draws a live level past -3 dBFS as too loud, and clamps beyond the scale", () => {
     renderWithStrata(

@@ -78,6 +78,9 @@ export function useRecorder({ maxSeconds, microphone }: UseRecorderOptions): Rec
   const resolveStop = React.useRef<((r: Recording | null) => void) | null>(null);
   const limit = React.useRef(maxSeconds);
   limit.current = maxSeconds;
+  // False once the screen has gone: a microphone that finishes opening after that (the permission prompt was
+  // still up) is closed at once rather than left recording for nobody.
+  const mounted = React.useRef(true);
 
   const stop = React.useCallback(() => {
     const s = stream.current;
@@ -107,33 +110,44 @@ export function useRecorder({ maxSeconds, microphone }: UseRecorderOptions): Rec
     const done = new Promise<Recording | null>((resolve) => {
       resolveStop.current = resolve;
     });
+    let opened: MicrophoneStream;
     try {
-      stream.current = await device.open((chunk) => {
+      opened = await device.open((chunk) => {
         const s = stream.current;
         if (!s) return; // a chunk posted after close
-        chunks.current.push(chunk);
-        frames += chunk.length;
-        recent = [...recent.slice(1 - RECENT_CHUNKS), peakDb(chunk)];
-        const seconds = frames / s.sampleRate;
-        setState({ phase: "recording", seconds, level: Math.max(...recent) });
-        if (seconds >= limit.current) stop();
+        // The last chunk is cut at the limit, so a take is never longer than `maxSeconds` (2048-frame chunks
+        // would otherwise overrun a one-second limit by 24 ms at 48 kHz, and the server refuses the take).
+        const room = Math.round(limit.current * s.sampleRate) - frames;
+        const kept = chunk.length > room ? chunk.subarray(0, Math.max(0, room)) : chunk;
+        chunks.current.push(kept);
+        frames += kept.length;
+        recent = [...recent.slice(1 - RECENT_CHUNKS), peakDb(kept)];
+        setState({ phase: "recording", seconds: frames / s.sampleRate, level: Math.max(...recent) });
+        if (kept.length < chunk.length || frames >= limit.current * s.sampleRate) stop();
       });
     } catch (e) {
       resolveStop.current = null;
       setState({ phase: "failed", reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).` });
       return null;
     }
+    if (!mounted.current) {
+      opened.close();
+      resolveStop.current = null;
+      return null;
+    }
+    stream.current = opened;
     setState((now) => (now.phase === "opening" ? { phase: "recording", seconds: 0, level: LEVEL_FLOOR_DB } : now));
     return done;
   }, [device, stop]);
 
-  React.useEffect(
-    () => () => {
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       stream.current?.close();
       stream.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   return { state, start, stop, recording: state.phase === "recording" || state.phase === "opening" };
 }

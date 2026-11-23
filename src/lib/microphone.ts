@@ -72,26 +72,31 @@ export const browserMicrophone: Microphone = {
     } catch (e) {
       throw explainMicrophoneError(e);
     }
-    const context = new AudioContext();
-    const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
-    try {
-      await context.audioWorklet.addModule(url);
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-    const tap = new AudioWorkletNode(context, "strata-tap");
-    tap.port.onmessage = (event: MessageEvent<Float32Array>) => onSamples(event.data);
-    const mute = context.createGain();
-    mute.gain.value = 0;
-    context.createMediaStreamSource(media).connect(tap).connect(mute).connect(context.destination);
-    return {
-      sampleRate: context.sampleRate,
-      device: media.getAudioTracks()[0]?.label || null,
-      close: () => {
-        for (const t of media.getTracks()) t.stop();
-        void context.close();
-      },
+    let context: AudioContext | undefined;
+    const close = () => {
+      for (const t of media.getTracks()) t.stop();
+      void context?.close();
     };
+    // Once the device is open, any failure building the graph closes it again: the caller gets no stream to
+    // close, and the browser's recording light would otherwise stay on.
+    try {
+      context = new AudioContext();
+      const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
+      try {
+        await context.audioWorklet.addModule(url);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      const tap = new AudioWorkletNode(context, "strata-tap");
+      tap.port.onmessage = (event: MessageEvent<Float32Array>) => onSamples(event.data);
+      const mute = context.createGain();
+      mute.gain.value = 0;
+      context.createMediaStreamSource(media).connect(tap).connect(mute).connect(context.destination);
+      return { sampleRate: context.sampleRate, device: media.getAudioTracks()[0]?.label || null, close };
+    } catch (e) {
+      close();
+      throw explainMicrophoneError(e);
+    }
   },
 };
 
