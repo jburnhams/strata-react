@@ -94,14 +94,14 @@ export {
   type RowSelection,
   type RowExpansion,
 } from "./components/data-table";
-export { MediaPlayer, useMediaElement, useAttachedSource, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type StreamContext, type StreamAttachment, type SourceAttacher, type MediaProblem, type MediaSource, type MediaSession } from "./components/media-player";
-export { useMediaSpans, SpanActions, type MediaSpanData, type SpanKind, type SpanBehaviour, type SpanOutcome, type SpanWords, type MediaSpansState } from "./components/media-spans";
+export { MediaPlayer, useMediaElement, useAttachedSource, SPEECH_RATES, type MediaPlayerProps, type MediaElementState, type MediaElementOptions, type MediaWindow, type StreamContext, type StreamAttachment, type SourceAttacher, type MediaProblem, type MediaSource, type MediaSession, type MediaProgress, type ResumeWords } from "./components/media-player";
+export { useMediaSpans, SpanActions, PlayerNotice, type SpanActionsNotice, type MediaSpanData, type SpanKind, type SpanBehaviour, type SpanOutcome, type SpanWords, type MediaSpansState } from "./components/media-spans";
 export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from "./components/transcript-view";
 export { phraseAt, wordAt, wordId, phraseOfWordId, isDoubtful, phraseDoubtful, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState, type TranscriptWord } from "./lib/transcript";
 export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";
 export { resamplePeaks, toPeakPair, peaksFromAudio, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
 export { MediaGroup, PlayWindowButton, joinMediaGroup, type PlayWindowButtonProps } from "./components/media-group";
-export { Transport, TimeReadout, SeekBar, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type SeekBarSpan, type VolumeControlProps, type Precision } from "./components/media";
+export { Transport, TimeReadout, SeekBar, SpanStrip, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type SeekBarSpan, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
