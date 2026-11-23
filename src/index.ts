@@ -105,6 +105,7 @@ export { Transport, TimeReadout, SeekBar, SpanStrip, VolumeControl, RateChoice, 
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
+export { DragSource, type DragSourceProps, type DragData } from "./components/drag-source";
 export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./components/file-intake";
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
 export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
