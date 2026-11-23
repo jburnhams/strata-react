@@ -135,7 +135,7 @@ function randomId(): string {
 /** A queue of writes kept on the device (localStorage) and sent in order when the server can take them; see `useOutbox` and `OutboxStatus`. */
 export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs = 60000 }: OutboxOptions): Outbox {
   const key = `strata:outbox:${name}`;
-  const store = storage === undefined ? (typeof window === "undefined" ? null : defaultStorage()) : storage;
+  const store = storage === undefined ? defaultStorage() : storage; // no window (SSR) is no storage: the probe throws
   const post = send ?? ((item: OutboxItem) => fetchJson(withBase(item.path, appBase()), { method: item.method, json: item.json }));
   let memory: Kept = { items: [], refused: [] };
   let persisted = store !== null;
@@ -192,6 +192,8 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
         const kept = read();
         const item = kept.items[0];
         if (!item) {
+          // Writes this tab queued that another tab sent or refused first (it held the lock): their first try is over.
+          for (const id of [...firstTry.keys()]) settle(id, kept.refused.some((r) => r.id === id) ? "refused" : "sent");
           problem = null;
           retryAt = null;
           wait = retryMs;
@@ -233,7 +235,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
   const flush = (): Promise<void> => {
     if (running) return running.then(flush);
     clearTimeout(timer);
-    const locks = typeof navigator === "undefined" ? undefined : (navigator as Navigator & { locks?: LockManager }).locks;
+    const { locks } = navigator as Navigator & { locks?: LockManager }; // a browser's, and Node's from 22 (SSR never flushes)
     const run = locks ? locks.request(key, pass) : pass();
     running = run.finally(() => {
       running = null;
@@ -269,7 +271,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
       write({ ...kept, refused: id === undefined ? [] : kept.refused.filter((r) => r.id !== id) });
     },
     start() {
-      if (typeof window === "undefined") return () => {};
+      // Called from an effect, so in a browser: `window` and `document` are there.
       const now = () => {
         wait = retryMs; // the network says it is back: try now and from the first wait again
         void flush();
@@ -279,14 +281,8 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
       };
       const other = (e: StorageEvent) => {
         if (e.key !== key) return;
-        // Another tab sent or refused a write this one queued: its first try is over.
-        const kept = read();
-        for (const id of [...firstTry.keys()]) {
-          if (kept.items.some((x) => x.id === id)) continue;
-          settle(id, kept.refused.some((r) => r.id === id) ? "refused" : "sent");
-        }
         changed();
-        if (e.newValue && !running) void flush();
+        if (e.newValue) void flush(); // after any pass under way, which may have stopped before this write was there
       };
       window.addEventListener("online", now);
       document.addEventListener("visibilitychange", shown);

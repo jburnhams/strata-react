@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { createOutbox, format, OutboxStatus, type OutboxItem } from "../../src";
+import { createOutbox, format, OutboxStatus, useOutboxStarted, type OutboxItem } from "../../src";
 import { server } from "../utils/server";
 
 // The outbox sends through the real fetchJson to MSW, which plays the server: up, down, refusing.
@@ -135,20 +135,147 @@ describe("createOutbox", () => {
     expect(box.snapshot().waiting).toBe(1);
   });
 
-  it("settles a write another tab sent", async () => {
+  it("settles a write another tab sent or refused before this one got to it", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const sent: string[] = [];
+    // This tab is sending a; meanwhile another tab sends b and refuses c, and writes the queue back without them.
+    const box = createOutbox({
+      name: "t9",
+      send: async (item) => {
+        sent.push(item.id);
+        await held;
+      },
+    });
+    const a = box.add(answer("a"));
+    const b = box.add(answer("b"));
+    const c = box.add(answer("c"));
+    const kept = JSON.parse(window.localStorage.getItem("strata:outbox:t9") as string) as { items: OutboxItem[] };
+    const refused = [{ id: "c", reason: "No.", at: new Date().toISOString() }];
+    window.localStorage.setItem("strata:outbox:t9", JSON.stringify({ items: kept.items.filter((x) => x.id === "a"), refused }));
+    release();
+    expect(await Promise.all([a.delivered, b.delivered, c.delivered])).toEqual(["sent", "sent", "refused"]);
+    expect(sent).toEqual(["a"]);
+  });
+
+  it("starts and stops with the component that holds it", async () => {
+    const seen = serve();
+    const box = createOutbox({ name: "t10" });
+    window.localStorage.setItem("strata:outbox:t10", JSON.stringify({ items: [{ ...answer("a"), queuedAt: "2026-11-23T10:00:00Z" }], refused: [] }));
+    function Shell() {
+      useOutboxStarted(box);
+      return null;
+    }
+    const { unmount } = render(<Shell />);
+    await vi.waitFor(() => expect(seen.map((x) => x.id)).toEqual(["a"]));
+    unmount();
+  });
+});
+
+describe("createOutbox, the edges", () => {
+  it("names what stopped it: a server asking to wait, a 5xx with no reason, a refusal with no reason", async () => {
+    let reply = () => new HttpResponse(null, { status: 429, statusText: "Too Many Requests" });
+    serve(() => reply());
+    const box = createOutbox({ name: "e1", retryMs: 60_000 });
+    await box.add(answer("a")).delivered;
+    expect(box.snapshot().problem).toBe("The server asked to wait.");
+    reply = () => new HttpResponse(null, { status: 500, statusText: "Internal Server Error" });
+    await box.flush();
+    expect(box.snapshot().problem).toBe("The server had a problem.");
+    reply = () => new HttpResponse(null, { status: 404, statusText: "Not Found" });
+    await box.flush();
+    expect(box.snapshot().refused.map((r) => r.reason)).toEqual(["404 Not Found"]);
+  });
+
+  it("tries again on its own after the wait", async () => {
+    let up = false;
+    serve(() => (up ? HttpResponse.json({ ok: true }) : HttpResponse.error()));
+    const box = createOutbox({ name: "e2", retryMs: 5 });
+    await box.add(answer("a")).delivered;
+    up = true;
+    await vi.waitFor(() => expect(box.snapshot().waiting).toBe(0));
+  });
+
+  it("keeps writes in memory when the browser refuses storage, at the start or later", async () => {
     serve(() => HttpResponse.error());
-    const box = createOutbox({ name: "t9", retryMs: 60_000 });
+    const refuse = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    try {
+      expect(createOutbox({ name: "e3" }).snapshot().persisted).toBe(false);
+      refuse.mockRestore();
+      const box = createOutbox({ name: "e4", retryMs: 60_000 });
+      expect(box.snapshot().persisted).toBe(true);
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("full", "QuotaExceededError");
+      });
+      await box.add(answer("a")).delivered;
+      expect(box.snapshot()).toMatchObject({ waiting: 1, persisted: false });
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("reads storage it cannot parse as an empty queue", () => {
+    window.localStorage.setItem("strata:outbox:e5", "{not json");
+    expect(createOutbox({ name: "e5" }).snapshot().waiting).toBe(0);
+    window.localStorage.setItem("strata:outbox:e5", JSON.stringify({ items: "no" }));
+    expect(createOutbox({ name: "e5" }).snapshot()).toMatchObject({ waiting: 0, refused: [] });
+  });
+
+  it("sends under the browser's lock where it has one, so one tab sends at a time", async () => {
+    const seen = serve();
+    const names: string[] = [];
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request: (name: string, run: () => Promise<void>) => (names.push(name), run()) },
+    });
+    try {
+      expect(await createOutbox({ name: "e6" }).add(answer("a")).delivered).toBe("sent");
+    } finally {
+      Reflect.deleteProperty(navigator, "locks");
+    }
+    expect(names).toEqual(["strata:outbox:e6"]);
+    expect(seen.map((x) => x.id)).toEqual(["a"]);
+  });
+
+  it("sends when the page is shown again, not while it is hidden", async () => {
+    let up = false;
+    const seen = serve(() => (up ? HttpResponse.json({ ok: true }) : HttpResponse.error()));
+    const box = createOutbox({ name: "e7", retryMs: 60_000 });
     const stop = box.start();
     await box.add(answer("a")).delivered;
-    const again = box.add(answer("b"));
-    await again.delivered;
-    // Another tab sent both and wrote the queue back empty, refusing b.
-    const empty = JSON.stringify({ items: [], refused: [{ id: "b", reason: "No.", at: new Date().toISOString() }] });
-    window.localStorage.setItem("strata:outbox:t9", empty);
-    window.dispatchEvent(new StorageEvent("storage", { key: "strata:outbox:t9", newValue: empty }));
+    await box.flush(); // the start's own pass, settled
+    const tries = seen.length;
+    up = true;
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(seen.length).toBe(tries);
+    Reflect.deleteProperty(document, "visibilityState");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(box.snapshot().waiting).toBe(0));
     stop();
-    expect(box.snapshot()).toMatchObject({ waiting: 0 });
-    expect(box.snapshot().refused.map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("follows other tabs: ignores other keys, keeps its own waiting writes, sends what another tab added", async () => {
+    let up = false;
+    const seen = serve(() => (up ? HttpResponse.json({ ok: true }) : HttpResponse.error()));
+    const box = createOutbox({ name: "e8", retryMs: 60_000 });
+    const stop = box.start();
+    await box.add(answer("a")).delivered;
+    window.dispatchEvent(new StorageEvent("storage", { key: "something-else", newValue: "x" }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "strata:outbox:e8", newValue: null })); // cleared elsewhere: nothing to send
+    expect(box.snapshot().waiting).toBe(1);
+    up = true;
+    // Another tab adds b to the same storage and the browser tells this one.
+    const raw = window.localStorage.getItem("strata:outbox:e8") as string;
+    const kept = JSON.parse(raw) as { items: OutboxItem[] };
+    kept.items.push({ ...answer("b"), queuedAt: new Date().toISOString() });
+    window.localStorage.setItem("strata:outbox:e8", JSON.stringify(kept));
+    window.dispatchEvent(new StorageEvent("storage", { key: "strata:outbox:e8", newValue: JSON.stringify(kept) }));
+    await vi.waitFor(() => expect(box.snapshot().waiting).toBe(0));
+    stop();
+    expect(seen.filter((x) => x.id === "b")).toHaveLength(1);
   });
 });
 
@@ -180,8 +307,18 @@ describe("OutboxStatus", () => {
     render(<OutboxStatus outbox={box} noun="answer" />);
     expect(screen.getByRole("status")).toHaveTextContent("The server refused 1 answer; it will not be sent.");
     expect(screen.getByRole("listitem")).toHaveTextContent("Answer a: Already logged with other contents.");
+    await act(() => box.add(answer("b")).delivered);
+    expect(screen.getByRole("status")).toHaveTextContent(/^The server refused 2\sanswers; they will not be sent\./);
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("lists a refused write that has no label by its reason alone", async () => {
+    serve(() => HttpResponse.json({ detail: "No." }, { status: 400 }));
+    const box = createOutbox({ name: "s5" });
+    await box.add({ method: "POST", path: "/api/answers", json: { id: "a" } }).delivered;
+    render(<OutboxStatus outbox={box} noun="answer" />);
+    expect(screen.getByRole("listitem").textContent).toBe("No.");
   });
 
   it("says when the writes live only in this page", async () => {
