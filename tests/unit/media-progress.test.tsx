@@ -97,6 +97,31 @@ describe("progress across files", () => {
   });
 });
 
+describe("skips across files and StrictMode", () => {
+  it("carries the part of a skipped span beyond a file boundary into the next file's count", async () => {
+    const onProgress = vi.fn();
+    const sources = [{ src: "/1.mp4", title: "One", duration: 100 }, { src: "/2.mp4", title: "Two", duration: 100 }];
+    const spans = [{ start: 90, end: 110, kind: "intro" }];
+    const Player = ({ index }: { index: number }) => <MediaPlayer label="Ep" kind="video" sources={sources} index={index} controls="strata" onProgress={onProgress} spans={spans} spanKinds={{ intro: { label: "Intro", behaviour: "auto" } }} />;
+    const { el, rerender, user } = await play(<Player index={0} />);
+    act(() => media.tick(el, 90)); // reaches the span: skipped into the second source at 10 s
+    rerender(<Player index={1} />);
+    act(() => media.loaded(el, 100));
+    await user.click(screen.getByRole("button", { name: "Pause" }));
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({ index: 1, watched: 10 }));
+  });
+
+  it("keeps the start for an attacher that is set up, torn down and set up again", () => {
+    const starts: number[] = [];
+    const attach: SourceAttacher = (_el, _src, context) => {
+      starts.push(context.startAt);
+      return { detach: () => undefined, reload: () => undefined };
+    };
+    render(<React.StrictMode><MediaPlayer label="Ep" kind="video" src="/a.m3u8" attach={attach} start={42} /></React.StrictMode>);
+    expect(starts).toEqual([42, 42]);
+  });
+});
+
 describe("start (#271)", () => {
   it("seeks a plain src once the metadata is in, and says so with Start over", async () => {
     const user = userEvent.setup();

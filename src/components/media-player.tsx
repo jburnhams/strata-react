@@ -538,7 +538,8 @@ export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>,
   const grows = React.useRef(growing);
   grows.current = growing;
   // Where the first load begins (issue #271); later sources start at their own beginning.
-  const first = React.useRef(start);
+  // Kept for the first source, not consumed by its first attach: React StrictMode runs the effect, its cleanup and the effect again.
+  const first = React.useRef<{ src: string | undefined; start: number | undefined }>({ src: undefined, start });
   // Runs after every commit, not only when `src` or `attach` change: a `MediaPlayer` that switches
   // between audio and video replaces the element and keeps the ref object, so the element's identity
   // is checked too, and the engine is moved to the new one.
@@ -549,8 +550,8 @@ export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>,
     now?.attachment.detach();
     hold.current = null;
     if (!el || !attach || !src) return;
-    const begin = first.current;
-    first.current = 0;
+    first.current.src ??= src;
+    const begin = src === first.current.src ? first.current.start : 0;
     hold.current = { el, src, attach, attachment: attach(el, src, { startAt: begin ?? 0, onProblem: (m) => problem.current?.(m), growing: grows.current }) };
   });
   React.useEffect(() => () => {
@@ -851,11 +852,29 @@ export function MediaPlayer({
     go(to);
   };
 
+  const carried = React.useRef<{ index: number; end: number } | null>(null);
+  // Runs after the hook's own effect that starts a new count for a new file.
+  React.useEffect(() => {
+    const c = carried.current;
+    if (c && c.index === index) {
+      carried.current = null;
+      media.markWatched(0, c.end);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
   // Where the element's own time is, from the player's: a skipped span is in the player's timeline (a sequence, a window), what is counted is the file's.
   const toFile = (t: number) => (cut ? t + cut.start : offsets ? t - offsets[index] : t);
   const spanSeen = (span: MediaSpanData, what: SpanOutcome) => {
     // Skipped on purpose counts as seen (issue #272); a muted span was played, so the element's own count has it.
-    if (what === "skipped" && (span.action ?? "skip") === "skip") media.markWatched(toFile(span.start), toFile(span.end));
+    if (what === "skipped" && (span.action ?? "skip") === "skip") {
+      media.markWatched(toFile(span.start), toFile(span.end));
+      // A skip that crosses into the next file: the part beyond is in that file, whose count starts when it loads.
+      if (offsets && !cut) {
+        let to = offsets.length - 1;
+        while (to > 0 && offsets[to] > span.end) to--;
+        if (to > index) carried.current = { index: to, end: span.end - offsets[to] };
+      }
+    }
     onSpan?.(span, what);
   };
 
