@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-22
+**`ChoiceGrid`: answering one question by tapping a picture** (branch `claude/project-thread-fmqqff`). Jonathan is rebuilding Flashtap (tap-the-right-picture rounds for children of two to five) on strata-react and asked for what it lacks to be added here rather than hand-built in the app ("add components to strata react as needed"). Flashtap had drawn its tiles in its own CSS; neither `SelectableGrid` (a chosen set for a bulk action, with checkboxes) nor `TileGrid` (links, no answer state) fits a tap that answers and cannot be taken back.
+
+- `src/components/choice-grid.tsx`: **new**. `ChoiceGrid` (React Aria `GridList`, `layout="grid"`, `onAction`): each tile `open`, `wrong`, `right` or `answer`, with its word from the required `marks` drawn as a `Status` and added to the tile's name; answered tiles are `disabledKeys` with `disabledBehavior="all"`, and every tile closes once one is `right` or `answer`, so no separate finished prop can disagree with the tiles. Wrong is greyed and neutral, not danger. Tiles at least 120px or 160px square. `ChoiceGridSkeleton` for `DataView`.
+- `src/styles/strata.css`, `src/lib/utils.ts`: **new** `type-picture` step (emoji or numeral drawn as a picture, `clamp(2.5rem, 1.75rem + 4vw, 4.5rem)`, leading 1.25, `--type-picture-size`/`-leading` to override); the one step above 28px outside Persuade, because it is recognised, not read. `cn` knows it.
+- `src/index.ts`, `README.md`: exported and listed.
+- `tests/unit/choice-grid.test.tsx`, `stories/choice-grid.stories.tsx`: **new**. Names, a wrong tap, the right tap closing the grid, the answer after the tries run out, keyboard, skeleton. Stories draw lucide icons rather than emoji, so the screenshots need no emoji font.
+- `tests/visual/baselines/data-choicegrid--*.png`: **new**, 14 shots, written with this machine's Chromium (Playwright's own build could not be downloaded here); CI may need them rewritten from its output if anti-aliasing differs beyond the blur.
+
 ## 2026-11-19
 **Let idle fullscreen video fill the player** (`fix/fullscreen-idle-video-space`).
 
