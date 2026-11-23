@@ -172,6 +172,8 @@ export {
   type FetchJsonOptions,
   type FetchJsonInit,
   createApi,
+  createTypedApi,
+  type TypedApi,
   type Api,
   type ApiOptions,
   type ApiPage,

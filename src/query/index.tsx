@@ -117,5 +117,6 @@ export async function fetchJson<T>(input: string | URL, init?: FetchJsonInit, { 
 }
 
 export { createApi, type Api, type ApiOptions } from "./api";
+export { createTypedApi, type TypedApi } from "./typed-api";
 export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
 export { useJob, isTaskRunning, type Job, type JobOptions } from "./job";

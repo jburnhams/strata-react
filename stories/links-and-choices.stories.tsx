@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Download, FileText } from "lucide-react";
 import { ButtonLink, ChoiceGroup, NativeSelect, SayAgain, TextLink, ToggleGroup } from "../src";
 
-const meta = { title: "Navigation/Links and URL choices", tags: ["no-visual"] } satisfies Meta;
+const meta = { title: "Navigation/Links and URL choices" } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

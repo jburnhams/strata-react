@@ -1,0 +1,90 @@
+import { createApi, type ApiOptions } from "./api";
+
+// A client typed by the server's own schema: `createTypedApi<paths>()` with the `paths` that
+// `strata-api-types` writes, so the path, its `{params}`, the query, the JSON body and the answer are
+// all checked against the Python side and the hand-kept endpoint table goes away (issue #296's last
+// ask). Types only on top of `createApi`: no `openapi-fetch`, no new dependency (Jonathan, 2026-11-14:
+// `fetchJson` and TanStack Query stay the client). Only JSON bodies and answers are typed; a 204 answers `void`.
+// The shapes read are openapi-typescript's: `paths[path][method]` with `parameters.path|query`,
+// `requestBody.content["application/json"]` and `responses[2xx].content["application/json"]`.
+
+type Method = "get" | "post" | "put" | "patch" | "delete";
+type Json = "application/json";
+
+type PathsWith<P, M extends Method> = { [K in keyof P]: P[K] extends { [m in M]: object } ? K : never }[keyof P] & string;
+type Operation<P, K extends keyof P, M extends Method> = P[K] extends { [m in M]: infer O } ? O : never;
+
+type Params<O, Where extends "path" | "query"> = O extends { parameters: { [w in Where]?: infer V } } ? Exclude<V, undefined | never> : never;
+type Body<O> = O extends { requestBody?: { content: { [j in Json]: infer B } } } ? B : never;
+type Answer<O> = O extends { responses: infer R }
+  ? R extends { 200: { content: { [j in Json]: infer T } } }
+    ? T
+    : R extends { 201: { content: { [j in Json]: infer T } } }
+      ? T
+      : R extends { 202: { content: { [j in Json]: infer T } } }
+        ? T
+        : void
+  : void;
+
+type HasKeys<T> = [T] extends [never] ? false : [keyof T] extends [never] ? false : true;
+type RequiredKeys<T> = { [K in keyof T]-?: object extends Pick<T, K> ? never : K }[keyof T];
+/** `{ path, query }`, each present only where the operation has them, and required only where one of its values is. */
+type Request<O> = (HasKeys<Params<O, "path">> extends true ? { path: Params<O, "path"> } : { path?: undefined }) &
+  (HasKeys<Params<O, "query">> extends true
+    ? RequiredKeys<Params<O, "query">> extends never
+      ? { query?: Params<O, "query"> }
+      : { query: Params<O, "query"> }
+    : { query?: undefined }) &
+  Omit<RequestInit, "method" | "body">;
+
+type Args<O, WithBody extends boolean> = WithBody extends true
+  ? [Body<O>] extends [never]
+    ? [request?: Request<O>]
+    : HasKeys<Params<O, "path">> extends true
+      ? [request: Request<O> & { json: Body<O> }]
+      : [request: Request<O> & { json: Body<O> }]
+  : [request?: Request<O>];
+
+/** A client whose paths, parameters, JSON bodies and answers come from `strata-api-types`' `paths`. */
+export type TypedApi<P> = {
+  /** The path with the app's base: for an `<img src>`, a download link or an `EventSource`. */
+  url(path: string): string;
+} & {
+  [M in Method]: <K extends PathsWith<P, M>>(path: K, ...args: Args<Operation<P, K, M>, M extends "get" | "delete" ? false : true>) => Promise<Answer<Operation<P, K, M>>>;
+};
+
+function fill(path: string, values: Record<string, unknown> | undefined, query: Record<string, unknown> | undefined): string {
+  const filled = path.replace(/\{([^}]+)\}/g, (_, name: string) => {
+    const value = values?.[name];
+    if (value === undefined || value === null) throw new Error(`strata-react: the path ${path} needs "${name}" in \`path\``);
+    return encodeURIComponent(String(value));
+  });
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    for (const item of Array.isArray(value) ? value : [value]) if (item !== undefined && item !== null) search.append(key, String(item));
+  }
+  const text = search.toString();
+  return text ? `${filled}${filled.includes("?") ? "&" : "?"}${text}` : filled;
+}
+
+/**
+ * `createApi` typed by the server's schema: `const api = createTypedApi<paths>()`, then `api.post("/api/learners", { json: { nickname } })` and
+ * `api.get("/api/learners/{id}", { path: { id } })`; the path, `path` and `query` values, `json` and the answer are checked, and `{id}` is filled and escaped.
+ */
+export function createTypedApi<P>(options: ApiOptions = {}): TypedApi<P> {
+  const api = createApi(options);
+  const call = (method: Method) => (path: string, request?: Record<string, unknown>) => {
+    const { path: values, query, json, ...init } = (request ?? {}) as { path?: Record<string, unknown>; query?: Record<string, unknown>; json?: unknown } & Record<string, unknown>;
+    const target = fill(path, values, query);
+    const rest = init as Parameters<typeof api.get>[1];
+    return method === "get" ? api.get(target, rest) : method === "delete" ? api.delete(target, rest) : api[method](target, json, rest);
+  };
+  return {
+    url: api.url,
+    get: call("get"),
+    post: call("post"),
+    put: call("put"),
+    patch: call("patch"),
+    delete: call("delete"),
+  } as TypedApi<P>;
+}

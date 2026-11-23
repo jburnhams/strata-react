@@ -13,6 +13,7 @@ import {
   ToggleGroup,
   appBase,
   createApi,
+  createTypedApi,
   fetchJson,
   pickVoice,
   useSearchParam,
@@ -241,5 +242,41 @@ describe("strata-api-types import failures (#293)", () => {
     expect(seven).toMatch(/ScriptTarget/);
     expect(seven).toMatch(/version 7.*no JavaScript API/);
     expect(explainImportFailure(broken, 6)).toMatch(/did not load/);
+  });
+});
+
+describe("createTypedApi (#296)", () => {
+  // The shape openapi-typescript writes for `paths`.
+  type paths = {
+    "/api/learners": {
+      get: { parameters: { query?: { archived?: boolean; tag?: string[] }; path?: never }; responses: { 200: { content: { "application/json": { id: number; nickname: string }[] } } } };
+      post: { requestBody: { content: { "application/json": { nickname: string } } }; responses: { 201: { content: { "application/json": { id: number; nickname: string } } } } };
+    };
+    "/api/learners/{id}": {
+      delete: { parameters: { path: { id: number }; query?: never }; responses: { 204: { content?: never } } };
+    };
+  };
+
+  it("fills and escapes path params, writes the query, sends the typed body and returns the typed answer", async () => {
+    const seen: string[] = [];
+    server.use(
+      http.get("*/proxy/api/learners", ({ request }) => { seen.push(new URL(request.url).search); return HttpResponse.json([{ id: 1, nickname: "Fox" }]); }),
+      http.post("*/proxy/api/learners", async ({ request }) => HttpResponse.json({ id: 2, ...((await request.json()) as object) } as never, { status: 201 })),
+      http.delete("*/proxy/api/learners/:id", ({ params }) => { seen.push(`delete ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
+    );
+    const api = createTypedApi<paths>({ base: "/proxy" });
+    const list = await api.get("/api/learners", { query: { archived: false, tag: ["a", "b"] } });
+    expect(list[0]!.nickname).toBe("Fox");
+    expect(seen[0]).toBe("?archived=false&tag=a&tag=b");
+    const made = await api.post("/api/learners", { json: { nickname: "Owl" } });
+    expect(made).toEqual({ id: 2, nickname: "Owl" });
+    await api.delete("/api/learners/{id}", { path: { id: 7 } });
+    expect(seen[1]).toBe("delete 7");
+    // @ts-expect-error a path the server does not have
+    void (() => api.get("/api/nope"));
+    // @ts-expect-error the body is required and typed
+    void (() => api.post("/api/learners", { json: { name: "x" } }));
+    // @ts-expect-error the path parameter is required
+    void (() => api.delete("/api/learners/{id}", {}));
   });
 });
