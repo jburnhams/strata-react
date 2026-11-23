@@ -9,6 +9,7 @@
 - `src/lib/speech.ts`, `src/components/say-again.tsx`, `src/testing/speech.ts` (all **new**): `speak`, `useSpeech`, `SayAgain` (named by its sentence) and `installFakeSpeech` (#299). No React Aria part exists for speech.
 - `src/testing/storage.ts` (**new**), `src/testing/layout.ts`: `installLayoutShims` installs an in-memory storage where Node 25+'s is unusable (#298).
 - `src/api-types/generate.ts`, `README.md`: the import failure says why (#293); the README gives the `typescript`/`typescript7` split a TypeScript 7 app needs. The third suggestion in the issue (depending on `@typescript/typescript6` inside the generator path) is a new dependency and is left for Jonathan to decide.
+- Review fixes in the same PR: `NativeSelect param=` collects option values inside `<optgroup>` and fragments; `useSpeech` cancels the current utterance when `muted` turns on.
 - `tests/unit/app-plumbing.test.tsx`, `stories/links-and-choices.stories.tsx` (**new**), `README.md`, `CLAUDE.md`, `UPGRADING.md`: tests (MSW for the network), stories, the component table and the app rules. The stories are tagged `no-visual`: this container's Chromium could not be launched (the integration visual tests fail the same way on `main` here), so no baselines were written; `ButtonLink` and `TextLink` should get baselines from a machine that can run `npm run test:visual:update`.
 
 ## 2026-11-22

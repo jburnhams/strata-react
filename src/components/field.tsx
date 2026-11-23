@@ -139,9 +139,18 @@ function PlainSelect({ className, id, size = "default", ...props }: PlainSelectP
   return <select {...useField(id)} className={cn(control, controlHeight[size], "pr-8", className)} {...props} />;
 }
 
+/** The values of every `<option>`, looking inside `<optgroup>`s and fragments. */
+function optionValues(children: React.ReactNode): string[] {
+  return React.Children.toArray(children).flatMap((c) => {
+    if (!React.isValidElement<{ value?: string; children?: React.ReactNode }>(c)) return [];
+    if (c.type === "option") return [c.props.value ?? String(c.props.children)];
+    return optionValues(c.props.children);
+  });
+}
+
 function ParamSelect({ param, paramDefault, onChange, children, ...props }: Extract<NativeSelectProps, { param: string }>) {
   // An unknown value in the URL reads as the default: the select shows an option that exists.
-  const options = React.Children.toArray(children).flatMap((c) => (React.isValidElement<{ value?: string; children?: React.ReactNode }>(c) ? [c.props.value ?? String(c.props.children)] : []));
+  const options = optionValues(children);
   const [value, setValue] = useSearchParam(param, { default: paramDefault, parse: (raw) => options.length === 0 || options.includes(raw) });
   return (
     <PlainSelect

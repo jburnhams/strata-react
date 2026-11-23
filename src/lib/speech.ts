@@ -100,6 +100,13 @@ export function useSpeech({ lang, rate, muted = false }: UseSpeechOptions = {}):
       synth.cancel();
     };
   }, []);
+  // Muting while something is being said stops it: the control disappears with `supported`, so it could not be stopped otherwise.
+  React.useEffect(() => {
+    if (muted) {
+      stopSpeaking();
+      setSpeaking(false);
+    }
+  }, [muted]);
   const say = React.useCallback(
     (text: string) => {
       if (!supported) return false;

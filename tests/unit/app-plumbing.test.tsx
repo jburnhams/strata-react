@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, render } from "@testing-library/react";
+import { screen, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { useLocation } from "react-router";
@@ -126,6 +126,34 @@ describe("useSearchParam (#297)", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Fox" }));
     expect(screen.getByTestId("search")).toHaveTextContent("/?size=l");
     expect(screen.getByTestId("search")).not.toHaveTextContent("round");
+  });
+});
+
+describe("review fixes", () => {
+  it("finds options inside optgroups and fragments", async () => {
+    renderWithStrata(
+      <NativeSelect aria-label="Round" param="round" paramDefault="all">
+        <option value="all">All</option>
+        <optgroup label="Later"><option value="due">Due</option></optgroup>
+      </NativeSelect>,
+      { route: "/?round=due" },
+    );
+    expect(screen.getByRole("combobox", { name: "Round" })).toHaveValue("due");
+  });
+
+  it("stops what is being said when muted turns on", () => {
+    const speech = installFakeSpeech();
+    try {
+      const { rerender } = render(<SayAgain text="Hej" />);
+      void userEvent.click(screen.getByRole("button", { name: "Say: Hej" }));
+      return waitFor(() => expect(speech.said).toHaveLength(1)).then(() => {
+        rerender(<SayAgain text="Hej" muted />);
+        expect(speech.said[0]!.cancelled).toBe(true);
+      }).finally(() => speech.uninstall());
+    } catch (e) {
+      speech.uninstall();
+      throw e;
+    }
   });
 });
 
