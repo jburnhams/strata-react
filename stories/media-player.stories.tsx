@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, MediaPlayer, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
+import { Button, MediaPlayer, SpanStrip, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
 import { silentWav } from "./fixtures/media";
 import clipSrc from "./fixtures/video/a.webm?url";
 
@@ -86,6 +86,32 @@ const spans: MediaSpanData[] = [
 
 /** Stretches on the seek bar, each a named range in its kind's tone (the title and the screen reader say "Recap, 0:40 to 1:10"); a one-second span keeps a visible width. */
 export const Spans: Story = { args: { label: "x" }, render: () => <One spans={spans} spanKinds={spanKinds} /> };
+
+// Issue #270: a kind with a colour of the app's own (a community database's categories), and the spans under the browser's own controls.
+const colourKinds: Record<string, SpanKind> = {
+  sponsor: { label: "Sponsor", colour: "--seg-sponsor" },
+  intro: { label: "Intro", colour: "--seg-intro" },
+  filler: { label: "Filler", colour: "--seg-filler" },
+};
+const colourSpans: MediaSpanData[] = [{ start: 0, end: 12, kind: "intro" }, { start: 40, end: 70, kind: "sponsor" }, { start: 120, end: 150, kind: "filler" }];
+// The app's theme names these; here, three of the fixture theme's own roles.
+const segmentColours = { "--seg-sponsor": "var(--color-heat-orange)", "--seg-intro": "var(--color-heat-cherry)", "--seg-filler": "var(--color-heat-yellow)" } as React.CSSProperties;
+
+/** A kind names a colour of the app's theme (`colour: "--seg-sponsor"`) instead of one of the five tones; each range also carries `data-kind`. The name and times stay the carrier. */
+export const SpanColours: Story = { args: { label: "x" }, render: () => <div style={segmentColours}><One spans={colourSpans} spanKinds={colourKinds} /></div> };
+
+/** Under the browser's own controls (a touch device, or `controls="native"`) the seek bar is the browser's and cannot draw the spans, so a thin strip under the picture does, named as the bar's ranges are. Shown here on its own. */
+export const SpanStripUnderNativeControls: Story = {
+  args: { label: "x" },
+  render: () => (
+    <div className="grid max-w-3xl gap-2" style={segmentColours}>
+      <SpanStrip label="Marked parts of Episode 4" duration={245} spans={colourSpans.map((s) => ({ start: s.start, end: s.end, label: colourKinds[s.kind].label, kind: s.kind, colour: colourKinds[s.kind].colour }))} />
+    </div>
+  ),
+};
+
+/** `start` begins a first load there ("Continue watching") and says so for a few seconds once playing, with Start over, in the notice place the span notice uses. */
+export const PickedUp: Story = { args: { label: "x" }, render: () => <One start={125} /> };
 
 /** What each kind does on reaching a stretch: `auto` skips (or mutes) it with "Skipped intro" and Undo, `ask` offers "Skip recap ›" over the picture and on the S key, `off` only draws it. Play it to see. */
 export const SpanBehaviours: Story = {

@@ -6,6 +6,7 @@ import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
 import { Button, IconButton, RowAction, type ButtonProps } from "./button";
 import { Status } from "./status";
+import { STRATA_DRAG_TYPE } from "./drag-source";
 
 // Bringing local files into an app (strata issue #75). Four pieces over `useFileIntake`:
 //
@@ -27,6 +28,14 @@ import { Status } from "./status";
 // refusal there shows no message, so we accept any file drop and judge in the hook. `isDropTarget`
 // comes from React Aria's enter and leave bookkeeping, which is why the state does not flicker as
 // the pointer crosses the zone's children (a plain `dragenter` handler on the zone does).
+// A drag of the app's own things is not a drop of files (issue #291, from strata-vid, whose library rows are
+// `DragSource`s beside a `FileDropZone` and a `Timeline`): the zone refuses a drag that carries `DragSource`'s
+// type, or one of the app's `refuseTypes` for drags it starts some other way, so the zone is not a stop on the
+// keyboard drag's way to a lane and does not offer "Drop to add" for it. Checked in `DragTypes` (react-aria's
+// `dnd/utils`): a drag of files carries each file's MIME type (`application/octet-stream` when unknown), so it
+// cannot carry our type; a drag `useDrag` starts carries only what it was given; but Safari's file drags have
+// an empty items list and `DragTypes.has` then answers true for every type. A type nothing could carry is asked
+// first (`has` true for it means "unknown types"), and such a drag is never refused, so Safari keeps working.
 // The dropped `File`s are read from the drop items (`kind: "file"`); directories are ignored.
 //
 // Drop-over state is a word as well as a border: "Drop to add …" replaces the prompt, so it does
@@ -67,12 +76,21 @@ export function FileButton({
   );
 }
 
+// A type no drag carries: `has` answering true for it means the browser would not say what is dragged (Safari's files).
+const NEVER_CARRIED = "application/x-strata-never";
+
+/** Whether a drag is the app's own, not files: it carries one of `refuse`, and the browser has not left its types unknown. */
+export function refusesDrag(types: { has: (type: string) => boolean }, refuse: readonly string[]): boolean {
+  return !types.has(NEVER_CARRIED) && refuse.some((type) => types.has(type));
+}
+
 /** A region that takes dropped files and offers the picker as its keyboard alternative. */
 export function FileDropZone({
   onFiles,
   acceptLabel,
   title,
   disabled,
+  refuseTypes,
   children,
   className,
 }: {
@@ -82,6 +100,8 @@ export function FileDropZone({
   /** The resting prompt ("Drag files here"). */
   title: string;
   disabled?: boolean;
+  /** Drag types of the app's own drags to ignore, besides every `DragSource`'s (which are always ignored): the zone does not light up for them and a keyboard drag does not stop on it. A dragged file never carries these, so a file is never refused. */
+  refuseTypes?: readonly string[];
   /** The `FileButton` (required in practice: it is how a keyboard or phone gets files in). */
   children?: React.ReactNode;
   className?: string;
@@ -95,6 +115,7 @@ export function FileDropZone({
     <DropZone
       aria-label={title}
       isDisabled={disabled}
+      getDropOperation={(types) => (refusesDrag(types, [STRATA_DRAG_TYPE, ...(refuseTypes ?? [])]) ? "cancel" : "copy")}
       onDrop={onDrop}
       className={({ isDropTarget, isFocusVisible }) =>
         cn(
