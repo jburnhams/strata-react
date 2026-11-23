@@ -135,12 +135,20 @@ describe("PlaceBoard", () => {
     const user = userEvent.setup();
     const onMove = vi.fn();
     renderWithStrata(<Order onMove={onMove} initial={{ n2: "first", n9: "second" }} states={{ first: "right", second: "wrong" }} locked />);
-    expect(place("first")).toHaveTextContent("Right");
-    expect(place("second")).toHaveTextContent("Not yet");
+    // The checked word is in each place's name, not only drawn inside it.
+    expect(place("first, right")).toHaveTextContent("Right");
+    expect(place("second, not yet")).toHaveTextContent("Not yet");
     expect(place("third")).not.toHaveTextContent(/Right|Not yet/);
     expect(piece("5")).toBeDisabled();
     await user.click(piece("5"));
     expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("names the move and the checked word together while a piece is held", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Order initial={{ n9: "second" }} states={{ second: "wrong" }} />);
+    await user.click(piece("5"));
+    expect(place("Put 5 in second, not yet")).toBeEnabled();
   });
 
   it("shows a piece placed in a place it does not list in the pile, and draws a place's own picture", () => {

@@ -198,7 +198,8 @@ export function PlaceBoard<P, S>({
               <AriaButton
                 isDisabled={!takes}
                 onPress={() => move(key)}
-                aria-label={takes && held !== undefined ? `Put ${pieceLabel(held)} in ${name}` : name}
+                // The checked word is part of the name, as on a ChoiceGrid tile ("second, not yet"): the Status inside is overridden by aria-label.
+                aria-label={(takes && held !== undefined ? `Put ${pieceLabel(held)} in ${name}` : name) + (state === "open" ? "" : `, ${marks[state].toLowerCase()}`)}
                 className="flex min-h-30 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-surface outline-offset-2 transition-state press hover:bg-muted disabled:cursor-default disabled:hover:bg-transparent"
               >
                 <span aria-hidden className={renderPlace ? "type-picture" : "type-heading"}>
