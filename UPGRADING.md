@@ -12,6 +12,7 @@ time. While the version is 0.x, any release may break.
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
 ## 2026-11-23
+- Speech (#310): `installFakeSpeech()` now also replaces `window.Audio` until `uninstall()`, and each `Spoken` entry has `clip` (null for the browser's voice), so a test that compares a whole entry with `toEqual` adds `clip: null`. `useSpeech().say` takes a sentence or recorded parts; `stopSpeaking()` and unmounting `useSpeech` stop a playing clip too.
 - `ChoiceGrid`'s `marks` type is `ChoiceMarks` (a quiz's three words, or `{ picked }` alone); `createTypedApi`'s POST/PUT/PATCH on an operation with `requestBody?: never` no longer ask for `json`, so a `json: undefined` workaround can be deleted. The request argument is now required when the operation has a required path or query value (a call that left it out compiled and threw at run time); pass `{ path: … }`.
 - `installLayoutShims()` now also installs an in-memory `localStorage` and `sessionStorage` where the runtime's are unusable (Node 25+ under jsdom), emptied after each test. Apps that carried their own shim can delete it; one that tests "no storage" must replace it afterwards.
 - `strata-api-types` reports why openapi-typescript failed to load instead of always asking for an install; a TypeScript 7 app needs the `typescript`/`typescript7` split in the README (new section text, no code change).

@@ -44,3 +44,18 @@ export const InTheUrl: Story = {
 export const SayIt: Story = {
   render: () => <SayAgain text="Which one is the cat?" lang="en-GB" />,
 };
+
+/** Recorded parts (a speech model's clips, or a person's recording of the sound /ʃ/): drawn wherever audio plays, even with no browser voice; the browser says `text` if a clip fails. */
+export const SayItRecorded: Story = {
+  render: () => (
+    <SayAgain
+      text="Listen. sh, as in ship."
+      parts={[
+        { text: "Listen.", clip: "voice/listen.wav" },
+        { text: "sh, as in ship.", clip: "voice/sh.wav" },
+      ]}
+      verb="Hear"
+      lang="en-GB"
+    />
+  ),
+};
