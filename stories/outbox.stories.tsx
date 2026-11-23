@@ -10,6 +10,7 @@ function held(state: Partial<OutboxSnapshot>): Outbox {
     flush: () => Promise.resolve(),
     snapshot: () => snap,
     subscribe: () => () => {},
+    onSent: () => () => {},
     dismiss: () => {},
     start: () => () => {},
   };

@@ -96,6 +96,9 @@ export type Outbox = {
   flush(): Promise<void>;
   snapshot(): OutboxSnapshot;
   subscribe(listener: () => void): () => void;
+  /** Calls `listener` with each write this page has sent, whenever it went (the first try, a retry, or a write an earlier
+   * visit left): refresh what the server's answer changes here, as a `delivered` first try misses later sends. */
+  onSent(listener: (item: OutboxItem) => void): () => void;
   /** Forgets a refused write (or all of them). */
   dismiss(id?: string): void;
   /** Sends what waits now, and again whenever the browser comes back online, the page is shown or another tab adds. Returns the stop. */
@@ -154,6 +157,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
   const firstTry = new Map<string, ((d: Delivery) => void)[]>();
   const adding = new Set<string>();
   const listeners = new Set<() => void>();
+  const sentListeners = new Set<(item: OutboxItem) => void>();
   let snap: OutboxSnapshot | null = null;
 
   // Read before every change, so two tabs adding and removing do not overwrite each other's work.
@@ -229,6 +233,7 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
           await post(item);
           await mutate((k) => ({ ...k, items: k.items.filter((x) => x.id !== item.id) }));
           settle(item.id, "sent");
+          for (const l of sentListeners) l(item);
         } catch (error) {
           if (!isRefusal(error)) {
             problem = problemOf(error);
@@ -288,6 +293,10 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    onSent(listener) {
+      sentListeners.add(listener);
+      return () => sentListeners.delete(listener);
     },
     dismiss(id) {
       void mutate((k) => ({ ...k, refused: id === undefined ? [] : k.refused.filter((r) => r.id !== id) }));

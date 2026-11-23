@@ -41,6 +41,8 @@ describe("createOutbox", () => {
     let up = false;
     const seen = serve(() => (up ? HttpResponse.json({ ok: true }) : HttpResponse.error()));
     const box = createOutbox({ name: "t2", retryMs: 60_000 });
+    const sent: string[] = [];
+    const stop = box.onSent((item) => sent.push(item.id));
     expect(await box.add(answer("a")).delivered).toBe("waiting");
     expect(await box.add(answer("b")).delivered).toBe("waiting");
     const s = box.snapshot();
@@ -54,6 +56,10 @@ describe("createOutbox", () => {
     expect(box.snapshot()).toMatchObject({ waiting: 0, problem: null, retryAt: null });
     expect(seen.filter((x) => x.id === "a").length).toBeGreaterThan(1); // tried, failed, tried again
     expect(seen.at(-1)?.id).toBe("b");
+    expect(sent).toEqual(["a", "b"]); // told of each send, the late ones too, once
+    stop();
+    await box.add(answer("c")).delivered;
+    expect(sent).toEqual(["a", "b"]);
   });
 
   it("treats a 5xx and a login's 401 as waiting, never refused", async () => {
