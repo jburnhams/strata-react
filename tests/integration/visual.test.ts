@@ -10,6 +10,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // run from the built bin, and real Chromium. The app is a page with no stories that fetches its
 // data, so this is route mode with MSW states, the case strata-listory needs.
 
+import { decode } from "../../src/visual/compare";
+
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const bin = join(root, "bin/strata-visual.js");
 let app: string;
@@ -60,7 +62,13 @@ beforeAll(() => {
   .dark body { background: #1c1b19; color: #eee; }
   h1 { margin: 16px; font-size: 24px; }
 </style></head><body><div id="root"></div><script type="module">
-  document.body.className = new URLSearchParams(location.search).get("font") ?? "";
+  const query = new URLSearchParams(location.search);
+  document.body.className = query.get("font") ?? "";
+  if (query.has("lazy")) {
+    // A picture that waits until it is near the window, two windows down the page (what Thumbnail does).
+    document.body.insertAdjacentHTML("beforeend", "<div style='height: 2400px'></div><div id='pic' style='height: 80px; background: #888'></div>");
+    new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) document.getElementById("pic").style.background = "#d22"; }).observe(document.getElementById("pic"));
+  }
   const root = document.getElementById("root");
   root.innerHTML = "<p aria-busy='true'>Loading the kiln room</p>";
   const r = await fetch("/api/greeting");
@@ -133,6 +141,23 @@ describe("strata-visual on an app's routes", () => {
     expect(lenient.code).toBe(0);
     expect(lenient.out).toMatch(/warning {2}home--system--wide--dark\.png: text in a system font/);
     rmSync(join(app, "tests/visual/fonts"), { recursive: true, force: true });
+  }, 120_000);
+
+  it("scrolls a tall page through first so pictures that wait to be near the window are in the baseline (issue #273)", () => {
+    const states = `{ lazy: { path: "/?lazy=1" } }`;
+    const lastRow = (name: string, dir: string) => {
+      const img = decode(readFileSync(join(app, dir, `${name}.png`)));
+      const at = ((img.height - 20) * img.width + 40) * 4;
+      return [img.data[at], img.data[at + 1], img.data[at + 2]];
+    };
+    config(states, undefined, `\n  baselines: "tests/visual/lazy",\n  themes: ["light"],`);
+    expect(run(["--update"]).code).toBe(0);
+    expect(lastRow("home--lazy--wide--light", "tests/visual/lazy")).toEqual([0xdd, 0x22, 0x22]);
+    config(states, undefined, `\n  baselines: "tests/visual/lazy-off",\n  themes: ["light"],\n  scrollThrough: false,`);
+    expect(run(["--update"]).code).toBe(0);
+    expect(lastRow("home--lazy--wide--light", "tests/visual/lazy-off")).toEqual([0x88, 0x88, 0x88]); // still its grey box
+    rmSync(join(app, "tests/visual/lazy"), { recursive: true, force: true });
+    rmSync(join(app, "tests/visual/lazy-off"), { recursive: true, force: true });
   }, 120_000);
 
   it("exits with an error, and does not hang, on a bad route name or concurrency", () => {

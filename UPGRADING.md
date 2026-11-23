@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-23
+- `strata-visual` gives a route's page, when taller than the window, a window as tall as itself before its shot, so lazy pictures (`Thumbnail`) below the fold are drawn in the baseline: re-record baselines that showed their grey loading boxes (`scrollThrough: false` in the config keeps the old behaviour). An app that passed `eager` to `Thumbnail` only for its screenshots can drop it.
+- `MediaPlayer` with `controls="native"` (or `"auto"` on a touch device) and `spans` now draws a thin strip of the spans under the picture.
+
 ## 2026-11-19
 - In fullscreen, `MediaPlayer` grows the video into the controls’ space while they are hidden.
 

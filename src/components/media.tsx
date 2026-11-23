@@ -77,7 +77,46 @@ export type SeekBarSpan = {
   label: string;
   /** Default "info". */
   tone?: SpanTone;
+  /** What kind of stretch it is ("sponsor"). Drawn as `data-kind` on the range, so an app can colour kinds from its own theme (`[data-kind="sponsor"]`). */
+  kind?: string;
+  /** A colour of the app's theme, named by its custom property (`"--seg-sponsor"`), for a kind whose colour the app's people know, instead of one of the five tones. Only a name starting with `--` is used; the library never picks a colour. */
+  colour?: string;
 };
+
+const COLOUR_NAME = /^--[\w-]+$/;
+
+/** One stretch drawn as a range of a bar of `duration` seconds, named with its times. Shared by the seek bar and the strip under the browser's own controls. */
+function SpanRange({ span, duration, thin, ...time }: { span: SeekBarSpan; duration: number; thin?: boolean } & TimeProps) {
+  const name = `${span.label}, ${timecode(span.start, time)} to ${timecode(span.end, time)}`;
+  const colour = span.colour && COLOUR_NAME.test(span.colour) ? span.colour : null;
+  return (
+    <span
+      role="img"
+      aria-label={name}
+      title={name}
+      data-span=""
+      data-kind={span.kind}
+      className={cn("absolute min-w-1 rounded-pill opacity-70", thin ? "h-1" : "h-1.5", !colour && SPAN_TONE[span.tone ?? "info"])}
+      style={{ left: `${(span.start / duration) * 100}%`, width: `${((span.end - span.start) / duration) * 100}%`, ...(colour ? { backgroundColor: `var(${colour})` } : undefined) }}
+    />
+  );
+}
+
+/**
+ * The marked stretches as a thin strip, for under a picture played with the browser's own controls, whose seek bar cannot draw them
+ * (strata-react issue #270): the same ranges, names and colours as `SeekBar spans`, not a control. Draws nothing until `duration` is known.
+ */
+export function SpanStrip({ spans, duration, label = "Marked parts", precision = "seconds", fps = 30, className }: { spans: readonly SeekBarSpan[]; duration: number | null; label?: string; className?: string } & TimeProps) {
+  const drawn = duration ? drawableSpans(spans, duration) : [];
+  if (!duration || !drawn.length) return null;
+  return (
+    <div role="group" aria-label={label} className={cn("relative h-1 w-full rounded-pill bg-muted", className)}>
+      {drawn.map((s) => (
+        <SpanRange key={`${s.start}-${s.end}-${s.label}`} span={s} duration={duration} precision={precision} fps={fps} thin />
+      ))}
+    </div>
+  );
+}
 
 /** The spans a bar of `duration` seconds can draw: in order, cut to the bar, and none that are empty or backwards. */
 function drawableSpans(spans: readonly SeekBarSpan[], duration: number) {
@@ -184,10 +223,7 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
         {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
         <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
         {duration > 0 &&
-          drawableSpans(spans, duration).map((s) => {
-            const name = `${s.label}, ${timecode(s.start, { precision, fps })} to ${timecode(s.end, { precision, fps })}`;
-            return <span key={`${s.start}-${s.end}-${s.label}`} role="img" aria-label={name} title={name} data-span="" className={cn("absolute h-1.5 min-w-1 rounded-pill opacity-70", SPAN_TONE[s.tone ?? "info"])} style={{ left: `${(s.start / duration) * 100}%`, width: `${((s.end - s.start) / duration) * 100}%` }} />;
-          })}
+          drawableSpans(spans, duration).map((s) => <SpanRange key={`${s.start}-${s.end}-${s.label}`} span={s} duration={duration} precision={precision} fps={fps} />)}
         {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
         {duration > 0 &&
           marks.map((m) => (

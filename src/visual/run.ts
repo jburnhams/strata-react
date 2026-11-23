@@ -159,6 +159,7 @@ async function runBatch(
         blockServiceWorkers: batch.blockServiceWorkers,
         onUnhandledRequest: batch.onUnhandledRequest,
         checkFonts: fonts !== "allow",
+        scrollThrough: ctx.config.scrollThrough,
       });
       if (systemFonts.length) {
         const line = `${file}: text in a system font, which differs by machine (bundle the face with @fontsource and name it in the theme's --font-*): ${systemFonts.join(", ")}`;

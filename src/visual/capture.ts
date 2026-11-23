@@ -25,6 +25,8 @@ export interface CaptureOptions {
   onUnhandledRequest?: "error" | "bypass";
   /** Look up which faces drew the page's text and return the ones that are not web fonts. Default true. */
   checkFonts?: boolean;
+  /** Scroll a page taller than the window through before the shot, so pictures that wait until they are near the window have loaded (issue #273). Default true. */
+  scrollThrough?: boolean;
 }
 
 /** What one shot produced. */
@@ -139,9 +141,13 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     });
     if (shot.waitFor) await page.locator(shot.waitFor).first().waitFor({ state: "visible", timeout: 15_000 });
     await settle(page);
+    // Only a whole-page shot: a component's shot is of its own box, and scrolling a story moved virtualised lists on (their shots got shorter).
+    const lazy = options.scrollThrough !== false && shot.clip === "page";
+    if (lazy) await scrollThrough(page);
     if (shot.setup) {
       await shot.setup(page, shot);
       await settle(page);
+      if (lazy) await scrollThrough(page);
     }
     let png: Buffer;
     if (shot.clip === "page") {
@@ -181,6 +187,31 @@ async function stable(page: Page, take: () => Promise<Buffer>): Promise<Buffer> 
     last = next;
   }
   return last;
+}
+
+/**
+ * A whole-page shot shows what a person would see after scrolling, so a picture that waits until it is near the
+ * window (`Thumbnail`, `InfiniteList`'s next page) has to have been near it (issue #273). A page taller than the
+ * window is shown to the page as a window as tall as itself (a few times over, in case what loads makes it taller),
+ * the pictures that started loading are waited for, and the window goes back to its size. Not a scroll: scrolling
+ * moved fixed elements (an undo bar) off where the shot has always drawn them, a window as tall as the page does not.
+ */
+async function scrollThrough(page: Page) {
+  const size = page.viewportSize();
+  if (!size) return;
+  let grew = false;
+  for (let i = 0; i < 3; i++) {
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (height <= size.height + 1) break;
+    grew = true;
+    // Bounded: a page that grows as it is shown (an endless feed) is read to 20000 px and no further.
+    await page.setViewportSize({ width: size.width, height: Math.min(height, 20_000) });
+    await page.waitForTimeout(100);
+    await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: 3_000 }).catch(() => undefined);
+  }
+  if (!grew) return;
+  await page.setViewportSize(size);
+  await settle(page);
 }
 
 async function settle(page: Page) {
