@@ -13,10 +13,12 @@ import { QueryClient } from "@tanstack/react-query";
 import { StrataQueryProvider, createQueryClient } from "../query";
 import { ThemeProvider, type ColorSchemePreference } from "../components/theme";
 import { StrataToastRegion, toast } from "../components/toast";
+import { MicrophoneContext, type Microphone } from "../lib/microphone";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
 export { installStorageShim, memoryStorage } from "./storage";
 export { installFakeSpeech, type FakeSpeech, type Spoken } from "./speech";
+export { fakeMicrophone, type FakeMicrophoneOptions } from "./microphone";
 export { filledButtons, expectOneFilledButton, asyncButtonPhase } from "./buttons";
 export {
   installFakeIntersectionObserver,
@@ -46,6 +48,8 @@ export type StrataRenderOptions = Omit<RenderOptions, "wrapper"> & {
   colorScheme?: ColorSchemePreference;
   /** Render the one `StrataToastRegion`, so `toast.show(...)` has somewhere to appear and a test can find it. Default true; pass `false` when the app's own route tree renders the region (a root layout route), or a test would see every toast twice. The queue is cleared at the start of each render, so a toast never carries into the next test. */
   toasts?: boolean;
+  /** The microphone a recording screen gets from `useMicrophone()`, such as `fakeMicrophone()`; the browser's when left out (which jsdom cannot open). */
+  microphone?: Microphone;
 };
 
 // The providers every Strata app has above its router, in the order an app nests them.
@@ -53,14 +57,16 @@ function StrataProviders({
   client,
   colorScheme,
   toasts,
+  microphone,
   children,
 }: {
   client: QueryClient;
   colorScheme: ColorSchemePreference;
   toasts: boolean;
+  microphone?: Microphone;
   children: React.ReactNode;
 }) {
-  return (
+  const tree = (
     <ThemeProvider defaultPreference={colorScheme} storageKey={null}>
       <StrataQueryProvider client={client}>
         {children}
@@ -68,16 +74,17 @@ function StrataProviders({
       </StrataQueryProvider>
     </ThemeProvider>
   );
+  return microphone ? <MicrophoneContext.Provider value={microphone}>{tree}</MicrophoneContext.Provider> : tree;
 }
 
 /** Testing Library's `render` inside `StrataQueryProvider` and a `MemoryRouter` at `route`. */
 export function renderWithStrata(
   ui: React.ReactElement,
-  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, ...options }: StrataRenderOptions = {},
+  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, microphone, ...options }: StrataRenderOptions = {},
 ) {
   toast.clear(); // module state: a toast from the last test must not show in this one
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone}>
       <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
     </StrataProviders>
   );
@@ -108,13 +115,14 @@ export function renderRoutes(
     client = createTestQueryClient(),
     colorScheme = "light",
     toasts = true,
+    microphone,
     ...options
   }: RenderRoutesOptions = {},
 ) {
   toast.clear();
   const router = createMemoryRouter(routes, { initialEntries: [route ?? basename ?? "/"], basename });
   const result = render(
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone}>
       <RouterProvider router={router} />
     </StrataProviders>,
     options,
