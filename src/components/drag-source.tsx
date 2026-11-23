@@ -30,6 +30,14 @@ import { cn } from "../lib/utils";
 // with no lag, and the browser draws its preview (ux-character.md, by frequency). While it is being
 // dragged the row is drawn faded (`data-dragging`), so the person can see what they picked up.
 
+/**
+ * The type every `DragSource` drag carries beside the app's own, so a drop target that takes only files (`FileDropZone`) can tell
+ * an in-app drag from a drag of files without the app declaring anything (issue #291). A drag started by `useDrag` carries only
+ * the types it is given, and React Aria's `DragTypes` cannot tell an app's `text/plain` from a dragged `.txt` file, so a type of
+ * our own is the one that can be recognised for certain.
+ */
+export const STRATA_DRAG_TYPE = "application/x-strata-drag";
+
 /** One dragged item: each drag type it offers, with its value (`{ "application/x-clip": "clip-9", "text/plain": "run.mp4" }`). React Aria's `DragItem`. */
 export type DragData = Record<string, string>;
 
@@ -54,7 +62,7 @@ export type DragSourceProps = {
 /** A row that can be dragged onto a drop target, such as a `Timeline` lane, by pointer or from the keyboard with its named grip. */
 export function DragSource({ label, items, onDragStart, onDragEnd, disabled, children, className }: DragSourceProps) {
   const { dragProps, dragButtonProps, isDragging } = useDrag({
-    getItems: items,
+    getItems: () => items().map((item) => ({ ...item, [STRATA_DRAG_TYPE]: "" })),
     hasDragButton: true,
     isDisabled: disabled,
     onDragStart: () => onDragStart?.(),

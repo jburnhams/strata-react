@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-11-23
+**`FileDropZone` refuses the app's own drags (issue #291)** (branch `claude/project-thread-h21m1s`). Found in strata-vid after its library rows became `DragSource`s: the zone beside the timeline took every drag, so a keyboard drag stopped on it first, a drop there did nothing, and a pointer drag over it said "Drop to add a video…". Of the issue's two options, a `refuseTypes` prop (a) was taken, plus a default that makes it unnecessary for Strata's own parts: the zone's `getDropOperation` returns `cancel` for a drag carrying `STRATA_DRAG_TYPE`, which every `DragSource` now adds to its items.
+
+- `src/components/drag-source.tsx`: **new** export `STRATA_DRAG_TYPE` (`application/x-strata-drag`); each dragged item carries it beside the app's own types. Option (b), refusing anything `application/x-*`, was not taken: it would refuse an app's own file-like types and guess. A type of our own is recognisable for certain.
+- `src/components/file-intake.tsx`: `FileDropZone` has `getDropOperation` (refuses `STRATA_DRAG_TYPE` and the app's `refuseTypes`) and the new prop `refuseTypes`. A drag whose types the browser does not report is never refused: Safari's file drags have an empty items list and React Aria's `DragTypes.has` answers true for every type, so a type no drag carries is asked first (checked in `react-aria/dist/private/dnd/utils.mjs`). `refusesDrag` holds that rule.
+- `tests/unit/drag-source.test.tsx`: a `DragSource` keyboard drag with a `FileDropZone` before the `Timeline` goes straight to the lane (fails without the fix), the same with `refuseTypes`, and `refusesDrag` for files, in-app drags and Safari's all-true answer.
+- `src/index.ts`: exports `STRATA_DRAG_TYPE`.
+- Not done: a pointer-drag test (jsdom has no drag events React Aria listens to); the keyboard path is what the issue's test covers.
+
 **Issue #286: `DragSource`, a row dragged onto a target from the keyboard too** (branch `claude/project-thread-3drc3w`). From strata-vid's library, whose files drag onto a `Timeline` lane by pointer only. Lanes have taken a keyboard drop since #121, but nothing here started a drag from outside a list, so an app used a native `draggable` or imported `react-aria` itself. Jonathan chose (2026-11-23) to build the part here.
 
 - `src/components/drag-source.tsx`: **new**. `DragSource` is React Aria's `useDrag` with `hasDragButton`: a grip button named "Drag <label>" carries the keyboard and screen-reader path, the whole row carries the pointer drag, and the row's own buttons keep working. `items` returns `DragData` (React Aria's `DragItem`, re-declared so the API reference is whole), `onDragEnd(dropped)` says whether it landed, `disabled` disables the grip, and the row fades while it is dragged. It is shaped like `SortableList`'s grip, so a person who knows one knows the other.
