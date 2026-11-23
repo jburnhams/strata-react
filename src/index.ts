@@ -190,6 +190,28 @@ export { appBase, withBase } from "./lib/base";
 export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";
 export { speak, stopSpeaking, canSpeak, pickVoice, useSpeech, type SpeakOptions, type Speech, type UseSpeechOptions } from "./lib/speech";
 export { SayAgain, type SayAgainProps } from "./components/say-again";
+export {
+  browserMicrophone,
+  explainMicrophoneError,
+  MicrophoneContext,
+  MicrophoneError,
+  useMicrophone,
+  type Microphone,
+  type MicrophoneStream,
+} from "./lib/microphone";
+export { LEVEL_FLOOR_DB, joinSamples, encodeWav, peakDb, speechLevel, type SpeechLevel } from "./lib/recording";
+export {
+  useRecorder,
+  InputLevel,
+  TakeLevel,
+  inputLevelThresholds,
+  type Recorder,
+  type RecorderState,
+  type Recording,
+  type UseRecorderOptions,
+  type InputLevelProps,
+  type TakeLevelProps,
+} from "./components/recorder";
 export { ButtonLink, TextLink, type ButtonLinkProps, type TextLinkProps } from "./components/link";
 
 export { Compare, type CompareProps, type CompareMode, type Candidate, type ImageMedia, type AudioMedia, type TextMedia, type VideoMedia } from "./components/compare";
