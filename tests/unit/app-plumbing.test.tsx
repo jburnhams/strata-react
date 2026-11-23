@@ -254,6 +254,7 @@ describe("createTypedApi (#296)", () => {
     };
     "/api/learners/{id}": {
       delete: { parameters: { path: { id: number }; query?: never }; responses: { 204: { content?: never } } };
+      get: { parameters: { path: { id: number }; query?: never }; responses: { 200: { content: { "application/json": { id: number } } } } };
     };
     // How openapi-typescript writes an operation with no request body (#305).
     "/api/learners/{id}/withdraw": {
@@ -285,6 +286,14 @@ describe("createTypedApi (#296)", () => {
     await api.post("/api/learners/{id}/withdraw", { path: { id: 3 } });
     await api.put("/api/learners/{id}/withdraw", { path: { id: 4 } });
     expect(seen.slice(2)).toEqual(["withdraw 3", "restore 4"]);
+    // The request argument is required where the operation has a required path or query value.
+    // @ts-expect-error `id` is required, so the request cannot be left out (body-less POST)
+    void (() => api.post("/api/learners/{id}/withdraw"));
+    // @ts-expect-error `id` is required, so the request cannot be left out (DELETE)
+    void (() => api.delete("/api/learners/{id}"));
+    // @ts-expect-error `id` is required, so the request cannot be left out (GET)
+    void (() => api.get("/api/learners/{id}"));
+    void (() => api.get("/api/learners"));
     // @ts-expect-error a path the server does not have
     void (() => api.get("/api/nope"));
     // @ts-expect-error the body is required and typed

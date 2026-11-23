@@ -46,13 +46,15 @@ type Request<O> = (HasKeys<Params<O, "path">> extends true ? { path: Params<O, "
     : { query?: undefined }) &
   Omit<RequestInit, "method" | "body">;
 
+// The request argument may be left out only when nothing in it is required: an operation with a
+// required `path` or `query` value needs the argument, with or without a body (a call that omitted it
+// type-checked and then threw in `fill`).
+type Optional<O> = [RequiredKeys<Request<O>>] extends [never] ? [request?: Request<O>] : [request: Request<O>];
 type Args<O, WithBody extends boolean> = WithBody extends true
   ? [Body<O>] extends [never]
-    ? [request?: Request<O>]
-    : HasKeys<Params<O, "path">> extends true
-      ? [request: Request<O> & { json: Body<O> }]
-      : [request: Request<O> & { json: Body<O> }]
-  : [request?: Request<O>];
+    ? Optional<O>
+    : [request: Request<O> & { json: Body<O> }]
+  : Optional<O>;
 
 /** A client whose paths, parameters, JSON bodies and answers come from `strata-api-types`' `paths`. */
 export type TypedApi<P> = {
