@@ -12,6 +12,10 @@ time. While the version is 0.x, any release may break.
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
 ## 2026-11-23
+- `installLayoutShims()` now also installs an in-memory `localStorage` and `sessionStorage` where the runtime's are unusable (Node 25+ under jsdom), emptied after each test. Apps that carried their own shim can delete it; one that tests "no storage" must replace it afterwards.
+- `strata-api-types` reports why openapi-typescript failed to load instead of always asking for an install; a TypeScript 7 app needs the `typescript`/`typescript7` split in the README (new section text, no code change).
+- `NativeSelect`, `ChoiceGroup` and `ToggleGroup` are now unions that also take `param` (URL-held choice); `ChoiceGroup` and `ToggleGroup` are function components with the same props, so nothing changes for existing callers. `fetchJson`'s init type is `FetchJsonInit` (`RequestInit` plus `json`).
+
 - `FileDropZone` no longer takes a `DragSource` drag (or one of its new `refuseTypes`): a keyboard drag skips it and it does not offer "Drop to add". A test that Tabbed past the zone during a keyboard drag can drop that Tab.
 - `strata-visual` gives a route's page, when taller than the window, a window as tall as itself before its shot, so lazy pictures (`Thumbnail`) below the fold are drawn in the baseline: re-record baselines that showed their grey loading boxes (`scrollThrough: false` in the config keeps the old behaviour). An app that passed `eager` to `Thumbnail` only for its screenshots can drop it.
 - `MediaPlayer` with `controls="native"` (or `"auto"` on a touch device) and `spans` now draws a thin strip of the spans under the picture.

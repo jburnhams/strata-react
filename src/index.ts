@@ -66,7 +66,7 @@ export {
   type AsyncActionOptions,
   type FieldErrors,
 } from "./components/async-button";
-export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice } from "./components/field";
+export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, type Choice, type NativeSelectProps, type ChoiceGroupProps } from "./components/field";
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from "./components/meter";
@@ -172,6 +172,12 @@ export {
   type DescribeError,
   type ErrorBody,
   type FetchJsonOptions,
+  type FetchJsonInit,
+  createApi,
+  createTypedApi,
+  type TypedApi,
+  type Api,
+  type ApiOptions,
   type ApiPage,
   type InfiniteLoad,
   type InfiniteLoadOptions,
@@ -180,6 +186,11 @@ export {
   type More,
 } from "./query";
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
+export { appBase, withBase } from "./lib/base";
+export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";
+export { speak, stopSpeaking, canSpeak, pickVoice, useSpeech, type SpeakOptions, type Speech, type UseSpeechOptions } from "./lib/speech";
+export { SayAgain, type SayAgainProps } from "./components/say-again";
+export { ButtonLink, TextLink, type ButtonLinkProps, type TextLinkProps } from "./components/link";
 
 export { Compare, type CompareProps, type CompareMode, type Candidate, type ImageMedia, type AudioMedia, type TextMedia, type VideoMedia } from "./components/compare";
 export { ViewportFrame, useViewport, type ViewportFrameProps, type ViewportState } from "./components/viewport";

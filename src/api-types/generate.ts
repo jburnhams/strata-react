@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 // The types behind `strata-api-types` (strata-react issue #263). A strata app's FastAPI server
@@ -55,13 +56,39 @@ function baseOf(source: string): URL {
   return /^https?:\/\//i.test(source) ? new URL(source) : pathToFileURL(resolve(source));
 }
 
+/** The message for a failed `import("openapi-typescript")`: absent, or present but unable to load (issue #293: a TypeScript 7 app was told to install what it had). */
+export function explainImportFailure(cause: unknown, typescriptMajor: number | undefined = installedTypescriptMajor()): string {
+  const text = cause instanceof Error ? cause.message : String(cause);
+  const code = (cause as { code?: string } | null)?.code;
+  const notFound = (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") && /Cannot find (package|module) 'openapi-typescript'/.test(text);
+  if (notFound) {
+    return "strata-api-types needs openapi-typescript: npm install --save-dev openapi-typescript (see \"API types from the server\" in the README for the TypeScript it wants).";
+  }
+  const hint =
+    typescriptMajor !== undefined && typescriptMajor >= 7
+      ? ` The \`typescript\` package installed here is version ${typescriptMajor}, which ships no JavaScript API, and openapi-typescript needs one. Install TypeScript 6's under the name \`typescript\` ("typescript": "npm:@typescript/typescript6@~6.0.2", with TypeScript 7 as another name such as "typescript7" for \`tsc\`) and keep the \`overrides\` entry; see "API types from the server" in the README.`
+      : " It is installed but did not load; the cause is above. It needs a `typescript` package with a JavaScript API (TypeScript 5 or 6).";
+  return `strata-api-types could not load openapi-typescript: ${text}.${hint}`;
+}
+
+/** The major version of the `typescript` package an app resolves, or `undefined` when none can be read. */
+function installedTypescriptMajor(): number | undefined {
+  try {
+    const { version } = createRequire(resolve("package.json"))("typescript/package.json") as { version?: string };
+    const major = Number.parseInt(version ?? "", 10);
+    return Number.isNaN(major) ? undefined : major;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * The TypeScript types for an OpenAPI document, as the text of the generated file. `source` is where the
  * document was read from (a URL or file path): relative `$ref`s to other files resolve against it.
  */
 export async function generateApiTypes(schema: OpenApiDocument, source?: string): Promise<string> {
-  const mod = await import("openapi-typescript").catch(() => {
-    throw new Error("strata-api-types needs openapi-typescript: npm install --save-dev openapi-typescript (it also wants TypeScript 5 or an override that points it at yours).");
+  const mod = await import("openapi-typescript").catch((cause: unknown) => {
+    throw new Error(explainImportFailure(cause), { cause });
   });
   const { default: openapiTS, astToString } = mod;
   const ast = await openapiTS(schema as never, source ? { cwd: baseOf(source) } : undefined);

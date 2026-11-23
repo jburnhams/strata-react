@@ -2,7 +2,9 @@
 // (LineChart's width; React Aria's Virtualizer draws every row of a list in a test unless the box is mocked, which these shims do not make smaller. A virtualised table with detail rows, or a virtualised grid of tiles, measures each row by its scroll size, which jsdom reports as 0: a test of one gives `Element.prototype.scrollHeight` a value) then render nothing to
 // assert on, so an app testing a screen built from them hits the same wall Strata's own suite did.
 // These shims give every element one fixed box and a ResizeObserver that reports it once on
-// observe. Real layout is checked by the visual suite in Chromium, never here.
+// observe (and, on Node 25+, a working in-memory localStorage: see storage.ts). Real layout is checked by the visual suite in Chromium, never here.
+
+import { installStorageShim } from "./storage";
 
 // jsdom has no DOMRect constructor in every version, so rects are plain objects of the same shape.
 /** A DOMRect-shaped object, for stand-ins that report geometry. */
@@ -18,7 +20,7 @@ export interface LayoutBox {
 
 /**
  * Give jsdom a fixed box for every element (`getBoundingClientRect`, `offset*`, `client*`) and a
- * ResizeObserver that reports it on observe, so measuring components render. Defaults to 640×280.
+ * ResizeObserver that reports it on observe, so measuring components render, and an in-memory `localStorage` and `sessionStorage` where the runtime's throw (Node 25+). Defaults to 640×280.
  * Call once in a Vitest setup file; returns a function that puts the originals back.
  */
 export function installLayoutShims({ width = 640, height = 280 }: Partial<LayoutBox> = {}): () => void {
@@ -49,6 +51,8 @@ export function installLayoutShims({ width = 640, height = 280 }: Partial<Layout
   for (const [prop, value] of [["offsetWidth", width], ["offsetHeight", height], ["clientWidth", width], ["clientHeight", height]] as const) {
     replace(HTMLElement.prototype, prop, { get: () => value });
   }
+
+  restore.push(installStorageShim());
 
   return () => {
     for (const undo of restore.reverse()) undo();

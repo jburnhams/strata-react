@@ -67,6 +67,15 @@ export function useLoad<T, K extends QueryKey = QueryKey>(
   return toLoad(useQuery(rest), describeError);
 }
 
+/** What `fetchJson` takes as `fetch`'s init, plus `json`. */
+export type FetchJsonInit = RequestInit & {
+  /**
+   * A value sent as the JSON body: `Content-Type: application/json` is set unless the caller gave one, and the method is `POST` unless given.
+   * Replaces `body`; an app never builds the `RequestInit` for a write by hand.
+   */
+  json?: unknown;
+};
+
 /** Options for `fetchJson` beyond `fetch`'s own. */
 export type FetchJsonOptions = {
   /** Finds the server's reason and per-field messages in an error body. Default `readErrorBody` (FastAPI's `detail`, `message`, `error`). */
@@ -75,14 +84,20 @@ export type FetchJsonOptions = {
 
 /**
  * fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default, and the usual commit for a write.
- * A 204 or empty body resolves to undefined. An error response's body is read onto the HttpError (`body`, `reason`, `fieldErrors`).
+ * `init.json` sends a JSON body without building the headers. A 204 or empty body resolves to undefined. An error response's body is read onto the HttpError (`body`, `reason`, `fieldErrors`).
  */
-export async function fetchJson<T>(input: string | URL, init?: RequestInit, { readError = readErrorBody }: FetchJsonOptions = {}): Promise<T> {
+export async function fetchJson<T>(input: string | URL, init?: FetchJsonInit, { readError = readErrorBody }: FetchJsonOptions = {}): Promise<T> {
+  const { json, ...rest } = init ?? {};
   // Headers, tuple arrays and plain objects are all valid HeadersInit; normalise before adding the
   // default so a caller's Authorization (or their own Accept) is never dropped.
-  const headers = new Headers(init?.headers);
+  const headers = new Headers(rest.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
-  const res = await fetch(input, { ...init, headers });
+  if (json !== undefined) {
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    rest.body = JSON.stringify(json);
+    rest.method ??= "POST";
+  }
+  const res = await fetch(input, { ...rest, headers });
   if (!res.ok) {
     // The body is read as text and parsed only when it parses: a proxy's HTML 502 page or an empty
     // body must still throw the HttpError, never a JSON SyntaxError in its place.
@@ -101,5 +116,7 @@ export async function fetchJson<T>(input: string | URL, init?: RequestInit, { re
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+export { createApi, type Api, type ApiOptions } from "./api";
+export { createTypedApi, type TypedApi } from "./typed-api";
 export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
 export { useJob, isTaskRunning, type Job, type JobOptions } from "./job";
