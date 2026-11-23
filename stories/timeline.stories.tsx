@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { useDrag } from "react-aria";
 import { Lock, Volume2 } from "lucide-react";
-import { IconButton, Timeline, TimelineZoomControls, noOverlap, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineLane, type TimelineProps } from "../src";
+import { DragSource, IconButton, Timeline, TimelineZoomControls, noOverlap, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineLane, type TimelineProps } from "../src";
 
 // Issue #77. Two subjects on one component, because they are one picture: kiln bookings across a
 // working day (hours on the axis, no current-time rule) and a media edit (seconds, a current time,
@@ -180,13 +179,12 @@ const library: Clip[] = [
   { id: "l3", name: "wind.wav", length: 20 },
 ];
 
-/** The app's own drag source: a button that drags a clip (React Aria `useDrag`; Enter starts a keyboard drag). */
+/** A library row that drags a clip: `DragSource`, with a grip for the keyboard (Enter picks it up). */
 function LibraryClip({ clip }: { clip: Clip }) {
-  const { dragProps, isDragging } = useDrag({ getItems: () => [{ "application/x-clip": clip.id, "text/plain": clip.name }], getAllowedDropOperations: () => ["copy"] });
   return (
-    <div {...dragProps} role="button" tabIndex={0} aria-label={`Drag ${clip.name}`} className={isDragging ? "rounded-control border border-border bg-muted px-3 py-2 opacity-60" : "rounded-control border border-border px-3 py-2"}>
+    <DragSource label={clip.name} items={() => [{ "application/x-clip": clip.id, "text/plain": clip.name }]} className="rounded-control border border-border py-1 pe-3 ps-1">
       {clip.name} <span className="text-muted-foreground tabular-nums">{clip.length} s</span>
-    </div>
+    </DragSource>
   );
 }
 
@@ -215,7 +213,7 @@ function DropStage() {
           setSaid(`Added ${clip.name} at ${d.start} s.`);
         }}
       />
-      <p className="type-body-sm text-muted-foreground">{said} Drag a clip onto a lane (it snaps to edges); the locked lane refuses with its reason. By keyboard: focus a clip, press Enter, Tab to a lane, Enter to drop it at the current time (30 s).</p>
+      <p className="type-body-sm text-muted-foreground">{said} Drag a clip onto a lane (it snaps to edges); the locked lane refuses with its reason. By keyboard: focus a clip's grip, press Enter, Tab to a lane, Enter to drop it at the current time (30 s).</p>
     </div>
   );
 }
