@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-11-23
+**`ChoiceGrid` `picked` state and body-less typed POSTs** (branch `claude/project-thread-yjlx1m`, issues #306 and #305). Flashtap uses `ChoiceGrid` for picks with no right answer and hit `createTypedApi` asking for `json` on a POST with no body. No dependency added.
+
+- `src/components/choice-grid.tsx`: new `picked` state (primary border on the sunken surface, neutral word, closes the grid like `right`, so a tap during a slow request cannot repeat); `marks` is now `ChoiceMarks`: a quiz gives `wrong`/`right`/`answer`, a grid with no answer key gives only `picked`. Chose `picked` over a separate `pending` state: the grid already closes on one tile's state, and the app can change the word while the request runs.
+- `src/query/typed-api.ts`: `Body<O>` reads `NonNullable<requestBody>`, so `requestBody?: never` is no body and `post`/`put`/`patch` take no `json`.
+- `src/index.ts` (exports `ChoiceMarks`), `README.md`, `UPGRADING.md`, `tests/unit/choice-grid.test.tsx`, `tests/unit/app-plumbing.test.tsx` (body-less POST and PUT), `stories/choice-grid.stories.tsx` (`Picked`), `tests/visual/baselines/data-choicegrid--picked--{light,dark}.png` (**new**; recorded with Chromium 1243 here, the 14 existing ChoiceGrid baselines still match).
+
 **Recording speech: `useRecorder`, `InputLevel`, `TakeLevel` and the microphone** (branch `claude/project-thread-cvjjmf`). Jonathan asked for strata-voice's recording studio to put its common code here ("a lot of the audio components should be common UI stuff"). Its first version hand-built the microphone glue, the WAV writer, the level meter and the take's verdict in the app; they move here unchanged in behaviour, so the next app that records (or strata-voice's import of existing audio) does not write them again. No dependency was added: the Web Audio API does the capture.
 
 - `src/lib/microphone.ts` (**new**): `Microphone`/`MicrophoneStream`, `browserMicrophone` (getUserMedia with echo cancellation, noise suppression and gain off, then an AudioWorklet loaded from a Blob URL posting 2048-frame chunks; MediaRecorder cannot write uncompressed audio), `MicrophoneError`, `explainMicrophoneError` (the DOMException names as sentences; a DOMException is checked apart from Error, which it is not under jsdom), `MicrophoneContext`, `useMicrophone`.

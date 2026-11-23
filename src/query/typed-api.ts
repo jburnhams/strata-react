@@ -15,7 +15,16 @@ type PathsWith<P, M extends Method> = { [K in keyof P]: P[K] extends { [m in M]:
 type Operation<P, K extends keyof P, M extends Method> = P[K] extends { [m in M]: infer O } ? O : never;
 
 type Params<O, Where extends "path" | "query"> = O extends { parameters: { [w in Where]?: infer V } } ? Exclude<V, undefined | never> : never;
-type Body<O> = O extends { requestBody?: { content: { [j in Json]: infer B } } } ? B : never;
+// `requestBody?: never` (an operation with no body) must not match the pattern below: an optional
+// `never` property matches `{ requestBody?: {…} }` and infers `unknown`, which asked for a `json` the
+// server does not take (issue #305). So the body is read from `NonNullable<…>`, and `never` stays `never`.
+type Body<O> = O extends { requestBody?: infer R }
+  ? [NonNullable<R>] extends [never]
+    ? never
+    : NonNullable<R> extends { content: { [j in Json]: infer B } }
+      ? B
+      : never
+  : never;
 type Answer<O> = O extends { responses: infer R }
   ? R extends { 200: { content: { [j in Json]: infer T } } }
     ? T

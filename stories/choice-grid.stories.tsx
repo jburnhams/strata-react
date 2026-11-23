@@ -31,6 +31,22 @@ function Round({ items = animals, states = {}, size }: { items?: Choice[]; state
   );
 }
 
+function PickRound({ states = {} }: { states?: Record<string, ChoiceState> }) {
+  const [chosen, setChosen] = React.useState(states);
+  return (
+    <ChoiceGrid
+      label="Which one next?"
+      items={animals}
+      itemKey={(c) => c.id}
+      itemLabel={(c) => c.word}
+      renderPicture={(c) => c.picture}
+      state={(c) => chosen[c.id] ?? "open"}
+      marks={{ picked: "Picked" }}
+      onChoose={(c) => setChosen({ [c.id]: "picked" })}
+    />
+  );
+}
+
 const meta = { title: "Data/ChoiceGrid", component: Round, parameters: { layout: "padded" } } satisfies Meta<typeof Round>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -46,6 +62,12 @@ export const Right: Story = { args: { states: { dog: "wrong", cat: "right" } } }
 
 /** The tries ran out: the answer is shown with its own word. */
 export const Answer: Story = { args: { states: { bird: "wrong", cat: "answer" } } };
+
+/** A choice with no answer key ("Which one next?"): the tile picked is neutral, with its word, and the grid is closed. */
+export const Picked: Story = {
+  args: { states: { fish: "picked" } },
+  render: (args) => <PickRound {...args} />,
+};
 
 /** Numerals for a counting question, at the larger tile size. */
 export const Numbers: Story = { args: { items: numbers, size: "lg", states: { n5: "wrong" } } };
