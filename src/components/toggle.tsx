@@ -2,6 +2,7 @@ import * as React from "react";
 import { ToggleButton as AriaToggleButton, ToggleButtonGroup } from "react-aria-components";
 import type { IconComponent } from "../lib/icon";
 import { cn } from "../lib/utils";
+import { useSearchParam } from "../lib/search-param";
 import { Tooltip } from "./tooltip";
 
 // On/off and one-of-a-few controls for what acts on the view: grid, snap, quality, view mode,
@@ -74,14 +75,30 @@ export type ToggleGroupProps = {
   /** Names the group for screen readers: "Preview quality". Required. */
   label: string;
   options: readonly ToggleOption[];
-  value: string;
-  onChange: (value: string) => void;
   size?: Size;
   className?: string;
-};
+} & (
+  | { value: string; onChange: (value: string) => void; param?: undefined }
+  | {
+      /** The search parameter that holds the choice, so it can be linked and survives a reload. The first option is the default and is not written. */
+      param: string;
+      value?: undefined;
+      /** Called after the URL changes. */
+      onChange?: (value: string) => void;
+    }
+);
 
 /** A single-choice set of toggle buttons for 2 to 7 short options that switch a view. One is always chosen; arrow keys move between them. */
-export function ToggleGroup({ label, options, value, onChange, size = "default", className }: ToggleGroupProps) {
+export function ToggleGroup(props: ToggleGroupProps) {
+  return props.param === undefined ? <ToggleGroupView {...props} /> : <ParamToggleGroup {...props} />;
+}
+
+function ParamToggleGroup({ param, options, onChange, ...props }: Extract<ToggleGroupProps, { param: string }>) {
+  const [value, setValue] = useSearchParam(param, { default: options[0]?.value ?? "", parse: (raw) => options.some((o) => o.value === raw) });
+  return <ToggleGroupView {...props} options={options} value={value} onChange={(next) => { setValue(next); onChange?.(next); }} />;
+}
+
+function ToggleGroupView({ label, options, value, onChange, size = "default", className }: { label: string; options: readonly ToggleOption[]; value: string; onChange: (value: string) => void; size?: Size; className?: string }) {
   return (
     <ToggleButtonGroup
       aria-label={label}

@@ -2,6 +2,7 @@ import * as React from "react";
 import { CircleAlert } from "lucide-react";
 import { Label, Radio, RadioGroup } from "react-aria-components";
 import { cn } from "../lib/utils";
+import { useSearchParam } from "../lib/search-param";
 import { controlHeight, type ControlSize } from "../lib/control";
 
 // Field owns the wiring a generated form usually forgets: the label's htmlFor, aria-describedby
@@ -115,8 +116,45 @@ export function Textarea({ className, id, ...props }: React.ComponentProps<"text
 // A native select, styled. For short option lists on a touch screen it beats a custom listbox:
 // the platform picker, typeahead and form autofill all work with no code.
 /** The platform select, styled. The default for short lists, especially on touch screens. `size="sm"` is --control-h-sm. */
-export function NativeSelect({ className, id, size = "default", ...props }: Omit<React.ComponentProps<"select">, "size"> & { size?: ControlSize }) {
+export function NativeSelect(props: NativeSelectProps) {
+  // `param` is a different component so a select outside a router (no `param`) never calls router hooks.
+  return props.param === undefined ? <PlainSelect {...(props as PlainSelectProps)} /> : <ParamSelect {...props} />;
+}
+
+type PlainSelectProps = Omit<React.ComponentProps<"select">, "size"> & { size?: ControlSize };
+
+/** Props of `NativeSelect`: a native select's own, or (with `param`) a choice held in the URL. */
+export type NativeSelectProps =
+  | PlainSelectProps & { param?: undefined; paramDefault?: undefined }
+  | (Omit<PlainSelectProps, "value" | "defaultValue" | "onChange"> & {
+      /** The search parameter that holds the choice (`?mode=…`), so it can be linked and survives a reload. */
+      param: string;
+      /** The option that is chosen when the URL says nothing; choosing it removes the param. */
+      paramDefault: string;
+      /** Called after the URL changes. */
+      onChange?: (value: string) => void;
+    });
+
+function PlainSelect({ className, id, size = "default", ...props }: PlainSelectProps) {
   return <select {...useField(id)} className={cn(control, controlHeight[size], "pr-8", className)} {...props} />;
+}
+
+function ParamSelect({ param, paramDefault, onChange, children, ...props }: Extract<NativeSelectProps, { param: string }>) {
+  // An unknown value in the URL reads as the default: the select shows an option that exists.
+  const options = React.Children.toArray(children).flatMap((c) => (React.isValidElement<{ value?: string; children?: React.ReactNode }>(c) ? [c.props.value ?? String(c.props.children)] : []));
+  const [value, setValue] = useSearchParam(param, { default: paramDefault, parse: (raw) => options.length === 0 || options.includes(raw) });
+  return (
+    <PlainSelect
+      {...props}
+      value={value}
+      onChange={(e) => {
+        setValue(e.target.value);
+        onChange?.(e.target.value);
+      }}
+    >
+      {children}
+    </PlainSelect>
+  );
 }
 
 // Radio choices: React Aria's RadioGroup (a group named by its label, arrow-key movement, one tab
@@ -125,7 +163,33 @@ export function NativeSelect({ className, id, size = "default", ...props }: Omit
 export type Choice = { value: string; label: string; detail?: string };
 
 /** Radio choices in a fieldset with a legend; each whole row is the hit target. For 2 to 5 options that each need a sentence. */
-export function ChoiceGroup({
+export function ChoiceGroup(props: ChoiceGroupProps) {
+  return props.param === undefined ? <ChoiceGroupView {...props} /> : <ParamChoiceGroup {...props} />;
+}
+
+/** Props of `ChoiceGroup`: the value and `onChange` are the caller's, or (with `param`) the URL's, the first choice being the default. */
+export type ChoiceGroupProps = {
+  legend: string;
+  name: string;
+  choices: Choice[];
+  error?: string;
+} & (
+  | { value: string; onChange: (value: string) => void; param?: undefined }
+  | {
+      /** The search parameter that holds the choice, so it can be linked and survives a reload. The first choice is the default and is not written. */
+      param: string;
+      value?: undefined;
+      /** Called after the URL changes. */
+      onChange?: (value: string) => void;
+    }
+);
+
+function ParamChoiceGroup({ param, choices, onChange, ...props }: Extract<ChoiceGroupProps, { param: string }>) {
+  const [value, setValue] = useSearchParam(param, { default: choices[0]?.value ?? "", parse: (raw) => choices.some((c) => c.value === raw) });
+  return <ChoiceGroupView {...props} choices={choices} value={value} onChange={(next) => { setValue(next); onChange?.(next); }} />;
+}
+
+function ChoiceGroupView({
   legend,
   name,
   choices,

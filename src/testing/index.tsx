@@ -15,6 +15,8 @@ import { ThemeProvider, type ColorSchemePreference } from "../components/theme";
 import { StrataToastRegion, toast } from "../components/toast";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
+export { installStorageShim, memoryStorage } from "./storage";
+export { installFakeSpeech, type FakeSpeech, type Spoken } from "./speech";
 export { filledButtons, expectOneFilledButton, asyncButtonPhase } from "./buttons";
 export {
   installFakeIntersectionObserver,

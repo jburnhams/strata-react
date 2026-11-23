@@ -167,7 +167,7 @@ Native elements stay where the platform does it better and the stack table says 
    `rowLabel`). Rows that start chosen are `useSelection`'s `initial` (keys, or a test on the
    row), never an effect that writes the selection once data arrives. Shift-click ranges come
    with both; never hand-write them.
-6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL.
+6. Anything a person would link or reload into (tab, sort, filter, page, open item) is in the URL (`useSearchParam`, or `param=` on `NativeSelect`, `ChoiceGroup`, `ToggleGroup`, `Tabs`; never a hand-written `URLSearchParams` update). An action that navigates is a `ButtonLink` (`variant="default"` counts as the view's filled button) and an in-app link in prose or a table is a `TextLink`, never a hand-styled `Link`. Writes go through `createApi()` (JSON bodies, the base path behind a reverse proxy: `createBrowserRouter(routes, { basename: appBase() || "/" })`), or `fetchJson(url, { json })`; an `<img src>` or download link uses `withBase`.
    A row that shows more of itself in place is a `Disclosure` (in a list) or `DataTable
    expansion=` (in a table), with `useExpanded({ param })` holding the open keys; the detail's
    `useLoad` lives in the detail's own component, so it runs when the row opens. Never a raw

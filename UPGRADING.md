@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-23
+- `installLayoutShims()` now also installs an in-memory `localStorage` and `sessionStorage` where the runtime's are unusable (Node 25+ under jsdom), emptied after each test. Apps that carried their own shim can delete it; one that tests "no storage" must replace it afterwards.
+- `strata-api-types` reports why openapi-typescript failed to load instead of always asking for an install; a TypeScript 7 app needs the `typescript`/`typescript7` split in the README (new section text, no code change).
+- `NativeSelect`, `ChoiceGroup` and `ToggleGroup` are now unions that also take `param` (URL-held choice); `ChoiceGroup` and `ToggleGroup` are function components with the same props, so nothing changes for existing callers. `fetchJson`'s init type is `FetchJsonInit` (`RequestInit` plus `json`).
+
 ## 2026-11-19
 - In fullscreen, `MediaPlayer` grows the video into the controls’ space while they are hidden.
 
