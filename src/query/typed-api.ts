@@ -15,7 +15,16 @@ type PathsWith<P, M extends Method> = { [K in keyof P]: P[K] extends { [m in M]:
 type Operation<P, K extends keyof P, M extends Method> = P[K] extends { [m in M]: infer O } ? O : never;
 
 type Params<O, Where extends "path" | "query"> = O extends { parameters: { [w in Where]?: infer V } } ? Exclude<V, undefined | never> : never;
-type Body<O> = O extends { requestBody?: { content: { [j in Json]: infer B } } } ? B : never;
+// `requestBody?: never` (an operation with no body) must not match the pattern below: an optional
+// `never` property matches `{ requestBody?: {…} }` and infers `unknown`, which asked for a `json` the
+// server does not take (issue #305). So the body is read from `NonNullable<…>`, and `never` stays `never`.
+type Body<O> = O extends { requestBody?: infer R }
+  ? [NonNullable<R>] extends [never]
+    ? never
+    : NonNullable<R> extends { content: { [j in Json]: infer B } }
+      ? B
+      : never
+  : never;
 type Answer<O> = O extends { responses: infer R }
   ? R extends { 200: { content: { [j in Json]: infer T } } }
     ? T
@@ -37,13 +46,15 @@ type Request<O> = (HasKeys<Params<O, "path">> extends true ? { path: Params<O, "
     : { query?: undefined }) &
   Omit<RequestInit, "method" | "body">;
 
+// The request argument may be left out only when nothing in it is required: an operation with a
+// required `path` or `query` value needs the argument, with or without a body (a call that omitted it
+// type-checked and then threw in `fill`).
+type Optional<O> = [RequiredKeys<Request<O>>] extends [never] ? [request?: Request<O>] : [request: Request<O>];
 type Args<O, WithBody extends boolean> = WithBody extends true
   ? [Body<O>] extends [never]
-    ? [request?: Request<O>]
-    : HasKeys<Params<O, "path">> extends true
-      ? [request: Request<O> & { json: Body<O> }]
-      : [request: Request<O> & { json: Body<O> }]
-  : [request?: Request<O>];
+    ? Optional<O>
+    : [request: Request<O> & { json: Body<O> }]
+  : Optional<O>;
 
 /** A client whose paths, parameters, JSON bodies and answers come from `strata-api-types`' `paths`. */
 export type TypedApi<P> = {

@@ -20,7 +20,12 @@ import { Status } from "./status";
 //
 // The state of each tile is the app's (it knows the answer key; strata-react never does): `open`,
 // `wrong` (tapped, not it), `right` (tapped, it) or `answer` (the right one shown because the tries
-// ran out). Each closed state carries its word under the picture (`marks`, required, so a state is
+// ran out), and `picked` for a choice with no answer key at all ("Which one next?", "How was that
+// one?", issue #306): the tile chosen, drawn with the primary border on the sunken surface (as a
+// chosen `SelectableGrid` tile), never the success tint, which would say "correct" about a
+// preference. `picked` closes the grid like `right`, so a second tap cannot land while the app's
+// request runs, and the app may keep the grid on screen with the word "Picked" or "Sending…" until
+// the request answers. A grid with no answer key passes `marks={{ picked: "…" }}` only. Each closed state carries its word under the picture (`marks`, required, so a state is
 // never colour alone) and in the tile's name ("Cow, not this one"). Wrong is greyed and neutral,
 // never red: a mistake is not punished (the early-years spec behind Flashtap, §17). Right and answer
 // get the success role's border and tint.
@@ -31,13 +36,16 @@ import { Status } from "./status";
 // table is a picture, not text to read. Feedback in sound (saying "No, that's a pig") is the app's.
 
 /** Where a tile stands in the round: not yet tried, tried and wrong, tried and right, or shown as the answer after the tries ran out. */
-export type ChoiceState = "open" | "wrong" | "right" | "answer";
+export type ChoiceState = "open" | "wrong" | "right" | "answer" | "picked";
+
+/** The word under each closed tile. A quiz gives `wrong`, `right` and `answer` (and `picked` if it ever uses it); a choice with no answer key gives only `picked`. A state with no word draws no word, so name every state the grid can reach. */
+export type ChoiceMarks = (Record<"wrong" | "right" | "answer", string> & { picked?: string }) | { picked: string; wrong?: never; right?: never; answer?: never };
 
 /** Smallest tile side: `md` 120px, `lg` 160px. Tiles grow to fill the row. */
 export type ChoiceSize = "md" | "lg";
 
 const minSide: Record<ChoiceSize, number> = { md: 120, lg: 160 };
-const closed = (s: ChoiceState) => s === "right" || s === "answer";
+const closed = (s: ChoiceState) => s === "right" || s === "answer" || s === "picked";
 
 /** Props of `ChoiceGrid`. */
 export type ChoiceGridProps<T> = {
@@ -51,8 +59,8 @@ export type ChoiceGridProps<T> = {
   renderPicture: (item: T) => React.ReactNode;
   /** Each tile's state in the round. The app owns the answer; the grid only draws it. */
   state: (item: T) => ChoiceState;
-  /** The word under a closed tile, for each closed state: `{ wrong: "Not this one", right: "Right", answer: "This one" }`. */
-  marks: Record<Exclude<ChoiceState, "open">, string>;
+  /** The word under a closed tile, for each closed state: `{ wrong: "Not this one", right: "Right", answer: "This one" }`, or `{ picked: "Picked" }` where there is no answer key. */
+  marks: ChoiceMarks;
   /** An open tile was pressed (pointer, touch, Enter or Space). */
   onChoose: (item: T) => void;
   /** Default `md`. */
@@ -62,7 +70,7 @@ export type ChoiceGridProps<T> = {
 
 const columns = (size: ChoiceSize) => ({ gridTemplateColumns: `repeat(auto-fill, minmax(min(${minSide[size]}px, 100%), 1fr))` });
 
-/** A grid of large picture tiles for answering one question with a tap: each tile open, wrong, right or shown as the answer, with its word; answered tiles cannot be pressed again, and the grid closes once the answer shows. */
+/** A grid of large picture tiles for answering one question with a tap: each tile open, wrong, right, shown as the answer or (no answer key) picked, with its word; answered tiles cannot be pressed again, and the grid closes once the answer shows. */
 export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture, state, marks, onChoose, size = "md", className }: ChoiceGridProps<T>) {
   const byKey = new Map(items.map((item) => [itemKey(item), item]));
   const over = items.some((item) => closed(state(item)));
@@ -84,7 +92,7 @@ export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture,
       {items.map((item) => {
         const key = itemKey(item);
         const s = state(item);
-        const mark = s === "open" ? null : marks[s];
+        const mark = s === "open" ? null : ((marks as Partial<Record<ChoiceState, string>>)[s] ?? null);
         return (
           <GridListItem
             key={key}
@@ -95,14 +103,15 @@ export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture,
             className={cn(
               "flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-2 text-card-foreground select-none outline-offset-2 transition-state press",
               "hover:border-primary disabled:cursor-default disabled:hover:border-border",
-              closed(s) && "border-4 border-success bg-success-subtle disabled:hover:border-success",
+              (s === "right" || s === "answer") && "border-4 border-success bg-success-subtle disabled:hover:border-success",
+              s === "picked" && "border-4 border-primary bg-surface-sunken disabled:hover:border-primary",
             )}
           >
             <span aria-hidden className={cn("type-picture transition-state", s === "wrong" && "opacity-40")}>
               {renderPicture(item)}
             </span>
             {mark && (
-              <Status tone={s === "wrong" ? "neutral" : "success"} className="max-w-full truncate">
+              <Status tone={s === "wrong" || s === "picked" ? "neutral" : "success"} className="max-w-full truncate">
                 {mark}
               </Status>
             )}
