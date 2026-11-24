@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-11-24
+**MediaPlayer heading** (branch `claude/project-thread-vwria5`, issue #329). Jonathan asked for a video's title and channel over the player while it is paused or the pointer moves, with the player drawing it so the app only gives the data. The player's idle timer, which ran only in full screen, now runs for any playing video; the controls still hide only in full screen.
+
+- `src/components/media-player.tsx`: `heading` prop (`MediaHeading`: `title`, `to`, `subtitle`, `subtitleTo`, `avatar`), drawn across the top of a video (`PictureHeading`) on a shade, with the title and subtitle as router links and the avatar a round `Thumbnail` (a letter when `null`). Shown while paused, and for 3 s after a mouse move, a key, a press or the start of playing; hidden at once when the pointer leaves the player outside full screen. It takes no clicks but its links' while shown, so a click on the picture still plays or pauses; a link reached by Tab brings it back. Video only.
+- `src/components/link.tsx`: `useTarget` and `Target` exported inside the package (not from `index.ts`) for the heading's links, which take the picture's white ink instead of `TextLink`'s accent.
+- `src/styles/strata.css`: `picture-shade` utility (white words on a black gradient, whatever the scheme; like `scrim`, not a theme role).
+- `src/index.ts`, `README.md` (Media player row): `MediaHeading`.
+- `stories/media-player.stories.tsx`: `Heading`. `tests/unit/media-player.test.tsx`: 3 tests (links and letter, plain words and audio, shown and hidden over play, moves and leaving).
+- `tests/visual/baselines/`: the new story's shots.
+
 **RateChoice on React Aria's Select** (branch `claude/project-thread-5wm5fj`, issue #324). strata-reels' tape page could not get stable baselines: the "1×" of the playback speed moved a pixel up or down between two runs on CI's runner. Chromium lays out a native select's text with `line-height: normal` whatever the page sets, and centres it, which put it on a fractional offset. The same one-pixel shift shows in every player shot between Chromium builds. A first guess, that the 4:3 video above put the controls on a half pixel, was wrong: the shift shows with no video. Jonathan chose to move the speed control onto React Aria's `Select`, so the text box is ours.
 - `src/components/media.tsx`: `RateChoice` is an `AriaSelect` with a `Button` trigger (the value and a chevron, control height and type from the theme), and a `ListBox` in a popover with the overlay surface, marking the current speed. Same props.
 - `tests/unit/media.test.tsx`: the trigger names its value and opens a listbox, the current speed is selected, and arrows and Enter choose. `media-player`, `compare-video` and `compare-video-grid` tests choose a speed by button and option. The view-change test clicks off the control before pressing "2", which a focused select takes as type-ahead.

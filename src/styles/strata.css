@@ -197,6 +197,15 @@
   :where(.dark) & { background-color: rgb(0 0 0 / 0.65); }
 }
 
+/* Words over a moving picture (a video's heading while it is paused): white on a shade that darkens
+   toward the edge, in either scheme, since the picture under it is neither light nor dark. Like
+   `scrim`, not a theme role (strata-react issue #329). */
+@utility picture-shade {
+  background-image: linear-gradient(to bottom, rgb(0 0 0 / 0.65), rgb(0 0 0 / 0));
+  color: rgb(255 255 255);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
 /* An overlay's entrance: an ordinary effect (fade and 2% scale), CSS only, once on mount. Overlays
    are occasional (character.md), so the effects duration and no overshoot; they close at once.
    Reduced motion collapses it in the rule below. */
