@@ -119,7 +119,7 @@ export {
   type TileSize,
 } from "./components/selectable-grid";
 export { ViewOptions, useViewOptions, sortRows, type ViewOptionsProps, type ViewOptionsConfig, type ViewOptionsState, type ViewSort, type ViewGroup, type ViewGroupRows } from "./components/view-options";
-export { ChoiceGrid, ChoiceGridSkeleton, type ChoiceGridProps, type ChoiceState, type ChoiceSize } from "./components/choice-grid";
+export { ChoiceGrid, ChoiceGridSkeleton, type ChoiceGridProps, type ChoiceState, type ChoiceMarks, type ChoiceSize } from "./components/choice-grid";
 export { PlaceBoard, type PlaceBoardProps, type PlaceState } from "./components/place-board";
 export { TileGrid, TileGridSkeleton, SelectableGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
@@ -202,7 +202,7 @@ export { OutboxStatus, type OutboxStatusProps } from "./components/outbox-status
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
 export { appBase, withBase } from "./lib/base";
 export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";
-export { speak, stopSpeaking, canSpeak, pickVoice, useSpeech, type SpeakOptions, type Speech, type UseSpeechOptions } from "./lib/speech";
+export { speak, stopSpeaking, canSpeak, canPlayClips, canSay, textOf, pickVoice, useSpeech, type SpeakOptions, type Speech, type SpeechPart, type Saying, type UseSpeechOptions } from "./lib/speech";
 export { SayAgain, type SayAgainProps } from "./components/say-again";
 export {
   browserMicrophone,

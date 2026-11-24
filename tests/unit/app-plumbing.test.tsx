@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, render, waitFor } from "@testing-library/react";
+import { cleanup, screen, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { useLocation } from "react-router";
@@ -15,7 +15,11 @@ import {
   createApi,
   createTypedApi,
   fetchJson,
+  canSay,
   pickVoice,
+  speak,
+  stopSpeaking,
+  textOf,
   useSearchParam,
   withBase,
 } from "../../src";
@@ -212,6 +216,90 @@ describe("speech (#299)", () => {
   });
 });
 
+describe("recorded speech (#310)", () => {
+  const parts = [
+    { text: "Listen.", clip: "voice/listen.wav" },
+    { text: "sh, as in ship.", clip: "voice/sh.wav" },
+  ];
+
+  it("plays every part's recording in order, names the button by its text, and ends once the last has played", async () => {
+    const speech = installFakeSpeech();
+    try {
+      const ended = vi.fn();
+      expect(canSay(parts)).toBe(true);
+      expect(speak(parts, { onEnd: ended })).toBe(true);
+      expect(speech.clips()).toEqual(["voice/listen.wav"]);
+      speech.finish();
+      expect(speech.clips()).toEqual(["voice/listen.wav", "voice/sh.wav"]);
+      expect(speech.said[1]).toMatchObject({ text: "sh, as in ship.", clip: "voice/sh.wav", cancelled: false });
+      expect(ended).not.toHaveBeenCalled();
+      speech.finish();
+      expect(ended).toHaveBeenCalledTimes(1);
+      render(<SayAgain text="Listen. sh, as in ship." parts={parts} />);
+      await userEvent.click(screen.getByRole("button", { name: "Say: Listen. sh, as in ship." }));
+      expect(speech.clips()).toHaveLength(3);
+    } finally {
+      speech.uninstall();
+    }
+  });
+
+  it("says the words with the browser's voice when a part has no recording: never two voices in one prompt", () => {
+    const speech = installFakeSpeech();
+    try {
+      speak([{ text: "Find the" , clip: "voice/find.wav" }, { text: "cow.", clip: null }], { lang: "en-GB" });
+      expect(speech.clips()).toEqual([]);
+      expect(speech.texts()).toEqual(["Find the cow."]);
+      expect(textOf([{ text: " Find the " }, { text: "cow." }])).toBe("Find the cow.");
+    } finally {
+      speech.uninstall();
+    }
+  });
+
+  it("hands the rest of the prompt to the browser's voice when a clip fails", () => {
+    const speech = installFakeSpeech();
+    try {
+      speak([...parts, { text: "Which letters make it?", clip: "voice/q.wav" }], { lang: "en-GB" });
+      speech.finish();
+      speech.failClip();
+      expect(speech.said.map((s) => [s.text, s.clip])).toEqual([
+        ["Listen.", "voice/listen.wav"],
+        ["sh, as in ship.", "voice/sh.wav"],
+        ["sh, as in ship. Which letters make it?", null],
+      ]);
+    } finally {
+      speech.uninstall();
+    }
+  });
+
+  it("cuts a clip off for the next prompt or a stop, and calls onEnd for it", () => {
+    const speech = installFakeSpeech();
+    try {
+      const ended = vi.fn();
+      speak(parts, { onEnd: ended });
+      speak("Try again.");
+      expect(speech.said[0]!.cancelled).toBe(true);
+      expect(ended).toHaveBeenCalledTimes(1);
+      expect(speech.texts()).toEqual(["Try again."]);
+      speak(parts);
+      stopSpeaking();
+      expect(speech.said.at(-1)!.cancelled).toBe(true);
+    } finally {
+      speech.uninstall();
+    }
+  });
+
+  it("draws the button for recordings where the browser has no voice, and not when muted or there is nothing to say", () => {
+    // jsdom has Audio but no speechSynthesis: what a browser without voices looks like
+    render(<SayAgain text="Listen. sh, as in ship." parts={parts} verb="Hear" />);
+    expect(screen.getByRole("button", { name: "Hear: Listen. sh, as in ship." })).toBeInTheDocument();
+    cleanup();
+    render(<SayAgain text="Listen. sh, as in ship." parts={parts} muted />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(canSay([{ text: "cow.", clip: null }])).toBe(false);
+    expect(speak([])).toBe(false);
+  });
+});
+
 describe("storage shim (#298)", () => {
   it("replaces storage that throws with an in-memory one, and leaves working storage alone", () => {
     const real = globalThis.localStorage;
@@ -254,6 +342,12 @@ describe("createTypedApi (#296)", () => {
     };
     "/api/learners/{id}": {
       delete: { parameters: { path: { id: number }; query?: never }; responses: { 204: { content?: never } } };
+      get: { parameters: { path: { id: number }; query?: never }; responses: { 200: { content: { "application/json": { id: number } } } } };
+    };
+    // How openapi-typescript writes an operation with no request body (#305).
+    "/api/learners/{id}/withdraw": {
+      post: { parameters: { path: { id: number }; query?: never }; requestBody?: never; responses: { 204: { content?: never } } };
+      put: { parameters: { path: { id: number }; query?: never }; requestBody?: never; responses: { 204: { content?: never } } };
     };
   };
 
@@ -272,6 +366,22 @@ describe("createTypedApi (#296)", () => {
     expect(made).toEqual({ id: 2, nickname: "Owl" });
     await api.delete("/api/learners/{id}", { path: { id: 7 } });
     expect(seen[1]).toBe("delete 7");
+    // A POST and a PUT with no request body take no `json` (#305).
+    server.use(
+      http.post("*/proxy/api/learners/:id/withdraw", ({ params }) => { seen.push(`withdraw ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
+      http.put("*/proxy/api/learners/:id/withdraw", ({ params }) => { seen.push(`restore ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
+    );
+    await api.post("/api/learners/{id}/withdraw", { path: { id: 3 } });
+    await api.put("/api/learners/{id}/withdraw", { path: { id: 4 } });
+    expect(seen.slice(2)).toEqual(["withdraw 3", "restore 4"]);
+    // The request argument is required where the operation has a required path or query value.
+    // @ts-expect-error `id` is required, so the request cannot be left out (body-less POST)
+    void (() => api.post("/api/learners/{id}/withdraw"));
+    // @ts-expect-error `id` is required, so the request cannot be left out (DELETE)
+    void (() => api.delete("/api/learners/{id}"));
+    // @ts-expect-error `id` is required, so the request cannot be left out (GET)
+    void (() => api.get("/api/learners/{id}"));
+    void (() => api.get("/api/learners"));
     // @ts-expect-error a path the server does not have
     void (() => api.get("/api/nope"));
     // @ts-expect-error the body is required and typed

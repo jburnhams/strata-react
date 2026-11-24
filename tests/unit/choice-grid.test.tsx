@@ -114,4 +114,34 @@ describe("ChoiceGrid", () => {
   it("teaches cn that type-picture is a type step", () => {
     expect(cn("type-body", "type-picture")).toBe("type-picture");
   });
+
+  it("draws a picked tile neutrally with its word and closes the grid, for a choice with no answer key (#306)", async () => {
+    const user = userEvent.setup();
+    const onChoose = vi.fn();
+    function Pick() {
+      const [picked, setPicked] = React.useState<string | null>(null);
+      return (
+        <ChoiceGrid
+          label="Which one next?"
+          items={animals.slice(0, 2)}
+          itemKey={(a) => a.id}
+          itemLabel={(a) => a.word}
+          renderPicture={(a) => a.picture}
+          state={(a) => (picked === a.id ? "picked" : "open")}
+          marks={{ picked: "Picked" }}
+          onChoose={(a) => { onChoose(a); setPicked(a.id); }}
+        />
+      );
+    }
+    renderWithStrata(<Pick />);
+    const g = screen.getByRole("grid", { name: "Which one next?" });
+    await user.click(within(g).getByRole("row", { name: "pig" }));
+    const pig = within(g).getByRole("row", { name: "pig, picked" });
+    expect(pig).toHaveTextContent("Picked");
+    expect(pig).toHaveAttribute("data-choice", "picked");
+    expect(pig.className).not.toMatch(/success/);
+    // A second tap cannot land while the app's request runs.
+    expect(within(g).getByRole("row", { name: "cow" }).getAttribute("aria-disabled")).toBe("true");
+    expect(onChoose).toHaveBeenCalledTimes(1);
+  });
 });
