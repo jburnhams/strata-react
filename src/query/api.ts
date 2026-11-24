@@ -16,6 +16,16 @@ export type ApiOptions = FetchJsonOptions & {
 
 type Init = Omit<FetchJsonInit, "method" | "json" | "body">;
 
+// A body that is already bytes (a recording, a file) goes as it is: `JSON.stringify` of a Blob is `{}`, and
+// `fetch` sets the Content-Type of a Blob from its own `type` (issue #318: Flashtap's `audio/wav` upload).
+const isRaw = (body: unknown): body is Blob | BufferSource | FormData | URLSearchParams | ReadableStream =>
+  (typeof Blob !== "undefined" && body instanceof Blob) ||
+  body instanceof ArrayBuffer ||
+  ArrayBuffer.isView(body) ||
+  (typeof FormData !== "undefined" && body instanceof FormData) ||
+  body instanceof URLSearchParams ||
+  (typeof ReadableStream !== "undefined" && body instanceof ReadableStream);
+
 /** The methods `createApi` returns: each applies the base and answers `fetchJson`'s `T`. */
 export type Api = {
   /** The path with the app's base: for an `<img src>`, a download link or an `EventSource`. */
@@ -29,12 +39,12 @@ export type Api = {
 
 /**
  * A small client over `fetchJson` for the app's own server: root-relative paths get the app's base (so it works behind a reverse proxy),
- * and `post`, `put` and `patch` send their body as JSON. `api.post<Learner>("/api/learners", { nickname })`.
+ * and `post`, `put` and `patch` send their body as JSON (a `Blob`, bytes, `FormData` or a stream is sent as it is, with the Blob's own type). `api.post<Learner>("/api/learners", { nickname })`.
  */
 export function createApi({ base, ...options }: ApiOptions = {}): Api {
   const url = (path: string) => withBase(path, base ?? appBase());
   const send = <T>(method: string, path: string, body: unknown, init?: Init) =>
-    fetchJson<T>(url(path), { ...init, method, ...(body === undefined ? {} : { json: body }) }, options);
+    fetchJson<T>(url(path), { ...init, method, ...(body === undefined ? {} : isRaw(body) ? { body } : { json: body }) }, options);
   return {
     url,
     get: (path, init) => send("GET", path, undefined, init),

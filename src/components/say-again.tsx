@@ -1,4 +1,5 @@
 import { Volume2 } from "lucide-react";
+import { useClips } from "../query/clips";
 import { canSay, useSpeech, type SpeechPart, type UseSpeechOptions } from "../lib/speech";
 import { IconButton } from "./button";
 
@@ -8,6 +9,7 @@ import { IconButton } from "./button";
 // worse than none), and it is an `IconButton`, so it has the press, the tooltip and the keyboard
 // behaviour of every other control (issue #299). Given `parts` (issue #310), it plays their recordings
 // instead, and the browser says `text` where one is missing; it is drawn wherever either can be heard.
+// Inside a `ClipsProvider` it needs neither `parts` nor `lang`: the app's clip list and language are the context's.
 
 /** Props of `SayAgain`. */
 export type SayAgainProps = UseSpeechOptions & {
@@ -22,8 +24,10 @@ export type SayAgainProps = UseSpeechOptions & {
 
 /** An icon button that says one sentence aloud, from its recordings when given, else with the browser's voice; hidden where neither can be heard or it is muted. */
 export function SayAgain({ text, parts, verb = "Say", className, ...options }: SayAgainProps) {
-  const { say, speaking } = useSpeech(options);
-  const saying = parts?.length ? parts : text;
+  const clips = useClips();
+  const { say, speaking } = useSpeech({ ...options, lang: options.lang ?? clips.lang });
+  // Inside a `ClipsProvider` the recordings of `text` are found for the caller (issue #318); `parts` still wins.
+  const saying = parts?.length ? parts : clips.parts(text);
   if (options.muted || !canSay(saying)) return null;
   return <IconButton icon={Volume2} label={`${verb}: ${text}`} aria-pressed={speaking || undefined} onPress={() => say(saying)} className={className} />;
 }
