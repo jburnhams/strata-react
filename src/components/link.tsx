@@ -44,6 +44,8 @@ type BaseProps = {
   "aria-label"?: string;
   id?: string;
   onPress?: ButtonProps["onPress"];
+  /** React Router's location state for a `to` link (where the person came from, read on the next page with `useLocation().state`). */
+  state?: unknown;
 };
 
 /** Props of `ButtonLink`. */
@@ -53,11 +55,11 @@ export type ButtonLinkProps = BaseProps & Target & { variant?: ButtonProps["vari
 export type TextLinkProps = BaseProps & Target & { icon?: IconComponent };
 
 // Shared with MediaPlayer's heading, whose links take the picture's ink rather than TextLink's accent; not in the public API.
-export function useTarget(target: Target, newTab: boolean | undefined) {
+export function useTarget(target: Target, newTab: boolean | undefined, state?: unknown) {
   const navigate = useNavigate();
   return {
     provide: (node: React.ReactNode) => (
-      <RouterProvider navigate={(to) => void navigate(to)} useHref={useHref}>
+      <RouterProvider navigate={(to) => void navigate(to, state === undefined ? undefined : { state })} useHref={useHref}>
         {node}
       </RouterProvider>
     ),
@@ -74,8 +76,8 @@ export function useTarget(target: Target, newTab: boolean | undefined) {
  * A link drawn as a `Button` (React Router `to`, or `href` for a download or another site): the same variants and heights, `variant="default"` is the filled one and counts for the one-filled-button rule (`data-variant` is set).
  */
 export function ButtonLink(all: ButtonLinkProps) {
-  const { to, href, download, newTab, variant, size, icon: Icon, className, children, ...rest } = all as ButtonLinkProps & { download?: boolean | string };
-  const { provide, props } = useTarget({ to, href, download } as Target, newTab);
+  const { to, href, download, newTab, state, variant, size, icon: Icon, className, children, ...rest } = all as ButtonLinkProps & { download?: boolean | string };
+  const { provide, props } = useTarget({ to, href, download } as Target, newTab, state);
   return provide(
     <AriaLink {...rest} {...props} data-variant={variant ?? "outline"} className={cn(buttonVariants({ variant, size }), "no-underline", className)}>
       {Icon && <Icon aria-hidden />}
@@ -88,8 +90,8 @@ export function ButtonLink(all: ButtonLinkProps) {
  * The house in-app link: accent ink, underlined, for a sentence, a table cell or an empty state's next step. `to` for a route, `href` for a file or another site.
  */
 export function TextLink(all: TextLinkProps) {
-  const { to, href, download, newTab, icon: Icon, className, children, ...rest } = all as TextLinkProps & { download?: boolean | string };
-  const { provide, props } = useTarget({ to, href, download } as Target, newTab);
+  const { to, href, download, newTab, state, icon: Icon, className, children, ...rest } = all as TextLinkProps & { download?: boolean | string };
+  const { provide, props } = useTarget({ to, href, download } as Target, newTab, state);
   return provide(
     <AriaLink
       {...rest}

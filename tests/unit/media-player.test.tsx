@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
+import { useLocation } from "react-router";
 import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 import { renderWithStrata } from "../../src/testing";
@@ -550,6 +551,15 @@ describe("MediaPlayer heading (issue #329)", () => {
     // No picture: the subtitle's first letter.
     expect(within(band()).getByText("K")).toBeInTheDocument();
     expect(band()).toHaveAttribute("data-shown");
+  });
+
+  it("carries the app's router state on its links (#333)", async () => {
+    function Arrived() {
+      return <output data-testid="state">{JSON.stringify(useLocation().state)}</output>;
+    }
+    renderWithStrata(<><MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={{ ...heading, state: { from: "watch" } }} /><Arrived /></>);
+    await userEvent.click(screen.getAllByRole("link", { name: "Kiln room" })[1]);
+    expect(screen.getByTestId("state")).toHaveTextContent('{"from":"watch"}');
   });
 
   it("draws plain words without routes, and nothing on audio", () => {
