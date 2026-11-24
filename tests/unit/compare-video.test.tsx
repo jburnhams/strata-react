@@ -46,7 +46,8 @@ describe("CompareVideo", () => {
     await userEvent.keyboard("l");
     expect(el("A").currentTime).toBe(1);
     expect(el("B").currentTime).toBe(1);
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.5×");
+    await userEvent.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await userEvent.click(await screen.findByRole("option", { name: "0.5×" }));
     expect(el("A").playbackRate).toBe(0.5);
     expect(el("B").playbackRate).toBe(0.5);
   });
@@ -110,7 +111,10 @@ describe("CompareVideo", () => {
   it("keeps the chosen speed when a view change makes new elements", async () => {
     renderWithStrata(<Harness />);
     load();
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.5×");
+    await userEvent.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await userEvent.click(await screen.findByRole("option", { name: "0.5×" }));
+    // Off the speed control first: a focused select takes "2" as type-ahead for 2×, as a native one does in a browser.
+    await userEvent.click(document.body);
     await userEvent.keyboard("2");
     load();
     expect(el("A").playbackRate).toBe(0.5);
@@ -180,7 +184,8 @@ describe("CompareVideo", () => {
   it("offers slow motion down to 0.1 and sets it on both", async () => {
     renderWithStrata(<Harness />);
     load();
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.1×");
+    await userEvent.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await userEvent.click(await screen.findByRole("option", { name: "0.1×" }));
     expect(el("A").playbackRate).toBe(0.1);
     expect(el("B").playbackRate).toBe(0.1);
   });

@@ -51,7 +51,8 @@ describe("CompareVideoGrid", () => {
     load(["A", "B", "C"]);
     await userEvent.keyboard("l");
     for (const l of ["A", "B", "C"]) expect(el(l).currentTime).toBe(1);
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "0.5×");
+    await userEvent.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await userEvent.click(await screen.findByRole("option", { name: "0.5×" }));
     for (const l of ["A", "B", "C"]) expect(el(l).playbackRate).toBe(0.5);
   });
 

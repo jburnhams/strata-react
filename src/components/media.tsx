@@ -1,14 +1,16 @@
 import type { SpanTone } from "./line-chart";
 import * as React from "react";
-import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward, Volume2, VolumeX } from "lucide-react";
+import { Check, ChevronDown, Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward, Volume2, VolumeX } from "lucide-react";
+import { controlHeight } from "../lib/control";
 import { format } from "../lib/format";
+import { overlaySurface } from "../lib/overlay";
 import { cn } from "../lib/utils";
 import { IconButton } from "./button";
-import { NativeSelect } from "./field";
 import type { Shortcut } from "./hotkeys";
 import { useSharedCursor, type CursorMapping } from "./cursor";
 import { Toolbar } from "./toolbar";
 import { Slider } from "./value-controls";
+import { Button as AriaButton, ListBox, ListBoxItem, Popover as AriaPopover, Select as AriaSelect, SelectValue } from "react-aria-components";
 import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
 import { useSliderState } from "react-stately";
 
@@ -306,16 +308,35 @@ export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, cla
   );
 }
 
-/** A choice of playback speed ("0.5×", "1×", "1.5×") on a native select, named "Playback speed". */
+// The speed is React Aria's `Select`, not `NativeSelect` (strata-react #324): Chromium lays out a native select's text
+// with `line-height: normal` whatever the page asks, and centres it in the control, so with the bundled faces the "1×"
+// sat on a fractional offset that rounded a pixel up or down between Chromium builds and, on a loaded runner, between
+// two runs of the same build: every player's screenshot was unstable there. React Aria's Select gives the same
+// behaviour (a button named by its value, a listbox popover, arrows and type-ahead, a hidden native select for forms)
+// with a text box the theme lays out on whole pixels. Its trigger is a `button` with the select's name and value.
+/** A choice of playback speed ("0.5×", "1×", "1.5×"), named "Playback speed": React Aria's Select. */
 export function RateChoice({ rate, onRateChange, rates = [0.5, 1, 1.25, 1.5, 2], className }: { rate: number; onRateChange: (rate: number) => void; rates?: readonly number[]; className?: string }) {
   return (
-    <NativeSelect aria-label="Playback speed" value={String(rate)} onChange={(e) => onRateChange(Number(e.target.value))} className={cn("w-auto", className)}>
-      {rates.map((r) => (
-        <option key={r} value={String(r)}>
-          {`${r}×`}
-        </option>
-      ))}
-    </NativeSelect>
+    <AriaSelect aria-label="Playback speed" selectedKey={String(rate)} onSelectionChange={(key) => key !== null && onRateChange(Number(key))} className={cn("w-auto", className)}>
+      <AriaButton className={cn("flex w-full items-center justify-between gap-2 rounded-control border border-input bg-background pr-2 pl-3 type-body text-foreground transition-state", controlHeight.default)}>
+        <SelectValue className="tabular-nums" />
+        <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
+      </AriaButton>
+      <AriaPopover placement="bottom start" offset={4} className={cn("layer-overlay min-w-(--trigger-width) p-1", overlaySurface)}>
+        <ListBox className="outline-none">
+          {rates.map((r) => (
+            <ListBoxItem key={r} id={String(r)} textValue={`${r}×`} className="flex min-h-(--control-h-sm) cursor-pointer items-center justify-between gap-3 rounded-control px-2 type-body-sm tabular-nums outline-none focus:bg-muted selected:font-medium">
+              {({ isSelected }) => (
+                <>
+                  {`${r}×`}
+                  {isSelected && <Check aria-hidden className="size-4" />}
+                </>
+              )}
+            </ListBoxItem>
+          ))}
+        </ListBox>
+      </AriaPopover>
+    </AriaSelect>
   );
 }
 
