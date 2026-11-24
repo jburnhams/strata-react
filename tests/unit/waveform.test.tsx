@@ -159,3 +159,20 @@ describe("Waveform decoding a file", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });
+
+describe("Waveform normalise", () => {
+  const quiet = Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 9)) * 0.1);
+  it("draws a quiet recording to fill the height and says by how much, in the plot and its summary", () => {
+    renderWithStrata(<Host peaks={quiet} marks={[]} spans={[]} normalise />);
+    expect(screen.getByText("Shown 10× louder")).toBeInTheDocument();
+    expect(slider()).toHaveAccessibleDescription("1:40 long, shown 10× louder");
+  });
+
+  it("says nothing for a recording already near full scale, or without normalise", () => {
+    const { unmount } = renderWithStrata(<Host marks={[]} spans={[]} peaks={peaks.map((p) => p * 2)} normalise />);
+    expect(screen.queryByText(/louder/)).toBeNull();
+    unmount();
+    renderWithStrata(<Host peaks={quiet} marks={[]} spans={[]} />);
+    expect(screen.queryByText(/louder/)).toBeNull();
+  });
+});

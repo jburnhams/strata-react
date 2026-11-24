@@ -1,6 +1,17 @@
 # Changelog
 
 ## 2026-11-24
+**FilmStrip and Waveform normalise** (branch `claude/project-thread-5wm5fj`). Jonathan asked for strata-reels' scene browser (a family tape's scenes with thumbnail strips, transcripts and descriptions), with the reusable parts here. Two were missing: a row of frames for a stretch of video (strata-360's clip list and strata-vid's library drew one by hand), and a waveform for quiet sound (a camcorder tape peaks near a tenth of full scale, so it drew as a flat line). No dependency added.
+
+- `src/components/film-strip.tsx` (**new**): `FilmStrip({ label, frames, span, time, onSeek, aspect, frameWidth, missing, seekVerb })`, `pickEvenly`, `frameAt`. As many `Thumbnail`s as fit at `frameWidth` (default 96 px), picked from the first to the last, sharing the width; each names its time ("Frame at 1:20", or "Play from 1:20" as a button). With `onSeek` the frames are React Aria `Button`s in our `Toolbar` (one tab stop, arrows, Home, End); the frame at `time` inside `span` gets a ring and `aria-current="time"`. Checked: React Aria has no filmstrip; its toolbar and button give all the keyboard and press handling.
+- `src/lib/waveform.ts`: `peakGain(pair, { percentile = 0.995, maxGain = 16 })`, one over a high percentile of the slices' magnitudes, so one click does not keep a quiet recording flat, with a ceiling so hiss is not drawn as speech.
+- `src/components/waveform.tsx`: `normalise` (true or `{ percentile, maxGain }`) scales the drawing only, and says "Shown 6× louder" under the plot (not over it, where the scaled bars reach) and in the slider's description; nothing under 1.1×.
+- `src/index.ts`, `README.md` (Listening and reading row).
+- `stories/film-strip.stories.tsx` (**new**: pictures, seeking, few frames, phone, none, and a quiet waveform to scale and normalised), `stories/fixtures/frames.ts` (**new**: SVG stand-ins for a garden party's frames).
+- `tests/integration/package.test.ts`: the peer-contract walk read FilmStrip's default `"Play from"` followed by the rest of the line as an import of a package named `, className }) {`; a specifier now has no spaces.
+- `tests/unit/film-strip.test.tsx` (**new**, 6 tests), `tests/unit/waveform.test.tsx` (normalise), `tests/unit/lib.test.ts` (`peakGain`).
+- `tests/visual/baselines/`: the new stories' shots.
+
 **Open issues #319, #318 and #305** (branch `claude/project-thread-b5lwwx`). Jonathan asked for the open issues to be fixed together in one PR. #305 (`createTypedApi` asking for `json` on a body-less POST) was already fixed by #306 in v1.3.4 and has tests; the issue was left open. #319 and #318 are new, both from Flashtap. No dependency added.
 
 - `src/query/reserve.ts` (**new**, #319): `createReserve({ name, size, fetch, sameMake })`, `take`, `refresh`, `kept`, `seed`, `clear`, `persisted`, and `useReserve(reserve, key)` for the count. Chosen so it pairs with `createOutbox`: localStorage under `strata:reserve:<name>:<key>`, one synchronous read and write per change. Differs from the outbox on purpose: without storage it keeps nothing (an item that does not survive a reload is not "kept for offline"). `refresh` also drops topped-up items that fail `sameMake`, and reads the keys again after the request so a `take` made while it was out is not undone. Two tabs may take the same item; the app's server-deduped write ids are the guard, and no Web Lock is used because `take` must answer at once. Checked and not used: TanStack Query's cache (memory only; persisting it is a dependency, and it refetches rather than consuming).

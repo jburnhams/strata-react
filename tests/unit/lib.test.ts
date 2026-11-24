@@ -166,3 +166,16 @@ describe("format.ago, compact and runningTime (issue #52)", () => {
     expect(format.runningTime(Number.NaN)).toBe("–");
   });
 });
+
+describe("peakGain", () => {
+  it("scales the loud parts to full height, ignores one click, never below 1 and never past the ceiling", async () => {
+    const { peakGain, toPeakPair } = await import("../../src");
+    const quiet = toPeakPair(Array.from({ length: 1000 }, (_, i) => (i === 500 ? 0.9 : 0.1)));
+    expect(peakGain(quiet)).toBeCloseTo(10);
+    expect(peakGain(toPeakPair([1, 0.95, 1, 1]))).toBe(1);
+    expect(peakGain(toPeakPair(Array.from({ length: 100 }, () => 0.001)))).toBe(16);
+    expect(peakGain(toPeakPair(Array.from({ length: 100 }, () => 0.001)), { maxGain: 4 })).toBe(4);
+    expect(peakGain(toPeakPair([0, 0, 0]))).toBe(1);
+    expect(peakGain(toPeakPair([]))).toBe(1);
+  });
+});

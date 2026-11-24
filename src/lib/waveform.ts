@@ -62,6 +62,25 @@ export function resamplePeaks(peaks: WaveformPeaks, buckets: number): PeakPair {
   return { min, max };
 }
 
+/**
+ * How much to scale peaks so the loud parts fill the height: one over the `percentile` of the slices'
+ * largest magnitudes, at most `maxGain` and never below 1. A percentile rather than the loudest slice,
+ * so one thump or click on a quiet recording (a dropped camcorder, a tape splice) does not keep the rest
+ * flat; a ceiling, so a recording that is only hiss is not drawn as if it were speech.
+ */
+export function peakGain(pair: PeakPair, { percentile = 0.995, maxGain = 16 }: { percentile?: number; maxGain?: number } = {}): number {
+  const n = Math.min(pair.min.length, pair.max.length);
+  if (n === 0) return 1;
+  // A long file is sampled (at most 50,000 slices) rather than sorted whole: the percentile barely moves.
+  const stride = Math.max(1, Math.floor(n / 50000));
+  const loud: number[] = [];
+  for (let i = 0; i < n; i += stride) loud.push(Math.max(Math.abs(pair.min[i]), Math.abs(pair.max[i])));
+  loud.sort((a, b) => a - b);
+  const top = loud[Math.min(loud.length - 1, Math.floor(percentile * (loud.length - 1)))];
+  if (!(top > 0)) return 1;
+  return Math.min(Math.max(1 / top, 1), maxGain);
+}
+
 /** What a decoded file looks like to this code: the shape of the browser's `AudioBuffer`. */
 export type DecodedAudio = { duration: number; numberOfChannels: number; length: number; getChannelData: (channel: number) => ArrayLike<number> };
 

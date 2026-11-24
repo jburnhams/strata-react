@@ -3,7 +3,7 @@ import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } f
 import { useSliderState } from "react-stately";
 import { format } from "../lib/format";
 import { useClientWork } from "../lib/client-work";
-import { clampView, peaksBetween, peaksFromAudio, timeAt, toPeakPair, type DecodedAudio, type PeakPair, type WaveformPeaks } from "../lib/waveform";
+import { clampView, peakGain, peaksBetween, peaksFromAudio, timeAt, toPeakPair, type DecodedAudio, type PeakPair, type WaveformPeaks } from "../lib/waveform";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { JobStatus } from "./job-status";
@@ -38,6 +38,12 @@ import { JobStatus } from "./job-status";
 //   Nothing animates, so reduced motion has nothing to turn off.
 // - **Underlay**: a node (a spectrogram `<img>`) laid under the plot and stretched to the same x axis,
 //   so it zooms and pans with it.
+//
+// - **Quiet recordings** (a camcorder's sound on a digitised tape peaks at a tenth of full scale) are a
+//   flat line drawn to scale, so `normalise` scales the drawing until the loud parts fill the height
+//   (`peakGain`: a high percentile, not the single loudest slice, with a ceiling so hiss stays small),
+//   and says so under the plot ("Shown 6× louder"), since a person comparing two recordings
+//   would otherwise read the drawn height as loudness. Only the drawing changes, never the sound.
 //
 // Checked: React Aria has no waveform, and its slider hooks do the rest, as above.
 
@@ -92,6 +98,8 @@ type Common = {
   defaultView?: readonly [number, number];
   /** How many peaks a decoded file is reduced to. Default 2000. */
   buckets?: number;
+  /** Scale the drawing so the loud parts fill the height (a quiet recording, such as a camcorder tape), and say by how much. `true` uses the defaults of `peakGain`; an object sets them. Only the drawing changes. */
+  normalise?: boolean | { percentile?: number; maxGain?: number };
   /** Turns a decoded file into samples. Default: the browser's `AudioContext.decodeAudioData`. */
   decode?: (data: ArrayBuffer) => Promise<DecodedAudio>;
   /** The words of the reading state; defaults say "Reading the waveform". */
@@ -120,7 +128,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), h
 const clock = (t: number) => format.runningTime(t);
 
 /** An audio waveform with marks, spans and a playhead: one slider you click, drag or key to seek, zoom, and a range to select. */
-export function Waveform({ label, peaks, source, duration: given, time, onSeek, marks = [], spans = [], underlay, range: controlledRange, onRangeChange, step = 5, bigStep = 30, defaultView, buckets = 2000, decode = defaultDecode, words = WORDS, disabled, className }: WaveformProps) {
+export function Waveform({ label, peaks, source, duration: given, time, onSeek, marks = [], spans = [], underlay, range: controlledRange, onRangeChange, step = 5, bigStep = 30, defaultView, buckets = 2000, normalise = false, decode = defaultDecode, words = WORDS, disabled, className }: WaveformProps) {
   // Peaks: given, or read from the file.
   const work = useClientWork<{ pair: PeakPair; duration: number }>(async ({ signal, progress }) => {
     const data = typeof source === "string" ? await (await fetch(source, { signal })).arrayBuffer() : await (source as Blob).arrayBuffer();
@@ -143,6 +151,9 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const pair = given_ ?? (work.phase === "finished" ? work.result!.pair : null);
   const duration = given ?? (work.phase === "finished" ? work.result!.duration : 0);
   const ready = pair !== null && duration > 0;
+  const percentile = typeof normalise === "object" ? normalise.percentile : undefined;
+  const maxGain = typeof normalise === "object" ? normalise.maxGain : undefined;
+  const gain = React.useMemo(() => (normalise && pair ? peakGain(pair, { percentile, maxGain }) : 1), [normalise, pair, percentile, maxGain]);
 
   // The view: the part of the file in the plot.
   const [view, setView] = React.useState<[number, number] | null>(defaultView ? [defaultView[0], defaultView[1]] : null);
@@ -289,12 +300,12 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
     for (let x = 0; x < width; x += column) {
       const [lo, hi] = peaksBetween(pair, (v0 + (x / width) * (v1 - v0)) / duration, (v0 + ((x + column) / width) * (v1 - v0)) / duration);
       if (!Number.isFinite(lo)) continue;
-      const top = 50 - clamp(hi, -1, 1) * 48;
-      const bottom = 50 - clamp(lo, -1, 1) * 48;
+      const top = 50 - clamp(hi * gain, -1, 1) * 48;
+      const bottom = 50 - clamp(lo * gain, -1, 1) * 48;
       d += `M${x + 0.5} ${top.toFixed(1)}V${Math.max(bottom, top + 1).toFixed(1)}`;
     }
     return d;
-  }, [pair, width, v0, v1, duration]);
+  }, [pair, width, v0, v1, duration, gain]);
   const clipId = React.useId();
   const px = (t: number) => ((t - v0) / span) * width;
   const visibleMarks = marks.filter((m) => m.time >= v0 && m.time <= v1);
@@ -302,8 +313,10 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const thin = visibleMarks.length > width / 8;
   const listedMarks = marks.filter((m) => m.label && (m.listed ?? m.kind !== "beat"));
   const counts = marks.reduce<Record<string, number>>((c, m) => ((c[m.kind ?? "mark"] = (c[m.kind ?? "mark"] ?? 0) + 1), c), {});
+  // Under 1.1× the drawing is as good as to scale, and saying so would be noise.
+  const louder = gain >= 1.1 ? `Shown ${gain < 10 ? gain.toFixed(1).replace(/\.0$/, "") : Math.round(gain)}× louder` : null;
   const summary = ready
-    ? `${clock(duration)} long${Object.keys(counts).length ? `, ${Object.entries(counts).map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", ")}` : ""}${spans.length ? `, ${spans.length} span${spans.length === 1 ? "" : "s"}` : ""}${zoomed ? `, showing ${clock(v0)} to ${clock(v1)}` : ""}${range ? `, range ${clock(range[0])} to ${clock(range[1])}` : ""}`
+    ? `${clock(duration)} long${Object.keys(counts).length ? `, ${Object.entries(counts).map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", ")}` : ""}${spans.length ? `, ${spans.length} span${spans.length === 1 ? "" : "s"}` : ""}${zoomed ? `, showing ${clock(v0)} to ${clock(v1)}` : ""}${range ? `, range ${clock(range[0])} to ${clock(range[1])}` : ""}${louder ? `, ${louder.toLowerCase()}` : ""}`
     : "";
   const summaryId = React.useId();
 
@@ -381,6 +394,11 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
           </div>
         </div>
       </div>
+      {ready && louder && (
+        <p aria-hidden className="justify-self-end type-caption text-muted-foreground">
+          {louder}
+        </p>
+      )}
       <VisuallyHidden>
         <p id={summaryId}>{summary}</p>
         <span role="status">{said}</span>

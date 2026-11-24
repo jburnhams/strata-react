@@ -84,6 +84,7 @@ export { useJobAction, type JobAction, type JobActionOptions } from "./component
 export { WorkflowSteps, type WorkflowStepsProps, type WorkflowStage, type StageState, type StageWords } from "./components/workflow-steps";
 export { JobsTable, type JobsTableProps, type JobRow } from "./components/jobs-table";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
+export { FilmStrip, pickEvenly, frameAt, type FilmStripProps, type FilmFrame } from "./components/film-strip";
 export {
   DataTable,
   TableSkeleton,
@@ -101,7 +102,7 @@ export { useMediaSpans, SpanActions, PlayerNotice, type SpanActionsNotice, type 
 export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from "./components/transcript-view";
 export { phraseAt, wordAt, wordId, phraseOfWordId, isDoubtful, phraseDoubtful, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState, type TranscriptWord } from "./lib/transcript";
 export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";
-export { resamplePeaks, toPeakPair, peaksFromAudio, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
+export { resamplePeaks, toPeakPair, peaksFromAudio, peakGain, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
 export { MediaGroup, PlayWindowButton, joinMediaGroup, type PlayWindowButtonProps } from "./components/media-group";
 export { Transport, TimeReadout, SeekBar, SpanStrip, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type SeekBarSpan, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
