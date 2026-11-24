@@ -185,6 +185,20 @@ export {
   type JobOptions,
   type More,
 } from "./query";
+export {
+  createOutbox,
+  useOutbox,
+  useOutboxStarted,
+  isRefusal,
+  type Outbox,
+  type OutboxOptions,
+  type OutboxRequest,
+  type OutboxItem,
+  type OutboxRefusal,
+  type OutboxSnapshot,
+  type Delivery,
+} from "./query/outbox";
+export { OutboxStatus, type OutboxStatusProps } from "./components/outbox-status";
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
 export { appBase, withBase } from "./lib/base";
 export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";

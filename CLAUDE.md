@@ -192,8 +192,13 @@ Native elements stay where the platform does it better and the stack table says 
 11. A map of routes is `RouteMap` from `strata-react/map` (Leaflet, an optional peer the app installs only for this): the app supplies `tiles` (light and, if it has one, dark, each with its attribution), keeps `routes` in one stable array (state or `useMemo`), colours by `values` + `colourScale` only where the colour is a fact of the subject (the key is built in), moves the position with the `position` prop (never by rebuilding routes), and lists its routes beside the map for the keyboard (`onSelect` is the pointer's path). Route geometry (`geo`, `format.distance`) comes from the main entry.
 12. Playing a file or a sequence of chapters is `MediaPlayer` (the browser's own bar on a touch device by default, `controls="native"` to keep it everywhere); the parts (`Transport`, `SeekBar`…) with `useMediaElement(ref)` are for an editor or a screen that draws its own layout, and the hook reads a native-controls element too. Several players on one page share the keys (the last played, focused or pressed owns them). Never hand-write the `timeupdate`/`durationchange`/`play()`-rejection glue.
 13. Recording speech is `useRecorder({ maxSeconds })` with `InputLevel` while it runs and `TakeLevel` on the take (a lossless WAV in `Recording.wav`); the device comes from `MicrophoneContext`, and tests and stories give it `fakeMicrophone()` (`renderWithStrata(ui, { microphone })`). Never hand-write `getUserMedia`, a worklet or a WAV header.
-14. A rare, earned completion uses `Done` with a past-tense title and what happens next.
-15. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
+14. Writes that must survive a lost connection (answers recorded during play, a form filled in the field) go through one
+   `createOutbox({ name })` per kind of work, made once at module level and started in the shell (`useOutboxStarted`),
+   with `OutboxStatus noun=` where a person checks on them. Each write carries a client-made id the server dedupes on, and
+   a write that depends on another names it with `after`. Never a hand-kept retry list, a `navigator.onLine` check or a
+   write that is dropped when its request fails.
+15. A rare, earned completion uses `Done` with a past-tense title and what happens next.
+16. Test with `renderWithStrata` from `strata-react/testing` and MSW handlers; never module mocks.
    Render the dark scheme with `renderWithStrata(ui, { colorScheme: "dark" })`. Export the app's
    `RouteObject[]` from its own module (as `examples/kiln-app/src/routes.tsx` does), give the same
    array to `createBrowserRouter` and to `renderRoutes(routes, { route, basename })` in tests, and
@@ -204,7 +209,7 @@ Native elements stay where the platform does it better and the stack table says 
    `{ name: format.count(6, "piece") }` or `/6\spieces/`, not a typed `"6 pieces"`. Check the
    one-filled-button rule with `expectOneFilledButton()` (after an interaction too), and read an
    `AsyncButton`'s phase with `asyncButtonPhase(el)`, never with class names or its text.
-16. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
+17. Guard the screens visually with `strata-visual` (`strata-react/visual`): a
    `strata-visual.config.ts` lists each route and its states as MSW handlers (the same ones the
    unit tests use), plus the Storybook build if the app has one. Pin `playwright` to an exact
    version and commit `tests/visual/baselines/`. See the README for the config and the CI job.
