@@ -65,7 +65,8 @@ describe("peer contract", () => {
   const optional = new Set(Object.keys(pkg.peerDependenciesMeta ?? {}).filter((p) => pkg.peerDependenciesMeta[p].optional));
   const required = new Set(Object.keys(pkg.peerDependencies).filter((p) => !optional.has(p)));
   const deps = new Set(Object.keys(pkg.dependencies));
-  const specifier = /(?:\bfrom|\bimport)\s*\(?\s*"([^"]+)"/g;
+  // A specifier has no spaces, so a string that only ends in "from" ("Play from", FilmStrip's verb) is not read as one.
+  const specifier = /(?:\bfrom|\bimport)\s*\(?\s*"([^"\s]+)"/g;
   const packageOf = (id: string) => (id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
 
   function packagesReached(entry: string) {
