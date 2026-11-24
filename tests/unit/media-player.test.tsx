@@ -267,7 +267,8 @@ describe("MediaPlayer", () => {
   it("keeps the chosen speed when another source loads", async () => {
     const user = userEvent.setup();
     const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "1.5×");
+    await user.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await user.click(await screen.findByRole("option", { name: "1.5×" }));
     expect(audio(container).playbackRate).toBe(1.5);
     await user.click(screen.getByRole("button", { name: "Next chapter" }));
     audio(container).load();

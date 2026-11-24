@@ -179,8 +179,24 @@ describe("RateChoice", () => {
   it("is a named select of speeds", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Player />);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Playback speed" }), "1.5×");
+    await user.click(screen.getByRole("button", { name: /Playback speed/ }));
+    await user.click(await screen.findByRole("option", { name: "1.5×" }));
     expect(state().rate).toBe(1.5);
+  });
+  it("names its value, marks the current speed and is worked from the keyboard", async () => {
+    const user = userEvent.setup();
+    renderWithStrata(<Player />);
+    const trigger = screen.getByRole("button", { name: /Playback speed/ });
+    expect(trigger).toHaveTextContent("1×");
+    expect(trigger).toHaveAttribute("aria-haspopup", "listbox");
+    await user.click(trigger);
+    expect(await screen.findByRole("option", { name: "1×" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{Escape}");
+    trigger.focus();
+    await user.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(state().rate).toBe(1.25);
+    expect(screen.getByRole("button", { name: /Playback speed/ })).toHaveTextContent("1.25×");
   });
 });
 

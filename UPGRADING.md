@@ -12,6 +12,7 @@ time. While the version is 0.x, any release may break.
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
 ## 2026-11-24
+- `RateChoice` (the speed in `MediaPlayer`, `VideoClock`, `CompareVideo`, `CompareVideoGrid`) is React Aria's `Select`, not a native select (#324): a test that did `user.selectOptions(getByRole("combobox", { name: "Playback speed" }), "1.5×")` now clicks `getByRole("button", { name: /Playback speed/ })` and then `findByRole("option", { name: "1.5×" })`. Visual baselines with a player move: the control is narrower, so a phone-width player's controls can fit on one row.
 - `createApi`'s `post`/`put`/`patch` send a `Blob`, bytes, `FormData`, `URLSearchParams` or a stream as it is (a Blob with its own type as Content-Type); before, any body was `JSON.stringify`ed, so such a body arrived as `{}`. `createTypedApi` takes `body` (not `json`) on an operation whose request body has only a non-JSON media type, so a workaround that went round the typed client through `fetchJson` can be deleted.
 - `SayAgain` inside a `ClipsProvider` takes the recordings of `text` and the provider's `lang` itself; one given `parts` or `lang` is unchanged, and outside a provider nothing changes.
 
