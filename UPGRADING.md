@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-24
+- `createApi`'s `post`/`put`/`patch` send a `Blob`, bytes, `FormData`, `URLSearchParams` or a stream as it is (a Blob with its own type as Content-Type); before, any body was `JSON.stringify`ed, so such a body arrived as `{}`. `createTypedApi` takes `body` (not `json`) on an operation whose request body has only a non-JSON media type, so a workaround that went round the typed client through `fetchJson` can be deleted.
+- `SayAgain` inside a `ClipsProvider` takes the recordings of `text` and the provider's `lang` itself; one given `parts` or `lang` is unchanged, and outside a provider nothing changes.
+
 ## 2026-11-23
 - Speech (#310): `installFakeSpeech()` now also replaces `window.Audio` until `uninstall()`, and each `Spoken` entry has `clip` (null for the browser's voice), so a test that compares a whole entry with `toEqual` adds `clip: null`. `useSpeech().say` takes a sentence or recorded parts; `stopSpeaking()` and unmounting `useSpeech` stop a playing clip too.
 - `ChoiceGrid`'s `marks` type is `ChoiceMarks` (a quiz's three words, or `{ picked }` alone); `createTypedApi`'s POST/PUT/PATCH on an operation with `requestBody?: never` no longer ask for `json`, so a `json: undefined` workaround can be deleted. The request argument is now required when the operation has a required path or query value (a call that left it out compiled and threw at run time); pass `{ path: … }`.

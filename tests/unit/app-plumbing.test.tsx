@@ -390,3 +390,29 @@ describe("createTypedApi (#296)", () => {
     void (() => api.delete("/api/learners/{id}", {}));
   });
 });
+
+describe("a body that is bytes (#318)", () => {
+  type paths = {
+    "/api/clips/{id}": {
+      put: { parameters: { path: { id: string }; query?: never }; requestBody: { content: { "audio/wav": string } }; responses: { 204: { content?: never } } };
+    };
+  };
+
+  it("sends a Blob as it is, with its own type, through createApi and createTypedApi", async () => {
+    const seen: { type: string | null; size: number }[] = [];
+    server.use(
+      http.put("*/proxy/api/clips/:id", async ({ request }) => {
+        seen.push({ type: request.headers.get("content-type"), size: (await request.arrayBuffer()).byteLength });
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const wav = new Blob([new Uint8Array(44)], { type: "audio/wav" });
+    await createApi({ base: "/proxy" }).put("/api/clips/a", wav);
+    await createTypedApi<paths>({ base: "/proxy" }).put("/api/clips/{id}", { path: { id: "b" }, body: wav });
+    expect(seen).toEqual([{ type: "audio/wav", size: 44 }, { type: "audio/wav", size: 44 }]);
+    // @ts-expect-error a body in another media type takes `body`, and it is required
+    void (() => createTypedApi<paths>().put("/api/clips/{id}", { path: { id: "b" } }));
+    // @ts-expect-error not `json`: the operation does not take JSON
+    void (() => createTypedApi<paths>().put("/api/clips/{id}", { path: { id: "b" }, json: {} }));
+  });
+});

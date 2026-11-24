@@ -4,7 +4,7 @@ import { createApi, type ApiOptions } from "./api";
 // `strata-api-types` writes, so the path, its `{params}`, the query, the JSON body and the answer are
 // all checked against the Python side and the hand-kept endpoint table goes away (issue #296's last
 // ask). Types only on top of `createApi`: no `openapi-fetch`, no new dependency (Jonathan, 2026-11-14:
-// `fetchJson` and TanStack Query stay the client). Only JSON bodies and answers are typed; a 204 answers `void`.
+// `fetchJson` and TanStack Query stay the client). Only JSON answers are typed, and a JSON body; a body in another media type is sent as it is (`body`); a 204 answers `void`.
 // The shapes read are openapi-typescript's: `paths[path][method]` with `parameters.path|query`,
 // `requestBody.content["application/json"]` and `responses[2xx].content["application/json"]`.
 
@@ -23,6 +23,18 @@ type Body<O> = O extends { requestBody?: infer R }
     ? never
     : NonNullable<R> extends { content: { [j in Json]: infer B } }
       ? B
+      : never
+  : never;
+// A body in another media type (`audio/wav`, `application/octet-stream`): sent as it is, so the call takes `body`
+// (a Blob, whose `type` becomes the Content-Type, or bytes) instead of `json` (issue #318). Not typed beyond that:
+// openapi-typescript writes a binary schema as `string`, which is no help to the caller. JSON wins where both are offered.
+type RawBody<O> = O extends { requestBody?: infer R }
+  ? [NonNullable<R>] extends [never]
+    ? never
+    : NonNullable<R> extends { content: infer C }
+      ? [Exclude<keyof C, Json>] extends [never]
+        ? never
+        : Blob | BufferSource
       : never
   : never;
 type Answer<O> = O extends { responses: infer R }
@@ -52,7 +64,9 @@ type Request<O> = (HasKeys<Params<O, "path">> extends true ? { path: Params<O, "
 type Optional<O> = [RequiredKeys<Request<O>>] extends [never] ? [request?: Request<O>] : [request: Request<O>];
 type Args<O, WithBody extends boolean> = WithBody extends true
   ? [Body<O>] extends [never]
-    ? Optional<O>
+    ? [RawBody<O>] extends [never]
+      ? Optional<O>
+      : [request: Request<O> & { body: RawBody<O> }]
     : [request: Request<O> & { json: Body<O> }]
   : Optional<O>;
 
@@ -85,10 +99,10 @@ function fill(path: string, values: Record<string, unknown> | undefined, query: 
 export function createTypedApi<P>(options: ApiOptions = {}): TypedApi<P> {
   const api = createApi(options);
   const call = (method: Method) => (path: string, request?: Record<string, unknown>) => {
-    const { path: values, query, json, ...init } = (request ?? {}) as { path?: Record<string, unknown>; query?: Record<string, unknown>; json?: unknown } & Record<string, unknown>;
+    const { path: values, query, json, body, ...init } = (request ?? {}) as { path?: Record<string, unknown>; query?: Record<string, unknown>; json?: unknown; body?: unknown } & Record<string, unknown>;
     const target = fill(path, values, query);
     const rest = init as Parameters<typeof api.get>[1];
-    return method === "get" ? api.get(target, rest) : method === "delete" ? api.delete(target, rest) : api[method](target, json, rest);
+    return method === "get" ? api.get(target, rest) : method === "delete" ? api.delete(target, rest) : api[method](target, body ?? json, rest);
   };
   return {
     url: api.url,

@@ -205,6 +205,8 @@ export {
   type Delivery,
 } from "./query/outbox";
 export { OutboxStatus, type OutboxStatusProps } from "./components/outbox-status";
+export { createReserve, useReserve, type Reserve, type ReserveOptions } from "./query/reserve";
+export { ClipsProvider, useClips, useSayOnShow, clipsQueryKey, type Clips, type ClipsContext, type ClipsProviderProps, type SayOnShowOptions } from "./query/clips";
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
 export { appBase, withBase } from "./lib/base";
 export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";
