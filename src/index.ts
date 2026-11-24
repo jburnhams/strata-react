@@ -188,7 +188,7 @@ export {
 export { describeActionError, fieldErrorsOf } from "./lib/errors";
 export { appBase, withBase } from "./lib/base";
 export { useSearchParam, type SearchParam, type SearchParamOptions } from "./lib/search-param";
-export { speak, stopSpeaking, canSpeak, pickVoice, useSpeech, type SpeakOptions, type Speech, type UseSpeechOptions } from "./lib/speech";
+export { speak, stopSpeaking, canSpeak, canPlayClips, canSay, textOf, pickVoice, useSpeech, type SpeakOptions, type Speech, type SpeechPart, type Saying, type UseSpeechOptions } from "./lib/speech";
 export { SayAgain, type SayAgainProps } from "./components/say-again";
 export {
   browserMicrophone,
