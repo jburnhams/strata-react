@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Dialog as AriaDialog, Modal, ModalOverlay } from "react-aria-components";
+import { UNSAFE_PortalProvider, useUNSAFE_PortalContext } from "react-aria";
 import { cn } from "../lib/utils";
 import { overlaySurface } from "../lib/overlay";
 
@@ -16,6 +17,12 @@ import { overlaySurface } from "../lib/overlay";
 // ours (an effect on `requestFullscreen` and the `fullscreenchange` event, the browser's own way
 // to say the person pressed Escape). If the browser refuses (it needs a recent click or key) the
 // fallback is used, so asking for full screen never silently does nothing.
+//
+// While natively full screen, React Aria's overlays (a select's list, a menu, a tooltip) portal into the frame
+// (`UNSAFE_PortalProvider`): the browser shows only the full-screen element and its descendants in the top layer,
+// so a popover portalled to <body> opened behind it, out of sight and out of reach (#325 review). The provider is
+// always there, so going full screen never mounts the content again (a playing video); outside full screen it
+// passes on whatever container the app set, else <body>.
 
 /** Props for `FullscreenFrame`. */
 export type FullscreenFrameProps = {
@@ -78,9 +85,11 @@ export function FullscreenFrame({ label, active, onActiveChange, modal: allowMod
 
   // The modal is the answer where the browser cannot, or has refused. While a request is in flight the content stays in place.
   const modal = allowModal && active && !native && (!canFullscreen() || refused);
+  const outer = useUNSAFE_PortalContext();
+  const getContainer = React.useCallback(() => (native && ref.current ? ref.current : (outer.getContainer?.() ?? document.body)), [native, outer]);
   const inner = (
     <div ref={ref} className={cn(active && "flex h-full min-h-0 flex-col bg-background p-4", className)}>
-      {children}
+      <UNSAFE_PortalProvider getContainer={getContainer}>{children}</UNSAFE_PortalProvider>
     </div>
   );
   if (!modal) return inner;

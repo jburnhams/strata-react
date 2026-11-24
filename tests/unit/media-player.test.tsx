@@ -442,6 +442,10 @@ describe("MediaPlayer full screen", () => {
       await user.keyboard("f");
       expect(full).not.toBeNull();
       expect(container.querySelector("video")).toBe(video);
+      // The speed's list opens inside the full-screen element, the only part of the page the browser shows.
+      await user.click(screen.getByRole("button", { name: /Playback speed/ }));
+      expect((full as Element | null)?.contains(await screen.findByRole("listbox"))).toBe(true);
+      await user.keyboard("{Escape}");
 
       vi.useFakeTimers();
       try {
