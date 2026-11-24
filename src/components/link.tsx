@@ -21,7 +21,7 @@ import { buttonVariants, type ButtonProps } from "./button";
 //   reads as a link inside a sentence, in a table cell and in an `EmptyState` action.
 // Neither takes `className` for anything but layout, like the rest.
 
-type Target =
+export type Target =
   | {
       /** An app route (React Router): `"/learners/7"`, `"?tab=log"`. Client-side navigation, the basename applied. */
       to: string;
@@ -52,7 +52,8 @@ export type ButtonLinkProps = BaseProps & Target & { variant?: ButtonProps["vari
 /** Props of `TextLink`. */
 export type TextLinkProps = BaseProps & Target & { icon?: IconComponent };
 
-function useTarget(target: Target, newTab: boolean | undefined) {
+// Shared with MediaPlayer's heading, whose links take the picture's ink rather than TextLink's accent; not in the public API.
+export function useTarget(target: Target, newTab: boolean | undefined) {
   const navigate = useNavigate();
   return {
     provide: (node: React.ReactNode) => (

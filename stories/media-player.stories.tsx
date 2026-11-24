@@ -148,3 +148,13 @@ export const VideoPhone: Story = {
   args: { label: "x" },
   render: () => <div className="w-80"><MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" /></div>,
 };
+
+/** What is playing across the top of a video (issue #329): the title and who made it, each a link, and their picture (here none, so a letter). Shown while paused and for 3 s after the pointer moves, a key is pressed or playing starts; hidden with the controls. */
+export const Heading: Story = {
+  args: { label: "x" },
+  render: () => (
+    <div className="max-w-3xl">
+      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" heading={{ title: "Glazing a celadon bowl", to: "/", subtitle: "Kiln room", subtitleTo: "/", avatar: null }} />
+    </div>
+  ),
+};

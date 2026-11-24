@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
+import { renderWithStrata } from "../../src/testing";
 
 // Issue #134. jsdom has no media engine, so tests/utils/media.ts plays the browser's decoder;
 // the hook, the element's events and the components are the real ones.
@@ -536,4 +537,63 @@ describe("MediaPlayer on the picture", () => {
     expect(wheel(-100)).toBe(true);
     expect(Math.round(videoOf(container).volume * 100)).toBe(100);
   });
+});
+
+describe("MediaPlayer heading (issue #329)", () => {
+  const heading = { title: "Glazing a celadon bowl", to: "/watch/7", subtitle: "Kiln room", subtitleTo: "/makers/kiln-room", avatar: null };
+  const band = () => screen.getByText("Glazing a celadon bowl").closest("[class*='picture-shade']") as HTMLElement;
+
+  it("names what is playing and whose it is, with links to each, over a video", () => {
+    renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={heading} />);
+    expect(screen.getByRole("link", { name: "Glazing a celadon bowl" })).toHaveAttribute("href", "/watch/7");
+    expect(screen.getAllByRole("link", { name: "Kiln room" }).map((a) => a.getAttribute("href"))).toEqual(["/makers/kiln-room", "/makers/kiln-room"]);
+    // No picture: the subtitle's first letter.
+    expect(within(band()).getByText("K")).toBeInTheDocument();
+    expect(band()).toHaveAttribute("data-shown");
+  });
+
+  it("draws plain words without routes, and nothing on audio", () => {
+    const { unmount } = renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={{ title: "Only words", subtitle: "By someone" }} />);
+    expect(screen.getByText("Only words").tagName).toBe("P");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    unmount();
+    renderWithStrata(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" heading={{ title: "Only words" }} />);
+    expect(screen.queryByText("Only words")).not.toBeInTheDocument();
+  });
+
+  it("stays while paused, fades 3 s into playing or when the pointer leaves, and comes back on a move", () => {
+    const { container } = renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={heading} />);
+    const el = container.querySelector("video")!;
+    const group = screen.getByRole("group", { name: "Tour" });
+    vi.useFakeTimers();
+    try {
+      act(() => media.loaded(el, 60));
+      act(() => vi.advanceTimersByTime(5000));
+      expect(band()).toHaveAttribute("data-shown");
+      act(() => void el.play());
+      act(() => vi.advanceTimersByTime(2999));
+      expect(band()).toHaveAttribute("data-shown");
+      act(() => vi.advanceTimersByTime(1));
+      expect(band()).not.toHaveAttribute("data-shown");
+      expect(band()).toHaveClass("opacity-0");
+
+      fireEvent.mouseMove(el);
+      expect(band()).toHaveAttribute("data-shown");
+      fireEvent.mouseLeave(group);
+      expect(band()).not.toHaveAttribute("data-shown");
+
+      fireEvent.mouseMove(el);
+      act(() => vi.advanceTimersByTime(3000));
+      expect(band()).not.toHaveAttribute("data-shown");
+      act(() => el.pause());
+      expect(band()).toHaveAttribute("data-shown");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+it("leaves the picture unlinked when no subtitle names the link (Codex on #330)", () => {
+  renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={{ title: "Only a title", subtitleTo: "/makers/1", avatar: null }} />);
+  expect(screen.queryAllByRole("link")).toEqual([]);
 });

@@ -14,6 +14,9 @@ import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 import { isDev } from "../lib/dev";
 import { createWatchedRanges, type MediaProgress } from "./media-progress";
+import { Link as AriaLink } from "react-aria-components";
+import { useTarget } from "./link";
+import { Thumbnail } from "./thumbnail";
 
 export type { MediaProgress };
 
@@ -573,6 +576,23 @@ export type MediaSource = {
 /** Lock-screen and headset metadata (`navigator.mediaSession`). */
 export type MediaSession = { title: string; artist?: string; album?: string; artwork?: string };
 
+/**
+ * What is playing, drawn across the top of a video while it is paused or the pointer is on it: a
+ * title, who made it, and their picture. Plain data; the player draws it.
+ */
+export type MediaHeading = {
+  /** What is playing ("Glazing a celadon bowl"). */
+  title: string;
+  /** An app route the title leads to. */
+  to?: string;
+  /** Under the title: who made it, or where it is from ("Kiln room"). */
+  subtitle?: string;
+  /** An app route the subtitle leads to, and the picture with it when there is a subtitle to name that link. */
+  subtitleTo?: string;
+  /** A small round picture before the words (the maker's avatar). `null` draws the subtitle's first letter instead. */
+  avatar?: string | null;
+};
+
 export type MediaPlayerProps = {
   /** Names the player and its element. */
   label: string;
@@ -633,6 +653,8 @@ export type MediaPlayerProps = {
   progressEvery?: number;
   /** The player's state and requests (`seek`, `setVolume`, `time`, `duration`…), for an app that acts on playback from beside it: a chapter list, comments at a time (strata-react issue #211). An object ref holds the latest state without rendering again; a function ref is called with it on every render. */
   mediaRef?: React.Ref<MediaElementState>;
+  /** What is playing, across the top of a video: shown while it is paused, and for a few seconds after the pointer moves on it, a key is pressed or playing starts; hidden with the controls (strata-react issue #329). Video only. */
+  heading?: MediaHeading;
   /** Drawn over the picture only (never the controls) in a box that fills it; the app's classes choose the corner (`absolute bottom-3 right-3`). Anything interactive in it is clickable and focusable. A video's box keeps its shape before the metadata loads, so the overlay has a stable place. */
   overlay?: (media: MediaElementState) => React.ReactNode;
   /** Content below the controls for playback-related messages and actions. Hides with the controls during idle fullscreen playback. */
@@ -748,6 +770,7 @@ export function MediaPlayer({
   onProgress,
   progressEvery,
   mediaRef,
+  heading,
   overlay,
   status,
   warning,
@@ -934,18 +957,26 @@ export function MediaPlayer({
   const [fullApi, setFullApi] = React.useState(false);
   React.useEffect(() => setFullApi(canFullscreen()), []);
   const canFull = fullscreen && fullApi && kind === "video" && !native;
-  const autoHideControls = full && canFull && media.playing;
+  // A playing video goes idle 3 s after the last pointer move, key or start (or at once when the pointer leaves it): the heading
+  // fades then, and in full screen the controls too. Paused, everything stays.
+  const autoHide = media.playing && kind === "video";
   const [controlsIdle, setControlsIdle] = React.useState(false);
   const idleTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const wakeControls = React.useCallback(() => {
     clearTimeout(idleTimer.current);
     setControlsIdle(false);
-    if (autoHideControls) idleTimer.current = setTimeout(() => setControlsIdle(true), 3000);
-  }, [autoHideControls]);
+    if (autoHide) idleTimer.current = setTimeout(() => setControlsIdle(true), 3000);
+  }, [autoHide]);
+  const sleepControls = React.useCallback(() => {
+    clearTimeout(idleTimer.current);
+    setControlsIdle(true);
+  }, []);
   React.useEffect(() => {
     wakeControls();
     return () => clearTimeout(idleTimer.current);
   }, [wakeControls]);
+  const idle = autoHide && controlsIdle;
+  const autoHideControls = full && canFull && autoHide;
   const hideControls = autoHideControls && controlsIdle;
   // On the picture: a click plays or pauses and a double click toggles full screen (two clicks cancel out, so the double click leaves playback as it was); the wheel sets the volume, but only while the player has focus, so scrolling past a video still scrolls the page. With the browser's own controls its click and double click are left alone (they do this already); the wheel works there too. The wheel listener is not passive, to stop the page scrolling.
   const stage = React.useRef<HTMLDivElement>(null);
@@ -986,7 +1017,7 @@ export function MediaPlayer({
   React.useEffect(() => {
     if (media.playing && shortcuts && !native) keyPlayers.use(id);
   }, [media.playing, id, shortcuts, native]);
-  const activeKeys = autoHideControls ? keys.map((shortcut) => ({
+  const activeKeys = autoHide ? keys.map((shortcut) => ({
     ...shortcut,
     run: () => {
       wakeControls();
@@ -1042,6 +1073,7 @@ export function MediaPlayer({
           onDoubleClick={canFull ? () => setFull((f) => !f) : undefined}
           className="absolute inset-0 size-full object-contain"
         />
+        {heading && <PictureHeading heading={heading} shown={!idle} />}
         {(overlay || showActions) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {overlay?.(media)}
@@ -1061,7 +1093,7 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHideControls ? wakeControls : undefined} onKeyDownCapture={autoHideControls ? wakeControls : undefined} onPointerDownCapture={() => keyPlayers.use(id)} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
+    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { keyPlayers.use(id); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
       {element}
       {native && hasSpans && <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />}
       {warningToast}
@@ -1150,5 +1182,44 @@ export function MediaPlayer({
       )}
     </div>
     </FullscreenFrame>
+  );
+}
+
+// The heading over a video (issue #329): the words a video site puts across the top of its player, so a person who paused or
+// moved the pointer sees what this is and whose it is without looking away from the picture. White on a shade (`picture-shade`),
+// since the picture under it is neither light nor dark whatever the theme. It never takes the picture's clicks (a click there
+// still plays or pauses) except on its links, and only while shown; hidden, it stays in the accessibility tree, and a link
+// reached by Tab brings it back.
+function PictureHeading({ heading, shown }: { heading: MediaHeading; shown: boolean }) {
+  const link = cn("min-w-0 truncate rounded-control underline-offset-4 hover:underline", shown && "pointer-events-auto");
+  const avatar = heading.avatar !== undefined && (
+    <Thumbnail
+      src={heading.avatar}
+      alt=""
+      eager
+      className="w-9 shrink-0 rounded-pill"
+      fallback={<span className="grid size-full place-items-center bg-surface-sunken type-label text-foreground">{(heading.subtitle ?? heading.title).slice(0, 1).toUpperCase()}</span>}
+    />
+  );
+  return (
+    <div
+      data-shown={shown || undefined}
+      className={cn("picture-shade pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3 pb-10 transition-state", shown ? "opacity-100" : "opacity-0 has-[:focus-visible]:opacity-100 has-[:focus-visible]:[&_a]:pointer-events-auto")}
+    >
+      {avatar && (heading.subtitleTo && heading.subtitle ? <HeadingLink to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
+      <div className="grid min-w-0">
+        {heading.to ? <HeadingLink to={heading.to} className={cn("type-heading", link)}>{heading.title}</HeadingLink> : <p className="type-heading truncate">{heading.title}</p>}
+        {heading.subtitle && (heading.subtitleTo ? <HeadingLink to={heading.subtitleTo} className={cn("type-body-sm", link)}>{heading.subtitle}</HeadingLink> : <p className="type-body-sm truncate">{heading.subtitle}</p>)}
+      </div>
+    </div>
+  );
+}
+
+function HeadingLink({ to, className, label, children }: { to: string; className: string; label?: string; children: React.ReactNode }) {
+  const { provide, props } = useTarget({ to }, false);
+  return provide(
+    <AriaLink {...props} aria-label={label} className={className}>
+      {children}
+    </AriaLink>,
   );
 }
