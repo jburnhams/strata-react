@@ -589,6 +589,8 @@ export type MediaHeading = {
   subtitle?: string;
   /** An app route the subtitle leads to, and the picture with it when there is a subtitle to name that link. */
   subtitleTo?: string;
+  /** React Router's location state the heading's links carry (where the person came from, for the next page to read). */
+  state?: unknown;
   /** A small round picture before the words (the maker's avatar). `null` draws the subtitle's first letter instead. */
   avatar?: string | null;
 };
@@ -1206,17 +1208,17 @@ function PictureHeading({ heading, shown }: { heading: MediaHeading; shown: bool
       data-shown={shown || undefined}
       className={cn("picture-shade pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3 pb-10 transition-state", shown ? "opacity-100" : "opacity-0 has-[:focus-visible]:opacity-100 has-[:focus-visible]:[&_a]:pointer-events-auto")}
     >
-      {avatar && (heading.subtitleTo && heading.subtitle ? <HeadingLink to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
+      {avatar && (heading.subtitleTo && heading.subtitle ? <HeadingLink state={heading.state} to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
       <div className="grid min-w-0">
-        {heading.to ? <HeadingLink to={heading.to} className={cn("type-heading", link)}>{heading.title}</HeadingLink> : <p className="type-heading truncate">{heading.title}</p>}
-        {heading.subtitle && (heading.subtitleTo ? <HeadingLink to={heading.subtitleTo} className={cn("type-body-sm", link)}>{heading.subtitle}</HeadingLink> : <p className="type-body-sm truncate">{heading.subtitle}</p>)}
+        {heading.to ? <HeadingLink state={heading.state} to={heading.to} className={cn("type-heading", link)}>{heading.title}</HeadingLink> : <p className="type-heading truncate">{heading.title}</p>}
+        {heading.subtitle && (heading.subtitleTo ? <HeadingLink state={heading.state} to={heading.subtitleTo} className={cn("type-body-sm", link)}>{heading.subtitle}</HeadingLink> : <p className="type-body-sm truncate">{heading.subtitle}</p>)}
       </div>
     </div>
   );
 }
 
-function HeadingLink({ to, className, label, children }: { to: string; className: string; label?: string; children: React.ReactNode }) {
-  const { provide, props } = useTarget({ to }, false);
+function HeadingLink({ to, state, className, label, children }: { to: string; state?: unknown; className: string; label?: string; children: React.ReactNode }) {
+  const { provide, props } = useTarget({ to }, false, state);
   return provide(
     <AriaLink {...props} aria-label={label} className={className}>
       {children}

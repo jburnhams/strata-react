@@ -181,6 +181,23 @@ describe("ButtonLink and TextLink (#294)", () => {
     await userEvent.click(screen.getByRole("link", { name: "Open the log" }));
     expect(screen.getByTestId("search")).toHaveTextContent("/log");
   });
+
+  it("carries router state to the next page (#333)", async () => {
+    function Arrived() {
+      return <output data-testid="state">{JSON.stringify(useLocation().state)}</output>;
+    }
+    renderWithStrata(
+      <>
+        <TextLink to="/log" state={{ from: "watch" }}>Open the log</TextLink>
+        <ButtonLink to="/plain">No state</ButtonLink>
+        <Arrived />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Open the log" }));
+    expect(screen.getByTestId("state")).toHaveTextContent('{"from":"watch"}');
+    await userEvent.click(screen.getByRole("link", { name: "No state" }));
+    expect(screen.getByTestId("state")).toHaveTextContent("null");
+  });
 });
 
 describe("speech (#299)", () => {

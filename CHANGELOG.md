@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-11-24
+**Links carry router state** (branch `claude/project-thread-vwria5`, issue #333). Review of the Tubes change that uses `MediaPlayer heading` found its channel link dropped the location state the app's own link carries (where the person came from), so the visit was recorded as from nowhere.
+
+- `src/components/link.tsx`: `TextLink` and `ButtonLink` take `state` (React Router location state for a `to` link); `useTarget` passes it to `navigate`.
+- `src/components/media-player.tsx`: `MediaHeading.state`, carried by the heading's links.
+- `README.md` (Media player row).
+- `tests/unit/app-plumbing.test.tsx`, `tests/unit/media-player.test.tsx`: a link with state hands it to the next page; one without leaves none.
+
 **MediaPlayer heading** (branch `claude/project-thread-vwria5`, issue #329). Jonathan asked for a video's title and channel over the player while it is paused or the pointer moves, with the player drawing it so the app only gives the data. The player's idle timer, which ran only in full screen, now runs for any playing video; the controls still hide only in full screen.
 
 - `src/components/media-player.tsx`: `heading` prop (`MediaHeading`: `title`, `to`, `subtitle`, `subtitleTo`, `avatar`), drawn across the top of a video (`PictureHeading`) on a shade, with the title and subtitle as router links and the avatar a round `Thumbnail` (a letter when `null`). Shown while paused, and for 3 s after a mouse move, a key, a press or the start of playing; hidden at once when the pointer leaves the player outside full screen. It takes no clicks but its links' while shown, so a click on the picture still plays or pauses; a link reached by Tab brings it back. Video only.
