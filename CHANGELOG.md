@@ -7,7 +7,7 @@
 - `src/components/link.tsx`: `useTarget` and `Target` exported inside the package (not from `index.ts`) for the heading's links, which take the picture's white ink instead of `TextLink`'s accent.
 - `src/styles/strata.css`: `picture-shade` utility (white words on a black gradient, whatever the scheme; like `scrim`, not a theme role).
 - `src/index.ts`, `README.md` (Media player row): `MediaHeading`.
-- `stories/media-player.stories.tsx`: `Heading`. `tests/unit/media-player.test.tsx`: 3 tests (links and letter, plain words and audio, shown and hidden over play, moves and leaving).
+- `stories/media-player.stories.tsx`: `Heading`. `tests/unit/media-player.test.tsx`: 4 tests (links and letter, plain words and audio, shown and hidden over play, moves and leaving), and the picture unlinked without a subtitle to name it.
 - `tests/visual/baselines/`: the new story's shots.
 
 **RateChoice on React Aria's Select** (branch `claude/project-thread-5wm5fj`, issue #324). strata-reels' tape page could not get stable baselines: the "1×" of the playback speed moved a pixel up or down between two runs on CI's runner. Chromium lays out a native select's text with `line-height: normal` whatever the page sets, and centres it, which put it on a fractional offset. The same one-pixel shift shows in every player shot between Chromium builds. A first guess, that the 4:3 video above put the controls on a half pixel, was wrong: the shift shows with no video. Jonathan chose to move the speed control onto React Aria's `Select`, so the text box is ours.

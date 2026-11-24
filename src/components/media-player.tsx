@@ -587,7 +587,7 @@ export type MediaHeading = {
   to?: string;
   /** Under the title: who made it, or where it is from ("Kiln room"). */
   subtitle?: string;
-  /** An app route the subtitle and the picture lead to. */
+  /** An app route the subtitle leads to, and the picture with it when there is a subtitle to name that link. */
   subtitleTo?: string;
   /** A small round picture before the words (the maker's avatar). `null` draws the subtitle's first letter instead. */
   avatar?: string | null;
@@ -1206,7 +1206,7 @@ function PictureHeading({ heading, shown }: { heading: MediaHeading; shown: bool
       data-shown={shown || undefined}
       className={cn("picture-shade pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3 pb-10 transition-state", shown ? "opacity-100" : "opacity-0 has-[:focus-visible]:opacity-100 has-[:focus-visible]:[&_a]:pointer-events-auto")}
     >
-      {avatar && (heading.subtitleTo ? <HeadingLink to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
+      {avatar && (heading.subtitleTo && heading.subtitle ? <HeadingLink to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
       <div className="grid min-w-0">
         {heading.to ? <HeadingLink to={heading.to} className={cn("type-heading", link)}>{heading.title}</HeadingLink> : <p className="type-heading truncate">{heading.title}</p>}
         {heading.subtitle && (heading.subtitleTo ? <HeadingLink to={heading.subtitleTo} className={cn("type-body-sm", link)}>{heading.subtitle}</HeadingLink> : <p className="type-body-sm truncate">{heading.subtitle}</p>)}

@@ -592,3 +592,8 @@ describe("MediaPlayer heading (issue #329)", () => {
     }
   });
 });
+
+it("leaves the picture unlinked when no subtitle names the link (Codex on #330)", () => {
+  renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={{ title: "Only a title", subtitleTo: "/makers/1", avatar: null }} />);
+  expect(screen.queryAllByRole("link")).toEqual([]);
+});
