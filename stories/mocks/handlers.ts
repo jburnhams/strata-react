@@ -2,6 +2,7 @@ import { delay, http, HttpResponse } from "msw";
 import { listDisk, makeFolder, noteFor } from "../fixtures/folders";
 import { bookings, firedWork, firings, glazeSwatches, piecePhotos, readings, type Booking, type Firing } from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
+import { firingRuns, studioJobs } from "../fixtures/workflow";
 
 // The fixture API, served by MSW in Storybook (service worker) and in the unit tests (Node). The
 // default handlers answer like a healthy server; the named sets below replace one route to put a
@@ -21,6 +22,16 @@ export const api = {
   invites: "/api/invites",
   /** `GET` the kiln log sync's status; `POST` starts one. */
   logSync: "/api/log-sync",
+  /** strata-python's shared workflow routes for one firing (`add_workflow`). */
+  firingRun: "/api/workflows/firing/subjects/f-0412",
+  /** `POST`: approve a gate of that firing. */
+  approve: (stage: string) => `/api/workflows/firing/subjects/f-0412/stages/${stage}/approve`,
+  /** `POST`: run the firing again. */
+  runFiring: "/api/workflows/firing/subjects/f-0412/run",
+  /** strata-python's shared queue routes (`add_jobs`). */
+  jobs: "/api/jobs",
+  cancelJob: (id: number | string) => `/api/jobs/${id}/cancel`,
+  retryJob: (id: number | string) => `/api/jobs/${id}/retry`,
 } as const;
 
 /** The kiln log sync's status: it reads each kiln controller's log in turn. */
@@ -216,6 +227,12 @@ export const handlers = [
   }),
   http.get(api.logSync, () => HttpResponse.json(logSyncs.idle)),
   http.post(api.logSync, () => new HttpResponse(null, { status: 202 })),
+  http.get(api.firingRun, () => HttpResponse.json(firingRuns.waiting)),
+  http.post(api.approve(":stage"), () => HttpResponse.json(firingRuns.done)),
+  http.post(api.runFiring, () => HttpResponse.json(firingRuns.running)),
+  http.get(api.jobs, () => HttpResponse.json({ items: studioJobs, next: null, total: null })),
+  http.post(api.cancelJob(":id"), ({ params }) => HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "cancelled" })),
+  http.post(api.retryJob(":id"), ({ params }) => HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "queued" })),
 ];
 
 /** The server refuses an invite for a reason only it can check, in its own words (FastAPI's `detail`). */

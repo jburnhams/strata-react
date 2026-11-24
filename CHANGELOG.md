@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-24
+**The shared jobs and workflow screens: `WorkflowSteps`, `JobsTable`, `useWorkflowRun`** (branch `claude/project-thread-daa05w`). Jonathan asked for strata-python's new shared routes (`add_jobs`, `add_workflow`, strata-python #68) to get a common UI here, with the types generated from the API rather than written again. The components take minimal structural types that the app's generated `Schema<"WorkflowRun">`, `Schema<"StageRun">` and `Schema<"Task">` satisfy, so nothing of the contract is typed by hand. No dependency added.
+
+- `src/components/workflow-steps.tsx` (**new**): an `<ol>` of a subject's stages, each with its state as a `Status` word (defaults Done, Approved, Not started, Out of date, Failed, Needs review, Waiting; `words` renames them), when it last ran and how long it took, a failed stage's error and Try again (outline), and Approve on a waiting gate (the first such gate's button is the filled one). A gate approved by a person says who, one approved by its policy "Approved automatically". An unknown state draws as Waiting; a cleared record draws no detail.
+- `src/components/jobs-table.tsx` (**new**): a `DataTable` of the queue's jobs: what each is (`describe`, default its kind), its state as a word, progress text or error, when it was added, and Cancel (queued or running) or Run again (failed or cancelled) as ghost row actions named with the description.
+- `src/query/workflow.ts` (**new**): `useWorkflowRun({ finished, ... })` over `useJob`, and `isWorkflowRunning(run, finished)` (a run with no job is not running).
+- `src/index.ts`, `src/query/index.tsx`, `README.md` (Status and figures, Data loading rows).
+- `stories/fixtures/workflow-openapi.json` (**new**): the OpenAPI schema of a strata-python app with `add_jobs` and `add_workflow`; `stories/fixtures/workflow-api.generated.ts` (**new**) written from it by `strata-api-types`, as an app writes its own; `stories/fixtures/workflow.ts` (**new**): a kiln firing at each point of its way and a jobs page, typed by those generated types.
+- `stories/mocks/handlers.ts`: the firing's run, approve and run routes, and the jobs page with cancel and retry.
+- `stories/workflow.stories.tsx` (**new**): NotStarted, Running, NeedsReview, Failed, Done, OwnWords, NeedsReviewPhone, FromTheApi (no-visual: polled through MSW with `JobStatus` while the job runs) and Jobs (wide).
+- `tests/unit/workflow.test.tsx` (**new**, 9 tests): words, details and the one filled button, Approve and Try again calling the app, policy approval, renamed words, unknown states, polling that stops when the job ends, and the jobs table's rows and actions over MSW.
+- `tests/visual/baselines/status-and-figures-workflowsteps--*--{light,dark}.png` (**new**, 16): written with this container's Chromium 1243 (Playwright here wants 1255, so the browser was linked under that name); CI's Chromium may differ in anti-aliasing, in which case its `visual-diffs` artifact has the replacements. `npm run test:integration` fails 8 tests here for the same missing browser, as it does on main.
+
 ## 2026-11-23
 **Writes kept while offline: `createOutbox`, `useOutbox`, `OutboxStatus`** (branch `claude/project-thread-rx0f3j`). Jonathan approved offline answer saving for Flashtap (its spec: "queue events offline; server reconciles idempotently"): a learner keeps playing on a tablet whose wifi drops, and each answer must reach the server once it is back. The queue and its sign are what any app that writes in the field needs, so they live here. No dependency was added: localStorage, `navigator.locks` where it exists, and `fetchJson`.
 
