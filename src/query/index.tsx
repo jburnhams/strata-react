@@ -120,3 +120,4 @@ export { createApi, type Api, type ApiOptions } from "./api";
 export { createTypedApi, type TypedApi } from "./typed-api";
 export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
 export { useJob, isTaskRunning, type Job, type JobOptions } from "./job";
+export { useWorkflowRun, isWorkflowRunning, type WorkflowRunLike, type WorkflowRunOptions } from "./workflow";

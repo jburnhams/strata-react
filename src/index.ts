@@ -81,6 +81,8 @@ export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type St
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";
 export { JobStatus, jobProgressText, type JobStatusProps, type JobFailure, type JobProgress, type JobWords } from "./components/job-status";
 export { useJobAction, type JobAction, type JobActionOptions } from "./components/job-action";
+export { WorkflowSteps, type WorkflowStepsProps, type WorkflowStage, type StageState, type StageWords } from "./components/workflow-steps";
+export { JobsTable, type JobsTableProps, type JobRow } from "./components/jobs-table";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export {
   DataTable,
@@ -163,6 +165,10 @@ export {
   useInfiniteLoad,
   useJob,
   isTaskRunning,
+  useWorkflowRun,
+  isWorkflowRunning,
+  type WorkflowRunLike,
+  type WorkflowRunOptions,
   apiPage,
   fetchJson,
   HttpError,
