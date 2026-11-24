@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { useQueryClient } from "@tanstack/react-query";
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { ClipsProvider, SayAgain, clipsQueryKey, useClips, useSayOnShow, createApi } from "../../src";
 import { installFakeSpeech, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
@@ -89,6 +89,18 @@ describe("ClipsProvider (#318)", () => {
     renderWithStrata(<ClipsProvider load={load}><Prompt text="Which one is the cat?" /></ClipsProvider>);
     await screen.findByText("ready");
     expect(speech.texts()).toEqual(["Which one is the cat?"]);
+  });
+
+  it("is ready when the list fails while the browser is offline, instead of waiting for the network", async () => {
+    speech = installFakeSpeech();
+    onlineManager.setOnline(false);
+    try {
+      renderWithStrata(<ClipsProvider load={() => Promise.reject(new Error("offline"))}><Prompt text="Which one is the cat?" /></ClipsProvider>);
+      await screen.findByText("ready", undefined, { timeout: 4000 });
+      expect(speech.texts()).toEqual(["Which one is the cat?"]);
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it("says a prompt once, not again when the provider is given new functions on each render", async () => {

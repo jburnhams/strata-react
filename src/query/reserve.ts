@@ -15,8 +15,9 @@ import * as React from "react";
 //   server would refuse their answers), then tops up in one request when fewer than half of `size`
 //   remain. One top-up in flight per key; a failed top-up is not an error to show (the person is
 //   playing with a good item in hand), the next `refresh` tries again.
-// - Items topped up are checked against the same `sameMake`: a server that has moved on between the
-//   fresh item and the top-up must not leave stale items behind.
+// - Items topped up are checked against the newest fresh item when they land, not the one the request was
+//   made under: a second `refresh` that arrives while one is in flight has already dropped what it
+//   found out of date, and the first response must not put such items back.
 // - `take` is one synchronous read and write, so it is atomic inside a tab; across tabs two may take
 //   the same item. That is harmless where the app's writes carry a client-made id the server dedupes
 //   on (the outbox's rule), and it is why no Web Lock is taken here: `take` has to answer at once.
@@ -73,6 +74,8 @@ export function createReserve<T, K extends string = string>({ name, size, fetch,
   let persisted = store !== null;
   const listeners = new Set<() => void>();
   const inFlight = new Set<string>();
+  // The newest fresh item per key: a top-up that was asked for under an older one is checked against this when it lands.
+  const latest = new Map<string, T>();
   const changed = () => {
     for (const l of listeners) l();
   };
@@ -107,6 +110,7 @@ export function createReserve<T, K extends string = string>({ name, size, fetch,
       return next;
     },
     async refresh(key, fresh) {
+      latest.set(key, fresh);
       const current = read(key);
       const kept = current.filter((item) => sameMake(item, fresh));
       if (kept.length !== current.length) write(key, kept);
@@ -116,7 +120,7 @@ export function createReserve<T, K extends string = string>({ name, size, fetch,
         const more = await fetch(key, size - kept.length);
         // Read again: `take` may have run while the request was out.
         const now = read(key);
-        write(key, [...now, ...more.filter((item) => sameMake(item, fresh))].slice(0, size));
+        write(key, [...now, ...more.filter((item) => sameMake(item, latest.get(key) as T))].slice(0, size));
       } catch {
         // Offline or the server is down: the next refresh tries again.
       } finally {

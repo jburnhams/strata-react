@@ -67,6 +67,17 @@ describe("createReserve (#319)", () => {
     expect(reserve.take("a")).toEqual(round("2"));
   });
 
+  it("checks a top-up against the newest fresh item, so an older request cannot put back what a later refresh dropped", async () => {
+    let release: (items: Round[]) => void = () => {};
+    const reserve = make(() => new Promise<Round[]>((r) => (release = r)));
+    const first = reserve.refresh("a", round("f1", 1));
+    await reserve.refresh("a", round("f2", 2)); // in flight already: only drops what is out of date
+    release([round("x", 1), round("y", 2)]);
+    await first;
+    expect(reserve.take("a")).toEqual(round("y", 2));
+    expect(reserve.take("a")).toBeUndefined();
+  });
+
   it("keeps what it has when the top-up fails, and tries again at the next fresh item", async () => {
     const fetch = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce([round("n")]);
     const reserve = make(fetch);

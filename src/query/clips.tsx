@@ -9,6 +9,8 @@ import { useLoad } from "./index";
 // line's clip and wait for the list before speaking unasked. That glue is here once:
 // - The list is read once (`useLoad`, `staleTime: Infinity`) and again only when the app invalidates
 //   `clipsQueryKey` (after a recording is kept), so a screen of prompts is not one request each.
+// - The query runs in `networkMode: "always"`: by default TanStack pauses a failing request while the browser
+//   is offline, so the list would never fail and `ready` never come, though offline is when the browser's voice is needed.
 // - `ready` is true once the list has arrived or failed. A screen that speaks a prompt on show waits for
 //   it (`useSayOnShow`), so the first prompt is not in the browser's voice while the rest are clips. A
 //   failed list is ready too: waiting for a server that is not there would leave the prompt unsaid.
@@ -66,7 +68,7 @@ export type ClipsProviderProps = {
 
 /** Reads the app's clip list once and gives `useClips`, `SayAgain` and `useSayOnShow` each line's recording. Put it in the shell, inside the query provider. */
 export function ClipsProvider({ load, lang, split, describe, queryKey = clipsQueryKey, children }: ClipsProviderProps) {
-  const list = useLoad<Clips>({ queryKey, queryFn: load, staleTime: Infinity });
+  const list = useLoad<Clips>({ queryKey, queryFn: load, staleTime: Infinity, networkMode: "always" });
   const clips = list.status === "ready" ? list.data : undefined;
   const value = React.useMemo<ClipsContext>(() => {
     const parts = (text: string): SpeechPart[] =>
