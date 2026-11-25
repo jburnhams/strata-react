@@ -15,6 +15,7 @@ export { capture, resolveShotUrl, toFetchRequest, type CaptureOptions, type Capt
 export { dropFiles, DROPPED_FILE_MODIFIED, type DroppedFile } from "./drop";
 export { serveStatic, type StaticServer } from "./serve";
 export { compare, decode, encode, boxBlur, THRESHOLD, BLUR, MAX_DIFF_PIXELS, type CompareOptions, type Image, type CompareResult } from "./compare";
+export type { PinnedSystemFont } from "./fonts";
 export {
   viewports,
   type Theme,

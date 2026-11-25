@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { http, HttpResponse } from "msw";
@@ -9,6 +9,7 @@ import { routeShots, storybookShots } from "../../src/visual/targets";
 import { withBaseTag } from "../../src/visual/serve";
 import { resolveShotUrl, toFetchRequest } from "../../src/visual/capture";
 import { formatReport, pinWarnings } from "../../src/visual/run";
+import { pinSystemFont } from "../../src/visual/fonts";
 import type { VisualReport } from "../../src/visual/types";
 
 // strata-react/visual's logic that needs no browser: comparison, turning stories and routes into
@@ -239,5 +240,26 @@ describe("serving an app build with a relative base (issue #242)", () => {
   });
   it("adds the tag to a page with no head", () => {
     expect(withBaseTag("<div></div>", "/x/")).toBe('<base href="/x/"><div></div>');
+  });
+});
+
+describe("pinSystemFont (issue #342)", () => {
+  it("writes a fontconfig whose only folder holds the named files and which answers every family with the pin", () => {
+    const dir = mkdtempSync(join(tmpdir(), "strata-pin-test-"));
+    writeFileSync(join(dir, "Face.ttf"), "not a real font");
+    const pinned = pinSystemFont({ pin: "Test Face", files: ["Face.ttf"] }, dir);
+    const conf = pinned.env.FONTCONFIG_FILE!;
+    const text = readFileSync(conf, "utf8");
+    expect(text.match(/<dir>/g)).toHaveLength(1);
+    expect(text).toContain("<string>Test Face</string>");
+    expect(pinned.family).toBe("Test Face");
+    pinned.dispose();
+    expect(existsSync(conf)).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("names a font file that is missing, and leaves nothing behind", () => {
+    expect(() => pinSystemFont({ pin: "Test Face", files: ["nowhere/Face.ttf"] }, tmpdir())).toThrow(/Face\.ttf not found/);
+    expect(() => pinSystemFont({ pin: "", files: [] }, tmpdir())).toThrow(/family name/);
   });
 });

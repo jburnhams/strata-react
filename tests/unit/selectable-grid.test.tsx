@@ -1,8 +1,8 @@
 import * as React from "react";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BulkBar, Button, DataTable, SelectableGrid, useSelection, type Column, type InitialSelection } from "../../src";
+import { BulkBar, Button, DataTable, SelectableGrid, useHotkeys, useSelection, type Column, type InitialSelection } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { shelfPhotos, type ShelfPhoto } from "../../stories/fixtures/kiln";
 
@@ -32,6 +32,20 @@ function Grid({ rows = photos, initial }: { rows?: ShelfPhoto[]; initial?: Initi
 }
 
 describe("SelectableGrid", () => {
+  it("lets a screen's single-key shortcuts through after a tile's box has focus (issue #328)", async () => {
+    const user = userEvent.setup();
+    const run = vi.fn();
+    function WithKeys() {
+      useHotkeys([{ keys: ["a"], label: "Approve", run }]);
+      return <Grid />;
+    }
+    renderWithStrata(<WithKeys />);
+    await user.click(box(photos[0]));
+    expect(box(photos[0])).toHaveFocus();
+    await user.keyboard("a");
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it("is a named list of tiles, each a box named from its row, disabled where it cannot be chosen", () => {
     renderWithStrata(<Grid />);
     const list = screen.getByRole("grid", { name: "Pieces from kiln 2" });

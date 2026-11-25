@@ -43,6 +43,47 @@ describe("format", () => {
   });
 });
 
+describe("format for a status page (issue #341)", () => {
+  it("writes binary sizes with { binary: true }, or a binary unit", () => {
+    const kib = 8_000_000 * 1024; // /proc/meminfo's 8,000,000 kB
+    expect(format.bytes(kib)).toBe(`8.2${NBSP}GB`);
+    expect(format.bytes(kib, { binary: true })).toBe(`7.6${NBSP}GiB`);
+    expect(format.bytes(1536, "KiB")).toBe(`1.5${NBSP}KiB`);
+    expect(format.bytes(512, { binary: true })).toBe(`512${NBSP}B`);
+    expect(format.bytes(3 * 1024 ** 2, { binary: true, unit: "KiB" })).toBe(`3,072${NBSP}KiB`);
+    expect(format.byteUnit(kib, { binary: true })).toBe("GiB");
+  });
+
+  it("writes a duration in words, or as an uptime in parts", () => {
+    expect(format.duration(45)).toBe(`45${NBSP}s`);
+    expect(format.duration(16 * 60 + 20)).toBe(`16${NBSP}min`);
+    expect(format.duration(3.5 * 3600)).toBe(`3.5${NBSP}h`);
+    expect(format.duration(2 * 86400)).toBe(`2${NBSP}days`);
+    expect(format.duration(86400)).toBe(`1${NBSP}day`);
+    expect(format.duration(null)).toBe("–");
+    expect(format.duration(-1)).toBe("–");
+    expect(format.duration(86400 + 3600 + 59, { style: "parts" })).toBe(`1d${NBSP}1h${NBSP}0m`);
+    expect(format.duration(2 * 3600 + 5 * 60, { style: "parts" })).toBe(`2h${NBSP}5m`);
+    expect(format.duration(5 * 60 + 3, { style: "parts" })).toBe(`5m${NBSP}3s`);
+    expect(format.duration(7, { style: "parts" })).toBe("7s");
+  });
+
+  it("writes a reading with its unit, and percent points through percent", () => {
+    expect(format.measure(12.34, "GB")).toBe(`12.3${NBSP}GB`);
+    expect(format.measure(41, "%")).toBe("41%");
+    expect(format.measure(null, "GB")).toBe("–");
+  });
+
+  it("writes the ticks of a chart of the past", () => {
+    expect(format.agoTick(0)).toBe("now");
+    expect(format.agoTick(30)).toBe(`−30${NBSP}s`);
+    expect(format.agoTick(120)).toBe(`−2${NBSP}min`);
+    expect(format.agoTick(6 * 3600)).toBe(`−6${NBSP}h`);
+    expect(format.agoTick(3 * 86400)).toBe(`−3${NBSP}d`);
+    expect(format.agoTick(undefined)).toBe("–");
+  });
+});
+
 describe("format dates", () => {
   const utc = createFormat("en-GB", { timeZone: "UTC" });
   const at = "2026-11-08T06:05:00Z";

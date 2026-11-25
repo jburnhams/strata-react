@@ -133,6 +133,24 @@ describe("LinkCard", () => {
     expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
   });
 
+  it("draws the leaving arrow only for another origin, or when told (issue #340)", () => {
+    const arrow = (name: string) => screen.getByRole("link", { name }).closest("h3")!.querySelector("svg");
+    renderWithStrata(
+      <>
+        <LinkCard href="https://glazes.example/" title="Other site" />
+        <LinkCard href="/notes/" title="Same site" />
+        <LinkCard href={`${window.location.origin}/wiki/`} title="Same site, absolute" />
+        <LinkCard href="/docs/" external title="Said to leave" />
+        <LinkCard href="https://glazes.example/" external={false} title="Said to stay" />
+      </>,
+    );
+    expect(arrow("Other site")).not.toBeNull();
+    expect(arrow("Same site")).toBeNull();
+    expect(arrow("Same site, absolute")).toBeNull();
+    expect(arrow("Said to leave")).not.toBeNull();
+    expect(arrow("Said to stay")).toBeNull();
+  });
+
   it("lists cards as items of a named list", () => {
     renderWithStrata(
       <LinkCardList label="Apps">

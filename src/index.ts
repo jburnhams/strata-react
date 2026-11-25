@@ -13,7 +13,9 @@ export {
   NBSP,
   MISSING,
   toDate,
+  type BinaryByteUnit,
   type ByteUnit,
+  type BytesOptions,
   type CountOptions,
   type DateFormatter,
   type DateInput,
@@ -51,6 +53,7 @@ export {
 export { geo, type LatLng } from "./lib/geo";
 export { formatChord, matchesChord, parseChord, isReservedChord, detectPlatform, type Platform } from "./lib/chords";
 export { Toolbar, ToolbarSeparator, type ToolbarProps } from "./components/toolbar";
+export { PauseButton } from "./components/pause-button";
 export { Toggle, ToggleGroup, type ToggleProps, type ToggleGroupProps, type ToggleOption } from "./components/toggle";
 export { Switch, type SwitchProps } from "./components/switch";
 export { Dialog, AlertDialog, type DialogProps, type AlertDialogProps } from "./components/dialog";
@@ -70,6 +73,7 @@ export { Field, Input, Textarea, NativeSelect, ChoiceGroup, type FieldProps, typ
 export { Status, type Tone } from "./components/status";
 export { Metric, MetricStrip, type MetricProps } from "./components/metric";
 export { Meter, crossedThreshold, type MeterProps, type MeterThreshold } from "./components/meter";
+export { SystemPanel, useSystemInfo, diskThresholds, type SystemPanelProps, type SystemInfoLike, type SystemFolder, type SystemService, type SystemFact } from "./components/system-panel";
 export { CompositionBar, type CompositionBarProps, type CompositionPart } from "./components/composition";
 export { LinkCard, LinkCardList, type LinkCardProps } from "./components/link-card";
 export { DataView, EmptyState, LoadError, Skeleton, StaleNotice, type Load, type LoadFailure, type Stale } from "./components/data-view";
@@ -83,6 +87,7 @@ export { JobStatus, jobProgressText, type JobStatusProps, type JobFailure, type 
 export { useJobAction, type JobAction, type JobActionOptions } from "./components/job-action";
 export { WorkflowSteps, type WorkflowStepsProps, type WorkflowStage, type StageState, type StageWords } from "./components/workflow-steps";
 export { JobsTable, type JobsTableProps, type JobRow } from "./components/jobs-table";
+export { ScheduleTable, type ScheduleTableProps, type ScheduleRow } from "./components/schedule-table";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export { FilmStrip, pickEvenly, frameAt, type FilmStripProps, type FilmFrame } from "./components/film-strip";
 export {
@@ -171,6 +176,8 @@ export {
   toLoad,
   staleOf,
   useLoad,
+  usePoll,
+  type Poll,
   useInfiniteLoad,
   useJob,
   isTaskRunning,

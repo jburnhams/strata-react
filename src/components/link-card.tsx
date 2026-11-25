@@ -14,8 +14,11 @@ import { cn } from "../lib/utils";
 // - Because the whole card is one link, nothing else on it can be interactive (a button or a
 //   second link inside a link is invalid and unreachable). `marks` is for `Status` words only.
 // - Status marks are words (`Status`), never a coloured dot in a corner.
-// - `to` is a route in this app (React Router's `Link`); `href` leaves it (a plain anchor) and is
-//   marked with an arrow, so a person knows before pressing that they will leave.
+// - `to` is a route in this app (React Router's `Link`); `href` is a plain anchor. It is marked
+//   with an arrow only when it leaves the site, so a person knows before pressing that they will
+//   leave: another origin, or `external`. A same-origin `href` (another app behind the same reverse
+//   proxy, `/notes/`) is not a route here but is not leaving either, so the arrow would say
+//   something untrue on every card of a homepage (issue #340). `external` overrides the rule.
 // - Hover and focus change the border and draw the ring around the card, not the title. There is
 //   no lift, scale or shadow: elevation is for what floats above the page, and a card on a
 //   homepage is pressed many times a day (ux-research ux-character.md, character by frequency).
@@ -28,7 +31,7 @@ export type LinkCardProps = (
       href?: undefined;
     }
   | {
-      /** Somewhere outside this app; the card shows an arrow. */
+      /** Somewhere that is not a route of this app. The card shows an arrow when it is on another origin. */
       href: string;
       to?: undefined;
     }
@@ -39,13 +42,25 @@ export type LinkCardProps = (
   description?: string;
   /** `Status` words about the destination ("Running", "Updated today"). Nothing interactive. */
   marks?: React.ReactNode;
+  /** For an `href`: whether it leaves the site (the arrow). Default: true when its origin is not this page's. */
+  external?: boolean;
   /** The title's element. h3 under a section heading; h2 when the cards are the page's sections. */
   as?: "h2" | "h3" | "h4";
   className?: string;
 };
 
+/** True when `href` is on another origin than the page (a relative one never is). Unreadable is treated as leaving. */
+function leavesSite(href: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URL(href, window.location.href).origin !== window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
 /** A destination as a card that is one link: its title is the link's name, the description and status marks are its description, and the whole card is the target. */
-export function LinkCard({ title, description, marks, as: Heading = "h3", className, ...destination }: LinkCardProps) {
+export function LinkCard({ title, description, marks, as: Heading = "h3", className, external, ...destination }: LinkCardProps) {
   const descriptionId = React.useId();
   const marksId = React.useId();
   const describedBy = [description && descriptionId, marks && marksId].filter(Boolean).join(" ") || undefined;
@@ -66,7 +81,7 @@ export function LinkCard({ title, description, marks, as: Heading = "h3", classN
             <a href={destination.href} aria-describedby={describedBy} className={linkClass}>
               {title}
             </a>
-            <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            {(external ?? leavesSite(destination.href)) && <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />}
           </>
         ) : (
           <Link to={destination.to} aria-describedby={describedBy} className={linkClass}>
