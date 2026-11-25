@@ -60,6 +60,30 @@ import { regionStyle, type PictureRegion } from "../lib/boxes";
 // without a crop endpoint. A server crop (a smaller file) is still better for a grid of hundreds from
 // different photos; `region` is for a few faces of one photo, or before the server has cut one.
 
+// A picture the page has already loaded is shown at once when a `Thumbnail` for it mounts again (issue
+// #352, from strata-reels): a `FilmStrip` that re-fits after the window changes size, a list that
+// re-sorts or a row that remounts used to start every thumbnail as a skeleton that waited to be near the
+// screen, although the browser had the picture in its cache and a request would cost nothing. The
+// request key and the source index that loaded are remembered for the life of the page (bounded, oldest
+// forgotten first), and a new `Thumbnail` for the same request asks at once, at the source that loaded.
+// It is not trusted to be loaded: the image element says so (it is `complete` with a size when it
+// mounts from the cache, so there is no skeleton frame; otherwise its load event does), so a picture
+// that has left the cache or must be fetched again (`no-store`) keeps its skeleton while it comes, and
+// one that now fails goes through the usual missing path.
+const loadedBefore = new Map<string, number>();
+const LOADED_LIMIT = 2000;
+
+function remember(key: string, index: number) {
+  loadedBefore.delete(key);
+  loadedBefore.set(key, index);
+  if (loadedBefore.size > LOADED_LIMIT) loadedBefore.delete(loadedBefore.keys().next().value!);
+}
+
+/** Forgets which pictures `Thumbnail` has loaded, so a test that checks the loading state starts from nothing. `renderWithStrata` and `renderRoutes` call it. */
+export function forgetLoadedThumbnails() {
+  loadedBefore.clear();
+}
+
 /** A width-over-height ratio: a number (`1.5`) or a fraction (`"4/3"`). */
 export type AspectRatio = number | `${number}/${number}`;
 
@@ -139,12 +163,14 @@ export function Thumbnail({
   const sources = React.useMemo(() => (src === null ? [] : typeof src === "string" ? (src ? [src] : []) : src.filter(Boolean)), [src]);
   const key = sources.length ? `${sources.join("\n")} ${srcSet ?? ""}` : null;
   const [outcome, setOutcome] = React.useState<Outcome | null>(null);
+  const before = key === null ? undefined : loadedBefore.get(key);
   const mine = key !== null && outcome?.key === key ? outcome : null;
-  const index = mine?.index ?? 0;
+  // A remembered request starts at the source that loaded, but stays "loading" until this image says it has.
+  const index = mine?.index ?? before ?? 0;
   const phase: Phase = key === null ? "missing" : mine?.done ?? "loading";
   const current = sources[index];
   const near = useInView({ active: !eager && sources.length > 0, rootMargin, once: true, unsupported: true });
-  const requested = eager || near.inView;
+  const requested = eager || near.inView || before !== undefined;
   // The next source, or the end of the list.
   const fail = () => setOutcome(index + 1 < sources.length ? { key: key!, index: index + 1, done: null } : { key: key!, index, done: "missing" });
   // An app that records what is gone is told once per request that ended without a picture.
@@ -172,13 +198,17 @@ export function Thumbnail({
       {key !== null && phase !== "missing" && requested && (
         <img
           key={`${key}#${index}`}
+          ref={(el) => {
+            // From the cache the image is complete as it mounts: loaded now, with no skeleton frame (the load event also follows, and agrees).
+            if (el && phase === "loading" && before !== undefined && el.complete && el.naturalWidth > 0) setOutcome({ key: key!, index, done: "loaded" });
+          }}
           src={current}
           // The candidates are the first source's: a fallback would otherwise be replaced by the set that just failed.
           srcSet={index === 0 ? srcSet : undefined}
           sizes={sizes}
           alt={alt}
           decoding="async"
-          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : setOutcome({ key: key!, index, done: "loaded" }))}
+          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : (remember(key!, index), setOutcome({ key: key!, index, done: "loaded" })))}
           onError={fail}
           style={region ? regionStyle(region, ratioNumber(aspect)) : undefined}
           className={cn(

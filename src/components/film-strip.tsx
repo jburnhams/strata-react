@@ -97,6 +97,14 @@ export function FilmStrip({ label, frames, span, time, onSeek, aspect = "4/3", f
   const stretch = span ?? ([frames[0]?.time ?? 0, frames.length ? frames[frames.length - 1].time + 1e-6 : 0] as const);
   const current = frameAt(shown, time, stretch);
 
+  // A frame is keyed by its time, so frames kept when the width changes keep their Thumbnail (and its
+  // loaded picture) instead of remounting as skeletons (#352); only a repeated time gets a counter.
+  const seen = new Map<number, number>();
+  const keyed = shown.map((f) => {
+    const n = seen.get(f.time) ?? 0;
+    seen.set(f.time, n + 1);
+    return { f, k: n ? `${f.time}#${n}` : String(f.time) };
+  });
   const picture = (f: FilmFrame, i: number) => (
     <Thumbnail src={f.src} alt={onSeek ? "" : `Frame at ${format.runningTime(f.time)}`} missing={missing} aspect={aspect} className={cn("w-full", i === current && "ring-2 ring-primary ring-offset-1 ring-offset-background")}>
       <span aria-hidden className="absolute bottom-0.5 right-0.5 rounded-control bg-background/80 px-1 type-caption tabular-nums text-foreground">
@@ -111,9 +119,9 @@ export function FilmStrip({ label, frames, span, time, onSeek, aspect = "4/3", f
         <Thumbnail src={null} alt={label} missing={missing} aspect={aspect} className="w-full max-w-24" />
       ) : onSeek ? (
         <Toolbar label={label} className="flex-nowrap gap-1">
-          {shown.map((f, i) => (
+          {keyed.map(({ f, k }, i) => (
             <AriaButton
-              key={`${f.time}-${i}`}
+              key={k}
               aria-label={`${seekVerb} ${format.runningTime(f.time)}`}
               aria-current={i === current ? "time" : undefined}
               onPress={() => onSeek(f.time)}
@@ -125,8 +133,8 @@ export function FilmStrip({ label, frames, span, time, onSeek, aspect = "4/3", f
         </Toolbar>
       ) : (
         <div role="group" aria-label={label} className="flex gap-1">
-          {shown.map((f, i) => (
-            <div key={`${f.time}-${i}`} aria-current={i === current ? "time" : undefined} className="min-w-0 flex-1">
+          {keyed.map(({ f, k }, i) => (
+            <div key={k} aria-current={i === current ? "time" : undefined} className="min-w-0 flex-1">
               {picture(f, i)}
             </div>
           ))}

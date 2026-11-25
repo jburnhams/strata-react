@@ -12,6 +12,18 @@
 - `tests/visual/baselines/`: 8 new (`data-boxedpicture--*`, `data-thumbnail--region--*`); no existing baseline changed.
 - `README.md`: the pictures row names them.
 
+## 2026-11-25 (thumbnails survive a resize)
+**`Thumbnail` shows pictures it has already loaded; `FilmStrip` keys frames by time** (branch `claude/project-thread-0ktdjf`, issue #352). Jonathan asked for the new issue from strata-reels: on the runner's Chromium the window is briefly 1×1 during a full-page capture, `FilmStrip` re-fits, every `Thumbnail` remounts as a skeleton that waits to be near the window, and strips below the fold stay skeletons although the browser has the pictures. The issue's measured log and its two fixes held; the third suggestion (a note in the `strata-visual` docs) is done too.
+
+- `src/components/thumbnail.tsx`: a module-level map of the request key to the source index that loaded (2000 entries, oldest dropped first). A `Thumbnail` that mounts for a remembered request asks at once, whatever its distance from the screen, at the source that loaded; it is loaded when the image says so (`complete` with a size as it mounts from the cache, so no skeleton frame, else its load event), so an evicted or `no-store` picture keeps its skeleton while it is fetched and a failing one takes the missing path. Review fix (Codex, real): the first version marked a remembered request loaded outright, which left a blank box while a re-fetch ran. `forgetLoadedThumbnails()` clears the memory; it is exported from the file, not the public API.
+- `src/components/film-strip.tsx`: a frame's key is its time (a repeated time gets a counter), so frames kept across a width change keep their `Thumbnail`.
+- `src/testing/index.tsx`: `renderWithStrata` and `renderRoutes` call `forgetLoadedThumbnails()` with `toast.clear()`, so each test starts from skeletons.
+- `tests/unit/thumbnail.test.tsx`, `tests/unit/film-strip.test.tsx`: a remounted thumbnail is loaded at once and a different picture still waits; a kept frame is the same element after the frames shown change.
+- `README.md` (`strata-visual`, lazy pictures): says the runner's Chromium resizes the window during a whole-page capture, so a component that measures its width re-renders then.
+- `UPGRADING.md`: a thumbnail for a picture already loaded no longer starts as a skeleton; a test that checks a repeat's loading state through plain `render` should call `forgetLoadedThumbnails` (or use `renderWithStrata`).
+- `strata-visual.config.ts`: the idle full-screen shot lost its Skip intro button on #354's CI run (2937 and 2711 pixels, the button's corner), although the baselines, taken after the 3 s pin, have it. A single seek is not enough on a slow runner: the hide wait and the capture let a 12 s clip play past the intro at 11 s. A first fix that seeked back to 3 s every 250 ms made CI's `waitFor` calls time out (each seek counts as activity, so the controls never hid again). The setup now seeks once and sets `playbackRate` to 0.0625, Chromium's slowest, which keeps the clip inside the intro without touching the player again. Baselines unchanged; `--filter fullscreen-player` matches all 4 shots locally.
+- Checks: `npm run typecheck` and `npm test` pass locally (1413 unit tests). The visual and integration jobs run in CI.
+
 ## 2026-11-25 (idle full-screen baselines)
 **Put back the two idle full-screen baselines that kept main's visual check red** (branch `claude/project-thread-o8xcum`, #353). Jonathan asked for the red check on main to be found and fixed, so the release after the eight-issue batch can be cut.
 
