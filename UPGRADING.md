@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-25 (latest)
+- `Poll` has a new member, `with({ every })` (#349): a read with its own pace takes `useLoad({ poll: poll.with({ every: 60_000 }) })` and keeps the page's pause, resume and "updated" time. A `Poll` you build by hand (in a test or story) must now supply `with`; one from `usePoll` already has it.
+- `SystemPanel` takes `headingLevel` (2, 3 or 4; default 2, unchanged) so a page's own `h2` section can hold it (#348). `renderWithStrata` and `renderRoutes` take `base: "/_home/"` (#350): a `<base href>` for the render, removed on unmount, so `withBase`, `createApi` and `useSystemInfo` read the mount point they read in production; delete a hand-written `<base>` in your setup file.
+- Visual baselines: `status-and-figures-pausebutton`, `-scheduletable`, `-systempanel` and `navigation-linkcard--same-site` were recorded before the default look and moved to it.
+
 ## 2026-11-25 (later)
 - `useHotkeys` also hears a key pressed on a control inside a grid or table row (a tile's checkbox) in the capture phase, because React Aria's row hooks stop those keys reaching `window` (#328): shortcuts that were dead after a checkbox click now run. A test that clicked the tile instead of its checkbox to avoid this can click the checkbox.
 - `LinkCard` with an `href` on the page's own origin (`/notes/`) no longer draws the leaving arrow; `external` says it either way (#340). A baseline with such a card moves: the arrow is gone.

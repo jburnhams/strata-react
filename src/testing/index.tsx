@@ -50,7 +50,30 @@ export type StrataRenderOptions = Omit<RenderOptions, "wrapper"> & {
   toasts?: boolean;
   /** The microphone a recording screen gets from `useMicrophone()`, such as `fakeMicrophone()`; the browser's when left out (which jsdom cannot open). */
   microphone?: Microphone;
+  /** The mount point of an app served behind a proxy (`"/_home/"`): a `<base href>` is in the document while the render lasts and removed when it unmounts, so `withBase`, `createApi` and `useSystemInfo` read what they read in production and in `strata-visual`. None when left out. */
+  base?: string;
 };
+
+// A <base href> for one render (#350): `appBase()` reads the page's <base>, which jsdom does not have.
+// It is installed before the render (and before `renderRoutes` creates its router, whose loaders run
+// at creation and may call `withBase`), first in <head> so it wins over one a setup file left. It is
+// made once per render call, outside React's render, so Strict Mode cannot leave a second one behind;
+// the provider removes it when the tree unmounts (Testing Library's cleanup does that after each
+// test) and puts it back if Strict Mode's rehearsal of the effect took it out.
+function installBase(base: string | undefined): HTMLBaseElement | null {
+  if (base === undefined || typeof document === "undefined") return null;
+  const el = document.createElement("base");
+  el.setAttribute("href", base);
+  document.head.prepend(el);
+  return el;
+}
+
+function useBaseElement(element: HTMLBaseElement | null | undefined) {
+  React.useEffect(() => {
+    if (element && !element.isConnected) document.head.prepend(element);
+    return () => element?.remove();
+  }, [element]);
+}
 
 // The providers every Strata app has above its router, in the order an app nests them.
 function StrataProviders({
@@ -58,14 +81,17 @@ function StrataProviders({
   colorScheme,
   toasts,
   microphone,
+  base,
   children,
 }: {
+  base?: HTMLBaseElement | null;
   client: QueryClient;
   colorScheme: ColorSchemePreference;
   toasts: boolean;
   microphone?: Microphone;
   children: React.ReactNode;
 }) {
+  useBaseElement(base);
   const tree = (
     <ThemeProvider defaultPreference={colorScheme} storageKey={null}>
       <StrataQueryProvider client={client}>
@@ -80,11 +106,12 @@ function StrataProviders({
 /** Testing Library's `render` inside `StrataQueryProvider` and a `MemoryRouter` at `route`. */
 export function renderWithStrata(
   ui: React.ReactElement,
-  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, microphone, ...options }: StrataRenderOptions = {},
+  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, microphone, base, ...options }: StrataRenderOptions = {},
 ) {
   toast.clear(); // module state: a toast from the last test must not show in this one
+  const baseElement = installBase(base);
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone} base={baseElement}>
       <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
     </StrataProviders>
   );
@@ -116,13 +143,15 @@ export function renderRoutes(
     colorScheme = "light",
     toasts = true,
     microphone,
+    base,
     ...options
   }: RenderRoutesOptions = {},
 ) {
   toast.clear();
+  const baseElement = installBase(base);
   const router = createMemoryRouter(routes, { initialEntries: [route ?? basename ?? "/"], basename });
   const result = render(
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone}>
+    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone} base={baseElement}>
       <RouterProvider router={router} />
     </StrataProviders>,
     options,

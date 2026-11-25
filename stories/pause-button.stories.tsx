@@ -4,14 +4,18 @@ import { PauseButton, type Poll } from "../src";
 // The control of a screen that reads again on its own: a "Pause updates" toggle and when it was last
 // read. The live demo is a polled screen (the status page); these fix the three states.
 
-const poll = (over: Partial<Poll>): Poll => ({
-  every: 5000,
-  paused: false,
-  toggle: () => undefined,
-  updatedAt: new Date("2026-11-24T12:00:00Z"),
-  note: () => undefined,
-  ...over,
-});
+const poll = (over: Partial<Poll>): Poll => {
+  const made: Poll = {
+    every: 5000,
+    paused: false,
+    toggle: () => undefined,
+    updatedAt: new Date("2026-11-24T12:00:00Z"),
+    note: () => undefined,
+    with: (override) => ({ ...made, ...override }),
+    ...over,
+  };
+  return made;
+};
 
 const meta = { title: "Status and figures/PauseButton", component: PauseButton, args: { poll: poll({}) } } satisfies Meta<typeof PauseButton>;
 export default meta;
