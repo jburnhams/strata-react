@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-25 (seek bar marks past the end)
+- **`SeekBar` (and `MediaPlayer` through it) no longer draws a mark outside 0 to the duration.** A test that found a mark button past the loaded file's end will not find it; pass marks within the file.
+
 ## 2026-11-25 (CompositionBar, #377)
 - `CompositionBar` no longer crashes a production build when a sixth part has no `colour`: it folds the smallest into "Other" and logs `console.error`. Development and tests still throw. Parts that come from data should pass `other={{ label }}` to fold on purpose; a test that expected the throw under `NODE_ENV=production` now sees the folded bar.
 
