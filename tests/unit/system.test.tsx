@@ -53,6 +53,17 @@ describe("SystemPanel", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("The server could not answer (503).");
   });
 
+  it("nests its headings one level down under a page's own h2 (headingLevel)", () => {
+    renderWithStrata(
+      <section aria-labelledby="about">
+        <h2 id="about">About this server</h2>
+        <SystemPanel load={ready(systemInfo)} now={systemNow} headingLevel={3} />
+      </section>,
+    );
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["About this server"]);
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Server", "Folders", "Services"]);
+  });
+
   it("reads the route through useSystemInfo", async () => {
     server.use(http.get("/api/system", () => HttpResponse.json(systemInfoPlain)));
     function Page() {

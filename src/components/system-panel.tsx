@@ -27,6 +27,9 @@ import { Status } from "./status";
 // - Loading uses the same pieces as every read: `useSystemInfo` is `useLoad` on the route (polled when
 //   given a `Poll`), `SystemPanel` takes the `Load` and draws it through `DataView` with a skeleton
 //   that mirrors it and the stale notice for free, so a restarting server does not blank the page.
+// - The headings are `h2` by default; `headingLevel` lets a page that frames the panel in its own
+//   section ("About this server") nest the three one level down, so the outline says whose parts they
+//   are (#348). A level, not a `heading` text prop: the words stay the panel's own.
 
 /** A folder the server watches, as `GET /api/system` reports it. */
 export type SystemFolder = {
@@ -81,6 +84,8 @@ export type SystemPanelProps = {
   facts?: SystemFact[];
   /** "Now", for the uptime (tests and screenshots). */
   now?: Date;
+  /** The level of the panel's three headings (Server, Folders, Services). Default 2; a page that wraps the panel in its own `h2` section passes 3 so the outline nests (#348). */
+  headingLevel?: 2 | 3 | 4;
   className?: string;
 };
 
@@ -97,6 +102,10 @@ function Fact({ term, children }: { term: string; children: React.ReactNode }) {
 function ofSize(used: number, size: number) {
   const unit = format.byteUnit(size);
   return `${format.bytes(used, unit)} of ${format.bytes(size, unit)}`;
+}
+
+function PanelHeading({ id, level, children }: { id: string; level: 2 | 3 | 4; children: React.ReactNode }) {
+  return React.createElement(`h${level}`, { id, className: "type-heading" }, children);
 }
 
 function SystemSkeleton() {
@@ -164,7 +173,7 @@ function ServiceRow({ service }: { service: SystemService }) {
 }
 
 /** About this server, from `GET /api/system`: version and commit, when it started, each folder's disk as a meter with its state in words, and each service as Up or Down. Loaded through `DataView`, with a skeleton and the stale notice. */
-export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now, className }: SystemPanelProps) {
+export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now, headingLevel = 2, className }: SystemPanelProps) {
   const headings = { folders: React.useId(), services: React.useId(), server: React.useId() };
   return (
     <DataView
@@ -178,9 +187,7 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
       {(s) => (
         <div className="grid max-w-xl gap-8">
           <section aria-labelledby={headings.server} className="grid gap-3">
-            <h2 id={headings.server} className="type-heading">
-              Server
-            </h2>
+            <PanelHeading id={headings.server} level={headingLevel}>Server</PanelHeading>
             <dl className="grid gap-2 type-body-sm">
               <Fact term="Version">
                 <span className="tabular-nums">{s.version}</span>
@@ -211,9 +218,7 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
           </section>
           {s.folders.length > 0 && (
             <section aria-labelledby={headings.folders} className="grid gap-3">
-              <h2 id={headings.folders} className="type-heading">
-                Folders
-              </h2>
+              <PanelHeading id={headings.folders} level={headingLevel}>Folders</PanelHeading>
               {s.folders.map((f) => (
                 <FolderRow key={f.name} folder={f} thresholds={thresholds} />
               ))}
@@ -221,9 +226,7 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
           )}
           {s.services.length > 0 && (
             <section aria-labelledby={headings.services} className="grid gap-3">
-              <h2 id={headings.services} className="type-heading">
-                Services
-              </h2>
+              <PanelHeading id={headings.services} level={headingLevel}>Services</PanelHeading>
               <ul className="grid gap-2">
                 {s.services.map((svc) => (
                   <ServiceRow key={svc.name} service={svc} />

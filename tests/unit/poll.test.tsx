@@ -55,3 +55,37 @@ describe("a polled read with a pause", () => {
     expect(screen.getByText("Not read yet")).toBeInTheDocument();
   });
 });
+
+// #349: a read with its own pace under the page's shared pause.
+function TwoPaces() {
+  const poll = usePoll({ every: 30 });
+  const fast = useLoad({ queryKey: ["fast"], queryFn: () => fetchJson<{ n: number }>("/api/fast"), poll, staleTime: 0 });
+  const slow = useLoad({ queryKey: ["slow"], queryFn: () => fetchJson<{ n: number }>("/api/slow"), poll: poll.with({ every: 100_000 }), staleTime: 0 });
+  return (
+    <>
+      <PauseButton poll={poll} />
+      <p>{fast.status === "ready" ? `fast ${fast.data.n}` : "fast loading"}</p>
+      <p>{slow.status === "ready" ? `slow ${slow.data.n}` : "slow loading"}</p>
+    </>
+  );
+}
+
+describe("poll.with({ every })", () => {
+  it("keeps its own interval while sharing the pause", async () => {
+    const user = userEvent.setup();
+    let fast = 0;
+    let slow = 0;
+    server.use(http.get("/api/fast", () => HttpResponse.json({ n: ++fast })), http.get("/api/slow", () => HttpResponse.json({ n: ++slow })));
+    renderWithStrata(<TwoPaces />);
+    await waitFor(() => expect(fast).toBeGreaterThanOrEqual(3));
+    expect(slow).toBe(1);
+
+    // Pausing the page's poll pauses both; resuming reads both once.
+    await user.click(screen.getByRole("button", { name: "Pause updates" }));
+    const held = fast;
+    await new Promise((r) => setTimeout(r, 120));
+    expect(fast).toBe(held);
+    await user.click(screen.getByRole("button", { name: "Pause updates" }));
+    await waitFor(() => expect(slow).toBe(2));
+  });
+});
