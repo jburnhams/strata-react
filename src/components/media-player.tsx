@@ -641,6 +641,8 @@ export type MediaPlayerProps = {
   spans?: readonly MediaSpanData[];
   /** For each kind of span: its `label`, its `tone` (a status role) and what happens on reaching one: `"auto"` skips it (or mutes it, for a span whose `action` is `"mute"`) with "Skipped intro" and Undo, `"ask"` offers a Skip button over the picture (and the `s` key), `"off"` (default) only draws it. Keep the object stable (state or `useMemo`). */
   spanKinds?: Readonly<Record<string, SpanKind>>;
+  /** Named points of one file drawn on the seek bar (its chapters: "Christmas dinner" at 40:12); pressing one seeks there (strata-react issue #371). For a single `src` without a `window`: a sequence's own marks (each source's start) and a window's take their place. Keep the array stable. */
+  marks?: readonly { time: number; label: string }[];
   /** Told what was done with a span: `skipped`, `muted`, `undone` or `played`. */
   onSpan?: (span: MediaSpanData, what: SpanOutcome) => void;
   /** The Skip button's and the notice's words, in the product's language. */
@@ -765,6 +767,7 @@ export function MediaPlayer({
   onTimeChange,
   spans,
   spanKinds,
+  marks,
   onSpan,
   spanWords,
   start,
@@ -1154,7 +1157,7 @@ export function MediaPlayer({
                   onSeek={seek}
                   buffered={growing ? media.ready : offsets ? undefined : media.buffered}
                   spans={spanState.bars}
-                  marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : []}
+                  marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : (!bound && marks) || []}
                   step={JUMP}
                   bigStep={60}
                   label={`Seek in ${label}`}

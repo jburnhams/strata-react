@@ -85,11 +85,13 @@ export { toast, toastTimeout, StrataToastRegion, type ToastContentProps, type St
 export { useClientWork, type ClientWork, type WorkContext, type WorkPhase } from "./lib/client-work";
 export { JobStatus, jobProgressText, type JobStatusProps, type JobFailure, type JobProgress, type JobWords } from "./components/job-status";
 export { useJobAction, type JobAction, type JobActionOptions } from "./components/job-action";
+export { WorkflowSummary, summariseWorkflow, describeWorkflowSummary, type WorkflowSummaryProps, type WorkflowSummaryData, type WorkflowSummaryState, type WorkflowSummaryWords } from "./components/workflow-steps";
 export { WorkflowSteps, type WorkflowStepsProps, type WorkflowStage, type StageState, type StageWords } from "./components/workflow-steps";
 export { JobsTable, type JobsTableProps, type JobRow } from "./components/jobs-table";
 export { ScheduleTable, type ScheduleTableProps, type ScheduleRow } from "./components/schedule-table";
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export { FilmStrip, pickEvenly, frameAt, type FilmStripProps, type FilmFrame } from "./components/film-strip";
+export { MediaContents, currentItem, type MediaContentsProps, type MediaContentsItem } from "./components/media-contents";
 export {
   DataTable,
   TableSkeleton,

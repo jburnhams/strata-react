@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { DataView, JobsTable, WorkflowSteps, fetchJson, isWorkflowRunning, useLoad, useWorkflowRun } from "../../src";
+import { DataView, JobsTable, WorkflowSteps, WorkflowSummary, summariseWorkflow, fetchJson, isWorkflowRunning, useLoad, useWorkflowRun } from "../../src";
 import { expectOneFilledButton, renderWithStrata } from "../../src/testing";
 import { describeJob, firingRuns, studioJobs, workflowNow, type Task, type WorkflowRun } from "../../stories/fixtures/workflow";
 import { api } from "../../stories/mocks/handlers";
@@ -166,5 +166,31 @@ describe("JobsTable", () => {
     renderWithStrata(<JobsTable caption="Jobs" jobs={[odd]} now={workflowNow} />);
     expect(screen.getByText("workflow:firing")).toBeInTheDocument();
     expect(screen.getByText("Queued")).toBeInTheDocument();
+  });
+});
+
+describe("WorkflowSummary (#373)", () => {
+  it("reduces a run to the state that matters and the stage it is about", () => {
+    expect(summariseWorkflow(firingRuns.notStarted.stages)).toMatchObject({ state: "ready", done: 0, total: 4 });
+    expect(summariseWorkflow(firingRuns.running.stages, { running: true })).toMatchObject({ state: "running", step: 2, stage: { name: "fire" } });
+    expect(summariseWorkflow(firingRuns.waiting.stages)).toMatchObject({ state: "waiting", step: 3, stage: { name: "inspect" } });
+    expect(summariseWorkflow(firingRuns.failed.stages)).toMatchObject({ state: "failed", stage: { name: "photograph" } });
+    expect(summariseWorkflow(firingRuns.done.stages)).toMatchObject({ state: "done", done: 4, total: 4 });
+  });
+
+  it("says running before a failure its job is trying again, and part done for a run stopped part way", () => {
+    expect(summariseWorkflow(firingRuns.failed.stages, { running: true })).toMatchObject({ state: "running", stage: { name: "photograph" }, step: 4 });
+    const part = firingRuns.running.stages.map((s) => ({ ...s, state: s.state === "done" ? "done" : "ready" }));
+    expect(summariseWorkflow(part)).toMatchObject({ state: "partial", done: 1 });
+  });
+
+  it("draws the word and the stage, in the same words as WorkflowSteps unless renamed", () => {
+    const { unmount } = renderWithStrata(<WorkflowSummary stages={firingRuns.waiting.stages} />);
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(screen.getByText("Inspect the pieces")).toBeInTheDocument();
+    unmount();
+    renderWithStrata(<WorkflowSummary stages={firingRuns.running.stages} running words={{ running: "Firing" }} />);
+    expect(screen.getByText("Firing")).toBeInTheDocument();
+    expect(screen.getByText("Fire to cone 6, step 2 of 4")).toBeInTheDocument();
   });
 });
