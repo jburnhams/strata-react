@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-25 (CompositionBar, #377)
+- `CompositionBar` no longer crashes a production build when a sixth part has no `colour`: it folds the smallest into "Other" and logs `console.error`. Development and tests still throw. Parts that come from data should pass `other={{ label }}` to fold on purpose; a test that expected the throw under `NODE_ENV=production` now sees the folded bar.
+
 ## 2026-11-25 (twelve issues, #359–#370)
 - **`Pane`'s body is inset** (`p-3`, the header's own padding) so an `Inspector` or text lines up with the pane's name (#366). A pane that holds a tree, table, list or stage drawn to the edge adds `flush`; a pane whose content you inset yourself (`className="p-3"` on the child) can delete that. Visual baselines with a `Pane` move.
 - `Expanded` (from `useExpanded`) has a new member, `toggle(key)` (#364): an `Expanded` you build by hand in a test or story must supply it. `Tree`'s new `branchPress="toggle"` makes pressing a folder's row open it instead of choosing it; the default (`"select"`) is unchanged.

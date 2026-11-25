@@ -1,4 +1,5 @@
 import * as React from "react";
+import { isDev } from "../lib/dev";
 import { format } from "../lib/format";
 import { cn } from "../lib/utils";
 
@@ -13,7 +14,17 @@ import { cn } from "../lib/utils";
 //   meaning (used before cached before free), not sorted by size.
 // - Categorical colours come from `--chart-1…5` in order, which palette.mjs checks are told apart
 //   by colour-blind readers. A sixth part has no token to take, so it must bring its own colour;
-//   more than five parts usually means the small ones belong in an "Other" part.
+//   more than five parts usually means the small ones belong in an "Other" part. A caller whose
+//   part count comes from data (by app, by user, by model) passes `other`, and the bar keeps the
+//   four largest in their given order and sums the rest into one last part (issue #377: a sixth
+//   app used the GPU and a whole usage page crashed in production). It is opt-in because for
+//   ordered parts (used, cached, free) the caller's order is the meaning and folding by size would
+//   be wrong.
+// - A mistake is loud where it can be caught and soft where it cannot: in development and tests a
+//   sixth part without a colour still throws, so the code is fixed before it ships; in a production
+//   build the extras are folded into "Other" and `console.error` says so, because a chart colour
+//   missing is not a reason to blank the page, and the table under the bar still names every part
+//   it folded (the "Other" row says how many).
 // - Segments are split by a 2px gap in the ground colour, so two neighbours of similar lightness
 //   still read as two.
 // - When the parts do not fill the whole (`total` is larger than their sum), the remainder is the
@@ -42,6 +53,13 @@ export type CompositionBarProps = {
   formatValue: (value: number) => string;
   /** Formats a part's share of the whole (0 to 1). Defaults to `format.share` ("<1%" for a part that rounds to 0). */
   formatShare?: (share: number) => string;
+  /**
+   * Fold the smallest parts into one last part when there are more than five. The four largest keep
+   * their given order; the rest are summed under this label (a function gets how many were folded:
+   * `(n) => `${n} other apps``). Opt in for parts that come from data and have no order of their own;
+   * leave it off for ordered parts (used, cached, free).
+   */
+  other?: { label: string | ((count: number) => string) };
   /** Header of the parts column, for screen readers and over the table. Defaults to "Part". */
   partHeader?: string;
   /** Header of the amounts column. Defaults to "Amount". */
@@ -61,6 +79,25 @@ export type CompositionBarProps = {
 
 const MAX_TOKENS = 5;
 
+/** Keeps the four largest parts in their given order and sums the rest into one last part. */
+function foldParts(parts: CompositionPart[], label: string | ((count: number) => string)): CompositionPart[] {
+  if (parts.length <= MAX_TOKENS) return parts;
+  const keep = new Set(
+    parts
+      .map((p, i) => ({ i, v: Math.max(0, p.value) }))
+      .sort((a, b) => b.v - a.v || a.i - b.i)
+      .slice(0, MAX_TOKENS - 1)
+      .map((x) => x.i),
+  );
+  const rest = parts.filter((_, i) => !keep.has(i));
+  const folded: CompositionPart = {
+    key: "strata-other",
+    label: typeof label === "function" ? label(rest.length) : label,
+    value: rest.reduce((n, p) => n + Math.max(0, p.value), 0),
+  };
+  return [...parts.filter((_, i) => keep.has(i)), folded];
+}
+
 /** A part's colour: its own, or the chart token for its position. Throws past the fifth token. */
 function colourFor(part: CompositionPart, index: number) {
   if (part.colour) return part.colour;
@@ -73,6 +110,19 @@ function colourFor(part: CompositionPart, index: number) {
   return `var(--chart-${index + 1})`;
 }
 
+/** The parts to draw: folded when asked to, or, in production only, when a part has no colour to take. */
+function shown(label: string, parts: CompositionPart[], other: CompositionBarProps["other"]): CompositionPart[] {
+  if (other) return foldParts(parts, other.label);
+  if (!isDev() && parts.some((p, i) => i >= MAX_TOKENS && !p.colour)) {
+    console.error(
+      `CompositionBar "${label}": ${parts.length} parts and only ${MAX_TOKENS} chart colours, so the smallest are shown as "Other". ` +
+        `Pass \`other\` to fold them on purpose, or give each part a colour.`,
+    );
+    return foldParts(parts, "Other");
+  }
+  return parts;
+}
+
 /** What a whole is made of: a stacked bar for proportion and a table that names every part, its amount and its share, so colour is never the only cue. */
 export function CompositionBar({
   label,
@@ -82,10 +132,12 @@ export function CompositionBar({
   partHeader = "Part",
   valueHeader = "Amount",
   shareHeader = "Share",
+  other,
   className,
   ...whole
 }: CompositionBarProps) {
   const captionId = React.useId();
+  parts = shown(label, parts, other);
   const sum = parts.reduce((n, p) => n + Math.max(0, p.value), 0);
   const total = Math.max(whole.total ?? sum, sum);
   const rest = whole.total !== undefined ? total - sum : 0;
