@@ -141,6 +141,15 @@ describe("strata.css in an app", () => {
     }
   });
 
+  it("makes Geist Variable the default face, and a product's own --font-sans still wins (2026-11-25)", async () => {
+    const css = await compileApp();
+    expect(css).toContain("Geist Variable");
+    expect(css).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/);
+    const own = await compileApp("strata.css", `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`);
+    expect(own).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
+    expect(own).not.toMatch(/--font-sans:\s*"Geist Variable"/);
+  });
+
   it("makes the type steps and a button's padding and icon roles with today's values as the defaults (issue #210)", async () => {
     const css = await compileApp();
     expect(css).toContain("font-size: var(--type-body-size, 1rem)");
