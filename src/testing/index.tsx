@@ -17,6 +17,7 @@ import { forgetLoadedThumbnails } from "../components/thumbnail";
 import { MicrophoneContext, type Microphone } from "../lib/microphone";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
+export { setupStrataTests, type StrataTestSetup } from "./setup";
 export { installStorageShim, memoryStorage } from "./storage";
 export { installFakeSpeech, type FakeSpeech, type Spoken } from "./speech";
 export { fakeMicrophone, speechScript, type FakeMicrophoneOptions, type FakeSpeechStretch } from "./microphone";

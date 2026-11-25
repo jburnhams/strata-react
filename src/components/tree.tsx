@@ -105,6 +105,8 @@ type TreeCommon<N> = {
   renderNode?: (node: N, state: TreeNodeState) => React.ReactNode;
   /** Which nodes are open; from `useExpanded`, optionally in the URL. */
   expanded: Expanded;
+  /** What pressing a branch's row (not its chevron) does. `"select"` (default) chooses it like a leaf; `"toggle"` opens or closes it and leaves the chosen row where it was, as a file tree does (Finder, VS Code), so only files are chosen. Not used with `choices`, where a press ticks. `beforeOpen` is still asked. */
+  branchPress?: "select" | "toggle";
   /** Asked when the person opens a branch (chevron or Right arrow): return `false` to keep it closed, having done something else with it (a folder that is a project is chosen, not entered). Not asked for opens the app makes itself. */
   beforeOpen?: (node: N) => boolean;
   /** The skeleton row while a node's children load. Default: a muted bar. */
@@ -120,7 +122,7 @@ type TreeCommon<N> = {
   badge?: (node: N) => { label: string; tone?: Tone } | null | undefined;
   /** Orders the children of every node, and the top level. */
   sortChildren?: (a: N, b: N) => number;
-  /** The keys from the top down to a node to bring into view: its ancestors open and the tree scrolls to it. Give the same array to reveal again. */
+  /** The keys from the top down to a node to bring into view: its ancestors open and the tree scrolls to it. Give the same array to reveal again. The ancestors are opened through `expanded`, so with `useExpanded({ param })` they are written into the URL (`?open=textures&open=textures/e1u1`): a link to a file carries its folders, and a test checks `open` by key, not by the exact search string. */
   reveal?: readonly string[];
   /** What is under a branch, as keys (not the branch itself), for a branch ticked before it was read. When given, ticking it does not open it: the keys are chosen and the live region says "2019 and its 91 folders". */
   resolveBranch?: (node: N) => Promise<readonly string[]>;
@@ -131,7 +133,7 @@ type TreeCommon<N> = {
   className?: string;
 };
 
-type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height" | "reveal" | "resolveBranch" | "coverNoun" | "sortChildren"> & { choices?: Choices; nodes: Map<string, N>; settle: (key: string, kids: readonly N[]) => void; current?: string | null; sorted: (nodes: readonly N[]) => readonly N[]; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
+type Ctx<N> = Omit<TreeCommon<N>, "label" | "roots" | "className" | "height" | "reveal" | "resolveBranch" | "coverNoun" | "sortChildren" | "branchPress"> & { choices?: Choices; nodes: Map<string, N>; settle: (key: string, kids: readonly N[]) => void; current?: string | null; sorted: (nodes: readonly N[]) => readonly N[]; childKeys: Map<string, string[]>; stateOf: (key: string) => "on" | "mixed" | "off" };
 const Context = React.createContext<Ctx<never> | null>(null);
 const useCtx = <N,>() => React.useContext(Context) as unknown as Ctx<N>;
 
@@ -258,7 +260,7 @@ function Children<N>({ node }: { node: N }) {
 }
 
 /** A hierarchy whose children load as each node opens (a `useChildren` hook per open node): a skeleton row, a Try again row and an "empty" row per node, type-ahead and arrow keys, single selection, open state optionally in the URL, always virtualised. */
-export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, current, onCurrentChange, count, badge, sortChildren, reveal, resolveBranch, coverNoun = ["item", "items"], expanded, beforeOpen, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
+export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranch, renderNode, selected, onSelect, choices, current, onCurrentChange, count, badge, sortChildren, reveal, resolveBranch, coverNoun = ["item", "items"], branchPress = "select", expanded, beforeOpen, loadingRow, emptyRow, height = "24rem", className }: TreeProps<N>) {
   const nodes = React.useRef(new Map<string, N>()).current;
   const [covered, setCovered] = React.useState("");
   const scroller = React.useRef<HTMLDivElement>(null);
@@ -357,7 +359,14 @@ export function Tree<N>({ label, roots, useChildren, nodeKey, nodeLabel, isBranc
     if (first === undefined || isNote(String(first))) return;
     const key = String(first);
     const node = nodes.get(key);
-    if (node !== undefined) onSelect?.(key, node);
+    if (node === undefined) return;
+    if (branchPress === "toggle" && (isBranch ? isBranch(node) : true)) {
+      // A folder's name opens or closes it; the chosen row stays on the last leaf.
+      if (!expanded.isOpen(key) && beforeOpen?.(node) === false) return;
+      expanded.toggle(key);
+      return;
+    }
+    onSelect?.(key, node);
   };
 
   // What the boxes show as ticked: the chosen keys (a row not read yet is still ticked), and a

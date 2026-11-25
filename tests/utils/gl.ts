@@ -9,6 +9,8 @@ export type FakeGl = {
   uniforms: Record<string, number>;
   /** 2D drawing: `drawImage` calls with their arguments. */
   drawImages: unknown[][];
+  /** 2D `putImageData` calls: the pixels written, with their size. */
+  puts: { width: number; height: number; data: Uint8ClampedArray }[];
   contexts: number;
   uninstall: () => void;
   canvas: () => HTMLCanvasElement | null;
@@ -17,7 +19,7 @@ export type FakeGl = {
 export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): FakeGl {
   const proto = HTMLCanvasElement.prototype;
   const saved = Object.getOwnPropertyDescriptor(proto, "getContext");
-  const state = { draws: 0, uploads: 0, uniforms: {} as Record<string, number>, drawImages: [] as unknown[][], contexts: 0 };
+  const state = { draws: 0, uploads: 0, uniforms: {} as Record<string, number>, drawImages: [] as unknown[][], puts: [] as { width: number; height: number; data: Uint8ClampedArray }[], contexts: 0 };
   let last: HTMLCanvasElement | null = null;
   const names = new Map<unknown, string>();
   const gl = new Proxy(
@@ -47,7 +49,13 @@ export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): Fak
       },
     },
   );
-  const ctx2d = { fillStyle: "", fillRect: () => {}, drawImage: (...args: unknown[]) => void state.drawImages.push(args) };
+  const ctx2d = {
+    fillStyle: "",
+    fillRect: () => {},
+    drawImage: (...args: unknown[]) => void state.drawImages.push(args),
+    createImageData: (width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }),
+    putImageData: (image: { width: number; height: number; data: Uint8ClampedArray }) => void state.puts.push(image),
+  };
   Object.defineProperty(proto, "getContext", {
     configurable: true,
     value(this: HTMLCanvasElement, type: string) {
@@ -63,6 +71,7 @@ export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): Fak
     get uploads() { return state.uploads; },
     get uniforms() { return state.uniforms; },
     get drawImages() { return state.drawImages; },
+    get puts() { return state.puts; },
     get contexts() { return state.contexts; },
     canvas: () => last,
     uninstall() {

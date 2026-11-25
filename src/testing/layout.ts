@@ -21,9 +21,12 @@ export interface LayoutBox {
 /**
  * Give jsdom a fixed box for every element (`getBoundingClientRect`, `offset*`, `client*`) and a
  * ResizeObserver that reports it on observe, so measuring components render, and an in-memory `localStorage` and `sessionStorage` where the runtime's throw (Node 25+). Defaults to 640×280.
- * Call once in a Vitest setup file; returns a function that puts the originals back.
+ * Call once in a Vitest setup file (or let `setupStrataTests` do it); does nothing, and returns a no-op, where there is no DOM (a node-environment test); returns a function that puts the originals back.
  */
 export function installLayoutShims({ width = 640, height = 280 }: Partial<LayoutBox> = {}): () => void {
+  // A setup file shared by jsdom tests and `// @vitest-environment node` ones runs this in both; with
+  // no DOM there is nothing to measure and no component to render, so it does nothing (#363).
+  if (typeof Element === "undefined" || typeof HTMLElement === "undefined") return () => {};
   const restore: (() => void)[] = [];
   const replace = (target: object, prop: string, descriptor: PropertyDescriptor) => {
     const before = Object.getOwnPropertyDescriptor(target, prop);

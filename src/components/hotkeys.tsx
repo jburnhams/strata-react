@@ -28,6 +28,8 @@ export type Shortcut = {
   keys: string[];
   /** What it does, in the product's words: "Accept booking", not "Action 1". */
   label: string;
+  /** What names it when keys are rebound (`ShortcutEditor`): stable across releases, so a person's saved keys still mean the same action. Default: the label. */
+  id?: string;
   run: () => void;
   /** Fire again while the key is held. On for moving through a list, off (the default) for answers. */
   repeat?: boolean;
@@ -91,6 +93,9 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
     };
   }, [enabled]);
 }
+
+/** How a `KeyboardEvent.key` is drawn in a legend and an editor: arrows as arrows, the rest by name. */
+export const keyName = (key: string) => KEY_NAMES[key] ?? key;
 
 const KEY_NAMES: Record<string, string> = {
   ArrowDown: "↓",

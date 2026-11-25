@@ -21,6 +21,7 @@ export default defineConfig({
         map: resolve(__dirname, "src/map/index.ts"),
         hls: resolve(__dirname, "src/hls/index.ts"),
         panorama: resolve(__dirname, "src/panorama/index.ts"),
+        scene: resolve(__dirname, "src/scene/index.ts"),
         visual: resolve(__dirname, "src/visual/index.ts"),
         "visual-cli": resolve(__dirname, "src/visual/cli.ts"),
         "api-types": resolve(__dirname, "src/api-types/index.ts"),

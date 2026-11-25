@@ -11,6 +11,7 @@ import {
   PanelTopOpen,
 } from "lucide-react";
 import { IconButton } from "./button";
+import { FileDropOverlay } from "./file-intake";
 import { cn } from "../lib/utils";
 
 // A screen that is a workspace of panes: a stage in the middle, side panels, a bottom panel, a bar
@@ -45,6 +46,8 @@ import { cn } from "../lib/utils";
 //   their collapsible panes start folded to their header bars, one tap to open. That is a rule of the
 //   component so every app does the same thing; it is not remembered, since it is the width and not
 //   a choice.
+// - The body is inset 0.75rem, the header's own padding, so a heading or an `Inspector` lines up with the
+//   pane's name (issue #366); `flush` is for a tree, table or stage that draws to the edge.
 // - Density comes from the tokens: header and rail sizes are `--control-h`.
 // Motion: none. Resizing and folding are done many times a session (character.md §3).
 //
@@ -149,6 +152,8 @@ export function Workspace({
   label,
   state,
   narrowBelow = 720,
+  onFiles,
+  acceptLabel,
   className,
   children,
 }: {
@@ -156,6 +161,10 @@ export function Workspace({
   state: WorkspaceState;
   /** Stack side-by-side splits when the workspace is narrower than this many pixels. Default 720. */
   narrowBelow?: number;
+  /** Takes files dropped anywhere on the window (issue #368): while a drag of files is over it, an overlay says "Drop to add {acceptLabel}". Needs `acceptLabel`. Keep a `FileButton` in the bar for the keyboard and phones. The app's own drags (`DragSource`) never trigger it. */
+  onFiles?: (files: File[]) => void;
+  /** What the drop takes, in words ("PAK files"). */
+  acceptLabel?: string;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -178,8 +187,49 @@ export function Workspace({
     <StateContext.Provider value={state}>
       <div ref={ref} role="group" aria-label={label} className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background", className)}>
         {children}
+        {onFiles && <FileDropOverlay onFiles={onFiles} acceptLabel={acceptLabel ?? "files"} />}
       </div>
     </StateContext.Provider>
+  );
+}
+
+// The bar across the top of a tool (issue #365, from the Quake 2 explorer and the Workspace story, which
+// each wrote it by hand and already differed: one wrapped, one did not, one was a `header` with an `h1`).
+// Which header is which:
+//   PageHeader     an app screen's heading, with its finding and its one filled action, in the page flow
+//   WorkspaceBar   a tool's one bar, inside a `Workspace`: the tool's name, what is loaded, the one
+//                  filled action, then the scheme and palette choice. One per workspace.
+//   Pane header    a region's own name and actions, inside the workspace (always from `Pane`)
+//   Toolbar        a row of controls within a pane (a tool's tools), one tab stop with arrows
+// It is a `header` (the banner landmark of a workspace screen) with the title as the screen's `h1`, and
+// the status is a polite live region, so "pak.pak, mod.pak, 3 MB" is heard when a file is added and
+// never on first render. The height is `--control-h`, so density moves it with every pane header, and
+// on a narrow screen the bar wraps (the status drops under the title) rather than clipping the action.
+
+/** What `WorkspaceBar` shows. */
+export type WorkspaceBarProps = {
+  /** The tool's name: the screen's heading ("Quake 2 explorer"). */
+  title: string;
+  /** What is loaded or happening, in words ("pak.pak, mod.pak, 3 MB"). A polite live region; it is not announced on first render. */
+  status?: React.ReactNode;
+  /** The bar's few actions, with at most one filled button (the view's one primary action). */
+  actions?: React.ReactNode;
+  /** The far end: `ColorSchemeChoice compact`, `PaletteChoice compact`. */
+  end?: React.ReactNode;
+  className?: string;
+};
+
+/** The bar across the top of a `Workspace`: the tool's name as the heading, a polite status line, the few actions, then an end slot for the scheme and palette choice. Wraps on a phone. */
+export function WorkspaceBar({ title, status, actions, end, className }: WorkspaceBarProps) {
+  return (
+    <header className={cn("flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1", className)}>
+      <h1 className="type-label min-w-0 shrink-0">{title}</h1>
+      <p role="status" className="type-body-sm min-w-0 flex-1 truncate text-muted-foreground tabular-nums">
+        {status}
+      </p>
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {end && <div className="flex shrink-0 items-center gap-2">{end}</div>}
+    </header>
   );
 }
 
@@ -203,6 +253,8 @@ export type PaneProps = {
   defaultCollapsed?: boolean;
   /** The pane's few actions, drawn in its header before the collapse button. */
   actions?: React.ReactNode;
+  /** Draws the body edge to edge. By default the body has the standard inset (the header's own 0.75rem), so a heading, an `Inspector` or text lines up with the pane's name; a tree, table, list or stage that brings its own edges is `flush`. */
+  flush?: boolean;
   className?: string;
   children?: React.ReactNode;
 };
@@ -213,7 +265,7 @@ const iconsFor = (direction: "row" | "column", edge: Slot["edge"], stacked: bool
 };
 
 /** A region of a workspace with a consistent header (name, actions, fold button) and a body that scrolls. */
-export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaultCollapsed, actions, className, children }: PaneProps) {
+export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaultCollapsed, actions, flush, className, children }: PaneProps) {
   const state = useState_();
   const { direction, edge, stacked } = React.useContext(SlotContext);
   const headingId = React.useId();
@@ -265,7 +317,7 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
           />
         )}
       </header>
-      <div id={`pane-body-${id}`} hidden={folded} className="min-h-0 min-w-0 flex-1 overflow-auto">
+      <div id={`pane-body-${id}`} hidden={folded} className={cn("min-h-0 min-w-0 flex-1 overflow-auto", !flush && "p-3")}>
         {children}
       </div>
     </section>
