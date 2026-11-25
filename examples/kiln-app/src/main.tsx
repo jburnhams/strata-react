@@ -4,9 +4,6 @@
 // route mode is exercised on an app with no stories, the way strata-listory is built. The app
 // does not know it is being tested: the visual suite answers its requests with MSW handlers in
 // Node (see ../strata-visual.config.ts at the repo root).
-import "@fontsource-variable/public-sans";
-import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/jetbrains-mono";
 import "./app.css";
 import * as React from "react";
 import { createRoot } from "react-dom/client";

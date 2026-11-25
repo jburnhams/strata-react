@@ -11,15 +11,16 @@ First use: the live demos and examples in ux-research. Then other products.
 
 ## The stance
 
-- **Opinionated about structure, behaviour and stack, and (since 2026-11-25) about a default look
-  that is opt-in.** `strata.css` itself ships no colours and no theme (its one default is the face,
-  Geist Variable, so no screen falls back to whatever the machine has), so an app with its own look
-  never moves. `strata-react/theme.css` is the default look (petrol and marigold, three radii, one
-  tinted shadow, light and dark) for an app that wants a finished UI without designing one; a
+- **Opinionated about structure, behaviour, stack and (since 2026-11-25) a default look.** Jonathan:
+  the theme is the default and an app opts out or overrides. `strata-react/strata.css` is the contract
+  plus the look (`src/styles/theme.css`: petrol and marigold from `palette.mjs`, three radii, one
+  tinted shadow, light and dark, Instrument Sans and JetBrains Mono); `strata-react/strata.bare.css`
+  is the contract alone, with no colours and Geist as the only default, for an app with its own look (Tubes).
+  An app that keeps `strata.css` overrides any value in a later `:root`, `.dark` or `@theme` block. A
   product with a subject still generates its own palette (`ux-design/skill/scripts/palette.mjs` in
-  ux-research) and supplies status roles and faces, which is how apps avoid being the same product
-  (ux-research `ux-slop-taxonomy.md` §1). Never change a value in `strata.css` to restyle: put it in
-  `theme.css`, so an existing app's look does not move.
+  ux-research), because a default shared by every app is how products become the same product
+  (ux-research `ux-slop-taxonomy.md` §1); the default is for apps that have not got one yet. Never
+  change a value in `strata.bare.css` to restyle, so an opted-out app does not move; the look goes in `theme.css`.
 - **Tailwind's stock namespaces are removed** (`--color-*`, `--text-*`, `--radius-*`,
   `--shadow-*`, `--font-*`), so `bg-indigo-500`, `text-sm`, `rounded-xl` and `shadow-lg` do not
   compile in a Strata app. Only the roles the theme names exist.
@@ -47,11 +48,11 @@ is his decision; do not change it on your own. Same rule in ux-research's `CLAUD
 | Runtime for tooling | Node 26 (LTS) | `.nvmrc`, `engines`, every workflow; TypeScript targets ES2024. Apps need it too (`engines` is published): it is the floor, and apps upgrade rather than Strata carrying an older Node |
 | UI | React 19, TypeScript 7 strict | Function components; `React.useId` for ids. `npm run typecheck` runs TypeScript 7's `tsc` (devDependency `typescript7`); `typescript` is `@typescript/typescript6`, the TypeScript 6 API that TypeDoc, Storybook's docgen, MSW and the `.d.ts` build still need (TS 7 ships no JS API) |
 | Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
-| Styles | Tailwind v4 | `src/styles/strata.css` is Tailwind source an app compiles with its own theme; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
+| Styles | Tailwind v4 | `src/styles/strata.bare.css` (the contract) and `theme.css` (the look) are Tailwind source, joined into `strata.css` by `scripts/copy-css.mjs`; an app compiles them with its own overrides; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
 | Primitives | React Aria Components | Jonathan's choice (2026-11-12): behaviour and accessibility of every interactive control come from `react-aria-components` (press, focus, keyboard models, overlays, menus, number and colour fields, drag and drop), styled with our tokens through its `data-*` state attributes, written as the `tailwindcss-react-aria-components` variants (`selected:`, `focus-visible:`, `hover:`, `disabled:`, `pressed:`, `open:`; loaded by `strata.css`, so an app does nothing). A state is written once where it is used, never copied into a CVA variant map: CVA holds the real variants (`variant`, `size`). Not Radix; `@radix-ui/react-slot` and `asChild` are gone. Native elements stay where the platform does it better (`Input`, `Textarea`, `NativeSelect`); `DataTable` is React Aria's Table with TanStack Table for the data model. When a component needs behaviour, follow "React Aria first" below |
 | State variants | tailwindcss-react-aria-components | Jonathan (2026-11-12). The Tailwind plugin that turns React Aria's `data-*` attributes into variants; `strata.css` has `@plugin` for it and it is a dependency, so no app install step. Use `selected:` not `data-[selected]:` |
-| Default face | Fontsource (`@fontsource-variable/geist`) | Jonathan, 2026-11-25: the one thing Strata does ship of a look, because a system face differs on every machine and made screenshots depend on the machine. `strata.css` imports it and sets `--font-sans`; a product's own face in a later `@theme` wins. Mono stays a system face |
+| Default faces | Fontsource (`@fontsource-variable/instrument-sans`, `jetbrains-mono`, `geist`, `source-serif-4`) | Jonathan, 2026-11-25: Instrument Sans (text, and titles and figures at 85% width) and JetBrains Mono come with the default look in `strata.css`, because a system face differs on every machine and made screenshots depend on the machine; a product's own face in a later `@theme` wins. Geist stays only in `strata.bare.css` (the opt-out keeps the face it had). Source Serif 4 is the opt-in reading serif (`strata-react/reading.css`, `font-reading`), for Read surfaces, never Operate titles |
 | Icons | lucide-react | Components accept any `IconComponent` |
 | Server data | TanStack Query | Every remote read is `useLoad(...)` → `Load<T>` → `DataView`; a cursor-paged read is `useInfiniteLoad(...)` → `InfiniteLoad<T>` → `InfiniteList`, with the cursor after the last item held, never an offset; a long-running server job is `useJob(...)` → `JobStatus`. `createQueryClient` sets one retry, 30 s stale time, no refetch on focus. `fetchJson` throws `HttpError` with the response body and the server's reason |
 | Tables | React Aria `Table` + TanStack Table | Jonathan, 2026-11-12: React Aria draws the table and owns focus, keyboard navigation, selection semantics and screen-reader roles (a `grid` of `row`s and `gridcell`s); TanStack Table owns the data model (sorting now; pagination, filtering, grouping, aggregation, column visibility and sizing when they are needed). Behind `DataTable`'s small column API (`key`, `header`, `cell`, `numeric`, `sort`) |
@@ -76,9 +77,10 @@ src/
   query/                TanStack Query bridge: createQueryClient, StrataQueryProvider, useLoad, toLoad, fetchJson
   testing/              renderWithStrata (router + query client), renderRoutes (the app's route tree), installLayoutShims, installFakeIntersectionObserver; exported as strata-react/testing
   visual/               the visual regression runner, exported as strata-react/visual; cli.ts is the strata-visual command
-  styles/strata.css     token contract, namespace reset, type steps, motion utilities, base layer
+  styles/strata.bare.css  token contract, namespace reset, type steps, motion utilities, base layer
+  styles/theme.css      the default look (palette, status roles, faces, radii); strata.css = bare + theme; reading.css is opt-in
 stories/                Storybook stories; fixtures/ (kiln-room sample data); mocks/handlers.ts (MSW); screens/ (whole screens)
-.storybook/             config, plus the FIXTURE theme (kiln room) stories render on
+.storybook/             config; stories render on the default look plus the kiln's heat colours (theme.css, a fixture)
 tests/unit/             Vitest + Testing Library + MSW (jsdom)
 tests/integration/      the built package: exports, bundle externals, strata.css compiled by Tailwind as an app would
 tests/utils/            setup (jest-dom, MSW server, layout shims)
@@ -135,9 +137,13 @@ Native elements stay where the platform does it better and the stack table says 
 ## Building an app on Strata
 
 ```css
-/* app.css */
+/* app.css: the default look, plus whatever the product overrides */
 @import "tailwindcss";
 @import "strata-react/strata.css";
+@import "./theme.css";            /* only what differs: subject colours, a face, each with its reason */
+
+/* or, with a whole palette of its own: the contract alone, then its theme */
+@import "strata-react/strata.bare.css";
 @import "./theme.generated.css";  /* palette.mjs output, never hand-edited */
 @import "./theme.css";            /* status roles, faces, subject colours, each with its reason */
 ```

@@ -27,12 +27,13 @@ beforeAll(() => {
   symlinkSync(join(root, "node_modules/tailwindcss"), join(app, "node_modules/tailwindcss"), "dir");
   // strata.css loads this plugin with @plugin; npm installs a dependency of strata-react beside it.
   symlinkSync(join(root, "node_modules/tailwindcss-react-aria-components"), join(app, "node_modules/tailwindcss-react-aria-components"), "dir");
-  // The default face is a dependency too: its @font-face rules are inlined by Tailwind from beside strata-react.
+  // The default faces are dependencies too: their @font-face rules are inlined by Tailwind from beside strata-react.
   mkdirSync(join(app, "node_modules/@fontsource-variable"), { recursive: true });
-  symlinkSync(join(root, "node_modules/@fontsource-variable/geist"), join(app, "node_modules/@fontsource-variable/geist"), "dir");
+  for (const face of ["instrument-sans", "jetbrains-mono"]) {
+    symlinkSync(join(root, "node_modules/@fontsource-variable", face), join(app, "node_modules/@fontsource-variable", face), "dir");
+  }
   execFileSync("git", ["init", "-q"], { cwd: app });
   writeFileSync(join(app, ".gitignore"), "node_modules\n");
-  writeFileSync(join(app, "theme.css"), readFileSync(join(root, ".storybook/theme.generated.css"), "utf8"));
   mkdirSync(join(app, "src"));
   writeFileSync(join(app, "src/page.tsx"), `export const Page = () => <main className="grid gap-4" />;`);
 }, 60_000);
@@ -42,7 +43,7 @@ afterAll(() => rmSync(app, { recursive: true, force: true }));
 /** Compiles the app's stylesheet the way @tailwindcss/vite and the CLI do: the stylesheet's own
  * sources plus automatic detection from the app's root, which honours .gitignore. */
 async function compileApp() {
-  const input = `@import "tailwindcss";\n@import "strata-react/strata.css";\n@import "./theme.css";\n`;
+  const input = `@import "tailwindcss";\n@import "strata-react/strata.css";\n`;
   const compiler = await compile(input, { base: app, onDependency: () => undefined });
   const scanner = new Scanner({ sources: [{ base: app, pattern: "**/*", negated: false }, ...compiler.sources] });
   return compiler.build(scanner.scan());
@@ -63,11 +64,14 @@ describe("strata-react installed from its tarball", () => {
     }
   });
 
-  it("brings its default face with it: Geist Variable's @font-face rules and --font-sans, with no app install step", async () => {
+  it("brings its default faces with it: Instrument Sans and JetBrains Mono @font-face rules and the role names, with no app install step and no theme file", async () => {
     const css = await compileApp();
-    expect(css).toMatch(/@font-face\s*{[^}]*font-family:\s*["']?Geist Variable["']?/);
-    expect(css).toMatch(/url\(["']?\.\/files\/geist-latin-wght-normal\.woff2/);
-    expect(css).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif/);
+    expect(css).toMatch(/@font-face\s*{[^}]*font-family:\s*["']?Instrument Sans Variable["']?/);
+    expect(css).toMatch(/@font-face\s*{[^}]*font-family:\s*["']?JetBrains Mono Variable["']?/);
+    expect(css).toMatch(/url\(["']?\.\/files\/instrument-sans-latin-wdth-normal\.woff2/);
+    expect(css).toMatch(/--font-sans:\s*"Instrument Sans Variable",\s*ui-sans-serif/);
+    expect(css).toContain(".bg-primary");
+    expect(css).not.toContain("Geist Variable");
   });
 
   it("moves both control heights with density, and a coarse pointer still wins (issue #117)", async () => {

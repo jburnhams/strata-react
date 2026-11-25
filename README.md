@@ -53,31 +53,40 @@ Use it to try a fix before it is released, then move back to the npm version.
 
 ## Set up an app
 
-**The quickest start is Strata's own look.** One import after `strata.css` gives an app a finished,
-checked theme (light and dark) and nothing else to write:
+**The default look is in `strata.css`.** One import gives an app a finished, checked theme (light and
+dark) and nothing else to write:
 
 ```css
 @import "tailwindcss";
-@import "strata-react/strata.css";
-@import "strata-react/theme.css";    /* the default look: palette, status roles, radii, shadow */
+@import "strata-react/strata.css";   /* the contract and the default look: palette, status roles, faces, radii, shadow */
 ```
 
-It is petrol and marigold on a faintly cool ground, three radii that differ (6, 10 and 14 px) and one
-tinted shadow for what floats; the face is Geist (already in `strata.css`). Marigold is the one warm
-accent and only marks where attention already is (a selection, the active item of a keyboard-worked
-list). Every value is a token, so an app changes any of them with a later `@theme` or `:root` block, or
-replaces the look by importing its own `theme.generated.css` and `theme.css` instead of this one; an
-app that already has its own theme and imports only `strata.css` is unchanged. The ramps are
-`palette.mjs` output (`--primary "#00798f" --secondary "#f2a900" --contrast 0.5 --ground tinted`),
-regenerate rather than edit. `examples/default-app` is an app that adds nothing to it, and its
-screenshots are `tests/visual/baselines-default-theme/` (`npm run test:visual:default-theme`).
+It is petrol and marigold on a faintly cool ground, with three radii that differ (6, 10 and 14 px), one
+petrol-tinted shadow for what floats, **Instrument Sans** for text (at 85% width and heavier for titles and
+big figures) and **JetBrains Mono** for code, both bundled. Marigold is the one warm accent and only marks
+where attention already is (a selection, the active item of a keyboard-worked list). Every value is a token:
+override any of them in a later `:root`, `.dark` or `@theme` block, or bring a whole palette
+(`theme.generated.css`) after it. Reading surfaces can add `@import "strata-react/reading.css"` for Source
+Serif 4 as `font-reading`; it is opt-in so other apps bundle nothing for it.
 
-The longer form, for a product with its own palette:
+**To opt out of the look** (an app that has its own, such as Tubes) import the contract alone, which is what
+`strata.css` was before the look existed:
+
+```css
+@import "strata-react/strata.bare.css";   /* no colours, no look; Geist is the only default (the face) */
+```
+
+The ramps are `palette.mjs` output (`--primary "#00798f" --secondary "#f2a900" --contrast 0.5 --ground tinted`);
+regenerate rather than edit. The Storybook and the example app run on the default look, so every baseline in
+`tests/visual/baselines/` shows it.
+
+The longer form, for a product with its own palette (imports `strata.bare.css`):
+
 
 ```css
 /* src/app.css */
 @import "tailwindcss";
-@import "strata-react/strata.css";   /* token contract, namespace reset, type steps, base layer */
+@import "strata-react/strata.bare.css";   /* token contract, namespace reset, type steps, base layer; no look */
 @import "./theme.generated.css";     /* your palette: ux-research ux-design/skill/scripts/palette.mjs */
 @import "./theme.css";               /* your status roles, faces and subject colours, with reasons */
 ```

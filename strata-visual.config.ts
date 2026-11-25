@@ -69,6 +69,7 @@ export default defineVisualConfig({
           },
         },
       },
+      { name: "controls", path: "/controls", states: { ready: [] } },
       {
         name: "kiln-room",
         path: "/",

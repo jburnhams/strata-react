@@ -1,0 +1,11 @@
+/* The reading serif, opt-in (`@import "strata-react/reading.css"` after strata.css): Source Serif 4 with its
+   optical-size axis, for surfaces people read rather than operate (an article, notes, a long description),
+   as `font-reading`. Chosen by Jonathan on 2026-11-25 from a specimen of six: sturdy proportions, a generous
+   x-height and clear numerals and units ("200 °C", "1,222"), and it sits well beside Instrument Sans.
+   Not in strata.css on purpose: Operate screens keep the sans, and an app that never reads long text should
+   not bundle the files (ux-slop-taxonomy §3b: a serif page title on a dashboard is an editorial costume). */
+@import "@fontsource-variable/source-serif-4/opsz.css";
+
+@theme {
+  --font-reading: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+}
