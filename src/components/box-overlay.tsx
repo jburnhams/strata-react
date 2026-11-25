@@ -72,10 +72,12 @@ export type BoxOverlayProps = {
   state: BoxesState;
   /** A box was chosen (a click, Enter or Space): zoom to it, scroll a text pane. The state already holds it. */
   onChoose?: (box: PictureBox) => void;
+  /** Fill the pointed or chosen box with its tone's subtle colour. Default `true` (a line of text stays readable under it); `false` for what the box is about to be looked at, such as a face, which only a heavier outline marks. */
+  fillLit?: boolean;
 };
 
 /** Read-only boxes drawn as one SVG layer over a picture, inside `ViewportFrame` so they zoom with it: outline by tone, hover and choice shared with a `BoxList`, one tab stop with arrows in reading order. */
-export function BoxOverlay({ label, of, boxes, state, onChoose }: BoxOverlayProps) {
+export function BoxOverlay({ label, of, boxes, state, onChoose, fillLit = true }: BoxOverlayProps) {
   const order = React.useMemo(() => readingOrder(boxes), [boxes]);
   const byId = React.useMemo(() => new Map(boxes.map((b) => [b.id, b])), [boxes]);
   const group = React.useRef<SVGSVGElement>(null);
@@ -111,6 +113,7 @@ export function BoxOverlay({ label, of, boxes, state, onChoose }: BoxOverlayProp
         const tone = b.tone ?? "neutral";
         const on = id === state.active;
         const lit = on || id === state.pointed;
+        const filled = lit && fillLit;
         const repeat = n >= order.length; // the raised copy of a lit box
         return (
           <rect
@@ -125,8 +128,8 @@ export function BoxOverlay({ label, of, boxes, state, onChoose }: BoxOverlayProp
             y={b.y}
             width={b.w}
             height={b.h}
-            fill={lit ? FILL[tone] : "none"}
-            fillOpacity={lit ? 0.25 : undefined}
+            fill={filled ? FILL[tone] : "none"}
+            fillOpacity={filled ? 0.25 : undefined}
             stroke={STROKE[tone]}
             strokeWidth={on ? 3 : 1.5}
             strokeOpacity={lit || tone !== "neutral" ? 1 : 0.55}

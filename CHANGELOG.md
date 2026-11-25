@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-25 (face store)
+**A face in its photo and a face cut from it: `BoxedPicture` and `Thumbnail region`** (branch `claude/project-thread-2fs8bi`). Jonathan asked for strata-models' one face database to have its own face screens built from common components, so other apps (bright-horizons, strata-360, strata-stills) can show their faces the same way. The parts were mostly here already (`SelectableGrid` for choosing among crops, `Thumbnail` for a crop, `ViewportFrame` + `BoxOverlay` for boxes on a picture); two gaps were left, each something every app would write by hand. No dependency added.
+- `src/lib/boxes.ts`: `PictureRegion` and `regionStyle`, where to put a whole picture so one padded box fills a frame of a given shape (never squashed, centred; percentages, so no measuring).
+- `src/components/thumbnail.tsx`: `region`, one box of the picture filling the thumbnail, with the loading, missing and lazy rules unchanged: a face shown from the photo an app already has, without a crop endpoint.
+- `src/components/boxed-picture.tsx` **new**: `BoxedPicture`, the picture in a `ViewportFrame` with its `BoxOverlay`, opened zoomed to the chosen box once the frame has a size (a layout effect, so the photo never shows fitted first) and zoomed again when another box is chosen here or in a `BoxList`; `zoom={false}` keeps it fitted (and turning it off goes back to fitted); the frame's size is observed, so a resize or a frame first drawn hidden zooms again (both from review); a missing picture says so in the product's words. The chosen face has a heavier outline and no fill: the first baseline showed the box's subtle fill greying out the face.
+- `src/components/box-overlay.tsx`: `fillLit` (default `true`, as before), `false` to mark the pointed or chosen box by its outline only.
+- `src/index.ts`: exports both and `regionStyle`, `PictureRegion`.
+- `stories/fixtures/faces.ts` **new** (a group photo drawn as SVG with three face boxes), `stories/boxed-picture.stories.tsx` **new** (opened on a face, the whole photo, photo not kept), `stories/thumbnail.stories.tsx` (Region).
+- `tests/unit/boxed-picture.test.tsx` **new**: `regionStyle` numbers, `Thumbnail region` placement, opening zoomed, zooming from the list, fitted with zoom off, the missing photo.
+- `tests/visual/baselines/`: 8 new (`data-boxedpicture--*`, `data-thumbnail--region--*`); no existing baseline changed.
+- `README.md`: the pictures row names them.
+
 ## 2026-11-25 (thumbnails survive a resize)
 **`Thumbnail` shows pictures it has already loaded; `FilmStrip` keys frames by time** (branch `claude/project-thread-0ktdjf`, issue #352). Jonathan asked for the new issue from strata-reels: on the runner's Chromium the window is briefly 1×1 during a full-page capture, `FilmStrip` re-fits, every `Thumbnail` remounts as a skeleton that waits to be near the window, and strips below the fold stay skeletons although the browser has the pictures. The issue's measured log and its two fixes held; the third suggestion (a note in the `strata-visual` docs) is done too.
 
