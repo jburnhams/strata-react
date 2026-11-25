@@ -38,6 +38,13 @@ describe("FilmStrip", () => {
     expect(names[5]).toBe("Frame at 13:10");
   });
 
+  it("keeps a frame's picture when the frames shown change, keyed by its time and not its place (#352)", () => {
+    const { rerender } = renderWithStrata(<FilmStrip label="Frames" frames={frames.slice(0, 6)} />);
+    const kept = screen.getByRole("img", { name: "Frame at 10:30" });
+    rerender(<FilmStrip label="Frames" frames={frames.slice(1, 7)} />);
+    expect(screen.getByRole("img", { name: "Frame at 10:30" })).toBe(kept);
+  });
+
   it("seeks from a pressed frame; the frames are one tab stop moved through with the arrows", async () => {
     const user = userEvent.setup();
     const onSeek = vi.fn();
