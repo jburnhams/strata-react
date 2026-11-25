@@ -13,7 +13,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 //   interval while it is not paused, notes when each read arrived, and reads once at once when the
 //   poll is resumed (what was on screen is as old as the pause).
 // - `PauseButton` (components/pause-button.tsx) takes the same object, with its words fixed.
-// - One `Poll` may serve several reads: the page pauses together. The time is the latest read's.
+// - One `Poll` may serve several reads: the page pauses together. The time is the latest read's. A read
+//   with its own pace takes `poll.with({ every })`: same pause and time, other interval (#349).
 // - `useJob` keeps its own interval: a job is polled only while it runs, which is not the person's
 //   to pause.
 
@@ -28,6 +29,8 @@ export type Poll = {
   updatedAt: Date | null;
   /** Used by `useLoad`: records the time of the read that just arrived (TanStack's `dataUpdatedAt`; 0 is none). */
   note: (dataUpdatedAt: number) => void;
+  /** The same poll at another pace: a read that must be slower (or faster) than the page's keeps the shared pause, resume and "updated" time (`useLoad({ poll: poll.with({ every: 60_000 }) })`). */
+  with: (override: { every: number }) => Poll;
 };
 
 /** The pause state and last-read time of a polled screen: pass it to `useLoad({ poll })` and to `PauseButton`. */
@@ -36,7 +39,10 @@ export function usePoll({ every, paused: initiallyPaused = false }: { every: num
   const [at, setAt] = React.useState(0);
   const toggle = React.useCallback(() => setPaused((p) => !p), []);
   const note = React.useCallback((dataUpdatedAt: number) => setAt((previous) => Math.max(previous, dataUpdatedAt)), []);
-  return React.useMemo(() => ({ every, paused, toggle, updatedAt: at ? new Date(at) : null, note }), [every, paused, toggle, at, note]);
+  return React.useMemo(() => {
+    const poll: Poll = { every, paused, toggle, updatedAt: at ? new Date(at) : null, note, with: (override) => ({ ...poll, every: override.every, with: (again) => poll.with(again) }) };
+    return poll;
+  }, [every, paused, toggle, at, note]);
 }
 
 /** Wires a query to its `Poll`: the time of each read, and one read when the poll is resumed. */

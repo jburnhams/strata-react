@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-25 (build fix and three issues)
+**Fix main's red visual check, and three issues from a status page, in one PR** (branch `claude/project-thread-0ktdjf`, issues #348, #349, #350). Jonathan asked for the build on `main` to be fixed and the open issues solved together. CI on `main` (run 428, after #347) failed only in "Visual regression": #347's new stories (`PauseButton`, `ScheduleTable`, `SystemPanel`) and the same-site `LinkCard` baselines had been recorded before #346 made the default look the default, so they still showed Geist and green meters where CI now draws Instrument Sans and petrol. Everything else passes.
+
+- `tests/visual/baselines/`: the 26 changed shots were replaced by the `.actual.png` files CI uploaded as `visual-diffs`, as the sandbox's Chromium (153) differs from CI's. Each diff was looked at: the `SystemPanel` and `PauseButton` ones are the face and the status colour, the 1px height changes follow from the face. The two idle full-screen player shots were already known to be timing-dependent and are not in the changed set here.
+- **#348**, `src/components/system-panel.tsx`: `headingLevel` (2, 3 or 4; default 2) sets the level of Server, Folders and Services so a page's own `h2` can hold the panel. A level and not a `heading` text prop, so the panel's words stay its own. Test in `tests/unit/system.test.tsx`.
+- **#349**, `src/query/poll.ts`: `Poll.with({ every })` returns the same poll at another interval, sharing the pause, the resume read and the "updated" time (what the issue's undocumented `{ ...poll, every }` workaround did, now a member and kept consistent). `stories/pause-button.stories.tsx` builds its fake `Poll` with it. Test in `tests/unit/poll.test.tsx`.
+- **#350**, `src/testing/index.tsx`: `base` on `renderWithStrata` and `renderRoutes` puts a `<base href>` first in `<head>` for the render and removes it on unmount. Tests in `tests/unit/testing.test.tsx`. Review fixes (Codex, both real): the base is installed once per render call before `renderRoutes` creates its router, so a route's initial loader sees it, and not inside a `useMemo`, which Strict Mode runs twice and would leave a stray `<base>`; the provider's effect removes it and restores it if Strict Mode's rehearsal removed it.
+- `UPGRADING.md`. No dependency added.
+- Checks: `npm run typecheck` and `npm test` (1410 unit tests) pass locally on Node 22. The visual check is judged by CI.
+
 ## 2026-11-25 (batch of eight issues)
 **Eight issues from apps built on Strata, in one PR** (branch `claude/project-thread-ilbkfn`, issues #328, #331, #339, #340, #341, #342, #343, #344). Jonathan asked for the new issues to be fixed together. No dependency added. #305, #318 and #319 were already fixed (v1.3.4 and PR 320) and were closed without code.
 

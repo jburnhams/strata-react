@@ -2,7 +2,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { StrataToastRegion, format, toast } from "../../src";
+import { StrataToastRegion, format, toast, withBase } from "../../src";
 import { installFakeIntersectionObserver, installLayoutShims, renderRoutes, renderWithStrata, type FakeIntersectionObserverControls } from "../../src/testing";
 
 // The helpers strata-react/testing gives an app's suite, tested the way an app would use them.
@@ -163,5 +163,42 @@ describe("toasts in renderWithStrata and renderRoutes", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("the base option (a proxy's mount point)", () => {
+  function Where() {
+    return <p>{withBase("/api/system")}</p>;
+  }
+
+  it("puts a <base href> in the document for the render and removes it on unmount", () => {
+    expect(document.querySelector("base")).toBeNull();
+    const { unmount } = renderWithStrata(<Where />, { base: "/_home/" });
+    expect(screen.getByText("/_home/api/system")).toBeInTheDocument();
+    expect(document.querySelector("base")).not.toBeNull();
+    unmount();
+    expect(document.querySelector("base")).toBeNull();
+  });
+
+  it("does the same in renderRoutes", () => {
+    const { unmount } = renderRoutes([{ path: "/", element: <Where /> }], { base: "/_home/" });
+    expect(screen.getByText("/_home/api/system")).toBeInTheDocument();
+    unmount();
+    expect(document.querySelector("base")).toBeNull();
+  });
+
+  it("is there when a route's loader runs, and leaves no base behind under Strict Mode", async () => {
+    let seen = "";
+    const routes = [{ path: "/", loader: () => ((seen = withBase("/api/system")), null), element: <Where /> }];
+    const { unmount } = renderRoutes(routes, { base: "/_home/", reactStrictMode: true });
+    expect(seen).toBe("/_home/api/system");
+    unmount();
+    renderWithStrata(<Where />, { base: "/_home/", reactStrictMode: true }).unmount();
+    expect(document.querySelectorAll("base")).toHaveLength(0);
+  });
+
+  it("changes nothing when left out", () => {
+    renderWithStrata(<Where />);
+    expect(screen.getByText("/api/system")).toBeInTheDocument();
   });
 });
