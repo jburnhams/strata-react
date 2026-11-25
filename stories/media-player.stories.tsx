@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, MediaPlayer, SpanStrip, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
+import { Button, MediaContents, MediaPlayer, SpanStrip, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
 import { silentWav } from "./fixtures/media";
 import clipSrc from "./fixtures/video/a.webm?url";
 
@@ -137,6 +137,28 @@ export const OverlayAndState: Story = {
           overlay={(m) => <p className="absolute top-3 left-3 rounded-control bg-background px-2 py-1 type-caption tabular-nums">{m.time.toFixed(1)} s</p>}
         />
         <Button onClick={() => state.current?.seek(1)}>Jump to 1 s</Button>
+      </div>
+    );
+  },
+};
+
+const firingParts = [
+  { id: "load", title: "Loading the kiln", start: 0, end: 70, detail: "Shelves and cones" },
+  { id: "fire", title: "Firing to cone 6", start: 70, end: 180 },
+  { id: "open", title: "Opening the kiln", start: 180, end: 245, detail: "The pieces come out" },
+];
+const firingMarks = firingParts.map((p) => ({ time: p.start, label: p.title }));
+
+/** One file's own chapters (issue #371) on the seek bar, and as its contents beside it (issue #372): the playing one is marked, and pressing one plays from its start. */
+export const FileChapters: Story = {
+  args: { label: "x" },
+  render: () => {
+    const player = React.useRef<MediaElementState | null>(null);
+    const [time, setTime] = React.useState(0);
+    return (
+      <div className="grid max-w-3xl gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <One marks={firingMarks} mediaRef={player} onTimeUpdate={(t) => setTime(Math.floor(t))} />
+        <MediaContents label="Parts of the walk-through" items={firingParts} time={time} onSeek={(t) => { setTime(t); player.current?.seek(t); }} />
       </div>
     );
   },

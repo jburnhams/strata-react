@@ -320,6 +320,23 @@ describe("MediaPlayer", () => {
       expect(screen.getByRole("button", { name: /Chapter three, / })).toBeInTheDocument();
     });
 
+    it("draws one file's own marks (its chapters) on the seek bar, and pressing one seeks there (#371)", async () => {
+      const user = userEvent.setup();
+      const marks = [{ time: 0, label: "Morning" }, { time: 600, label: "Dinner" }];
+      const { container } = render(<MediaPlayer label="Tape" src="/tape.mp4" marks={marks} controls="strata" />);
+      const el = audio(container) ?? (container.querySelector("video") as HTMLMediaElement);
+      act(() => media.loaded(el, 1200));
+      await user.click(screen.getByRole("button", { name: /^Dinner, / }));
+      expect(el.currentTime).toBe(600);
+    });
+
+    it("keeps a window's own marks in place of the file's", () => {
+      const { container } = render(<MediaPlayer label="Tape" src="/tape.mp4" window={{ start: 10, end: 20 }} showFull marks={[{ time: 600, label: "Dinner" }]} controls="strata" />);
+      act(() => media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 1200));
+      expect(screen.queryByRole("button", { name: /^Dinner, / })).toBeNull();
+      expect(screen.getByRole("button", { name: /^Window starts, / })).toBeInTheDocument();
+    });
+
     it("seeks into another source by changing it, and carries on playing from there", async () => {
       const user = userEvent.setup();
       const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
