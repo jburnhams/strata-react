@@ -187,6 +187,16 @@ describe("the base option (a proxy's mount point)", () => {
     expect(document.querySelector("base")).toBeNull();
   });
 
+  it("is there when a route's loader runs, and leaves no base behind under Strict Mode", async () => {
+    let seen = "";
+    const routes = [{ path: "/", loader: () => ((seen = withBase("/api/system")), null), element: <Where /> }];
+    const { unmount } = renderRoutes(routes, { base: "/_home/", reactStrictMode: true });
+    expect(seen).toBe("/_home/api/system");
+    unmount();
+    renderWithStrata(<Where />, { base: "/_home/", reactStrictMode: true }).unmount();
+    expect(document.querySelectorAll("base")).toHaveLength(0);
+  });
+
   it("changes nothing when left out", () => {
     renderWithStrata(<Where />);
     expect(screen.getByText("/api/system")).toBeInTheDocument();
