@@ -3,6 +3,7 @@ import { BoxOverlay, type BoxesState } from "./box-overlay";
 import { Thumbnail } from "./thumbnail";
 import { ViewportFrame, useViewport } from "./viewport";
 import { zoomToBox, type PictureBox } from "../lib/boxes";
+import { FIT } from "../lib/viewport";
 
 // A face in its picture (strata-models' face store: every app that shows a face offers "see it in the
 // photo"; strata-scan's lines and strata-360's people are the same need). The parts were already
@@ -11,7 +12,7 @@ import { zoomToBox, type PictureBox } from "../lib/boxes";
 // face from a grid expects to land on that face, not on the whole photo with a small outline
 // somewhere in it. `zoomToBox` needs the frame's size in pixels, which exists only after layout, so
 // the zoom waits for the frame to be measured (a layout effect, before paint, so the photo never
-// shows fitted first) and runs again whenever the chosen box changes, from the picture or from a
+// shows fitted first) and runs again whenever the chosen box or the frame's size changes, from the picture or from a
 // `BoxList` beside it. `zoom={false}` keeps the photo fitted and only lights the box.
 //
 // The chosen box is marked by a heavier outline only (`BoxOverlay fillLit={false}`): its subtle fill, right over a line of
@@ -54,12 +55,28 @@ export function BoxedPicture({ label, src, alt, missing, of, boxes, state, boxes
   const frame = React.useRef<HTMLDivElement>(null);
   const { setViewport } = view;
   const box = state.active ? boxes.find((b) => b.id === state.active) : undefined;
+  // The frame's size, kept current: `zoomToBox` answers in pixels, so a resized window, a turned phone or a pane that
+  // widens must zoom again, and a frame first drawn hidden (size 0) zooms once it is shown.
+  const [size, setSize] = React.useState<{ width: number; height: number } | null>(null);
   React.useLayoutEffect(() => {
-    if (!zoom || !box) return;
-    const r = frame.current?.getBoundingClientRect();
-    if (r && r.width > 0 && r.height > 0) setViewport(zoomToBox(box, of, { width: r.width, height: r.height }, margin));
+    const el = frame.current;
+    if (!el) return;
+    const read = () => {
+      const r = el.getBoundingClientRect();
+      setSize((was) => (was && was.width === r.width && was.height === r.height ? was : { width: r.width, height: r.height }));
+    };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  React.useLayoutEffect(() => {
+    // Zoom off means fitted, also when it is turned off after opening zoomed.
+    if (!zoom) return setViewport(FIT);
+    if (box && size && size.width > 0 && size.height > 0) setViewport(zoomToBox(box, of, size, margin));
     // The box's id and place are the inputs; a new array of the same boxes must not zoom again over a person's own panning.
-  }, [zoom, box?.id, box?.x, box?.y, box?.w, box?.h, of.w, of.h, margin, setViewport]);
+  }, [zoom, box?.id, box?.x, box?.y, box?.w, box?.h, of.w, of.h, margin, size, setViewport]);
   return (
     <ViewportFrame ref={frame} label={label} aspect={of.w / of.h} maxHeight={maxHeight} className={className} {...view}>
       <Thumbnail src={src} alt={alt} missing={missing} aspect={of.w / of.h} fit="contain" eager className="size-full rounded-none" />

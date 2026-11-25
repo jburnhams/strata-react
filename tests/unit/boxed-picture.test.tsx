@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BoxList, BoxedPicture, Thumbnail, regionStyle, useBoxes, type PictureBox } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -68,9 +68,38 @@ describe("BoxedPicture", () => {
     expect(within(frame).getByRole("button", { name: "Face 2: not named" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("stays fitted with zoom off", () => {
-    renderWithStrata(<Photo zoom={false} />);
-    expect(transformOf(screen.getByRole("group", { name: "Photo 12" }))).toBe("translate(0px) scale(1)");
+  it("stays fitted with zoom off, and goes back to fitted when zoom is turned off", () => {
+    const { rerender } = renderWithStrata(<Photo />);
+    const frame = screen.getByRole("group", { name: "Photo 12" });
+    expect(transformOf(frame)).not.toBe("translate(0px) scale(1)");
+    rerender(<Photo zoom={false} />);
+    expect(transformOf(frame)).toBe("translate(0px) scale(1)");
+  });
+
+  it("zooms again when the frame changes size, so the face stays in the middle", () => {
+    // The browser's part: a ResizeObserver that this test fires after giving the frame a new size.
+    const Shim = globalThis.ResizeObserver;
+    const rect = Element.prototype.getBoundingClientRect;
+    let fire = () => {};
+    globalThis.ResizeObserver = class {
+      constructor(cb: () => void) {
+        fire = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      renderWithStrata(<Photo />);
+      const frame = screen.getByRole("group", { name: "Photo 12" });
+      const before = transformOf(frame);
+      Element.prototype.getBoundingClientRect = () => ({ x: 0, y: 0, top: 0, left: 0, right: 320, bottom: 140, width: 320, height: 140, toJSON: () => ({}) });
+      act(() => fire());
+      expect(transformOf(frame)).not.toBe(before);
+    } finally {
+      globalThis.ResizeObserver = Shim;
+      Element.prototype.getBoundingClientRect = rect;
+    }
   });
 
   it("says in the product's words when the photo is not there, and still shows the faces", () => {
