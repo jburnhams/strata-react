@@ -330,6 +330,13 @@ describe("MediaPlayer", () => {
       expect(el.currentTime).toBe(600);
     });
 
+    it("leaves out a mark past the end of the file, which would otherwise widen the page", () => {
+      const { container } = render(<MediaPlayer label="Tape" src="/tape.mp4" marks={[{ time: 1, label: "Morning" }, { time: 2412, label: "Dinner" }]} controls="strata" />);
+      act(() => media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 2));
+      expect(screen.getByRole("button", { name: /^Morning, / })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Dinner, / })).toBeNull();
+    });
+
     it("keeps a window's own marks in place of the file's", () => {
       const { container } = render(<MediaPlayer label="Tape" src="/tape.mp4" window={{ start: 10, end: 20 }} showFull marks={[{ time: 600, label: "Dinner" }]} controls="strata" />);
       act(() => media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 1200));

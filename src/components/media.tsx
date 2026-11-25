@@ -228,7 +228,8 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
           drawableSpans(spans, duration).map((s) => <SpanRange key={`${s.start}-${s.end}-${s.label}`} span={s} duration={duration} precision={precision} fps={fps} />)}
         {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
         {duration > 0 &&
-          marks.map((m) => (
+          // A mark past the end (a chapter list longer than the file that loaded) would sit thousands of widths to the right and widen the page.
+          marks.filter((m) => m.time >= 0 && m.time <= duration).map((m) => (
             <button
               key={`${m.time}-${m.label}`}
               type="button"
