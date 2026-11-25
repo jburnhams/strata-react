@@ -9,6 +9,7 @@
 - `tests/unit/thumbnail.test.tsx`, `tests/unit/film-strip.test.tsx`: a remounted thumbnail is loaded at once and a different picture still waits; a kept frame is the same element after the frames shown change.
 - `README.md` (`strata-visual`, lazy pictures): says the runner's Chromium resizes the window during a whole-page capture, so a component that measures its width re-renders then.
 - `UPGRADING.md`: a thumbnail for a picture already loaded no longer starts as a skeleton; a test that checks a repeat's loading state through plain `render` should call `forgetLoadedThumbnails` (or use `renderWithStrata`).
+- `strata-visual.config.ts`: the idle full-screen shot lost its Skip intro button on #354's CI run (the only failure; 2937 and 2711 pixels, the button's corner), although the baselines, taken after the 3 s pin, have it. A single seek is not enough on a slow runner: the three-second hide wait and the capture let a 12 s clip play past the intro at 11 s. The setup now keeps seeking back to 3 s every 250 ms, so the shot does not depend on runner speed. Baselines unchanged.
 - Checks: `npm run typecheck` and `npm test` pass locally (1413 unit tests). The visual and integration jobs run in CI.
 
 ## 2026-11-25 (build fix and three issues)
