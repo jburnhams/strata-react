@@ -68,12 +68,13 @@ export default defineVisualConfig({
               // machine: a slower runner shot it after the intro, with no Skip button. Pin the time inside the
               // intro so the shot is the same everywhere.
               // Seeking once was not enough (CI run for #354: no button in the shot): the hide wait and the capture
-              // itself take seconds on a slow runner, long enough for a 12 s clip to play out of the intro. So hold
-              // the clip at 3 s for the rest of the page's life by seeking back four times a second; the player's
-              // idle timer and Skip button do not care how playback got there.
+              // itself take seconds on a slow runner, long enough for a 12 s clip to play out of the intro. Seeking
+              // back every 250 ms was worse: each seek counts as activity, so the controls never hid again and the
+              // waits below timed out. So seek once and slow playback to Chromium's slowest rate (1/16), which keeps
+              // the clip inside the intro for the rest of the page's life without touching the player again.
               await video.evaluate((el: HTMLVideoElement) => {
                 el.currentTime = 3;
-                window.setInterval(() => { el.currentTime = 3; }, 250);
+                el.playbackRate = 0.0625;
               });
               await waitForControls(false);
               // The button is rebuilt when the player's time catches up with the seek, so find it again.
