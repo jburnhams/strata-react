@@ -18,7 +18,7 @@ import { MicrophoneContext, type Microphone } from "../lib/microphone";
 export { installLayoutShims, type LayoutBox } from "./layout";
 export { installStorageShim, memoryStorage } from "./storage";
 export { installFakeSpeech, type FakeSpeech, type Spoken } from "./speech";
-export { fakeMicrophone, type FakeMicrophoneOptions } from "./microphone";
+export { fakeMicrophone, speechScript, type FakeMicrophoneOptions, type FakeSpeechStretch } from "./microphone";
 export { filledButtons, expectOneFilledButton, asyncButtonPhase } from "./buttons";
 export {
   installFakeIntersectionObserver,

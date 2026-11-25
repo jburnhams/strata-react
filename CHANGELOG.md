@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-25
+**Hands-free recording** (branch `claude/project-thread-cvjjmf`). Jonathan asked for a studio mode in strata-voice that is always listening, captures each prompt as he says it and moves on, so he can read without clicking. Cutting takes out of an open microphone is the part every recording app would need, so it lives here. It uses an energy detector, not a neural VAD: that needs no download or dependency, and is enough for one speaker close to a microphone. Scoring in the app catches a take that was a cough or a door. No dependency added.
+
+- `src/lib/segmenter.ts` (**new**): `createSegmenter(sampleRate, options)` with `push`, `flush`, `reset`, `noise`, `speaking`, `seconds`, and `rmsDb`. It reads 20 ms frames against the room's quiet, which it measures itself (down fast, up 2.5 dB a second, never while a take is heard). A take starts 12 dB above the quiet for 60 ms, with a floor of -55 dBFS, and continues at 6 dB less. It ends after 1 s of quiet, keeps 0.3 s either side and drops anything under 0.3 s of speech. At `maxSeconds` it cuts the take, measured to the last speech and not to the quiet still being waited out, and then waits for quiet.
+- `src/components/auto-recorder.tsx` (**new**): `useAutoRecorder({ maxSeconds, onTake, paused, microphone, ...SegmenterOptions })` gives `state`, `start`, `stop` and `listening`. Each take arrives as an `AutoTake` (a `Recording` plus `cut`). Stop and Pause hand over the take being heard, and leaving the screen keeps nothing. `onTake` and `paused` are read live, so the microphone opens once. `ListeningLevel` is the same peak meter as `InputLevel`, with a "Listening", "Hearing you" or "Paused" sentence and the room's level.
+- `src/testing/microphone.ts`: `fakeMicrophone` takes `script` (stretches of tone and quiet) and `loop`. `speechScript(takes, { speak, gap, amplitude })` writes one.
+- `src/index.ts`, `src/testing/index.tsx`, `README.md` (Recording row).
+- `stories/recording.stories.tsx`: `ListeningForSpeech`, `ListeningHearingYou` and `ListeningPaused` are baselines. `HandsFree` (a fake reader) and `HandsFreeThisDevice` are `no-visual`.
+- `tests/unit/auto-recorder.test.tsx` (**new**, 16 tests): the segmenter over made-up speech (pads, a pause at a comma, a click, a cough, a loud room, digital quiet, the cut and the wait after it, flush and reset), and the hook through the fake microphone (takes as they end, Stop handing one over, the cut, pausing, refusals, unmounting).
+- `tests/visual/baselines/`: the three new stories' shots.
+
 ## 2026-11-24
 **Links carry router state** (branch `claude/project-thread-vwria5`, issue #333). Review of the Tubes change that uses `MediaPlayer heading` found its channel link dropped the location state the app's own link carries (where the person came from), so the visit was recorded as from nowhere.
 

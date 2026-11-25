@@ -235,6 +235,16 @@ export {
   type InputLevelProps,
   type TakeLevelProps,
 } from "./components/recorder";
+export { createSegmenter, rmsDb, type Segment, type Segmenter, type SegmenterOptions } from "./lib/segmenter";
+export {
+  useAutoRecorder,
+  ListeningLevel,
+  type AutoRecorder,
+  type AutoRecorderState,
+  type AutoTake,
+  type UseAutoRecorderOptions,
+  type ListeningLevelProps,
+} from "./components/auto-recorder";
 export { ButtonLink, TextLink, type ButtonLinkProps, type TextLinkProps } from "./components/link";
 
 export { Compare, type CompareProps, type CompareMode, type Candidate, type ImageMedia, type AudioMedia, type TextMedia, type VideoMedia } from "./components/compare";
