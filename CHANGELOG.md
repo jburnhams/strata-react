@@ -1,18 +1,16 @@
 # Changelog
 
-<<<<<<< HEAD
 ## 2026-11-25 (seek bar marks past the end)
 **`SeekBar` leaves out a mark past the file's end** (branch `claude/project-thread-t8kdgj`). Found taking strata-reels' screenshots on 1.3.19: the tape page passes its chapter starts (40:12, 1:34:10) as `MediaPlayer marks`, the mock server's browser copy is two seconds long, and each mark was drawn at `time / duration` (120,600%), so the page was 790,375 px wide and Chromium could not capture it. A real copy shorter than its chapter list (a proxy cut short) would do the same.
 - `src/components/media.tsx`: marks outside 0 to the duration are not drawn.
 - `tests/unit/media-player.test.tsx`: a mark past the end is left out.
 - `UPGRADING.md`: says so (review fix, Codex).
-=======
+
 ## 2026-11-25 (CompositionBar with many parts)
 **Fixed #377: `CompositionBar` folds many parts into "Other" on request and no longer crashes a production page** (branch `claude/project-thread-68yll2`). Jonathan asked for the new open issue; it was the only one after #370. A sixth part without a colour threw at render, and strata-models lost a whole page to it.
 
 - `src/components/composition.tsx`: `other={{ label }}` (a string, or a function of how many were folded) keeps the four largest parts in their given order and sums the rest into one last part; opt-in, because for ordered parts (used, cached, free) the order is the meaning. In a production build (`isDev()` false) a sixth part with no colour is folded into "Other" and `console.error` says how to fix it; development and tests still throw. The file comment gives the reasons. No dependency added.
 - `tests/unit/dashboard.test.tsx`: three tests (folding and order, five parts untouched, production folds and logs). `stories/composition.stories.tsx`: `ManyParts`, **new** story, with **new** light and dark baselines in `tests/visual/baselines/` (looked at: four largest in order, then "2 smaller apps"; recorded with Playwright's Chromium 1255 here, so CI is the judge). `README.md`, `UPGRADING.md`: the behaviour.
->>>>>>> origin/main
 
 ## 2026-11-25 (twelve issues from the Quake 2 explorer)
 **Fixed every open issue (#359 to #370) in one batch: a hex dump, pictures from bytes, a console, key rebinding, a 3D scene frame, a workspace bar, a window-wide drop, and the small gaps beside them** (branch `claude/project-thread-uwr1a5`, PR #374). Jonathan asked for all the open issues, none of them Dependabot's, as one PR, each solved so the library as a whole gains. Twelve issues came from rebuilding the Quake 2 explorer (jburnhams/quake2#1513) and moving its components; the explorer's screen is now one composition story that uses most of them. No dependency was added: the 3D frame is a new entry with no dependency of its own, the hex dump is windowed by arithmetic, and the one place a dependency would have made an API nicer (#363, `vitest` as a peer) was put to Jonathan as a question and built without it.
