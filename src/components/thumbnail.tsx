@@ -58,9 +58,11 @@ import { cn } from "../lib/utils";
 // re-sorts or a row that remounts used to start every thumbnail as a skeleton that waited to be near the
 // screen, although the browser had the picture in its cache and a request would cost nothing. The
 // request key and the source index that loaded are remembered for the life of the page (bounded, oldest
-// forgotten first), and a new `Thumbnail` for the same request starts as loaded and asks at once. A
-// picture that has since gone from the cache still shows its skeleton, because the image's own load
-// event sets the state, and one that now fails goes through the usual missing path.
+// forgotten first), and a new `Thumbnail` for the same request asks at once, at the source that loaded.
+// It is not trusted to be loaded: the image element says so (it is `complete` with a size when it
+// mounts from the cache, so there is no skeleton frame; otherwise its load event does), so a picture
+// that has left the cache or must be fetched again (`no-store`) keeps its skeleton while it comes, and
+// one that now fails goes through the usual missing path.
 const loadedBefore = new Map<string, number>();
 const LOADED_LIMIT = 2000;
 
@@ -146,8 +148,9 @@ export function Thumbnail({
   const key = sources.length ? `${sources.join("\n")} ${srcSet ?? ""}` : null;
   const [outcome, setOutcome] = React.useState<Outcome | null>(null);
   const before = key === null ? undefined : loadedBefore.get(key);
-  const mine = key !== null && outcome?.key === key ? outcome : before !== undefined ? ({ key: key!, index: before, done: "loaded" } as Outcome) : null;
-  const index = mine?.index ?? 0;
+  const mine = key !== null && outcome?.key === key ? outcome : null;
+  // A remembered request starts at the source that loaded, but stays "loading" until this image says it has.
+  const index = mine?.index ?? before ?? 0;
   const phase: Phase = key === null ? "missing" : mine?.done ?? "loading";
   const current = sources[index];
   const near = useInView({ active: !eager && sources.length > 0, rootMargin, once: true, unsupported: true });
@@ -179,6 +182,10 @@ export function Thumbnail({
       {key !== null && phase !== "missing" && requested && (
         <img
           key={`${key}#${index}`}
+          ref={(el) => {
+            // From the cache the image is complete as it mounts: loaded now, with no skeleton frame (the load event also follows, and agrees).
+            if (el && phase === "loading" && before !== undefined && el.complete && el.naturalWidth > 0) setOutcome({ key: key!, index, done: "loaded" });
+          }}
           src={current}
           // The candidates are the first source's: a fallback would otherwise be replaced by the set that just failed.
           srcSet={index === 0 ? srcSet : undefined}

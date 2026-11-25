@@ -12,7 +12,7 @@ time. While the version is 0.x, any release may break.
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
 ## 2026-11-25 (latest)
-- A `Thumbnail` for a picture the page has already loaded now shows it at once when it mounts again (a `FilmStrip` after a resize, a re-sorted list) instead of starting as a skeleton (#352). `renderWithStrata` and `renderRoutes` reset this per test; a test using plain `render` that expects the loading state for a repeated `src` sees the picture instead.
+- A `Thumbnail` for a picture the page has already loaded now asks for it at once when it mounts again, wherever it is, and shows it as soon as the image is there (a `FilmStrip` after a resize, a re-sorted list), instead of waiting near the screen as a skeleton (#352). `renderWithStrata` and `renderRoutes` reset this per test; a test using plain `render` that expects no request for a repeated `src` before it scrolls near sees one (call `forgetLoadedThumbnails`).
 
 - `Poll` has a new member, `with({ every })` (#349): a read with its own pace takes `useLoad({ poll: poll.with({ every: 60_000 }) })` and keeps the page's pause, resume and "updated" time. A `Poll` you build by hand (in a test or story) must now supply `with`; one from `usePoll` already has it.
 - `SystemPanel` takes `headingLevel` (2, 3 or 4; default 2, unchanged) so a page's own `h2` section can hold it (#348). `renderWithStrata` and `renderRoutes` take `base: "/_home/"` (#350): a `<base href>` for the render, removed on unmount, so `withBase`, `createApi` and `useSystemInfo` read the mount point they read in production; delete a hand-written `<base>` in your setup file.

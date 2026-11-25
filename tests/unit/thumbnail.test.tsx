@@ -42,7 +42,7 @@ describe("Thumbnail", () => {
     expect(io.observers.every((o) => o.targets.size === 0)).toBe(true);
   });
 
-  it("shows a picture it has loaded before at once when it mounts again, without waiting to be near the screen (#352)", () => {
+  it("asks for a picture it has loaded before at once when it mounts again, without waiting to be near the screen (#352)", () => {
     const first = render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" />);
     io.intersect(first.container.firstElementChild!);
     fireEvent.load(screen.getByRole("img", { name: "Celadon bowl" }));
@@ -50,8 +50,11 @@ describe("Thumbnail", () => {
 
     const again = render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" />);
     const box = again.container.firstElementChild as HTMLElement;
-    expect(box).not.toHaveAttribute("aria-busy");
+    // Asked for at once, but it is not taken as loaded until the image says so (it may need fetching again).
     expect(imgIn(box)).toHaveAttribute("src", photo);
+    expect(box).toHaveAttribute("aria-busy", "true");
+    fireEvent.load(imgIn(box)!);
+    expect(box).not.toHaveAttribute("aria-busy");
     // A different picture still waits for the screen.
     const other = render(<Thumbnail src="/api/photos/p-302.svg" alt="Tenmoku cup" missing="Photo not found" />);
     expect(other.container.firstElementChild).toHaveAttribute("aria-busy", "true");
