@@ -80,17 +80,27 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
   const rows = Math.ceil(total / PER_ROW);
   const visibleRows = Math.max(1, Math.floor(height / ROW_PX));
   const fullHeight = rows * ROW_PX;
-  const scale = fullHeight > MAX_PX ? MAX_PX / fullHeight : 1;
-  const pxPerRow = ROW_PX * scale;
+  // Past the browser's height limit the spacer is MAX_PX tall and the scroll range maps onto the whole file:
+  // the bottom of the scroll bar is the last screen of rows, the top the first (not a fixed pixels-per-row).
+  const spacer = Math.max(Math.min(fullHeight, MAX_PX), height);
+  const scrollRange = Math.max(0, spacer - height);
+  const rowRange = Math.max(0, rows - height / ROW_PX); // how many rows the window can move
+  const rowAt = (top: number) => (scrollRange > 0 ? (top / scrollRange) * rowRange : 0);
+  const topOfRow = (row: number) => (rowRange > 0 ? (row / rowRange) * scrollRange : 0);
 
   const scroller = React.useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = React.useState(0);
-  const first = Math.min(Math.max(0, rows - 1), Math.floor(scrollTop / pxPerRow));
-  const fraction = scrollTop / pxPerRow - first; // how far into the first row the window is
+  const firstFloat = rowAt(scrollTop);
+  const first = Math.min(Math.max(0, rows - 1), Math.floor(firstFloat));
+  const fraction = firstFloat - first; // how far into the first row the window is
 
   // The range is an anchor and a cursor: moving without Shift puts both on one byte.
-  const [anchor, setAnchor] = React.useState<number | null>(defaultSelection ? defaultSelection.start : null);
-  const [cursor, setCursor] = React.useState<number | null>(defaultSelection ? Math.max(defaultSelection.start, defaultSelection.end - 1) : null);
+  const [rawAnchor, setAnchor] = React.useState<number | null>(defaultSelection ? defaultSelection.start : null);
+  const [rawCursor, setCursor] = React.useState<number | null>(defaultSelection ? Math.max(defaultSelection.start, defaultSelection.end - 1) : null);
+  // A shorter buffer (another file chosen) must not leave the cursor past its end.
+  const clampTo = (n: number | null) => (n === null || total === 0 ? null : Math.min(n, total - 1));
+  const anchor = clampTo(rawAnchor);
+  const cursor = clampTo(rawCursor);
   const range: ByteRange | null = anchor === null || cursor === null ? null : { start: Math.min(anchor, cursor), end: Math.max(anchor, cursor) + 1 };
   const notify = React.useRef(onSelectionChange);
   notify.current = onSelectionChange;
@@ -104,10 +114,9 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
     const el = scroller.current;
     if (!el) return;
     const row = Math.floor(index / PER_ROW);
-    const top = row * pxPerRow;
-    const firstSeen = Math.ceil(el.scrollTop / pxPerRow);
-    if (row < firstSeen) el.scrollTop = top;
-    else if (row >= Math.floor(el.scrollTop / pxPerRow) + visibleRows) el.scrollTop = (row - visibleRows + 1) * pxPerRow;
+    const now = rowAt(el.scrollTop);
+    if (row < Math.ceil(now)) el.scrollTop = topOfRow(row);
+    else if (row >= Math.floor(now) + visibleRows) el.scrollTop = topOfRow(row - visibleRows + 1);
     setScrollTop(el.scrollTop);
   };
 
@@ -204,7 +213,7 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
             <span>Text</span>
           </div>
           <div ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} className="overflow-y-auto" style={{ height }}>
-            <div style={{ height: Math.max(rows * pxPerRow, visibleRows * ROW_PX) }} className="relative">
+            <div style={{ height: spacer }} className="relative">
               <div className="sticky top-0 overflow-hidden" style={{ height }}>
                 <div style={{ transform: `translateY(${-fraction * ROW_PX}px)` }}>
                   {drawn.map((r) => {

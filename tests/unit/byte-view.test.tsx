@@ -110,3 +110,23 @@ describe("ByteView", () => {
     expect(screen.getByRole("status")).toHaveTextContent("No bytes.");
   });
 });
+
+describe("ByteView edge cases", () => {
+  it("survives a shorter buffer after a byte past its end was chosen", async () => {
+    const { rerender } = renderWithStrata(<ByteView bytes={bytes(512)} label="file" defaultSelection={{ start: 400, end: 401 }} />);
+    rerender(<ByteView bytes={bytes(16)} label="file" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Byte 0xf of 16");
+    rerender(<ByteView bytes={new Uint8Array()} label="file" />);
+    expect(screen.getByRole("status")).toHaveTextContent("No bytes.");
+  });
+
+  it("reaches the last byte of a file too big for one element (Ctrl+End)", async () => {
+    const onSelectionChange = vi.fn();
+    renderWithStrata(<ByteView bytes={bytes(50 * 1024 * 1024)} label="big" height={200} onSelectionChange={onSelectionChange} />);
+    await userEvent.tab();
+    await userEvent.keyboard("{Control>}{End}{/Control}");
+    const last = 50 * 1024 * 1024 - 1;
+    expect(onSelectionChange).toHaveBeenLastCalledWith({ start: last, end: last + 1 });
+    expect(document.querySelector(`[data-i="${last}"]`)).not.toBeNull();
+  });
+});

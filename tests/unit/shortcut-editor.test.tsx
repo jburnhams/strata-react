@@ -91,6 +91,14 @@ describe("ShortcutEditor", () => {
     expect(screen.getByRole("button", { name: /Press a key for Fire/ })).toBeInTheDocument();
   });
 
+  it("Tab leaves the recording and lets focus move", async () => {
+    renderWithStrata(<Host />);
+    await change("Fire");
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Change Fire" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Press a key/ })).toBeNull();
+  });
+
   it("waits for the key a modifier goes with", async () => {
     renderWithStrata(<Host />);
     await change("Fire");

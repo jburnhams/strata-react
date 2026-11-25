@@ -146,6 +146,12 @@ export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", classN
   const onKeyDown = (e: React.KeyboardEvent, shortcut: Shortcut) => {
     const id = idOf(shortcut);
     if (e.nativeEvent.isComposing) return;
+    if (e.key === "Tab") {
+      // Tab cannot be bound and must still leave: end the recording and let focus move.
+      setRecording(null);
+      setSaid("Tab moves between controls, so it cannot be a shortcut. Kept " + keyName(shortcut.keys[0] ?? "") + " for " + shortcut.label + ".");
+      return;
+    }
     e.stopPropagation(); // the page's own `useHotkeys` must not hear the key being chosen
     if (e.key === "Escape") {
       e.preventDefault();
