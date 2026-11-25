@@ -171,6 +171,18 @@ describe("DataTable", () => {
     expect(screen.getByRole("columnheader", { name: /Member/ })).toBeInTheDocument();
   });
 
+  it("keeps ordering rows by a column that a narrow screen hides from a virtualised table (issue #339)", async () => {
+    const real = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
+    onTestFinished(() => void (window.matchMedia = real));
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
+    renderWithStrata(<DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} sortParam="sort" />, { route: "/?sort=pieces.desc" });
+    await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
+    const first = within(bodyRows().find((r) => r.getAttribute("aria-hidden") !== "true")!).getAllByRole("rowheader")[0].textContent;
+    const top = [...manyBookings].sort((a, b) => b.pieces - a.pieces)[0];
+    expect(manyBookings.find((b) => b.member === first)?.pieces).toBe(top.pieces);
+  });
+
   it("renders every row of a short table", () => {
     renderWithStrata(<DataTable caption="Few" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
     expect(bodyRows()).toHaveLength(bookings.length);

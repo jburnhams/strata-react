@@ -268,7 +268,7 @@ function Table<T extends Rec>({
   const hiddenBelow = (c: Column<T>, i: number) => (i > 0 && c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
   const defs = React.useMemo<ColumnDef<typeof features, T, unknown>[]>(
     () =>
-      columns.map((c): ColumnDef<typeof features, T, unknown> => {
+      allColumns.map((c): ColumnDef<typeof features, T, unknown> => {
         const { value, sort } = c;
         if (!value) {
           return {
@@ -301,11 +301,12 @@ function Table<T extends Rec>({
             : (a, b) => compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
         };
       }),
-    [columns],
+    [allColumns],
   );
 
   const sortable = (c: Column<T>) => (c.value ? c.sort !== false : Boolean(c.sort));
-  const sorting: SortingState = sort && columns.some((c) => c.key === sort.key && sortable(c))
+  // The data model keeps every column, shown or not, so a sort on a column hidden by a narrow screen still orders the rows.
+  const sorting: SortingState = sort && allColumns.some((c) => c.key === sort.key && sortable(c))
     ? [{ id: sort.key, desc: sort.dir === "descending" }]
     : [];
 

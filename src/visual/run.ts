@@ -125,7 +125,7 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     });
     const meta: Meta = { chromium: browser.version(), platform: `${process.platform}-${process.arch}` };
     try {
-      for (const batch of batches) await runBatch(browser, batch, { config, baselineDir, outputDir, update, report, log });
+      for (const batch of batches) await runBatch(browser, batch, { config, baselineDir, outputDir, update, report, log, pinnedFamily: pinned?.family });
     } finally {
       await browser.close();
     }

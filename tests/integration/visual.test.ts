@@ -143,6 +143,16 @@ describe("strata-visual on an app's routes", () => {
     rmSync(join(app, "tests/visual/fonts"), { recursive: true, force: true });
   }, 120_000);
 
+  it("pins the system face so text in it is not a system-font fault (issue #342)", () => {
+    const dejavu = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    expect(existsSync(dejavu), "this test pins DejaVu Sans, which Ubuntu runners have").toBe(true);
+    config(`{ system: { path: "/?font=system" } }`, undefined, `\n  baselines: "tests/visual/pinned",\n  themes: ["light"],\n  systemFonts: { pin: "DejaVu Sans", files: [${JSON.stringify(dejavu)}] },`);
+    const pinned = run(["--update"]);
+    expect(pinned.out).not.toContain("system font");
+    expect(pinned.code).toBe(0);
+    rmSync(join(app, "tests/visual/pinned"), { recursive: true, force: true });
+  }, 120_000);
+
   it("scrolls a tall page through first so pictures that wait to be near the window are in the baseline (issue #273)", () => {
     const states = `{ lazy: { path: "/?lazy=1" } }`;
     const lastRow = (name: string, dir: string) => {

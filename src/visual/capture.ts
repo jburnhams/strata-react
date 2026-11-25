@@ -219,8 +219,9 @@ async function scrollThrough(page: Page, problems: string[]) {
     // Bounded: a page that grows as it is shown (an endless feed) is read to 20000 px and no further.
     await page.setViewportSize({ width: size.width, height: Math.min(height, 20_000) });
     await page.waitForTimeout(100);
-    await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: PICTURES_WAIT_MS }).catch(() => undefined);
   }
+  // Also for a page that fits the window: the loop above never ran its wait, and settle()'s network-idle wait is shorter.
+  await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: PICTURES_WAIT_MS }).catch(() => undefined);
   const late = await page.evaluate(() => [...document.images].filter((img) => !img.complete).map((img) => img.currentSrc || img.src));
   if (late.length) {
     const shown = late.slice(0, 3).map((src) => new URL(src, "http://x").pathname);
