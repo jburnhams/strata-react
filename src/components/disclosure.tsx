@@ -86,6 +86,8 @@ export type Expanded = {
   onChange: (next: Set<string>) => void;
   isOpen: (key: string) => boolean;
   setOpen: (key: string, open: boolean) => void;
+  /** Opens a closed key, closes an open one (the same word as `WorkspaceState.toggle`). */
+  toggle: (key: string) => void;
   collapseAll: () => void;
 };
 
@@ -119,6 +121,12 @@ function api(expanded: ReadonlySet<string>, set: (next: Set<string>) => void, si
       const next = single ? new Set<string>() : new Set(expanded);
       if (open) next.add(key);
       else next.delete(key);
+      set(next);
+    },
+    toggle: (key) => {
+      const next = single ? new Set<string>() : new Set(expanded);
+      if (expanded.has(key)) next.delete(key);
+      else next.add(key);
       set(next);
     },
     collapseAll: () => set(new Set()),

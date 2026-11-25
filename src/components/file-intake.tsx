@@ -137,6 +137,98 @@ export function FileDropZone({
   );
 }
 
+// A window-wide drop (issue #368, from the Quake 2 explorer). In a tool screen the person drags a file
+// from the desktop onto the window, wherever it lands, and `FileDropZone` is a region you aim at. React
+// Aria's `DropZone` is for that region; there is no part for the whole window, so this listens on the
+// document (checked: `useDrop` binds to one element). It follows the same rules as the zone: the drag
+// must carry files (`Files` in its types), the app's own drags (`STRATA_DRAG_TYPE`, `refuseTypes`) never
+// light it, and the drop is judged after it, in `useFileIntake`. Enter and leave events fire for every
+// child the pointer crosses, so a depth count (not a boolean) says whether a drag is still over the
+// window. A drop a `FileDropZone` or other target already took (`defaultPrevented`) is not taken twice.
+// The overlay is for a pointer; the `FileButton` stays the keyboard and phone way in, so it is hidden
+// from assistive technology and takes no events. `Workspace onFiles` mounts it for a tool screen.
+
+const carriesFiles = (e: DragEvent, refuse: readonly string[]) => {
+  const types = Array.from(e.dataTransfer?.types ?? []);
+  return types.includes("Files") && !refusesDrag({ has: (type) => types.includes(type) }, [STRATA_DRAG_TYPE, ...refuse]);
+};
+
+/** While files are dragged anywhere over the window, a dim overlay names what is taken ("Drop to add PAK files"); a drop calls `onFiles`. The app's own drags never trigger it. Keep a `FileButton` beside it for the keyboard and phones. */
+export function FileDropOverlay({
+  onFiles,
+  acceptLabel,
+  disabled,
+  refuseTypes,
+}: {
+  onFiles: (files: File[]) => void;
+  /** What it takes, in words ("PAK files"), shown in "Drop to add …". */
+  acceptLabel: string;
+  disabled?: boolean;
+  /** Drag types of the app's own drags to ignore, besides every `DragSource`'s. */
+  refuseTypes?: readonly string[];
+}) {
+  const [over, setOver] = React.useState(false);
+  const live = React.useRef({ onFiles, refuseTypes: refuseTypes ?? [] });
+  live.current = { onFiles, refuseTypes: refuseTypes ?? [] };
+  React.useEffect(() => {
+    if (disabled) return;
+    let depth = 0;
+    const reset = () => {
+      depth = 0;
+      setOver(false);
+    };
+    const enter = (e: DragEvent) => {
+      if (!carriesFiles(e, live.current.refuseTypes)) return;
+      depth += 1;
+      setOver(true);
+    };
+    const hover = (e: DragEvent) => {
+      if (!carriesFiles(e, live.current.refuseTypes)) return;
+      e.preventDefault(); // without this the browser opens the file instead of dropping it
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    };
+    const leave = (e: DragEvent) => {
+      if (!carriesFiles(e, live.current.refuseTypes)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setOver(false);
+    };
+    const drop = (e: DragEvent) => {
+      const wanted = carriesFiles(e, live.current.refuseTypes);
+      reset();
+      if (!wanted || e.defaultPrevented) return;
+      e.preventDefault();
+      const files = Array.from(e.dataTransfer?.items ?? [])
+        .filter((i) => i.kind === "file")
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null);
+      const list = files.length ? files : Array.from(e.dataTransfer?.files ?? []);
+      if (list.length) live.current.onFiles(list);
+    };
+    document.addEventListener("dragenter", enter);
+    document.addEventListener("dragover", hover);
+    document.addEventListener("dragleave", leave);
+    document.addEventListener("drop", drop);
+    // A drag cancelled with Escape fires no leave on the window in every browser.
+    document.addEventListener("dragend", reset);
+    return () => {
+      document.removeEventListener("dragenter", enter);
+      document.removeEventListener("dragover", hover);
+      document.removeEventListener("dragleave", leave);
+      document.removeEventListener("drop", drop);
+      document.removeEventListener("dragend", reset);
+    };
+  }, [disabled]);
+  if (!over || disabled) return null;
+  return (
+    <div aria-hidden data-file-drop-overlay className="pointer-events-none fixed inset-0 layer-overlay grid place-items-center scrim p-6">
+      <div className="flex items-center gap-3 rounded-overlay border-2 border-dashed border-primary bg-background px-6 py-5 shadow-overlay">
+        <Upload aria-hidden className="size-5 text-primary" />
+        <p className="type-heading">Drop to add {acceptLabel}</p>
+      </div>
+    </div>
+  );
+}
+
 const rowStatus: Record<FileOutcome["status"], { tone: "neutral" | "info" | "success" | "warning" | "danger"; word: string; icon: IconComponent }> = {
   processing: { tone: "info", word: "Adding…", icon: Loader },
   added: { tone: "success", word: "Added", icon: CircleCheck },

@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, Density, Pane, Split, Workspace, useWorkspaceState } from "../src";
+import { Button, ColorSchemeChoice, Density, Inspector, InspectorSection, Pane, PropertyList, Split, Workspace, WorkspaceBar, useWorkspaceState } from "../src";
 
 // A screen of panes for a tool (issue #68, from strata-vid): library, stage and inspector across,
 // a timeline along the bottom. Sizes here are in the stories' own state; an app passes `persist`
@@ -15,7 +15,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const Lines = ({ items }: { items: string[] }) => (
-  <ul className="grid gap-1 p-3">
+  <ul className="grid gap-1">
     {items.map((i) => (
       <li key={i} className="type-body-sm">{i}</li>
     ))}
@@ -31,20 +31,21 @@ function Editor({ collapsed = [], narrow }: { collapsed?: string[]; narrow?: num
   return (
     <div className="h-140">
       <Workspace label="Video editor" state={ws} narrowBelow={narrow}>
-        <div className="flex h-(--control-h) shrink-0 items-center justify-between border-b border-border px-3">
-          <span className="type-label">Kiln reel</span>
-          <Button size="sm" variant="default">Export</Button>
-        </div>
+        <WorkspaceBar title="Kiln reel" status="4 clips, 2 min 40 s" actions={<Button size="sm" variant="default">Export</Button>} end={<ColorSchemeChoice compact />} />
         <Split direction="column">
           <Split direction="row">
             <Pane id="library" name="Library" size={260} min={180} max={420} collapsible>
               <Lines items={["Moonbeam.mp4", "Bisque load.mp4", "Glaze test.mp4", "Kiln 2 door.mp4"]} />
             </Pane>
-            <Pane id="stage" name="Preview" grow>
+            <Pane id="stage" name="Preview" grow flush>
               <div className="grid h-full place-items-center type-body text-muted-foreground">Frame 00:12:04</div>
             </Pane>
             <Pane id="inspector" name="Inspector" size={260} min={200} collapsible actions={<Button size="sm" variant="ghost">Reset</Button>}>
-              <Lines items={["Position 12.0 s", "Duration 4.5 s", "Volume 80%"]} />
+              <Inspector title="Moonbeam.mp4" kind="Video clip" empty={null}>
+                <InspectorSection id="timing" title="Timing">
+                  <PropertyList items={[{ term: "Position", value: "12.0", unit: "s" }, { term: "Duration", value: "4.5", unit: "s" }, { term: "Volume", value: "80%" }]} />
+                </InspectorSection>
+              </Inspector>
             </Pane>
           </Split>
           <Pane id="timeline" name="Timeline" size={180} min={120} collapsible>

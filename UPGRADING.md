@@ -11,7 +11,13 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
-## 2026-11-25 (latest)
+## 2026-11-25 (twelve issues, #359–#370)
+- **`Pane`'s body is inset** (`p-3`, the header's own padding) so an `Inspector` or text lines up with the pane's name (#366). A pane that holds a tree, table, list or stage drawn to the edge adds `flush`; a pane whose content you inset yourself (`className="p-3"` on the child) can delete that. Visual baselines with a `Pane` move.
+- `Expanded` (from `useExpanded`) has a new member, `toggle(key)` (#364): an `Expanded` you build by hand in a test or story must supply it. `Tree`'s new `branchPress="toggle"` makes pressing a folder's row open it instead of choosing it; the default (`"select"`) is unchanged.
+- `installLayoutShims()` returns a no-op where there is no DOM (#363), so a setup file shared with `// @vitest-environment node` tests no longer throws. New `setupStrataTests({ afterEach })` in `strata-react/testing` is the one setup call (shims, then after each test: unmount, clear toasts, forget loaded thumbnails); an app whose Vitest `globals` are off and that had its own `afterEach(cleanup)` can replace it. `strata.bare.css` gains the `image-pixelated` utility.
+- pnpm 12: add `minimumReleaseAgeExclude: [strata-react]` to `pnpm-workspace.yaml` to take each release the day it is cut (#362); README, Install.
+
+## 2026-11-25 (thumbnails and polling)
 - A `Thumbnail` for a picture the page has already loaded now asks for it at once when it mounts again, wherever it is, and shows it as soon as the image is there (a `FilmStrip` after a resize, a re-sorted list), instead of waiting near the screen as a skeleton (#352). `renderWithStrata` and `renderRoutes` reset this per test; a test using plain `render` that expects no request for a repeated `src` before it scrolls near sees one (call `forgetLoadedThumbnails`).
 
 - `Poll` has a new member, `with({ every })` (#349): a read with its own pace takes `useLoad({ poll: poll.with({ every: 60_000 }) })` and keeps the page's pause, resume and "updated" time. A `Poll` you build by hand (in a test or story) must now supply `with`; one from `usePoll` already has it.

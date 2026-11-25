@@ -116,7 +116,12 @@ export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type Timeli
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
 export { SortableList, type SortableListProps, type DropTarget } from "./components/sortable-list";
 export { DragSource, STRATA_DRAG_TYPE, type DragSourceProps, type DragData } from "./components/drag-source";
-export { FileButton, FileDropZone, FileOutcomes, MissingFile } from "./components/file-intake";
+export { FileButton, FileDropZone, FileDropOverlay, FileOutcomes, MissingFile } from "./components/file-intake";
+export { useObjectUrl } from "./lib/object-url";
+export { PixelImage, pixelZoom, rgbaToBlob, type PixelImageProps } from "./components/pixel-image";
+export { ByteView, type ByteViewProps, type ByteHighlight, type ByteRange } from "./components/byte-view";
+export { Console, type ConsoleProps, type ConsoleLine, type ConsoleLevel } from "./components/console";
+export { ShortcutEditor, useRebindableShortcuts, checkKey, type Rebinding, type ShortcutOverrides, type KeyCheck } from "./components/shortcut-editor";
 export { useFileIntake, matchesAccept, type FileIntake, type FileIntakeOptions, type FileOutcome } from "./lib/file-intake";
 export { Inspector, InspectorSection, PropertyRow, PropertyList, type InspectorProps, type InspectorSectionProps, type PropertyRowProps, type Property, type PropertyListProps } from "./components/inspector";
 export { Disclosure, useExpanded, type DisclosureProps, type DisclosureOpenProps, type Expanded, type ExpandedOptions } from "./components/disclosure";
@@ -150,7 +155,7 @@ export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-sh
 export { Tabs, type TabItem } from "./components/tabs";
 export { Density, type DensityName, type DensityProps } from "./components/density";
 export type { ControlSize } from "./lib/control";
-export { useHotkeys, KeysLegend, isTypingTarget, type Shortcut } from "./components/hotkeys";
+export { useHotkeys, KeysLegend, isTypingTarget, keyName, type Shortcut } from "./components/hotkeys";
 export { useActiveItem, ActiveList, type ActiveItem } from "./components/active-list";
 export {
   ThemeProvider,
@@ -278,7 +283,7 @@ export { loudnessOf, matchGains, gainToVolume, measureLoudness, type Loudness } 
 export { CompareGrid, type CompareGridProps } from "./components/compare-grid";
 export { useDifference, type DifferenceState, type ReadPixels } from "./components/difference";
 export { differences, readPixels, resample, MAX_SIDE, DEFAULT_TOLERANCE, type Difference, type Pixels } from "./lib/image-diff";
-export { Workspace, Split, Pane, useWorkspaceState, type WorkspaceState, type PaneProps } from "./components/workspace";
+export { Workspace, WorkspaceBar, Split, Pane, useWorkspaceState, type WorkspaceState, type PaneProps, type WorkspaceBarProps } from "./components/workspace";
 export {
   useHistory,
   useHistoryState,

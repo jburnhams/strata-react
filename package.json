@@ -61,6 +61,11 @@
       "import": "./dist/panorama.js",
       "default": "./dist/panorama.js"
     },
+    "./scene": {
+      "types": "./dist/scene/index.d.ts",
+      "import": "./dist/scene.js",
+      "default": "./dist/scene.js"
+    },
     "./api-types": {
       "types": "./dist/api-types/index.d.ts",
       "import": "./dist/api-types.js",

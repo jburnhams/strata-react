@@ -200,6 +200,7 @@
 /* Stacking, once, for every floating thing, so an app never writes a z-index. A bar (the undo
    bar, toasts) sits above panes and sticky headers; overlays (dialogs, popovers, menus) above
    bars; a tooltip above everything, since it can name a control inside an overlay. */
+@utility image-pixelated { image-rendering: pixelated; }
 @utility layer-bar { z-index: 50; }
 @utility layer-overlay { z-index: 60; }
 @utility layer-tip { z-index: 70; }
