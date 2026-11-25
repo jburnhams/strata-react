@@ -1,0 +1,34 @@
+/* An app that takes Strata's default look and adds nothing: the whole stylesheet is these three
+   lines (plus @source, which only points Tailwind at this repo's own sources; an installed app
+   needs none because strata.css scans the built components). */
+@import "tailwindcss";
+@import "../../../src/styles/strata.css";
+@import "../../../src/styles/theme.css";
+
+/* The product layer of this example, as in the kiln fixture: the kiln's glow, a fact of its subject, only
+   where colour encodes temperature (the firing chart). Everything else is Strata's default. */
+:root {
+  --heat-unlit: oklch(46% 0.035 55);
+  --heat-dull-red: oklch(44% 0.14 27);
+  --heat-cherry: oklch(50% 0.17 30);
+  --heat-orange: oklch(55% 0.16 48);
+  --heat-yellow: oklch(63% 0.14 75);
+}
+.dark {
+  --heat-unlit: oklch(62% 0.03 55);
+  --heat-dull-red: oklch(58% 0.17 27);
+  --heat-cherry: oklch(65% 0.19 33);
+  --heat-orange: oklch(74% 0.16 55);
+  --heat-yellow: oklch(86% 0.14 88);
+}
+@theme inline {
+  --color-heat-unlit: var(--heat-unlit);
+  --color-heat-dull-red: var(--heat-dull-red);
+  --color-heat-cherry: var(--heat-cherry);
+  --color-heat-orange: var(--heat-orange);
+  --color-heat-yellow: var(--heat-yellow);
+}
+
+@source "../../../src";
+@source "../../../stories";
+@source "./";

@@ -117,14 +117,15 @@ describe("peer contract", () => {
 
 describe("strata.css in an app", () => {
   // `sheet` is the stylesheet the app imports; `own` is the app's own CSS (a screen that still uses stock classes).
-  async function compileApp(sheet = "strata.css", own = "") {
+  async function compileApp(sheet = "strata.css", own = "", defaultTheme = false) {
     const app = mkdtempSync(join(tmpdir(), "strata-app-"));
     mkdirSync(join(app, "node_modules"));
     symlinkSync(root, join(app, "node_modules/strata-react"), "dir");
     for (const dep of ["tailwindcss"]) symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
     writeFileSync(join(app, "theme.css"), readFileSync(join(root, ".storybook/theme.generated.css"), "utf8"));
+    if (defaultTheme) writeFileSync(join(app, "default.css"), readFileSync(join(root, "dist/theme.css"), "utf8"));
     writeFileSync(join(app, "page.tsx"), `<div className="bg-indigo-500 text-sm rounded-xl shadow-lg grid gap-4 bg-primary" />`);
-    const input = `@import "tailwindcss";\n@import "strata-react/${sheet}";\n@import "./theme.css";\n@source "./page.tsx";\n${own}`;
+    const input = `@import "tailwindcss";\n@import "strata-react/${sheet}";\n@import "./${defaultTheme ? "default" : "theme"}.css";\n@source "./page.tsx";\n${own}`;
     try {
       const compiler = await compile(input, { base: app, onDependency: () => undefined });
       const scanner = new Scanner({ sources: compiler.sources });
@@ -148,6 +149,22 @@ describe("strata.css in an app", () => {
     const own = await compileApp("strata.css", `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`);
     expect(own).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
     expect(own).not.toMatch(/--font-sans:\s*"Geist Variable"/);
+  });
+
+  // The default look is opt-in: strata.css alone keeps every value an existing app (Tubes) was built on.
+  it("leaves the radii and shadow alone until an app imports theme.css, and lets the app's own theme win after it", async () => {
+    const plain = await compileApp();
+    expect(plain).toContain("--radius-control: 4px;");
+    expect(plain).toContain("--radius-surface: 6px;");
+    expect(plain).not.toContain("--accent: var(--secondary-3)");
+    const themed = await compileApp("strata.css", "", true);
+    for (const role of ["--radius-control: 6px;", "--radius-surface: 10px;", "--radius-overlay: 14px;", "--accent: var(--secondary-3)", "--success-subtle:", "--danger:"]) {
+      expect(themed, role).toContain(role);
+    }
+    expect(themed).toMatch(/\.bg-primary\s*{[^}]*var\(--primary\)/);
+    const own = await compileApp("strata.css", `@theme { --radius-control: 2px; }\n`, true);
+    expect(own).toContain("--radius-control: 2px;");
+    expect(own).not.toContain("--radius-control: 6px;");
   });
 
   it("makes the type steps and a button's padding and icon roles with today's values as the defaults (issue #210)", async () => {

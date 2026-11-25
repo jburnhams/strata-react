@@ -12,6 +12,7 @@ time. While the version is 0.x, any release may break.
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
 ## 2026-11-25
+- New and opt-in: `@import "strata-react/theme.css"` after `strata.css` gives an app Strata's default look (palette, status roles, radii, shadow, light and dark). Nothing changes for an app that does not import it, so **an app with its own theme (Tubes) does nothing**. An app that wants it drops its own `theme.generated.css` and `theme.css` first, or keeps them and overrides only what differs in later `:root` or `@theme` blocks.
 - The default `--font-sans` is **Geist Variable**, bundled (Fontsource, a dependency of strata-react), where it was the system sans. An app that names its own face in `--font-sans` is unchanged; an app that never did gets a new look and moved baselines (re-record them: the face is now the same on every machine, so the screenshots no longer depend on its fonts). Mono is still a system face. `strata.css` now `@import`s `@fontsource-variable/geist`, so **the app's build must resolve a CSS `url()` to a `.woff2`**: Vite does this with nothing added (the files are emitted with hashed names under the app's base); a build that runs the Tailwind CLI and esbuild on its own must copy `node_modules/@fontsource-variable/geist/files/*.woff2` next to the compiled CSS (the rules say `./files/…`) or name its own face.
 
 ## 2026-11-24

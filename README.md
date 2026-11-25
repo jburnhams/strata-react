@@ -53,6 +53,27 @@ Use it to try a fix before it is released, then move back to the npm version.
 
 ## Set up an app
 
+**The quickest start is Strata's own look.** One import after `strata.css` gives an app a finished,
+checked theme (light and dark) and nothing else to write:
+
+```css
+@import "tailwindcss";
+@import "strata-react/strata.css";
+@import "strata-react/theme.css";    /* the default look: palette, status roles, radii, shadow */
+```
+
+It is petrol and marigold on a faintly cool ground, three radii that differ (6, 10 and 14 px) and one
+tinted shadow for what floats; the face is Geist (already in `strata.css`). Marigold is the one warm
+accent and only marks where attention already is (a selection, the active item of a keyboard-worked
+list). Every value is a token, so an app changes any of them with a later `@theme` or `:root` block, or
+replaces the look by importing its own `theme.generated.css` and `theme.css` instead of this one; an
+app that already has its own theme and imports only `strata.css` is unchanged. The ramps are
+`palette.mjs` output (`--primary "#00798f" --secondary "#f2a900" --contrast 0.5 --ground tinted`),
+regenerate rather than edit. `examples/default-app` is an app that adds nothing to it, and its
+screenshots are `tests/visual/baselines-default-theme/` (`npm run test:visual:default-theme`).
+
+The longer form, for a product with its own palette:
+
 ```css
 /* src/app.css */
 @import "tailwindcss";

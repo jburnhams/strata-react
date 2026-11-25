@@ -13,6 +13,10 @@ const sources = `\n/* The built components, so their classes are generated. */\n
 writeFileSync(`${root}dist/strata.css`, `${css}${sources}`);
 console.log("dist/strata.css written");
 
+// The default theme (palette, status roles, radii, shadow): opt-in, imported after strata.css.
+writeFileSync(`${root}dist/theme.css`, readFileSync(`${root}src/styles/theme.css`, "utf8"));
+console.log("dist/theme.css written");
+
 const strict = /\/\* strata:strict-begin \*\/[\s\S]*?\/\* strata:strict-end \*\//;
 if (!strict.test(css)) throw new Error("src/styles/strata.css lost its strata:strict markers: strata.migrate.css cannot be made");
 const migrate = css.replace(

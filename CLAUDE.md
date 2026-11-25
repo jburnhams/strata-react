@@ -11,11 +11,15 @@ First use: the live demos and examples in ux-research. Then other products.
 
 ## The stance
 
-- **Opinionated about structure, behaviour and stack; silent about the look.** Strata ships no
-  colours and no theme (its one default is the face, Geist Variable, so no screen falls back to whatever the machine has). A product generates its own palette from its subject
-  (`ux-design/skill/scripts/palette.mjs` in ux-research) and supplies status roles and faces.
-  Shipping a look would make every product built on it the same product, which is how "AI
-  slop" forms (ux-research `ux-slop-taxonomy.md` §1).
+- **Opinionated about structure, behaviour and stack, and (since 2026-11-25) about a default look
+  that is opt-in.** `strata.css` itself ships no colours and no theme (its one default is the face,
+  Geist Variable, so no screen falls back to whatever the machine has), so an app with its own look
+  never moves. `strata-react/theme.css` is the default look (petrol and marigold, three radii, one
+  tinted shadow, light and dark) for an app that wants a finished UI without designing one; a
+  product with a subject still generates its own palette (`ux-design/skill/scripts/palette.mjs` in
+  ux-research) and supplies status roles and faces, which is how apps avoid being the same product
+  (ux-research `ux-slop-taxonomy.md` §1). Never change a value in `strata.css` to restyle: put it in
+  `theme.css`, so an existing app's look does not move.
 - **Tailwind's stock namespaces are removed** (`--color-*`, `--text-*`, `--radius-*`,
   `--shadow-*`, `--font-*`), so `bg-indigo-500`, `text-sm`, `rounded-xl` and `shadow-lg` do not
   compile in a Strata app. Only the roles the theme names exist.
