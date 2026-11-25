@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-25 (face store)
+**A face in its photo and a face cut from it: `BoxedPicture` and `Thumbnail region`** (branch `claude/project-thread-2fs8bi`). Jonathan asked for strata-models' one face database to have its own face screens built from common components, so other apps (bright-horizons, strata-360, strata-stills) can show their faces the same way. The parts were mostly here already (`SelectableGrid` for choosing among crops, `Thumbnail` for a crop, `ViewportFrame` + `BoxOverlay` for boxes on a picture); two gaps were left, each something every app would write by hand. No dependency added.
+- `src/lib/boxes.ts`: `PictureRegion` and `regionStyle`, where to put a whole picture so one padded box fills a frame of a given shape (never squashed, centred; percentages, so no measuring).
+- `src/components/thumbnail.tsx`: `region`, one box of the picture filling the thumbnail, with the loading, missing and lazy rules unchanged: a face shown from the photo an app already has, without a crop endpoint.
+- `src/components/boxed-picture.tsx` **new**: `BoxedPicture`, the picture in a `ViewportFrame` with its `BoxOverlay`, opened zoomed to the chosen box once the frame has a size (a layout effect, so the photo never shows fitted first) and zoomed again when another box is chosen here or in a `BoxList`; `zoom={false}` keeps it fitted; a missing picture says so in the product's words. The chosen face has a heavier outline and no fill: the first baseline showed the box's subtle fill greying out the face.
+- `src/components/box-overlay.tsx`: `fillLit` (default `true`, as before), `false` to mark the pointed or chosen box by its outline only.
+- `src/index.ts`: exports both and `regionStyle`, `PictureRegion`.
+- `stories/fixtures/faces.ts` **new** (a group photo drawn as SVG with three face boxes), `stories/boxed-picture.stories.tsx` **new** (opened on a face, the whole photo, photo not kept), `stories/thumbnail.stories.tsx` (Region).
+- `tests/unit/boxed-picture.test.tsx` **new**: `regionStyle` numbers, `Thumbnail region` placement, opening zoomed, zooming from the list, fitted with zoom off, the missing photo.
+- `tests/visual/baselines/`: 8 new (`data-boxedpicture--*`, `data-thumbnail--region--*`); no existing baseline changed.
+- `README.md`: the pictures row names them.
+
 ## 2026-11-25 (batch of eight issues)
 **Eight issues from apps built on Strata, in one PR** (branch `claude/project-thread-ilbkfn`, issues #328, #331, #339, #340, #341, #342, #343, #344). Jonathan asked for the new issues to be fixed together. No dependency added. #305, #318 and #319 were already fixed (v1.3.4 and PR 320) and were closed without code.
 

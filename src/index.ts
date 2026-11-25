@@ -293,8 +293,9 @@ export { Lightbox, useLightboxUrl, type LightboxProps, type LightboxItem, type L
 export { RegionEditor, describeRegion, type RegionEditorProps, type EditableRegion, type RegionTone } from "./components/region-editor";
 export { BookViewer, useBookUrl, type BookPage, type BookUrl, type BookViewerProps } from "./components/book-viewer";
 export { findPage, pageName, sayPosition, viewOf, viewsOf, type PageNames } from "./lib/book";
+export { BoxedPicture, type BoxedPictureProps } from "./components/boxed-picture";
 export { BoxOverlay, BoxList, useBoxes, type BoxOverlayProps, type BoxListProps, type BoxesState, type BoxSource } from "./components/box-overlay";
-export { readingOrder, zoomToBox, type PictureBox, type BoxTone } from "./lib/boxes";
+export { readingOrder, zoomToBox, regionStyle, type PictureBox, type BoxTone, type PictureRegion } from "./lib/boxes";
 export { moveRect, resizeRect, fitRect, drawRect, lerpRect, ease, turnedSize, turnRect, normaliseAngle, splitRect, joinRects, gutterOf, moveGutter, type Rect, type Handle, type RectLimits, type Easing } from "./lib/region";
 export { SequenceTimeline, type SequenceTimelineProps, type SequenceItem, type CutRoom, type CutChange } from "./components/sequence-timeline";
 export { snapToGrid, stepOnGrid, gridPoints, clampToRoom, settleCut, type Grid, type CutLimit } from "./lib/sequence";

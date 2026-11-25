@@ -3,6 +3,7 @@ import { ImageOff } from "lucide-react";
 import { Skeleton } from "./data-view";
 import { useInView } from "../lib/in-view";
 import { cn } from "../lib/utils";
+import { regionStyle, type PictureRegion } from "../lib/boxes";
 
 // A photo or crop from an API, in a list, a table cell or a grid (strata-react issue #33, from
 // the Bright Horizons review app, where some crops 404 because the file is missing on disk). A
@@ -53,6 +54,12 @@ import { cn } from "../lib/utils";
 // - `onMissing()` is called once when the thumbnail ends in its missing state after asking for
 //   something (not for `src={null}`), so an app can record that the item behind it has gone.
 
+// One box of a bigger picture (strata-models' face store, where every app shows faces cut from photos):
+// `region` draws the whole picture placed so that the box fills the thumbnail, so an app shows a face,
+// or an OCR line, from the photo it already has, with the loading, missing and lazy rules above,
+// without a crop endpoint. A server crop (a smaller file) is still better for a grid of hundreds from
+// different photos; `region` is for a few faces of one photo, or before the server has cut one.
+
 /** A width-over-height ratio: a number (`1.5`) or a fraction (`"4/3"`). */
 export type AspectRatio = number | `${number}/${number}`;
 
@@ -78,6 +85,8 @@ export type ThumbnailProps = {
   onLoad?: (image: HTMLImageElement, index: number) => boolean | void;
   /** Called once when the thumbnail ends in its missing state after a request failed or was rejected, never for a record with no source. */
   onMissing?: () => void;
+  /** Show one box of the picture, filling the thumbnail (a face from a photo): the picture's size, the box in its pixels and `pad`, how many times the box the crop is (default 1.6). `fit` does not apply. */
+  region?: PictureRegion;
   /** Overlays drawn above the image in the same box (a running time, a "Saved" badge), in place whether the image has loaded, failed or is missing. */
   children?: React.ReactNode;
 } & (
@@ -98,6 +107,12 @@ export type ThumbnailProps = {
 type Phase = "loading" | "loaded" | "missing";
 type Outcome = { key: string; index: number; done: "loaded" | "missing" | null };
 
+const ratioNumber = (aspect: AspectRatio) => {
+  if (typeof aspect === "number") return aspect;
+  const [w, h] = aspect.split("/").map(Number);
+  return w! / h!;
+};
+
 const ratio = (aspect: AspectRatio) => (typeof aspect === "number" ? String(aspect) : aspect.replace("/", " / "));
 
 /** A box of fixed aspect ratio for a remote image: a skeleton until it loads, the `missing` words (or a `fallback`) if it cannot, a request only when it nears the screen, and `children` overlaid in its corners. `alt` and `missing` or `fallback` are required. */
@@ -115,6 +130,7 @@ export function Thumbnail({
   fallback,
   onLoad,
   onMissing,
+  region,
   children,
 }: ThumbnailProps) {
   // The outcome is kept with the request it belongs to (the sources and `srcSet`, since the browser may
@@ -164,7 +180,12 @@ export function Thumbnail({
           decoding="async"
           onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : setOutcome({ key: key!, index, done: "loaded" }))}
           onError={fail}
-          className={cn("absolute inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain", phase === "loading" && "opacity-0")}
+          style={region ? regionStyle(region, ratioNumber(aspect)) : undefined}
+          className={cn(
+            "absolute",
+            region ? "max-w-none" : ["inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain"],
+            phase === "loading" && "opacity-0",
+          )}
         />
       )}
       {phase === "missing" && (

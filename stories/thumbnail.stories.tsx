@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DataView, EmptyState, Skeleton, Thumbnail, ThumbnailSkeleton, fetchJson, format, useLoad } from "../src";
 import { piecePhotos, type PiecePhoto } from "./fixtures/kiln";
 import { api, photosLoading, piecesLoading } from "./mocks/handlers";
+import { PHOTO_SIZE, groupPhoto, photoFaces } from "./fixtures/faces";
 
 // A Thumbnail has its shape before the photo arrives, a skeleton while it loads, and says
 // "Photo not found" when it cannot be loaded or there is none. The photos come from MSW, so the
@@ -29,6 +30,18 @@ export const Missing: Story = { args: { src: "/api/photos/p-305-moved.svg", alt:
 export const SourcesInOrder: Story = { args: { src: ["/api/photos/p-305-moved.svg", "/api/photos/p-301.svg"], alt: "Celadon bowl, front" } };
 
 export const NoPhoto: Story = { args: { src: null, alt: "Raku dish", missing: "No photo yet" } };
+
+/** `region`: one box of a bigger photo fills the thumbnail (faces from a group photo, by the face store's boxes), padded and never squashed, from the one picture. */
+export const Region: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-start gap-4">
+      {photoFaces.map((f) => (
+        <Thumbnail key={f.id} src={groupPhoto} alt={f.label} missing="Photo not kept" region={{ of: PHOTO_SIZE, box: f }} className="w-24" />
+      ))}
+      <Thumbnail src={groupPhoto} alt={photoFaces[1]!.label} missing="Photo not kept" region={{ of: PHOTO_SIZE, box: photoFaces[1]!, pad: 2.4 }} aspect="3/4" className="w-24" />
+    </div>
+  ),
+};
 
 /** The box takes `aspect`; `fit="contain"` shows the whole image inside it instead of cropping. */
 export const Shapes: Story = {

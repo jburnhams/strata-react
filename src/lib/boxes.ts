@@ -43,3 +43,25 @@ export function zoomToBox(box: Rect, of: { w: number; h: number }, frame: { widt
   const shares: ShareBox = [(ox + (box.x - mx) * s) / frame.width, (oy + (box.y - my) * s) / frame.height, ((box.w + 2 * mx) * s) / frame.width, ((box.h + 2 * my) * s) / frame.height];
   return boxViewport(shares, frame);
 }
+
+/** One box of a picture to show on its own, as `Thumbnail`'s `region` takes it: the picture's size, the box in its pixels, and `pad`, how many times the box's size the crop is (default 1.6, a face with its hair and chin). */
+export type PictureRegion = { of: { w: number; h: number }; box: Rect; pad?: number };
+
+/**
+ * Where the whole picture goes so that one box of it fills a frame of `aspect` (width over height), as
+ * percentages of the frame: the crop is the box grown `pad` times about its centre, then widened or
+ * heightened to the frame's shape, so the box is never squashed and stays in the middle. A crop that
+ * runs past the picture's edge shows the frame's own ground there, as a face at the edge of a photo
+ * is shown by a server crop that pads. No canvas and no second request: the browser draws the one
+ * picture, which a list of faces from the same photo shares from its cache.
+ */
+export function regionStyle({ of, box, pad = 1.6 }: PictureRegion, aspect: number): { left: string; top: string; width: string; height: string } {
+  let cw = Math.max(box.w * pad, 1);
+  let ch = Math.max(box.h * pad, 1);
+  if (cw / ch < aspect) cw = ch * aspect;
+  else ch = cw / aspect;
+  const x0 = box.x + box.w / 2 - cw / 2;
+  const y0 = box.y + box.h / 2 - ch / 2;
+  const pct = (n: number) => `${+(n * 100).toFixed(4) || 0}%`; // `|| 0`: never "-0%"
+  return { left: pct(-x0 / cw), top: pct(-y0 / ch), width: pct(of.w / cw), height: pct(of.h / ch) };
+}
