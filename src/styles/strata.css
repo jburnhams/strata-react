@@ -5,3 +5,4 @@
    for an app that brings its own look. */
 @import "./strata.bare.css";
 @import "./theme.css";
+@import "./palettes.css";

@@ -15,6 +15,7 @@ import {
   Meter,
   NativeSelect,
   PageHeader,
+  PaletteChoice,
   Status,
   Switch,
   Tabs,
@@ -67,7 +68,7 @@ function Controls() {
   const [lid, setLid] = React.useState(true);
   return (
     <main className="mx-auto grid max-w-5xl gap-10 p-8">
-      <PageHeader title="Controls" scope="Strata's default look, every kind of control" actions={<Button variant="default">Book a firing</Button>} />
+      <PageHeader title="Controls" scope="Strata's default look, every kind of control" actions={<><PaletteChoice compact /><Button variant="default">Book a firing</Button></>} />
       <section aria-label="Buttons" className="flex flex-wrap items-center gap-3">
         <Button variant="default">Book firing</Button>
         <Button>Message owners</Button>

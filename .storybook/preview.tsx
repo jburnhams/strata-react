@@ -15,7 +15,7 @@ import { handlers } from "../stories/mocks/handlers";
 // product would.
 
 const withFrame: Decorator = (Story, context) => {
-  const { theme, density } = context.globals as { theme?: string; density?: string };
+  const { theme, density, palette } = context.globals as { theme?: string; density?: string; palette?: string };
   React.useLayoutEffect(() => {
     const root = document.documentElement;
     if (density === "compact") root.dataset.density = "compact";
@@ -24,7 +24,7 @@ const withFrame: Decorator = (Story, context) => {
   const [client] = React.useState(() => createQueryClient({ defaultOptions: { queries: { retry: false } } }));
   const route = (context.parameters.route as string | undefined) ?? "/";
   return (
-    <ThemeProvider key={theme} defaultPreference={(theme as ColorSchemePreference | undefined) ?? "light"} storageKey={null}>
+    <ThemeProvider key={`${theme}-${palette}`} defaultPreference={(theme as ColorSchemePreference | undefined) ?? "light"} storageKey={null} defaultPalette={palette ?? "petrol"} paletteStorageKey={null}>
       <StrataQueryProvider client={client}>
         <MemoryRouter initialEntries={[route]}>
           <Story />
@@ -49,12 +49,16 @@ const preview: Preview = {
       description: "Light or dark theme",
       toolbar: { title: "Theme", icon: "mirror", items: ["light", "dark"], dynamicTitle: true },
     },
+    palette: {
+      description: "Palette (a theme beside light and dark)",
+      toolbar: { title: "Palette", icon: "paintbrush", items: ["petrol", "pine", "cobalt", "steel", "clay"], dynamicTitle: true },
+    },
     density: {
       description: "Control density",
       toolbar: { title: "Density", icon: "component", items: ["comfortable", "compact"], dynamicTitle: true },
     },
   },
-  initialGlobals: { theme: "light", density: "comfortable" },
+  initialGlobals: { theme: "light", density: "comfortable", palette: "petrol" },
   parameters: {
     layout: "padded",
     controls: { expanded: true },

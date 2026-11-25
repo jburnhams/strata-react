@@ -25,7 +25,8 @@ const imports = [...theme.matchAll(/^@import [^;]+;\n/gm)].map((m) => m[0]);
 if (imports.length === 0) throw new Error("src/styles/theme.css has no @import lines: the default faces would not be bundled");
 const head = bare.match(/^\/\*[\s\S]*?\*\/\n/)[0];
 const body = bare.slice(head.length).replace(geist, "");
-const look = theme.replace(/^@import [^;]+;\n/gm, "");
+const palettes = readFileSync(`${root}src/styles/palettes.css`, "utf8");
+const look = `${theme.replace(/^@import [^;]+;\n/gm, "")}\n${palettes}`;
 writeFileSync(`${root}dist/strata.css`, `${head}\n${imports.join("")}${body}\n${look}${sources}`);
 console.log("dist/strata.css written");
 

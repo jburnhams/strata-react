@@ -35,6 +35,14 @@ import { ChoiceGroup } from "./field";
 //   Each segment is named by `aria-label` on its radio and shows the same words as a tooltip; the
 //   icons are the familiar three (screen, sun, moon), and none of them is a toggle that loses the
 //   system setting. The visible words are left out only because the icons are that well known.
+// - A palette is chosen independently of the scheme (2026-11-25, Jonathan: "palettes as themes alongside
+//   dark mode, each app an easy toggle"). The provider sets `data-palette` on the same element as `.dark`;
+//   strata.css has a light and a dark block per palette keyed on it (`src/styles/palettes.css`), and the
+//   default palette is the plain :root, so no attribute and `"petrol"` are the same. The palette persists
+//   under its own key like the scheme does, with the same safeguards (storage in try/catch, a stored
+//   value that is not a palette name is ignored, other tabs follow). `PaletteChoice` is the picker: each
+//   option carries a swatch drawn in its own palette by scoping `data-palette` on the swatch, so a person
+//   sees the colours before choosing; a swatch is never the only name, the words are always there.
 // - Storybook's decorator and `renderWithStrata({ colorScheme })` run through this provider, so
 //   stories and tests see the same class, in the same place, as an app.
 
@@ -48,6 +56,49 @@ export const COLOR_SCHEME_STORAGE_KEY = "strata-color-scheme";
 
 const QUERY = "(prefers-color-scheme: dark)";
 const PREFERENCES: readonly ColorSchemePreference[] = ["system", "light", "dark"];
+
+/** A palette Strata ships: its name (the `data-palette` value) and the words `PaletteChoice` shows. */
+export type PaletteOption = { name: string; label: string; detail?: string };
+
+/** The palettes in `strata.css`: the default first, then four others. An app that adds its own in CSS passes its own list to `PaletteChoice`. */
+export const palettes: readonly PaletteOption[] = [
+  { name: "petrol", label: "Petrol and marigold", detail: "The default" },
+  { name: "pine", label: "Pine and coral" },
+  { name: "cobalt", label: "Cobalt and tangerine" },
+  { name: "steel", label: "Steel and mint" },
+  { name: "clay", label: "Clay and teal" },
+];
+
+/** The default palette: the plain `:root` look, with no override. */
+export const DEFAULT_PALETTE = "petrol";
+
+/** The localStorage key `ThemeProvider` keeps the palette under unless given another. */
+export const PALETTE_STORAGE_KEY = "strata-palette";
+
+const PALETTE_NAME = /^[a-z][a-z0-9-]{0,31}$/;
+
+function isPalette(value: unknown): value is string {
+  return typeof value === "string" && PALETTE_NAME.test(value);
+}
+
+function readStoredPalette(key: string | null): string | null {
+  if (key === null) return null;
+  try {
+    const value = window.localStorage.getItem(key);
+    return isPalette(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPalette(key: string | null, value: string) {
+  if (key === null) return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable: the palette lasts this visit only.
+  }
+}
 
 function isPreference(value: unknown): value is ColorSchemePreference {
   return typeof value === "string" && (PREFERENCES as readonly string[]).includes(value);
@@ -100,11 +151,18 @@ export type ColorSchemeState = {
 
 const Context = React.createContext<ColorSchemeState | null>(null);
 
+/** What `usePalette` returns: the palette name in effect and a setter that persists it. */
+export type PaletteState = { palette: string; setPalette: (palette: string) => void };
+
+const PaletteContext = React.createContext<PaletteState | null>(null);
+
 /** Sets the `.dark` class strata.css keys on, from a system, light or dark preference that persists in localStorage when it can. */
 export function ThemeProvider({
   children,
   defaultPreference = "system",
   storageKey = COLOR_SCHEME_STORAGE_KEY,
+  defaultPalette = DEFAULT_PALETTE,
+  paletteStorageKey = PALETTE_STORAGE_KEY,
   target,
   density,
 }: {
@@ -113,6 +171,10 @@ export function ThemeProvider({
   defaultPreference?: ColorSchemePreference;
   /** Where the choice is kept in localStorage; `null` keeps it for this visit only. */
   storageKey?: string | null;
+  /** The palette before a person has chosen one: a `data-palette` name from `palettes` (or the app's own). Left out, the default palette. */
+  defaultPalette?: string;
+  /** Where the palette is kept in localStorage; `null` keeps it for this visit only. */
+  paletteStorageKey?: string | null;
   /**
    * The element that gets the `.dark` class; the document's root element when left out. A nested
    * target can turn a light page's panel dark, not the reverse: strata.css keys dark on any
@@ -165,10 +227,46 @@ export function ThemeProvider({
     return () => element.classList.remove("dark");
   }, [scheme, target]);
 
+  // The palette follows the scheme's pattern: default first, the stored choice in a layout effect.
+  const [palette, setPaletteState] = React.useState<string>(defaultPalette);
+  React.useLayoutEffect(() => {
+    const stored = readStoredPalette(paletteStorageKey);
+    if (stored) setPaletteState(stored);
+  }, [paletteStorageKey]);
+  const setPalette = React.useCallback(
+    (next: string) => {
+      if (!isPalette(next)) return;
+      setPaletteState(next);
+      writeStoredPalette(paletteStorageKey, next);
+    },
+    [paletteStorageKey],
+  );
+  React.useEffect(() => {
+    if (paletteStorageKey === null) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== paletteStorageKey && event.key !== null) return;
+      const value = event.key === null ? null : event.newValue;
+      setPaletteState(isPalette(value) ? value : defaultPalette);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [paletteStorageKey, defaultPalette]);
+  React.useLayoutEffect(() => {
+    const element = target === undefined ? document.documentElement : target;
+    if (!element) return;
+    element.setAttribute("data-palette", palette);
+    return () => element.removeAttribute("data-palette");
+  }, [palette, target]);
+
   useDensityOn(density, target);
 
   const value = React.useMemo(() => ({ preference, scheme, setPreference }), [preference, scheme, setPreference]);
-  return <Context.Provider value={value}>{children}</Context.Provider>;
+  const paletteValue = React.useMemo(() => ({ palette, setPalette }), [palette, setPalette]);
+  return (
+    <Context.Provider value={value}>
+      <PaletteContext.Provider value={paletteValue}>{children}</PaletteContext.Provider>
+    </Context.Provider>
+  );
 }
 
 /** The person's colour-scheme preference, the scheme in effect, and a setter that persists it. Must be inside `ThemeProvider`. */
@@ -270,6 +368,97 @@ export function ColorSchemeChoice({
         if (isPreference(value)) setPreference(value);
       }}
       choices={PREFERENCES.map((value) => ({ value, ...words[value] }))}
+    />
+  );
+}
+
+/** The palette in effect and a setter that persists it. Must be inside `ThemeProvider`. */
+export function usePalette(): PaletteState {
+  const value = React.useContext(PaletteContext);
+  if (!value) throw new Error("usePalette must be used inside a ThemeProvider.");
+  return value;
+}
+
+/**
+ * The body of an inline `<script>` for the page's `<head>` that sets `data-palette` before the first paint
+ * from the stored choice, so a page does not flash the default palette while the bundle loads. Pass the
+ * same key and default as the `ThemeProvider`; put it beside `colorSchemeScript()`.
+ */
+export function paletteScript(storageKey: string = PALETTE_STORAGE_KEY, defaultPalette: string = DEFAULT_PALETTE): string {
+  const key = JSON.stringify(storageKey);
+  const fallback = JSON.stringify(defaultPalette);
+  return (
+    `(function(){var p=${fallback};try{var s=localStorage.getItem(${key});` +
+    `if(s&&/^[a-z][a-z0-9-]{0,31}$/.test(s))p=s}catch(e){}` +
+    `document.documentElement.setAttribute("data-palette",p)})()`
+  );
+}
+
+/**
+ * The palettes as radio buttons, bound to the nearest `ThemeProvider`, each with a swatch drawn in its own
+ * palette (primary and the one warm accent) so the colours are seen before they are chosen. A list for a
+ * settings page, or `compact` swatches named "Palette" for a header. The words are always present (the
+ * list shows them, the compact form names each swatch and shows the same words as a tooltip).
+ */
+export function PaletteChoice({
+  legend,
+  options = palettes,
+  compact = false,
+  className,
+}: {
+  /** The group's name, as the page words it. Defaults to "Palette". */
+  legend?: string;
+  /** The palettes offered: names that `strata.css` (or the app's own CSS) defines under `data-palette`, with their words. Defaults to `palettes`. */
+  options?: readonly PaletteOption[];
+  /** Swatches only, for a header or footer, for an app with no settings page. */
+  compact?: boolean;
+  /** Layout at the call site (compact only). */
+  className?: string;
+}) {
+  const { palette, setPalette } = usePalette();
+  const name = React.useId();
+  const swatch = (option: PaletteOption) => (
+    // Scoping the palette on the swatch draws it in its own colours, in light and in a dark page.
+    <span data-palette={option.name} aria-hidden className="inline-flex size-5 shrink-0 overflow-hidden rounded-pill border border-border">
+      <span className="w-1/2 bg-primary" />
+      <span className="w-1/2 bg-secondary-9" />
+    </span>
+  );
+  if (compact) {
+    return (
+      <RadioGroup
+        aria-label={legend ?? "Palette"}
+        orientation="horizontal"
+        name={name}
+        value={palette}
+        onChange={setPalette}
+        className={cn("inline-flex gap-0.5 rounded-surface border border-border bg-background p-0.5", className)}
+      >
+        {options.map((option) => (
+          <Tooltip key={option.name} label={option.label}>
+            <Radio
+              value={option.name}
+              aria-label={option.label}
+              className={cn(
+                "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control transition-state",
+                "hover:bg-muted selected:bg-muted selected:ring-1 selected:ring-border",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              )}
+            >
+              {swatch(option)}
+            </Radio>
+          </Tooltip>
+        ))}
+      </RadioGroup>
+    );
+  }
+  return (
+    <ChoiceGroup
+      legend={legend ?? "Palette"}
+      name={name}
+      value={palette}
+      onChange={setPalette}
+      choices={options.map((option) => ({ value: option.name, label: option.label, detail: option.detail, leading: swatch(option) }))}
     />
   );
 }

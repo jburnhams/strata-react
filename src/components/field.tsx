@@ -169,7 +169,8 @@ function ParamSelect({ param, paramDefault, onChange, children, ...props }: Extr
 // Radio choices: React Aria's RadioGroup (a group named by its label, arrow-key movement, one tab
 // stop), and each row wraps its control so the whole row is one hit target. The dot is drawn from
 // tokens, not the platform's accent-color radio.
-export type Choice = { value: string; label: string; detail?: string };
+/** One option of a `ChoiceGroup`: its value, its words, and optionally a decorative `leading` mark (a swatch) before the words, which a screen reader skips, so the label must say it all. */
+export type Choice = { value: string; label: string; detail?: string; leading?: React.ReactNode };
 
 /** Radio choices in a fieldset with a legend; each whole row is the hit target. For 2 to 5 options that each need a sentence. */
 export function ChoiceGroup(props: ChoiceGroupProps) {
@@ -225,6 +226,7 @@ function ChoiceGroupView({
           >
             <span className="size-2 rounded-pill bg-primary opacity-0 group-selected:opacity-100" />
           </span>
+          {c.leading && <span className="mt-0.5 shrink-0">{c.leading}</span>}
           <span className="grid">
             <span className="type-body">{c.label}</span>
             {c.detail && <span className="type-body-sm text-muted-foreground">{c.detail}</span>}

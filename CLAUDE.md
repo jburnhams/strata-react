@@ -152,6 +152,9 @@ Native elements stay where the platform does it better and the stack table says 
    out in `AppShell`. Never write a matchMedia listener for dark mode: `ThemeProvider` owns the
    `.dark` class (Storybook's decorator and `renderWithStrata` use it too), `ColorSchemeChoice`
    goes on the settings page, and `colorSchemeScript()` is inlined in `<head>` to avoid a flash.
+   An app that offers palettes (the default look ships five, as `data-palette` blocks) puts
+   `PaletteChoice` beside it (or `compact` in the header) and `paletteScript()` beside the scheme's
+   script; never set `data-palette` by hand or write a palette picker.
 2. Every screen: write its one question and its finding in a comment at the top; `PageHeader`
    with the finding; blocks in the order a person asks the next questions.
 3. Every remote read: `useLoad` → `DataView` with a skeleton that mirrors the layout and an
