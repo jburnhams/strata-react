@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Thumbnail, ThumbnailSkeleton } from "../../src";
+import { forgetLoadedThumbnails } from "../../src/components/thumbnail";
 import { installFakeIntersectionObserver } from "../../src/testing";
 
 // jsdom never fetches images, so the test plays the browser's part: it says when the box scrolls
 // near (the fake IntersectionObserver) and whether the image loaded or failed (load/error events).
+
+beforeEach(forgetLoadedThumbnails); // module state: what an earlier test loaded must not show here
 
 const photo = "/api/photos/p-301.svg";
 const imgIn = (box: HTMLElement) => box.querySelector("img");
@@ -12,6 +15,7 @@ const imgIn = (box: HTMLElement) => box.querySelector("img");
 describe("Thumbnail", () => {
   let io: ReturnType<typeof installFakeIntersectionObserver>;
   beforeEach(() => {
+    forgetLoadedThumbnails();
     io = installFakeIntersectionObserver();
   });
   afterEach(() => io.uninstall());
@@ -36,6 +40,22 @@ describe("Thumbnail", () => {
     io.intersect(box, false);
     expect(imgIn(box)).toBe(img);
     expect(io.observers.every((o) => o.targets.size === 0)).toBe(true);
+  });
+
+  it("shows a picture it has loaded before at once when it mounts again, without waiting to be near the screen (#352)", () => {
+    const first = render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" />);
+    io.intersect(first.container.firstElementChild!);
+    fireEvent.load(screen.getByRole("img", { name: "Celadon bowl" }));
+    first.unmount();
+
+    const again = render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" />);
+    const box = again.container.firstElementChild as HTMLElement;
+    expect(box).not.toHaveAttribute("aria-busy");
+    expect(imgIn(box)).toHaveAttribute("src", photo);
+    // A different picture still waits for the screen.
+    const other = render(<Thumbnail src="/api/photos/p-302.svg" alt="Tenmoku cup" missing="Photo not found" />);
+    expect(other.container.firstElementChild).toHaveAttribute("aria-busy", "true");
+    expect(imgIn(other.container.firstElementChild as HTMLElement)).toBeNull();
   });
 
   it("says which photo is missing, in the product's words, when the image fails", () => {

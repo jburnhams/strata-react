@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-25 (thumbnails survive a resize)
+**`Thumbnail` shows pictures it has already loaded; `FilmStrip` keys frames by time** (branch `claude/project-thread-0ktdjf`, issue #352). Jonathan asked for the new issue from strata-reels: on the runner's Chromium the window is briefly 1×1 during a full-page capture, `FilmStrip` re-fits, every `Thumbnail` remounts as a skeleton that waits to be near the window, and strips below the fold stay skeletons although the browser has the pictures. The issue's measured log and its two fixes held; the third suggestion (a note in the `strata-visual` docs) is done too.
+
+- `src/components/thumbnail.tsx`: a module-level map of the request key to the source index that loaded (2000 entries, oldest dropped first). A `Thumbnail` that mounts for a remembered request starts as loaded and asks at once, whatever its distance from the screen; the image's own load or error event still decides the state, so a picture gone from the cache shows its skeleton and a failing one takes the missing path. `forgetLoadedThumbnails()` clears it; it is exported from the file, not the public API.
+- `src/components/film-strip.tsx`: a frame's key is its time (a repeated time gets a counter), so frames kept across a width change keep their `Thumbnail`.
+- `src/testing/index.tsx`: `renderWithStrata` and `renderRoutes` call `forgetLoadedThumbnails()` with `toast.clear()`, so each test starts from skeletons.
+- `tests/unit/thumbnail.test.tsx`, `tests/unit/film-strip.test.tsx`: a remounted thumbnail is loaded at once and a different picture still waits; a kept frame is the same element after the frames shown change.
+- `README.md` (`strata-visual`, lazy pictures): says the runner's Chromium resizes the window during a whole-page capture, so a component that measures its width re-renders then.
+- `UPGRADING.md`: a thumbnail for a picture already loaded no longer starts as a skeleton; a test that checks a repeat's loading state through plain `render` should call `forgetLoadedThumbnails` (or use `renderWithStrata`).
+- Checks: `npm run typecheck` and `npm test` pass locally (1413 unit tests). The visual and integration jobs run in CI.
+
 ## 2026-11-25 (build fix and three issues)
 **Fix main's red visual check, and three issues from a status page, in one PR** (branch `claude/project-thread-0ktdjf`, issues #348, #349, #350). Jonathan asked for the build on `main` to be fixed and the open issues solved together. CI on `main` (run 428, after #347) failed only in "Visual regression": #347's new stories (`PauseButton`, `ScheduleTable`, `SystemPanel`) and the same-site `LinkCard` baselines had been recorded before #346 made the default look the default, so they still showed Geist and green meters where CI now draws Instrument Sans and petrol. Everything else passes.
 

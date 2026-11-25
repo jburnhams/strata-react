@@ -13,6 +13,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { StrataQueryProvider, createQueryClient } from "../query";
 import { ThemeProvider, type ColorSchemePreference } from "../components/theme";
 import { StrataToastRegion, toast } from "../components/toast";
+import { forgetLoadedThumbnails } from "../components/thumbnail";
 import { MicrophoneContext, type Microphone } from "../lib/microphone";
 
 export { installLayoutShims, type LayoutBox } from "./layout";
@@ -109,6 +110,7 @@ export function renderWithStrata(
   { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, microphone, base, ...options }: StrataRenderOptions = {},
 ) {
   toast.clear(); // module state: a toast from the last test must not show in this one
+  forgetLoadedThumbnails(); // likewise the pictures a Thumbnail has loaded: each test starts from skeletons
   const baseElement = installBase(base);
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone} base={baseElement}>
@@ -148,6 +150,7 @@ export function renderRoutes(
   }: RenderRoutesOptions = {},
 ) {
   toast.clear();
+  forgetLoadedThumbnails();
   const baseElement = installBase(base);
   const router = createMemoryRouter(routes, { initialEntries: [route ?? basename ?? "/"], basename });
   const result = render(

@@ -53,6 +53,28 @@ import { cn } from "../lib/utils";
 // - `onMissing()` is called once when the thumbnail ends in its missing state after asking for
 //   something (not for `src={null}`), so an app can record that the item behind it has gone.
 
+// A picture the page has already loaded is shown at once when a `Thumbnail` for it mounts again (issue
+// #352, from strata-reels): a `FilmStrip` that re-fits after the window changes size, a list that
+// re-sorts or a row that remounts used to start every thumbnail as a skeleton that waited to be near the
+// screen, although the browser had the picture in its cache and a request would cost nothing. The
+// request key and the source index that loaded are remembered for the life of the page (bounded, oldest
+// forgotten first), and a new `Thumbnail` for the same request starts as loaded and asks at once. A
+// picture that has since gone from the cache still shows its skeleton, because the image's own load
+// event sets the state, and one that now fails goes through the usual missing path.
+const loadedBefore = new Map<string, number>();
+const LOADED_LIMIT = 2000;
+
+function remember(key: string, index: number) {
+  loadedBefore.delete(key);
+  loadedBefore.set(key, index);
+  if (loadedBefore.size > LOADED_LIMIT) loadedBefore.delete(loadedBefore.keys().next().value!);
+}
+
+/** Forgets which pictures `Thumbnail` has loaded, so a test that checks the loading state starts from nothing. `renderWithStrata` and `renderRoutes` call it. */
+export function forgetLoadedThumbnails() {
+  loadedBefore.clear();
+}
+
 /** A width-over-height ratio: a number (`1.5`) or a fraction (`"4/3"`). */
 export type AspectRatio = number | `${number}/${number}`;
 
@@ -123,12 +145,13 @@ export function Thumbnail({
   const sources = React.useMemo(() => (src === null ? [] : typeof src === "string" ? (src ? [src] : []) : src.filter(Boolean)), [src]);
   const key = sources.length ? `${sources.join("\n")} ${srcSet ?? ""}` : null;
   const [outcome, setOutcome] = React.useState<Outcome | null>(null);
-  const mine = key !== null && outcome?.key === key ? outcome : null;
+  const before = key === null ? undefined : loadedBefore.get(key);
+  const mine = key !== null && outcome?.key === key ? outcome : before !== undefined ? ({ key: key!, index: before, done: "loaded" } as Outcome) : null;
   const index = mine?.index ?? 0;
   const phase: Phase = key === null ? "missing" : mine?.done ?? "loading";
   const current = sources[index];
   const near = useInView({ active: !eager && sources.length > 0, rootMargin, once: true, unsupported: true });
-  const requested = eager || near.inView;
+  const requested = eager || near.inView || before !== undefined;
   // The next source, or the end of the list.
   const fail = () => setOutcome(index + 1 < sources.length ? { key: key!, index: index + 1, done: null } : { key: key!, index, done: "missing" });
   // An app that records what is gone is told once per request that ended without a picture.
@@ -162,7 +185,7 @@ export function Thumbnail({
           sizes={sizes}
           alt={alt}
           decoding="async"
-          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : setOutcome({ key: key!, index, done: "loaded" }))}
+          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : (remember(key!, index), setOutcome({ key: key!, index, done: "loaded" })))}
           onError={fail}
           className={cn("absolute inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain", phase === "loading" && "opacity-0")}
         />
