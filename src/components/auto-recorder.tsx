@@ -82,6 +82,7 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
   latest.current = { onTake, paused, maxSeconds, tuning };
   const mounted = React.useRef(true);
   const opening = React.useRef(false);
+  const cancelled = React.useRef(false);
 
   const hand = React.useCallback((samples: Float32Array, cut: boolean, s: MicrophoneStream) => {
     latest.current.onTake({
@@ -102,6 +103,12 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
   }, [hand]);
 
   const stop = React.useCallback(() => {
+    // Stop while the microphone is still opening (the permission prompt is up): it is closed as soon as it opens.
+    if (opening.current) {
+      cancelled.current = true;
+      setState({ phase: "idle" });
+      return;
+    }
     const s = stream.current;
     if (!s) return;
     flush();
@@ -114,6 +121,7 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
   const start = React.useCallback(async (): Promise<boolean> => {
     if (stream.current || opening.current) return false;
     opening.current = true;
+    cancelled.current = false;
     setState({ phase: "opening" });
     let recent: number[] = [];
     let opened: MicrophoneStream;
@@ -125,6 +133,7 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
         recent = [...recent.slice(1 - RECENT_CHUNKS), peakDb(chunk)];
         const quiet = latest.current.paused;
         if (!quiet) for (const taken of seg.push(chunk)) hand(taken.samples, taken.cut, s);
+        if (stream.current !== s) return; // onTake stopped the recorder: it stays stopped
         setState({
           phase: "listening",
           level: Math.max(...recent),
@@ -136,11 +145,12 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
       });
     } catch (e) {
       opening.current = false;
+      if (cancelled.current) return false; // stopped while opening: nothing to say about a device no one wants now
       setState({ phase: "failed", reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).` });
       return false;
     }
     opening.current = false;
-    if (!mounted.current) {
+    if (!mounted.current || cancelled.current) {
       opened.close();
       return false;
     }

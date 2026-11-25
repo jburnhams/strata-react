@@ -236,6 +236,79 @@ describe("useAutoRecorder", () => {
   });
 });
 
+describe("useAutoRecorder stopped from outside a chunk", () => {
+  function Stopper({ microphone }: { microphone: Microphone }) {
+    const [count, setCount] = React.useState(0);
+    const recorder: { stop: () => void } = { stop: () => {} };
+    const r = useAutoRecorder({
+      maxSeconds: 30,
+      microphone,
+      onTake: () => {
+        setCount((n) => n + 1);
+        recorder.stop();
+      },
+    });
+    recorder.stop = r.stop;
+    return (
+      <div>
+        <Button onClick={() => void r.start()}>Listen</Button>
+        <Button onClick={r.stop}>Stop listening</Button>
+        <span>
+          {r.state.phase} {count}
+        </span>
+      </div>
+    );
+  }
+
+  it("stays stopped when onTake stops it", async () => {
+    let send: ((c: Float32Array) => void) | undefined;
+    let closed = 0;
+    const microphone: Microphone = {
+      open(onSamples) {
+        send = onSamples;
+        return Promise.resolve({ sampleRate: RATE, device: null, close: () => closed++ });
+      },
+    };
+    const user = userEvent.setup();
+    renderWithStrata(<Stopper microphone={microphone} />);
+    await user.click(screen.getByRole("button", { name: "Listen" }));
+    await screen.findByText("listening 0");
+    const all = [sound(0.5, 0), sound(1, 0.3), sound(1.5, 0)];
+    act(() => {
+      for (const p of all) for (let i = 0; i < p.length; i += 2048) send?.(p.subarray(i, i + 2048));
+    });
+    expect(screen.getByText("idle 1")).toBeInTheDocument();
+    expect(closed).toBe(1);
+  });
+
+  it("closes a microphone stopped while it was opening, refused or not", async () => {
+    let finish: (() => void) | undefined;
+    let refuse: (() => void) | undefined;
+    let closed = 0;
+    const microphone: Microphone = {
+      open: () =>
+        new Promise((resolve, reject) => {
+          finish = () => resolve({ sampleRate: RATE, device: null, close: () => closed++ });
+          refuse = () => reject(new Error("no"));
+        }),
+    };
+    const user = userEvent.setup();
+    renderWithStrata(<Stopper microphone={microphone} />);
+    await user.click(screen.getByRole("button", { name: "Listen" }));
+    await screen.findByText("opening 0");
+    await user.click(screen.getByRole("button", { name: "Stop listening" }));
+    expect(screen.getByText("idle 0")).toBeInTheDocument();
+    await act(async () => finish?.());
+    expect(closed).toBe(1);
+    expect(screen.getByText("idle 0")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Listen" }));
+    await user.click(screen.getByRole("button", { name: "Stop listening" }));
+    await act(async () => refuse?.());
+    expect(screen.getByText("idle 0")).toBeInTheDocument();
+  });
+});
+
 describe("fakeMicrophone's script", () => {
   it("plays its stretches once then falls quiet, or loops them", async () => {
     const heard = (loop: boolean) =>

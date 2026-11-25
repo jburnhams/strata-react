@@ -8,7 +8,8 @@
 - `src/testing/microphone.ts`: `fakeMicrophone` takes `script` (stretches of tone and quiet) and `loop`. `speechScript(takes, { speak, gap, amplitude })` writes one.
 - `src/index.ts`, `src/testing/index.tsx`, `README.md` (Recording row).
 - `stories/recording.stories.tsx`: `ListeningForSpeech`, `ListeningHearingYou` and `ListeningPaused` are baselines. `HandsFree` (a fake reader) and `HandsFreeThisDevice` are `no-visual`.
-- `tests/unit/auto-recorder.test.tsx` (**new**, 16 tests): the segmenter over made-up speech (pads, a pause at a comma, a click, a cough, a loud room, digital quiet, the cut and the wait after it, flush and reset), and the hook through the fake microphone (takes as they end, Stop handing one over, the cut, pausing, refusals, unmounting).
+- Review (Codex): `stop()` while the microphone is still opening now closes it once it opens, instead of it starting to listen. A recorder stopped from inside `onTake` stays stopped; before, the chunk's state update put it back to listening with the microphone closed.
+- `tests/unit/auto-recorder.test.tsx` (**new**, 18 tests): the segmenter over made-up speech (pads, a pause at a comma, a click, a cough, a loud room, digital quiet, the cut and the wait after it, flush and reset), and the hook through the fake microphone (takes as they end, Stop handing one over, the cut, pausing, refusals, unmounting).
 - `tests/visual/baselines/`: the three new stories' shots.
 
 ## 2026-11-24
