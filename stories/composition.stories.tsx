@@ -75,3 +75,22 @@ export const SmallPart: Story = {
     />
   ),
 };
+
+/** Parts that come from data (by app) and may be many: `other` keeps the four largest and folds the rest into one named part. */
+export const ManyParts: Story = {
+  render: () => (
+    <CompositionBar
+      label="GPU time today, by app"
+      parts={[
+        { key: "a", label: "Render farm", value: 41 },
+        { key: "b", label: "Transcoder", value: 22 },
+        { key: "c", label: "Thumbnailer", value: 3 },
+        { key: "d", label: "Search index", value: 12 },
+        { key: "e", label: "Notebook", value: 2 },
+        { key: "f", label: "Backup check", value: 1 },
+      ]}
+      other={{ label: (n) => `${n} smaller apps` }}
+      formatValue={(v) => `${v} h`}
+    />
+  ),
+};

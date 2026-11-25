@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
@@ -90,6 +90,38 @@ describe("CompositionBar", () => {
     six[5] = { ...six[5], colour: "var(--muted-foreground)" } as (typeof six)[number];
     renderWithStrata(<CompositionBar label="Six" parts={six} formatValue={String} />);
     expect(screen.getByRole("table", { name: "Six" })).toBeInTheDocument();
+  });
+
+  describe("many parts (#377)", () => {
+    const apps = [3, 9, 1, 5, 2, 7, 4].map((v, i) => ({ key: `a${i}`, label: `App ${i + 1}`, value: v }));
+    const names = () => screen.getAllByRole("rowheader").map((r) => r.textContent);
+
+    it("folds the smallest into one last part when asked, keeping the largest four in their given order", () => {
+      renderWithStrata(
+        <CompositionBar label="GPU" parts={apps} other={{ label: (n) => `${n} other apps` }} formatValue={String} />,
+      );
+      expect(names()).toEqual(["App 2", "App 4", "App 6", "App 7", "3 other apps"]);
+      expect(screen.getByRole("rowheader", { name: "3 other apps" }).closest("tr")).toHaveTextContent("6");
+    });
+
+    it("leaves five or fewer parts alone, even with `other`", () => {
+      renderWithStrata(<CompositionBar label="GPU" parts={apps.slice(0, 5)} other={{ label: "Other" }} formatValue={String} />);
+      expect(names()).toHaveLength(5);
+      expect(names()).not.toContain("Other");
+    });
+
+    it("folds into Other and says so on the console in production instead of throwing", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        renderWithStrata(<CompositionBar label="GPU" parts={apps} formatValue={String} />);
+        expect(names()).toEqual(["App 2", "App 4", "App 6", "App 7", "Other"]);
+        expect(error).toHaveBeenCalledWith(expect.stringContaining("Pass `other`"));
+      } finally {
+        error.mockRestore();
+        vi.unstubAllEnvs();
+      }
+    });
   });
 
   it("fills the track with fractional values (flex factors are shares)", () => {
