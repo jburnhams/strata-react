@@ -64,11 +64,18 @@ export default defineVisualConfig({
               if (!restoredBounds || Math.abs(restoredBounds.height - visibleBounds.height) > 1) {
                 throw new Error("The control bar should reclaim its space when the mouse moves");
               }
+              // The clip is 12 s and the intro runs 1 to 11 s, so how far playback has got by now depends on the
+              // machine: a slower runner shot it after the intro, with no Skip button. Pin the time inside the
+              // intro so the shot is the same everywhere.
+              await video.evaluate((el: HTMLVideoElement) => { el.currentTime = 3; });
               await waitForControls(false);
+              // The button is rebuilt when the player's time catches up with the seek, so find it again.
+              await page.getByRole("button", { name: "Skip intro" }).waitFor({ state: "visible" });
             },
           },
         },
       },
+      { name: "controls", path: "/controls", states: { ready: [] } },
       {
         name: "kiln-room",
         path: "/",

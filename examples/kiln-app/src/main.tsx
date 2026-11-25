@@ -4,14 +4,11 @@
 // route mode is exercised on an app with no stories, the way strata-listory is built. The app
 // does not know it is being tested: the visual suite answers its requests with MSW handlers in
 // Node (see ../strata-visual.config.ts at the repo root).
-import "@fontsource-variable/public-sans";
-import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/jetbrains-mono";
 import "./app.css";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
-import { StrataQueryProvider } from "../../../src";
+import { StrataQueryProvider, ThemeProvider } from "../../../src";
 import { routes } from "./routes";
 
 const router = createBrowserRouter(routes, {
@@ -20,8 +17,10 @@ const router = createBrowserRouter(routes, {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <StrataQueryProvider>
-      <RouterProvider router={router} />
-    </StrataQueryProvider>
+    <ThemeProvider>
+      <StrataQueryProvider>
+        <RouterProvider router={router} />
+      </StrataQueryProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

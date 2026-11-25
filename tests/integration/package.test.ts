@@ -117,12 +117,13 @@ describe("peer contract", () => {
 
 describe("strata.css in an app", () => {
   // `sheet` is the stylesheet the app imports; `own` is the app's own CSS (a screen that still uses stock classes).
-  async function compileApp(sheet = "strata.css", own = "") {
+  async function compileApp(sheet = "strata.css", own = "", ownTheme = sheet !== "strata.css") {
     const app = mkdtempSync(join(tmpdir(), "strata-app-"));
     mkdirSync(join(app, "node_modules"));
     symlinkSync(root, join(app, "node_modules/strata-react"), "dir");
     for (const dep of ["tailwindcss"]) symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
-    writeFileSync(join(app, "theme.css"), readFileSync(join(root, ".storybook/theme.generated.css"), "utf8"));
+    // An app's own palette (what a product built before the default look brings), used with the bare contract.
+    writeFileSync(join(app, "theme.css"), ownTheme ? readFileSync(join(root, "tests/integration/fixtures/own-theme.generated.css"), "utf8") : "");
     writeFileSync(join(app, "page.tsx"), `<div className="bg-indigo-500 text-sm rounded-xl shadow-lg grid gap-4 bg-primary" />`);
     const input = `@import "tailwindcss";\n@import "strata-react/${sheet}";\n@import "./theme.css";\n@source "./page.tsx";\n${own}`;
     try {
@@ -141,13 +142,39 @@ describe("strata.css in an app", () => {
     }
   });
 
-  it("makes Geist Variable the default face, and a product's own --font-sans still wins (2026-11-25)", async () => {
-    const css = await compileApp();
-    expect(css).toContain("Geist Variable");
-    expect(css).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/);
-    const own = await compileApp("strata.css", `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`);
+  it("makes the default look part of strata.css: its faces, roles and radii (2026-11-25)", async () => {
+    const css = await compileApp("strata.css");
+    expect(css).toMatch(/--font-sans:\s*"Instrument Sans Variable"/);
+    expect(css).toMatch(/--font-mono:\s*"JetBrains Mono Variable"/);
+    expect(css).toContain("Instrument Sans Variable");
+    expect(css).not.toContain("Geist Variable");
+    for (const role of ["--radius-control: 6px;", "--radius-surface: 10px;", "--radius-overlay: 14px;", "--title-stretch: 85%;"]) {
+      expect(css, role).toContain(role);
+    }
+    expect(css).toMatch(/\.bg-primary\s*{[^}]*var\(--primary\)/);
+    expect(css).toMatch(/\.bg-danger-subtle\s*{[^}]*var\(--danger-subtle\)/);
+  });
+
+  it("lets an app override any part of the default look in a later block, or leave it with strata.bare.css", async () => {
+    const own = await compileApp("strata.css", `@theme { --radius-control: 2px; --font-sans: "Source Sans 3 Variable", sans-serif; }\n:root { --primary: red; }\n`);
+    expect(own).toContain("--radius-control: 2px;");
+    expect(own).not.toContain("--radius-control: 6px;");
     expect(own).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
-    expect(own).not.toMatch(/--font-sans:\s*"Geist Variable"/);
+    expect(own).toContain("--primary: red");
+    // The bare contract is today's no-look behaviour: the old radii, Geist, and no roles until the app brings its own.
+    const bare = await compileApp("strata.bare.css");
+    expect(bare).toContain("--radius-control: 4px;");
+    expect(bare).toContain("--radius-surface: 6px;");
+    expect(bare).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/);
+    expect(bare).not.toContain("Instrument Sans");
+    const bareOwn = await compileApp("strata.bare.css", `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`);
+    expect(bareOwn).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
+    expect(bareOwn).not.toMatch(/--font-sans:\s*"Geist Variable"/);
+  });
+
+  it("brings the reading serif only when reading.css is imported", async () => {
+    expect(await compileApp("strata.css", `@import "strata-react/reading.css";\n@source inline("font-reading");\n`)).toContain("Source Serif 4 Variable");
+    expect(await compileApp("strata.css")).not.toContain("Source Serif 4");
   });
 
   it("makes the type steps and a button's padding and icon roles with today's values as the defaults (issue #210)", async () => {
@@ -172,8 +199,8 @@ describe("strata.css in an app", () => {
     await expect(compileApp("strata.css", own)).rejects.toThrow(/Cannot apply unknown utility class/);
   });
 
-  it("makes strata.migrate.css from strata.css and nothing else", () => {
-    const strict = readFileSync(join(root, "dist/strata.css"), "utf8");
+  it("makes strata.migrate.css from strata.bare.css and nothing else", () => {
+    const strict = readFileSync(join(root, "dist/strata.bare.css"), "utf8");
     const migrate = readFileSync(join(root, "dist/strata.migrate.css"), "utf8");
     expect(strict).toContain("--color-*: initial;");
     expect(migrate).not.toContain("--color-*: initial;");

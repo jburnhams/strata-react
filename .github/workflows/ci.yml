@@ -55,5 +55,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: visual-diffs
-          path: tests/visual/output/
+          path: |
+            tests/visual/output/
           if-no-files-found: ignore

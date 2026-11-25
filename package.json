@@ -38,6 +38,14 @@
       "style": "./dist/strata.css",
       "default": "./dist/strata.css"
     },
+    "./reading.css": {
+      "style": "./dist/reading.css",
+      "default": "./dist/reading.css"
+    },
+    "./strata.bare.css": {
+      "style": "./dist/strata.bare.css",
+      "default": "./dist/strata.bare.css"
+    },
     "./strata.migrate.css": {
       "style": "./dist/strata.migrate.css",
       "default": "./dist/strata.migrate.css"
@@ -133,6 +141,9 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
     "@tanstack/react-table": "^9.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -146,8 +157,6 @@
     "tailwindcss-react-aria-components": "^2.2.0"
   },
   "devDependencies": {
-    "@fontsource-variable/archivo": "^5.3.0",
-    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/public-sans": "^5.3.0",
     "@storybook/addon-a11y": "^10.6.6",
     "@storybook/addon-docs": "^10.6.6",
