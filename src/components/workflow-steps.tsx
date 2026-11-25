@@ -135,3 +135,88 @@ export function WorkflowSteps<S extends WorkflowStage>({ label, stages, onApprov
     </ol>
   );
 }
+
+// `WorkflowSummary` (issue #373): the same run in a few words, for a list of subjects (a table cell, a
+// card), where `WorkflowSteps` in full is too much. One word and the one stage that matters, in the
+// order a person needs them: what is happening now, then what is broken, then what waits for them,
+// then what is out of date; only then "Done". The words are `WorkflowSteps`' own where the state is
+// one (so the two agree on one page), plus "Running" and "Part done", which belong to a run and not
+// a stage.
+
+/** A whole run's state, for a list of subjects: a stage state that matters, or one of the run's own. */
+export type WorkflowSummaryState = "running" | "failed" | "waiting" | "stale" | "done" | "partial" | "ready";
+
+/** A run in a few words' worth of data: its state, the stage it is about, and how many stages are done of how many. */
+export type WorkflowSummaryData<S extends WorkflowStage = WorkflowStage> = {
+  state: WorkflowSummaryState;
+  /** The stage the state is about: the one running or next, the failed one, the waiting gate, the stale one. */
+  stage?: S;
+  /** That stage's place, from 1. */
+  step?: number;
+  done: number;
+  total: number;
+};
+
+/** Reduces a run's stages to one state and the stage it is about. `running`: its job is queued or running. */
+export function summariseWorkflow<S extends WorkflowStage>(stages: readonly S[], { running = false }: { running?: boolean } = {}): WorkflowSummaryData<S> {
+  const total = stages.length;
+  const done = stages.filter((s) => s.state === "done").length;
+  const at = (state: WorkflowSummaryState, find: (s: S) => boolean): WorkflowSummaryData<S> | null => {
+    const i = stages.findIndex(find);
+    return i < 0 ? null : { state, stage: stages[i], step: i + 1, done, total };
+  };
+  if (running) return at("running", (s) => s.state !== "done") ?? { state: "running", done, total };
+  return (
+    at("failed", (s) => s.state === "failed") ??
+    at("waiting", (s) => s.state === "waiting") ??
+    at("stale", (s) => s.state === "stale") ??
+    (done === total ? { state: "done", done, total } : done === 0 ? { state: "ready", done, total } : { state: "partial", done, total })
+  );
+}
+
+/** The summary's words: the stage words `WorkflowSteps` uses, and the run's own two. */
+export type WorkflowSummaryWords = StageWords & { running?: string; partial?: string };
+
+const SUMMARY_LOOKS: Record<WorkflowSummaryState, { tone: Tone; icon: IconComponent; word: (w: Required<WorkflowSummaryWords>) => string }> = {
+  running: { tone: "info", icon: Clock, word: (w) => w.running },
+  failed: { tone: "danger", icon: CircleAlert, word: (w) => w.failed },
+  waiting: { tone: "info", icon: Eye, word: (w) => w.waiting },
+  stale: { tone: "warning", icon: RotateCcw, word: (w) => w.stale },
+  done: { tone: "success", icon: Check, word: (w) => w.done },
+  partial: { tone: "neutral", icon: CircleDashed, word: (w) => w.partial },
+  ready: { tone: "neutral", icon: CircleDashed, word: (w) => w.ready },
+};
+
+/** The sentence beside the word: which stage, and how far through. */
+export function describeWorkflowSummary(s: WorkflowSummaryData): string | null {
+  if (s.state === "running") return s.stage ? `${s.stage.title}, step ${s.step} of ${s.total}` : null;
+  if (s.state === "partial") return `${s.done} of ${format.count(s.total, "step")} done`;
+  return s.stage && s.state !== "done" && s.state !== "ready" ? s.stage.title : null;
+}
+
+/** The workflow summary's props. */
+export type WorkflowSummaryProps = {
+  /** The run's stages: `WorkflowRun.stages`. */
+  stages: readonly WorkflowStage[];
+  /** Its job is queued or running (`WorkflowRun.job` in a state that has not ended). */
+  running?: boolean;
+  /** Renames the words. */
+  words?: WorkflowSummaryWords;
+  className?: string;
+};
+
+/** A subject's run through a strata-python pipeline in a few words, for a list of subjects: running (on which step), failed (which), waiting for review (which gate), out of date, part done, or done. */
+export function WorkflowSummary({ stages, running, words, className }: WorkflowSummaryProps) {
+  const summary = summariseWorkflow(stages, { running });
+  const look = SUMMARY_LOOKS[summary.state];
+  const detail = describeWorkflowSummary(summary);
+  const all = { ...DEFAULT_WORDS, running: "Running", partial: "Part done", ...words } as Required<WorkflowSummaryWords>;
+  return (
+    <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1", className)}>
+      <Status tone={look.tone} icon={look.icon}>
+        {look.word(all)}
+      </Status>
+      {detail && <span className="type-body-sm text-muted-foreground">{detail}</span>}
+    </span>
+  );
+}
