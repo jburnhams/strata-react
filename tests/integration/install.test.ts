@@ -27,6 +27,9 @@ beforeAll(() => {
   symlinkSync(join(root, "node_modules/tailwindcss"), join(app, "node_modules/tailwindcss"), "dir");
   // strata.css loads this plugin with @plugin; npm installs a dependency of strata-react beside it.
   symlinkSync(join(root, "node_modules/tailwindcss-react-aria-components"), join(app, "node_modules/tailwindcss-react-aria-components"), "dir");
+  // The default face is a dependency too: its @font-face rules are inlined by Tailwind from beside strata-react.
+  mkdirSync(join(app, "node_modules/@fontsource-variable"), { recursive: true });
+  symlinkSync(join(root, "node_modules/@fontsource-variable/geist"), join(app, "node_modules/@fontsource-variable/geist"), "dir");
   execFileSync("git", ["init", "-q"], { cwd: app });
   writeFileSync(join(app, ".gitignore"), "node_modules\n");
   writeFileSync(join(app, "theme.css"), readFileSync(join(root, ".storybook/theme.generated.css"), "utf8"));
@@ -58,6 +61,13 @@ describe("strata-react installed from its tarball", () => {
     for (const cls of [".rounded-control", ".press", ".transition-state", ".type-label", ".h-\\(--control-h\\)"]) {
       expect(css, cls).toContain(cls);
     }
+  });
+
+  it("brings its default face with it: Geist Variable's @font-face rules and --font-sans, with no app install step", async () => {
+    const css = await compileApp();
+    expect(css).toMatch(/@font-face\s*{[^}]*font-family:\s*["']?Geist Variable["']?/);
+    expect(css).toMatch(/url\(["']?\.\/files\/geist-latin-wght-normal\.woff2/);
+    expect(css).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif/);
   });
 
   it("moves both control heights with density, and a coarse pointer still wins (issue #117)", async () => {

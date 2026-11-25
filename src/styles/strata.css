@@ -12,6 +12,13 @@
 
    The research behind every value is in jburnhams/ux-research, ui-library/tokens.md. */
 
+/* The default face, bundled so no screen is drawn in whatever the machine has (Jonathan, 2026-11-25):
+   Geist Variable from Fontsource, a dependency of this package, so an app installs nothing. The
+   @font-face rules carry unicode-range, so a browser downloads only the subset a page uses (about
+   32 KB for Latin). A product that names its own face in `--font-sans` still wins; this only
+   replaces the system fallback. Vite resolves the files, as it does for any imported CSS. */
+@import "@fontsource-variable/geist";
+
 /* strata:strict-begin */
 /* Clear Tailwind's stock namespaces right after Tailwind's own theme loads. With these gone,
    `bg-indigo-500`, `text-sm`, `rounded-xl` and `shadow-lg` do not compile at all: the only colours,
@@ -52,9 +59,10 @@
 }
 
 @theme {
-  /* System faces until the product names its own (a later @theme block wins). One family on an
-     Operate surface; --font-display is for page titles only. */
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  /* Geist Variable until the product names its own (a later @theme block wins), then the system
+     faces only for the instant before it loads. One family on an Operate surface; --font-display
+     is for page titles only. Mono stays a system face: Strata draws little code. */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-display: var(--font-sans);
 

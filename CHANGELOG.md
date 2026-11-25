@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-11-25
+**Geist Variable is the default face** (branch `geist-font`). Jonathan asked why Strata and the apps on it did not bundle their fonts through Fontsource: most apps do (nine of sixteen name a Fontsource face in their theme), but the library's own default fell back to `ui-sans-serif`, which is a different face on every machine, so an app that named none drew differently on a laptop, a phone and in CI, and its visual baselines depended on the machine's fonts. His decision (2026-11-25): Fontsource inside the library, Geist. A dependency is added on his say-so (see "Dependencies" in `CLAUDE.md`).
+
+- `package.json` (`@fontsource-variable/geist` ^5.3.0, a dependency, so an app installs nothing) and `package-lock.json`.
+- `src/styles/strata.css`: `@import "@fontsource-variable/geist"` and `--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif`. A product's own `--font-sans` in a later `@theme` still wins. The `@font-face` rules carry `unicode-range`, so a page downloads only the subsets it draws (29 KB for Latin). Mono stays a system face.
+- Checked in a real Vite 7 app built from the packed tarball: five `.woff2` files emitted, Geist installed beside strata-react with no app step, and Chromium reports the text drawn in "Geist" as a custom face. The Tailwind CLI alone leaves `url(./files/…)` relative to its output and copies nothing, so an app built that way (the homepage) must copy the files; `UPGRADING.md` says so.
+- `tests/integration/install.test.ts` (the installed package brings the `@font-face` rules and `--font-sans`), `tests/integration/package.test.ts` (Geist is the default and an app's own face wins).
+- `README.md` (Fonts), `CLAUDE.md` (stack table), `UPGRADING.md`.
+- The Storybook fixture theme names its own faces, so no story baseline moves.
+
 **Hands-free recording** (branch `claude/project-thread-cvjjmf`). Jonathan asked for a studio mode in strata-voice that is always listening, captures each prompt as he says it and moves on, so he can read without clicking. Cutting takes out of an open microphone is the part every recording app would need, so it lives here. It uses an energy detector, not a neural VAD: that needs no download or dependency, and is enough for one speaker close to a microphone. Scoring in the app catches a take that was a cough or a door. No dependency added.
 
 - `src/lib/segmenter.ts` (**new**): `createSegmenter(sampleRate, options)` with `push`, `flush`, `reset`, `noise`, `speaking`, `seconds`, and `rmsDb`. It reads 20 ms frames against the room's quiet, which it measures itself (down fast, up 2.5 dB a second, never while a take is heard). A take starts 12 dB above the quiet for 60 ms, with a floor of -55 dBFS, and continues at 6 dB less. It ends after 1 s of quiet, keeps 0.3 s either side and drops anything under 0.3 s of speech. At `maxSeconds` it cuts the take, measured to the last speech and not to the quiet still being waited out, and then waits for quiet.

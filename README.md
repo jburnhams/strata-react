@@ -70,7 +70,7 @@ automatic detection.
 
 `theme.css` supplies what Strata names but does not choose: `--success`, `--success-subtle`,
 `--warning…`, `--danger…`, `--info…` (pale tint + dark ink of one hue, ink at least 6:1),
-`--font-sans` / `--font-display` in an `@theme` block, and optionally `--title-weight`,
+`--font-sans` / `--font-display` in an `@theme` block (Strata's default `--font-sans` is Geist Variable, bundled; name your own to replace it), and optionally `--title-weight`,
 `--title-stretch`, `--title-tracking`. See `.storybook/theme.css` for a complete example (the
 kiln-room fixture).
 
@@ -301,8 +301,10 @@ many shots were pixel-identical and how many matched within tolerance (the five 
 failing are listed as `within`).
 
 **Fonts.** Every face must be one the page loads: bundle it with `@fontsource` (or your own
-`@font-face`) and name it first in the theme's `--font-*`. Strata's defaults fall through to
-`ui-sans-serif`, which is Cantarell on one Linux, DejaVu Sans on another and San Francisco on a
+`@font-face`) and name it first in the theme's `--font-*`. Strata's own default sans is Geist Variable, bundled with the package
+(`strata.css` imports it; the app's build must resolve a CSS `url()` to a `.woff2`, which Vite does and the bare Tailwind CLI does not),
+so an app that names none still loads a face. Anything that falls through to
+`ui-sans-serif` (the mono default, a face you name that fails to load) is Cantarell on one Linux, DejaVu Sans on another and San Francisco on a
 Mac, and a glyph missing from a web font (an arrow, `⌘`) falls back the same way; no threshold
 absorbs that. The runner asks Chromium which face drew each element's text and fails the shot
 naming the face and an example (`"DejaVu Sans" in <kbd> "⌘"`). `systemFonts: "warn"` reports

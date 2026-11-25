@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-25
+- The default `--font-sans` is **Geist Variable**, bundled (Fontsource, a dependency of strata-react), where it was the system sans. An app that names its own face in `--font-sans` is unchanged; an app that never did gets a new look and moved baselines (re-record them: the face is now the same on every machine, so the screenshots no longer depend on its fonts). Mono is still a system face. `strata.css` now `@import`s `@fontsource-variable/geist`, so **the app's build must resolve a CSS `url()` to a `.woff2`**: Vite does this with nothing added (the files are emitted with hashed names under the app's base); a build that runs the Tailwind CLI and esbuild on its own must copy `node_modules/@fontsource-variable/geist/files/*.woff2` next to the compiled CSS (the rules say `./files/…`) or name its own face.
+
 ## 2026-11-24
 - `RateChoice` (the speed in `MediaPlayer`, `VideoClock`, `CompareVideo`, `CompareVideoGrid`) is React Aria's `Select`, not a native select (#324): a test that did `user.selectOptions(getByRole("combobox", { name: "Playback speed" }), "1.5×")` now clicks `getByRole("button", { name: /Playback speed/ })` and then `findByRole("option", { name: "1.5×" })`. Visual baselines with a player move: the control is narrower, so a phone-width player's controls can fit on one row.
 - `createApi`'s `post`/`put`/`patch` send a `Blob`, bytes, `FormData`, `URLSearchParams` or a stream as it is (a Blob with its own type as Content-Type); before, any body was `JSON.stringify`ed, so such a body arrived as `{}`. `createTypedApi` takes `body` (not `json`) on an operation whose request body has only a non-JSON media type, so a workaround that went round the typed client through `fetchJson` can be deleted.
