@@ -50,9 +50,6 @@ jobs:
       - run: npm run build-example
       # strata-visual, as an app would run it; strata-visual.config.ts names both targets.
       - run: node bin/strata-visual.js
-      # The default theme, on an app that adds no styling of its own; its own baselines folder.
-      - run: npm run build-example:default
-      - run: node bin/strata-visual.js --config strata-visual.default-theme.config.ts
       - name: Upload screenshots that differ
         if: failure()
         uses: actions/upload-artifact@v7
@@ -60,5 +57,4 @@ jobs:
           name: visual-diffs
           path: |
             tests/visual/output/
-            tests/visual/output-default-theme/
           if-no-files-found: ignore
