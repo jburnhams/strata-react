@@ -182,7 +182,7 @@ Native elements stay where the platform does it better and the stack table says 
    `keydown` listener.
 8. A status dashboard: a level with limits is a `Meter` with named `thresholds` (one shared set
    for like things, as shares of `max`), what a whole is made of is a `CompositionBar`, a way
-   to another app or area is a `LinkCard` in a `LinkCardList`, and sizes go through
+   to another app or area is a `LinkCard` in a `LinkCardList`, a machine's timers a `ScheduleTable`, the server's own `GET /api/system` a `SystemPanel` (`useSystemInfo()`), a screen that re-reads on its own `usePoll` → `useLoad({ poll })` → `PauseButton` (never a hand-written pause state), a column that goes on a phone `hideBelow` (never a `matchMedia` filter), and sizes go through
    `format.bytes`. An app with no settings page puts `ColorSchemeChoice compact` in the header.
    A dense app sets `density="compact"` on `ThemeProvider` (or `<Density page>`), never per-control heights; a dense region is `<Density value="compact">`, and `size="sm"` picks the smaller height for one control. Control heights are `controlHeight` in `src/lib/control.ts`, never a fixed `h-9`.
    A job the server runs for a while is `useJob({ isRunning, invalidates })` → `JobStatus` with

@@ -2,6 +2,7 @@
 // tell it has rendered, and what to cut out. Storybook stories and app routes are both turned into
 // shots, so capture, comparison and baselines are the same code for a component library and for
 // an app's screens (strata-react issue #13).
+import type { PinnedSystemFont } from "./fonts";
 import type { Page } from "playwright";
 import type { RequestHandler } from "msw";
 import type { CompareOptions } from "./compare";
@@ -146,8 +147,13 @@ export interface VisualConfig {
    * lacks). `error` (default) fails the shot, because no comparison threshold makes Cantarell
    * match San Francisco; `warn` reports it; `allow` skips the check. Bundle every face with
    * `@fontsource` (or your own `@font-face`) and name it first in the theme's `--font-*`.
+   *
+   * An app that chooses `system-ui` on purpose (so a page never waits on a font download) pins it
+   * instead: `{ pin: "DejaVu Sans", files: ["tests/visual/fonts/DejaVuSans.ttf"] }` makes every
+   * system family mean that face in the runner's Chromium, on every machine (issue #342), through
+   * a fontconfig file the runner generates. Linux only; elsewhere it warns and takes the machine's face.
    */
-  systemFonts?: "error" | "warn" | "allow";
+  systemFonts?: "error" | "warn" | "allow" | PinnedSystemFont;
   /**
    * Before a whole-page shot (a route's) of a page taller than the window, show it to the page in a window as tall as itself and wait for the
    * pictures that start loading, then go back to the window's size, so a `Thumbnail` or any other lazy picture below the fold is in the

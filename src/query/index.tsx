@@ -8,6 +8,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type { Load, Stale } from "../components/data-view";
+import { usePollBinding, type Poll } from "./poll";
 import { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody } from "../lib/errors";
 
 export { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody };
@@ -59,12 +60,18 @@ export function staleOf(
   return { message: describe(query.error), readAt: new Date(query.dataUpdatedAt), retry: () => void query.refetch(), retrying: query.isFetching };
 }
 
-/** `useQuery`, returned as a `Load<T>` for `DataView`. */
+/** `useQuery`, returned as a `Load<T>` for `DataView`. With `poll` (from `usePoll`) it reads again every `poll.every` ms until the person pauses it. */
 export function useLoad<T, K extends QueryKey = QueryKey>(
-  options: UseQueryOptions<T, Error, T, K> & { describeError?: DescribeError },
+  options: UseQueryOptions<T, Error, T, K> & {
+    describeError?: DescribeError;
+    /** Read again on this poll's interval unless it is paused; see `usePoll` and `PauseButton`. Replaces `refetchInterval`. */
+    poll?: Poll;
+  },
 ): Load<T> {
-  const { describeError, ...rest } = options;
-  return toLoad(useQuery(rest), describeError);
+  const { describeError, poll, ...rest } = options;
+  const query = useQuery(poll ? { ...rest, refetchInterval: poll.paused ? false : poll.every } : rest);
+  usePollBinding(poll, query);
+  return toLoad(query, describeError);
 }
 
 /** What `fetchJson` takes as `fetch`'s init, plus `json`. */
@@ -116,6 +123,7 @@ export async function fetchJson<T>(input: string | URL, init?: FetchJsonInit, { 
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+export { usePoll, type Poll } from "./poll";
 export { createApi, type Api, type ApiOptions } from "./api";
 export { createTypedApi, type TypedApi } from "./typed-api";
 export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";

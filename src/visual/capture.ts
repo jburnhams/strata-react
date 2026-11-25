@@ -10,6 +10,9 @@ import type { Shot, VisualConfig } from "./types";
 // Where ThemeProvider and colorSchemeScript() keep the preference (COLOR_SCHEME_STORAGE_KEY in components/theme.tsx; copied, not imported, so the runner loads no React).
 const COLOR_SCHEME_STORAGE_KEY = "strata-color-scheme";
 
+// How long a whole-page shot waits for the pictures that have started loading (issue #331).
+const PICTURES_WAIT_MS = 15_000;
+
 // Animations and transitions off, caret hidden: a screenshot is of the settled state.
 const freeze = `*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`;
 
@@ -25,6 +28,8 @@ export interface CaptureOptions {
   onUnhandledRequest?: "error" | "bypass";
   /** Look up which faces drew the page's text and return the ones that are not web fonts. Default true. */
   checkFonts?: boolean;
+  /** A family the runner pinned every system family to (`systemFonts: { pin }`): text drawn in it is deterministic, so it is not reported. */
+  pinnedFamily?: string;
   /** Scroll a page taller than the window through before the shot, so pictures that wait until they are near the window have loaded (issue #273). Default true. */
   scrollThrough?: boolean;
 }
@@ -143,11 +148,11 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     await settle(page);
     // Only a whole-page shot: a component's shot is of its own box, and scrolling a story moved virtualised lists on (their shots got shorter).
     const lazy = options.scrollThrough !== false && shot.clip === "page";
-    if (lazy) await scrollThrough(page);
+    if (lazy) await scrollThrough(page, problems);
     if (shot.setup) {
       await shot.setup(page, shot);
       await settle(page);
-      if (lazy) await scrollThrough(page);
+      if (lazy) await scrollThrough(page, problems);
     }
     let png: Buffer;
     if (shot.clip === "page") {
@@ -157,7 +162,7 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
       if (!clip) throw new Error("rendered nothing visible");
       png = await stable(page, () => page.screenshot({ fullPage: true, clip, animations: "disabled" }));
     }
-    const systemFonts = options.checkFonts === false ? [] : await platformFonts(page);
+    const systemFonts = options.checkFonts === false ? [] : await platformFonts(page, options.pinnedFamily);
     return { png, problems, systemFonts };
   } finally {
     await context.close();
@@ -195,8 +200,15 @@ async function stable(page: Page, take: () => Promise<Buffer>): Promise<Buffer> 
  * window is shown to the page as a window as tall as itself (a few times over, in case what loads makes it taller),
  * the pictures that started loading are waited for, and the window goes back to its size. Not a scroll: scrolling
  * moved fixed elements (an undo bar) off where the shot has always drawn them, a window as tall as the page does not.
+ *
+ * The wait for the pictures is up to 15 s, not 3: on a loaded CI runner 18 small SVGs answered by MSW in Node took
+ * longer than 3 s, the wait gave up without a word, and `stable()` then agreed with itself on two shots of
+ * skeletons (their pulse is frozen, so nothing changed between them), which compared against a baseline of pictures
+ * (issue #331). A wait that still runs out is now a problem on the shot, with the count and the first sources, so
+ * the failure names its cause. A picture that is held open on purpose in a whole-page shot is reported the same way;
+ * turn `scrollThrough` off for that run.
  */
-async function scrollThrough(page: Page) {
+async function scrollThrough(page: Page, problems: string[]) {
   const size = page.viewportSize();
   if (!size) return;
   let grew = false;
@@ -207,7 +219,12 @@ async function scrollThrough(page: Page) {
     // Bounded: a page that grows as it is shown (an endless feed) is read to 20000 px and no further.
     await page.setViewportSize({ width: size.width, height: Math.min(height, 20_000) });
     await page.waitForTimeout(100);
-    await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: 3_000 }).catch(() => undefined);
+    await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: PICTURES_WAIT_MS }).catch(() => undefined);
+  }
+  const late = await page.evaluate(() => [...document.images].filter((img) => !img.complete).map((img) => img.currentSrc || img.src));
+  if (late.length) {
+    const shown = late.slice(0, 3).map((src) => new URL(src, "http://x").pathname);
+    problems.push(`${late.length} ${late.length === 1 ? "picture" : "pictures"} had not loaded after ${PICTURES_WAIT_MS / 1000}s (${shown.join(", ")}${late.length > 3 ? ", …" : ""})`);
   }
   if (!grew) return;
   await page.setViewportSize(size);
@@ -254,7 +271,7 @@ async function settle(page: Page) {
 // browser is pinned: the same `ui-sans-serif` is Cantarell on one Linux, DejaVu on another and
 // San Francisco on a Mac, and a glyph missing from a web font (an arrow, ⌘) falls back to
 // whatever the machine has. So the shot reports it rather than tolerating it in the comparison.
-async function platformFonts(page: Page): Promise<string[]> {
+async function platformFonts(page: Page, pinned?: string): Promise<string[]> {
   const cdp = await page.context().newCDPSession(page);
   try {
     await cdp.send("DOM.enable");
@@ -286,7 +303,7 @@ async function platformFonts(page: Page): Promise<string[]> {
       // A node that is not rendered (display: none) has no fonts and is skipped by Chromium.
       const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId: t.id }).catch(() => ({ fonts: [] }));
       for (const f of fonts) {
-        if (f.isCustomFont || found.has(f.familyName)) continue;
+        if (f.isCustomFont || f.familyName === pinned || found.has(f.familyName)) continue;
         const text = t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text;
         // The CSS stack that fell through to the machine, so a `--font-mono` that names a face the app did not import is
         // recognisable as such (issue #136): the glyph or the whole stack was missing from the bundled faces.

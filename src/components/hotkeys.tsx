@@ -11,6 +11,14 @@ import { cn } from "../lib/utils";
 //   2. They never take a chord: with Ctrl, Meta or Alt held the browser and the OS keep the key.
 //      Shift is part of the key itself, so "?" works and "A" is not "a".
 //   3. Holding a key does not repeat an answer; only shortcuts marked `repeat` (moving) repeat.
+//   4. They are also heard in the capture phase for a key pressed on a control inside a grid or
+//      table row (a tile's checkbox, a row's button). React Aria's `useGridListItem` calls
+//      `stopPropagation` for every key but Tab pressed on such a child ("we don't want to trigger
+//      grid level interactions"), which also stops the native event bubbling to `window`, so after
+//      a click on a tile's checkbox `a` never arrived (issue #328). Only that case is taken early:
+//      the grid does nothing with those keys, so nothing is done twice. Every other key keeps the
+//      bubble phase, which lets a part that handles a key itself (a slider's arrows and Space, a
+//      menu's typeahead) call `preventDefault` or stop it first, as it always could.
 // The same list drives the handler and the legend, so a shortcut cannot exist without being
 // shown, and the legend cannot advertise a key that does nothing.
 
@@ -38,12 +46,19 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+// A control inside a row of a grid or table: React Aria's row hooks stop the keys pressed on it.
+function isRowChild(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const row = target.closest("[role=row]");
+  return row !== null && row !== target;
+}
+
 function toShortcuts(input: Shortcut[] | Record<string, () => void>): Shortcut[] {
   return Array.isArray(input) ? input : Object.entries(input).map(([key, run]) => ({ keys: [key], label: key, run }));
 }
 
 /**
- * Binds single-key shortcuts on the window, ignoring keys typed into fields, chords with Ctrl, Meta
+ * Binds single-key shortcuts on the window (also for a key pressed on a control inside a grid row, whose React Aria hooks stop propagation), ignoring keys typed into fields, chords with Ctrl, Meta
  * or Alt, IME composition and (unless `repeat`) held keys. Pass the same list to `KeysLegend`.
  */
 export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, { enabled = true }: { enabled?: boolean } = {}) {
@@ -53,7 +68,11 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
 
   React.useEffect(() => {
     if (!enabled) return;
+    // One press may be seen twice (capture, then bubble): it runs once.
+    const seen = new WeakSet<Event>();
     const onKeyDown = (e: KeyboardEvent) => {
+      if (seen.has(e)) return;
+      seen.add(e);
       if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
       const hit = latest.current.find((s) => !s.disabled && s.keys.includes(e.key));
@@ -61,8 +80,15 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
       e.preventDefault();
       hit.run();
     };
+    const early = (e: KeyboardEvent) => {
+      if (isRowChild(e.target)) onKeyDown(e);
+    };
+    window.addEventListener("keydown", early, true);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", early, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [enabled]);
 }
 

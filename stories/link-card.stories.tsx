@@ -16,7 +16,18 @@ export const Route: Story = {
   decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
 };
 
-/** `href` leaves the app, so the card says so with an arrow before it is pressed. */
+/** Another app behind the same reverse proxy is an `href` but does not leave the site, so it has no arrow. */
+export const SameSite: Story = {
+  args: {
+    href: "/notes/",
+    title: "Notes",
+    description: "Firing notes and glaze test results, kept by the co-op.",
+    marks: <Status tone="success">Running</Status>,
+  },
+  decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
+};
+
+/** An `href` on another origin leaves the site, so the card says so with an arrow before it is pressed. */
 export const Elsewhere: Story = {
   args: {
     href: "https://glazes.kilnroom.example",

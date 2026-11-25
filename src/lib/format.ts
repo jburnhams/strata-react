@@ -34,6 +34,13 @@
 // m:ss of a media player, which Intl.DurationFormat's long form is not. `share` is `percent` for a
 // part of a whole (strata-react issue #43): a part that is there never prints as "0%", nor a part
 // short of the whole as "100%".
+//
+// Four more came from a status page (strata-react issue #341, jburnhams/homepage), each written by
+// hand there because `format` had no equivalent: `bytes` in binary units (`{ binary: true }`:
+// memory is read in KiB, MiB, GiB, and `free -h` shows them, so a decimal GB reads 7% high);
+// `duration` ("16 min", "3.5 h", "2 days" to say how long, or `style: "parts"` for an uptime,
+// "1d 1h 0m"), which `runningTime`'s clock cannot say; `measure` (a reading and its unit, "12.3 GB",
+// "41%"); and `agoTick` ("now", "−30 s", "−2 min") for the axis of a history chart.
 
 export const NBSP = " ";
 
@@ -44,6 +51,20 @@ export const MISSING = "–";
 export type ByteUnit = "B" | "kB" | "MB" | "GB" | "TB" | "PB";
 const BYTE_UNITS: readonly ByteUnit[] = ["B", "kB", "MB", "GB", "TB", "PB"];
 const BYTE_SIZE = Object.fromEntries(BYTE_UNITS.map((u, i) => [u, 1000 ** i])) as Record<ByteUnit, number>;
+
+/** The binary byte units `format.bytes` writes with `{ binary: true }`. */
+export type BinaryByteUnit = "B" | "KiB" | "MiB" | "GiB" | "TiB" | "PiB";
+const BINARY_UNITS: readonly BinaryByteUnit[] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+const BINARY_SIZE = Object.fromEntries(BINARY_UNITS.map((u, i) => [u, 1024 ** i])) as Record<BinaryByteUnit, number>;
+const SIZE: Record<ByteUnit | BinaryByteUnit, number> = { ...BYTE_SIZE, ...BINARY_SIZE };
+
+/** What `format.bytes` and `format.byteUnit` take beyond the value: `{ binary: true }` for KiB, MiB, GiB (powers of 1024), or a unit to fix. A binary unit implies binary. */
+export type BytesOptions = { binary?: boolean; unit?: ByteUnit | BinaryByteUnit };
+
+function chooseByteUnit(value: number, binary: boolean): ByteUnit | BinaryByteUnit {
+  const units: readonly (ByteUnit | BinaryByteUnit)[] = binary ? BINARY_UNITS : BYTE_UNITS;
+  return [...units].reverse().find((u) => Math.abs(value) >= SIZE[u]) ?? "B";
+}
 
 /** An `Intl.NumberFormat` that can also be called directly: `f(n)` is `f.format(n)`. `null` or `undefined` prints the placeholder. */
 export type NumberFormatter = ((value: number | bigint | Intl.StringNumericLiteral | null | undefined) => string) & {
@@ -214,12 +235,54 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
     /**
      * A size in bytes in the largest decimal unit it reaches (kB, MB, GB, TB, as disks and
      * networks are sold): one decimal below 10 ("5.2 GB"), whole above ("431 GB"). Pass `unit`
-     * to fix the unit, so figures compared side by side ("431 of 466 GB") share one.
+     * to fix the unit, so figures compared side by side ("431 of 466 GB") share one. Memory is
+     * read in binary units: `{ binary: true }` writes KiB, MiB, GiB ("7.6 GiB"), and a binary
+     * unit ("GiB") picks that too. The second argument is a unit or `{ binary, unit }`.
      */
-    bytes: (value: number, unit?: ByteUnit) => {
-      const chosen = unit ?? [...BYTE_UNITS].reverse().find((u) => Math.abs(value) >= BYTE_SIZE[u]) ?? "B";
-      const scaled = value / BYTE_SIZE[chosen];
+    bytes: (value: number, unitOrOptions?: ByteUnit | BinaryByteUnit | BytesOptions) => {
+      const { binary = false, unit } = typeof unitOrOptions === "string" ? { unit: unitOrOptions } : (unitOrOptions ?? {});
+      const chosen = unit ?? chooseByteUnit(value, binary);
+      const scaled = value / SIZE[chosen];
       return withUnit(scaled, chosen, Math.abs(scaled) < 10 && chosen !== "B" ? decimal : integer);
+    },
+    /**
+     * A length of time in words, the unit chosen by size: "45 s", "16 min", "3.5 h", "2 days". Unknown
+     * (null, negative, not finite) prints the placeholder. `style: "parts"` is an uptime, the two
+     * largest units written out: "1d 1h 0m", "2h 5m", "5m 3s". Not `runningTime`, which is a media clock.
+     */
+    duration: (seconds: number | null | undefined, { style = "approx" }: { style?: "approx" | "parts" } = {}) => {
+      if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return missing;
+      if (style === "parts") {
+        const s = Math.floor(seconds);
+        const [d, h, m] = [Math.floor(s / 86400), Math.floor((s % 86400) / 3600), Math.floor((s % 3600) / 60)];
+        if (d > 0) return `${d}d${NBSP}${h}h${NBSP}${m}m`;
+        if (h > 0) return `${h}h${NBSP}${m}m`;
+        if (m > 0) return `${m}m${NBSP}${s % 60}s`;
+        return `${s}s`;
+      }
+      if (seconds < 60) return withUnit(Math.floor(seconds), "s");
+      if (seconds < 3600) return withUnit(Math.floor(seconds / 60), "min");
+      if (seconds < 86400) return withUnit(seconds / 3600, "h", decimal);
+      const days = seconds / 86400;
+      return withUnit(days, plurals.select(Math.round(days * 10) / 10) === "one" ? "day" : "days", decimal);
+    },
+    /**
+     * A reading and its unit: `format.measure(12.34, "GB")` is "12.3 GB" (one decimal at most, a
+     * non-breaking space). `"%"` takes the figure as percent points and goes through `percent`, so
+     * the locale decides the spacing: `format.measure(41, "%")` is "41%". Unknown prints the placeholder.
+     */
+    measure: (value: number | null | undefined, unit: string) =>
+      value == null ? missing : unit === "%" ? percent.format(value / 100) : withUnit(value, unit, decimal),
+    /**
+     * A tick for the axis of a chart of the past, from seconds before now: "now", "−30 s", "−2 min",
+     * "−6 h", "−3 d" (a true minus sign). Pass it as `LineChart`'s `formatX` after turning x into seconds ago.
+     */
+    agoTick: (secondsAgo: number | null | undefined) => {
+      if (secondsAgo == null || !Number.isFinite(secondsAgo)) return missing;
+      const s = Math.abs(secondsAgo);
+      if (s < 1) return "now";
+      const [n, unit] = s < 60 ? [s, "s"] : s < 3600 ? [s / 60, "min"] : s < 86400 ? [s / 3600, "h"] : [s / 86400, "d"];
+      return `−${integer.format(n)}${NBSP}${unit}`;
     },
     /**
      * A distance in metres as a person says it: metres under a kilometre ("850 m"), then
@@ -234,7 +297,7 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
       return Math.abs(metres) < 1000 ? withUnit(metres, "m") : withUnit(metres / 1000, "km", Math.abs(metres) < 100_000 ? decimal : integer);
     },
     /** The unit `bytes` would choose for a value, to share it across a set of figures. */
-    byteUnit: (value: number): ByteUnit => [...BYTE_UNITS].reverse().find((u) => Math.abs(value) >= BYTE_SIZE[u]) ?? "B",
+    byteUnit: (value: number, { binary = false }: { binary?: boolean } = {}) => chooseByteUnit(value, binary),
     /**
      * "1 piece", "6 pieces": the count and its noun, so copy never reads "1 pieces". They are
      * joined by a non-breaking space (`NBSP`), not a plain one: in a test, match with the same

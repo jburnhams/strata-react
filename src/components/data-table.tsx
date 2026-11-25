@@ -22,6 +22,7 @@ import {
   type Selection,
 } from "react-aria-components";
 import { useSearchParams } from "react-router";
+import { useNarrowerThan, type Breakpoint } from "../lib/breakpoint";
 import { format } from "../lib/format";
 import { cn } from "../lib/utils";
 import { TableSelectionCheckbox, useShiftNote } from "./checkbox";
@@ -91,6 +92,11 @@ export type Column<T> = {
   truncate?: boolean;
   /** Keep the header for screen readers only, as for a column of row actions. `header` still names it. */
   hideHeader?: boolean;
+  /**
+   * Hide the column, header and cells together, on screens narrower than this Tailwind breakpoint
+   * (`"sm"` hides it on a phone). For the columns that are not the row's meaning (its name and state word stay). Not on the first column, which is the row's header. CSS only, except in a virtualised table, where the columns are laid out in script and are dropped by a media query instead.
+   */
+  hideBelow?: Breakpoint;
   className?: string;
 } & (
   | {
@@ -237,9 +243,12 @@ const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSorted
 // public `T` stays unconstrained so an app's row types need no change: the cast is in the two wrappers.
 type Rec = Record<string, any>; // TanStack's own RowData
 
+// `max-*:hidden` as literal class names so Tailwind finds them.
+const HIDE_BELOW: Record<Breakpoint, string> = { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" };
+
 function Table<T extends Rec>({
   caption,
-  columns,
+  columns: allColumns,
   rows,
   rowKey,
   sortState: [sort, setSort],
@@ -249,6 +258,14 @@ function Table<T extends Rec>({
   expansion,
   className,
 }: DataTableProps<T> & { sortState: SortState }) {
+  // Where the table will be virtualised its columns cannot be hidden by CSS (see `hideBelow`).
+  const willVirtualize = rows.length >= virtualizeFrom;
+  const narrower = useNarrowerThan(willVirtualize && allColumns.some((c) => c.hideBelow));
+  const columns = React.useMemo(
+    () => (willVirtualize ? allColumns.filter((c, i) => i === 0 || !c.hideBelow || !narrower.has(c.hideBelow)) : allColumns),
+    [allColumns, willVirtualize, narrower],
+  );
+  const hiddenBelow = (c: Column<T>, i: number) => (i > 0 && c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
   const defs = React.useMemo<ColumnDef<typeof features, T, unknown>[]>(
     () =>
       columns.map((c): ColumnDef<typeof features, T, unknown> => {
@@ -396,6 +413,7 @@ function Table<T extends Rec>({
               "py-2 text-left align-bottom type-caption font-normal text-muted-foreground outline-offset-[-2px]",
               i < columns.length - 1 && "pr-4",
               c.numeric && "text-right",
+              hiddenBelow(c, i),
             )}
           >
             {({ allowsSorting, sortDirection }) => {
@@ -467,6 +485,7 @@ function Table<T extends Rec>({
                       i < columns.length - 1 && "pr-4",
                       c.numeric && "text-right tabular-nums",
                       c.truncate && "max-w-48 truncate",
+                      hiddenBelow(c, i),
                       c.className,
                     )}
                   >

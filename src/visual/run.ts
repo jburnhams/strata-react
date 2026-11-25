@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import type { Browser } from "playwright";
 import { capture } from "./capture";
 import { compare, decode } from "./compare";
+import { pinSystemFont, type PinnedFonts } from "./fonts";
 import { serveStatic, type StaticServer } from "./serve";
 import { defaultThemes, routeShots, storybookShots } from "./targets";
 import type { Shot, VisualConfig, VisualReport } from "./types";
@@ -64,6 +65,7 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
   const report: VisualReport = { total: 0, same: 0, tolerated: [], changed: [], added: [], obsolete: [], errors: [], warnings: pinWarnings(cwd), updated: update, failed: false };
 
   const batches: Batch[] = [];
+  let pinned: PinnedFonts | undefined;
   try {
     if (config.storybook !== undefined) {
       const target = typeof config.storybook === "string" ? { dir: config.storybook } : config.storybook;
@@ -113,7 +115,14 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     // STRATA_VISUAL_CHROMIUM_ARGS adds flags, for experiments such as checking that the
     // comparison absorbs another rasteriser (the visual-portability workflow).
     const extraArgs = (process.env.STRATA_VISUAL_CHROMIUM_ARGS ?? "").split(/\s+/).filter(Boolean);
-    const browser = await chromium.launch({ args: ["--font-render-hinting=none", "--disable-lcd-text", "--force-color-profile=srgb", ...extraArgs] });
+    // A pinned system face (issue #342): on Linux a fontconfig file of the runner's own makes every system family that face.
+    const pin = typeof config.systemFonts === "object" ? config.systemFonts : undefined;
+    if (pin && process.platform !== "linux") report.warnings.push(`systemFonts.pin works through fontconfig and applies on Linux only; this run (${process.platform}) draws system text in the machine's own faces, so record baselines where CI does`);
+    pinned = pin && process.platform === "linux" ? pinSystemFont(pin, cwd) : undefined;
+    const browser = await chromium.launch({
+      args: ["--font-render-hinting=none", "--disable-lcd-text", "--force-color-profile=srgb", ...extraArgs],
+      ...(pinned ? { env: { ...process.env, ...pinned.env } as Record<string, string> } : {}),
+    });
     const meta: Meta = { chromium: browser.version(), platform: `${process.platform}-${process.arch}` };
     try {
       for (const batch of batches) await runBatch(browser, batch, { config, baselineDir, outputDir, update, report, log });
@@ -135,6 +144,7 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
       }
     }
   } finally {
+    pinned?.dispose();
     for (const b of batches) await b.server?.close();
   }
   report.failed = Boolean(report.errors.length || report.changed.length || (ci && !update && report.added.length));
@@ -144,13 +154,15 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
 async function runBatch(
   browser: Browser,
   batch: Batch,
-  ctx: { config: VisualConfig; baselineDir: string; outputDir: string; update: boolean; report: VisualReport; log: (l: string) => void },
+  ctx: { config: VisualConfig; baselineDir: string; outputDir: string; update: boolean; report: VisualReport; log: (l: string) => void; pinnedFamily?: string },
 ) {
   const { baselineDir, outputDir, update, report } = ctx;
   const shoot = async (shot: Shot) => {
     const file = `${shot.name}.png`;
     try {
-      const fonts = ctx.config.systemFonts ?? "error";
+      // A pin that cannot apply here (not Linux) was reported once, and its text is only a warning.
+      const configured = ctx.config.systemFonts ?? "error";
+      const fonts = typeof configured === "object" ? (ctx.pinnedFamily ? "error" : "warn") : configured;
       const { png, problems, systemFonts } = await capture(browser, shot, {
         baseUrl: batch.baseUrl,
         time: ctx.config.time,
@@ -159,6 +171,7 @@ async function runBatch(
         blockServiceWorkers: batch.blockServiceWorkers,
         onUnhandledRequest: batch.onUnhandledRequest,
         checkFonts: fonts !== "allow",
+        pinnedFamily: ctx.pinnedFamily,
         scrollThrough: ctx.config.scrollThrough,
       });
       if (systemFonts.length) {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -150,6 +150,25 @@ describe("DataTable", () => {
     expect(rendered.length).toBeGreaterThan(0);
     expect(rendered.length).toBeLessThan(40);
     expect(screen.getByRole("grid")).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
+  });
+
+  it("hides a column's header and cells together below a breakpoint, in CSS (issue #339)", () => {
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
+    renderWithStrata(<DataTable caption="Work" columns={narrowing} rows={bookings} rowKey={(b) => b.id} />);
+    const header = screen.getByRole("columnheader", { name: /Pieces/ });
+    expect(header).toHaveClass("max-sm:hidden");
+    expect(within(bodyRows()[0]).getAllByRole("gridcell").filter((c) => c.classList.contains("max-sm:hidden"))).toHaveLength(1);
+    expect(screen.getByRole("columnheader", { name: /Member/ })).not.toHaveClass("max-sm:hidden");
+  });
+
+  it("drops the column from a virtualised table on a narrow screen, where CSS cannot (issue #339)", async () => {
+    const real = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
+    onTestFinished(() => void (window.matchMedia = real));
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
+    renderWithStrata(<DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />);
+    await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
+    expect(screen.getByRole("columnheader", { name: /Member/ })).toBeInTheDocument();
   });
 
   it("renders every row of a short table", () => {

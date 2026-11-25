@@ -11,6 +11,12 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-25 (later)
+- `useHotkeys` also hears a key pressed on a control inside a grid or table row (a tile's checkbox) in the capture phase, because React Aria's row hooks stop those keys reaching `window` (#328): shortcuts that were dead after a checkbox click now run. A test that clicked the tile instead of its checkbox to avoid this can click the checkbox.
+- `LinkCard` with an `href` on the page's own origin (`/notes/`) no longer draws the leaving arrow; `external` says it either way (#340). A baseline with such a card moves: the arrow is gone.
+- `format.byteUnit(n)` is typed `ByteUnit | BinaryByteUnit` (its value for the default decimal call is unchanged); `format.bytes`'s second argument also takes `{ binary, unit }`.
+- `strata-visual` waits up to 15 s (was 3) for pictures in a whole-page shot and reports ones still not loaded as a problem on the shot (#331), where it used to pass silently; a page that holds an `<img>` request open on purpose fails its route shot until `scrollThrough: false`. `systemFonts` also takes `{ pin, files }` (#342).
+
 ## 2026-11-25
 - The default `--font-sans` is **Geist Variable**, bundled (Fontsource, a dependency of strata-react), where it was the system sans. An app that names its own face in `--font-sans` is unchanged; an app that never did gets a new look and moved baselines (re-record them: the face is now the same on every machine, so the screenshots no longer depend on its fonts). Mono is still a system face. `strata.css` now `@import`s `@fontsource-variable/geist`, so **the app's build must resolve a CSS `url()` to a `.woff2`**: Vite does this with nothing added (the files are emitted with hashed names under the app's base); a build that runs the Tailwind CLI and esbuild on its own must copy `node_modules/@fontsource-variable/geist/files/*.woff2` next to the compiled CSS (the rules say `./files/…`) or name its own face.
 
