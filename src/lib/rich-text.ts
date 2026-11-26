@@ -23,9 +23,7 @@ export type Inline =
   | { type: "link"; href: string; children: Inline[] }
   | { type: "entity"; id: string; text: string };
 
-export type Block =
-  | { type: "paragraph"; children: Inline[] }
-  | { type: "list"; ordered: boolean; items: Inline[][] };
+export type Block = { type: "paragraph"; children: Inline[] } | { type: "list"; ordered: boolean; items: Inline[][] };
 
 const WORD = /[\p{L}\p{N}_-]/u;
 

@@ -68,7 +68,13 @@ function defaultStorage(): Storage | null {
 }
 
 /** Items the server made ahead, kept on the device (localStorage) and used once each; see `useReserve`. */
-export function createReserve<T, K extends string = string>({ name, size, fetch, sameMake = () => true, storage }: ReserveOptions<T, K>): Reserve<T, K> {
+export function createReserve<T, K extends string = string>({
+  name,
+  size,
+  fetch,
+  sameMake = () => true,
+  storage,
+}: ReserveOptions<T, K>): Reserve<T, K> {
   const prefix = `strata:reserve:${name}:`;
   const store = storage === undefined ? defaultStorage() : storage;
   let persisted = store !== null;
@@ -166,5 +172,9 @@ export function useReserve<T, K extends string>(reserve: Reserve<T, K>, key: K):
     },
     [reserve],
   );
-  return React.useSyncExternalStore(subscribe, () => reserve.kept(key), () => 0);
+  return React.useSyncExternalStore(
+    subscribe,
+    () => reserve.kept(key),
+    () => 0,
+  );
 }

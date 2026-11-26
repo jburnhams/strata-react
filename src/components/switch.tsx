@@ -35,7 +35,10 @@ export function Switch({ label, detail, on, defaultOn, onChange, disabled, class
       isDisabled={disabled}
       aria-labelledby={`${id}-label`}
       aria-describedby={detail ? `${id}-detail` : undefined}
-      className={cn("group inline-flex min-h-6 cursor-pointer items-start gap-3 disabled:cursor-not-allowed disabled:opacity-50", className)}
+      className={cn(
+        "group inline-flex min-h-6 cursor-pointer items-start gap-3 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
     >
       <span
         aria-hidden
@@ -50,8 +53,14 @@ export function Switch({ label, detail, on, defaultOn, onChange, disabled, class
         </span>
       </span>
       <span className="grid">
-        <span id={`${id}-label`} className="type-body">{label}</span>
-        {detail && <span id={`${id}-detail`} className="type-body-sm text-muted-foreground">{detail}</span>}
+        <span id={`${id}-label`} className="type-body">
+          {label}
+        </span>
+        {detail && (
+          <span id={`${id}-detail`} className="type-body-sm text-muted-foreground">
+            {detail}
+          </span>
+        )}
       </span>
     </AriaSwitch>
   );

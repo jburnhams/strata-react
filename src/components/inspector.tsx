@@ -52,7 +52,10 @@ function readRemembered(key: string | null | undefined): Remembered {
   }
 }
 
-type InspectorState = { isOpen: (id: string, defaultOpen: boolean) => boolean; setOpen: (id: string, open: boolean) => void };
+type InspectorState = {
+  isOpen: (id: string, defaultOpen: boolean) => boolean;
+  setOpen: (id: string, open: boolean) => void;
+};
 const InspectorContext = React.createContext<InspectorState | null>(null);
 
 export type InspectorProps = {
@@ -76,7 +79,17 @@ export type InspectorProps = {
 };
 
 /** A panel of properties for the selected thing: a labelled region with a heading, an empty state when `title` is null, and sections whose open state is remembered. */
-export function Inspector({ title, kind, empty, selectionKey, storageKey, actions, summary, children, className }: InspectorProps) {
+export function Inspector({
+  title,
+  kind,
+  empty,
+  selectionKey,
+  storageKey,
+  actions,
+  summary,
+  children,
+  className,
+}: InspectorProps) {
   const headingId = React.useId();
   const [remembered, setRemembered] = React.useState<Remembered>(() => readRemembered(storageKey));
   const root = React.useRef<HTMLElement>(null);
@@ -119,19 +132,34 @@ export function Inspector({ title, kind, empty, selectionKey, storageKey, action
     };
   }, []);
   React.useEffect(() => {
-    if (hadFocus.current && (document.activeElement === document.body || !document.activeElement)) (heading.current ?? root.current)?.focus(); // the panel itself when the heading is gone (nothing selected)
+    if (hadFocus.current && (document.activeElement === document.body || !document.activeElement))
+      (heading.current ?? root.current)?.focus(); // the panel itself when the heading is gone (nothing selected)
   }, [selectionKey, title]);
 
   return (
     <InspectorContext.Provider value={state}>
-      <aside ref={root} data-part="inspector" tabIndex={-1} aria-labelledby={title === null ? undefined : headingId} aria-label={title === null ? "Properties" : undefined} className={cn("min-w-0", className)}>
+      <aside
+        ref={root}
+        data-part="inspector"
+        tabIndex={-1}
+        aria-labelledby={title === null ? undefined : headingId}
+        aria-label={title === null ? "Properties" : undefined}
+        className={cn("min-w-0", className)}
+      >
         {title === null ? (
           empty
         ) : (
           <div className="grid grid-cols-1 gap-4">
             <header data-part="inspector-header" className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <Heading level={2} id={headingId} ref={heading} tabIndex={-1} title={title} className="truncate type-heading outline-offset-2">
+                <Heading
+                  level={2}
+                  id={headingId}
+                  ref={heading}
+                  tabIndex={-1}
+                  title={title}
+                  className="truncate type-heading outline-offset-2"
+                >
                   {title}
                 </Heading>
                 {kind && <p className="type-body-sm text-muted-foreground">{kind}</p>}
@@ -163,13 +191,25 @@ export type InspectorSectionProps = {
 };
 
 /** A titled group of rows that collapses. The body is mounted only while open; the open state is remembered by the surrounding `Inspector` (and held locally outside one). */
-export function InspectorSection({ id, title, defaultOpen = true, actions, children, className }: InspectorSectionProps) {
+export function InspectorSection({
+  id,
+  title,
+  defaultOpen = true,
+  actions,
+  children,
+  className,
+}: InspectorSectionProps) {
   const inspector = React.useContext(InspectorContext);
   const [own, setOwn] = React.useState(defaultOpen);
   const expanded = inspector ? inspector.isOpen(id, defaultOpen) : own;
   const onChange = (open: boolean) => (inspector ? inspector.setOpen(id, open) : setOwn(open));
   return (
-    <Disclosure data-part="inspector-section" isExpanded={expanded} onExpandedChange={onChange} className={cn("min-w-0 border-t border-border first:border-t-0", className)}>
+    <Disclosure
+      data-part="inspector-section"
+      isExpanded={expanded}
+      onExpandedChange={onChange}
+      className={cn("min-w-0 border-t border-border first:border-t-0", className)}
+    >
       {({ isExpanded }) => (
         <>
           <div className="flex items-center gap-2">
@@ -178,13 +218,18 @@ export function InspectorSection({ id, title, defaultOpen = true, actions, child
                 slot="trigger"
                 className="-mx-1 flex min-h-(--control-h-sm) w-full cursor-pointer items-center gap-2 rounded-control px-1 text-left type-label hover:bg-muted"
               >
-                <ChevronRight aria-hidden className={cn("size-4 shrink-0 text-muted-foreground", isExpanded && "rotate-90")} />
+                <ChevronRight
+                  aria-hidden
+                  className={cn("size-4 shrink-0 text-muted-foreground", isExpanded && "rotate-90")}
+                />
                 <span className="min-w-0 flex-1 truncate">{title}</span>
               </AriaButton>
             </Heading>
             {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
           </div>
-          <DisclosurePanel>{isExpanded && <div className="grid grid-cols-1 gap-4 pt-2 pb-4 pl-6 *:min-w-0">{children}</div>}</DisclosurePanel>
+          <DisclosurePanel>
+            {isExpanded && <div className="grid grid-cols-1 gap-4 pt-2 pb-4 pl-6 *:min-w-0">{children}</div>}
+          </DisclosurePanel>
         </>
       )}
     </Disclosure>
@@ -207,7 +252,9 @@ export type PropertyRowProps = {
 /** One editable property: a `Field` (label, hint, error wired to the control) with a "Reset <label>" that shows only while `modified`. */
 export function PropertyRow({ label, hint, error, modified, onReset, children, className }: PropertyRowProps) {
   const reset =
-    modified && onReset ? <IconButton icon={RotateCcw} label={`Reset ${label.toLowerCase()}`} onClick={onReset} /> : undefined;
+    modified && onReset ? (
+      <IconButton icon={RotateCcw} label={`Reset ${label.toLowerCase()}`} onClick={onReset} />
+    ) : undefined;
   return (
     <Field label={label} hint={hint} error={error} action={reset} className={className}>
       {children}

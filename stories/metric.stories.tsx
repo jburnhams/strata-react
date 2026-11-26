@@ -13,7 +13,12 @@ export const KilnRoom: Story = {
   args: { label: "Kiln room now", children: null },
   render: (args) => (
     <MetricStrip label={args.label}>
-      <Metric label="Kiln 2 temperature" value={format.integer(212)} unit="°C" note="Safe to open below 200 °C, about 14:50" />
+      <Metric
+        label="Kiln 2 temperature"
+        value={format.integer(212)}
+        unit="°C"
+        note="Safe to open below 200 °C, about 14:50"
+      />
       <Metric label="Pieces waiting in kiln 2" value={format.integer(waiting)} note="From 4 members" />
       <Metric
         label="Shelves free in Friday's bisque"

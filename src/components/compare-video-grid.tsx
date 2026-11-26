@@ -3,7 +3,15 @@ import { cn } from "../lib/utils";
 import { useInView } from "../lib/in-view";
 import type { Region } from "../lib/viewport";
 import type { Candidate, VideoMedia } from "./compare";
-import { Caption, FullscreenButton, VIEWPORT_HEIGHT, ZoomControls, useWidth, useZoom, zoomShortcuts } from "./compare-parts";
+import {
+  Caption,
+  FullscreenButton,
+  VIEWPORT_HEIGHT,
+  ZoomControls,
+  useWidth,
+  useZoom,
+  zoomShortcuts,
+} from "./compare-parts";
 import { RegionChips, useRegions } from "./compare-regions";
 import { Skeleton } from "./data-view";
 import { FullscreenFrame } from "./fullscreen-frame";
@@ -82,9 +90,27 @@ export type CompareVideoGridProps = {
   className?: string;
 };
 
-const COLUMNS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-2 lg:grid-cols-3", 4: "sm:grid-cols-2 lg:grid-cols-4" } as const;
+const COLUMNS = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+} as const;
 
-function Cell({ c, index, clock, blind, isReference, children }: { c: Candidate<VideoMedia>; index: number; clock: VideoClock; blind: boolean; isReference: boolean; children: (loading: boolean) => React.ReactNode }) {
+function Cell({
+  c,
+  index,
+  clock,
+  blind,
+  isReference,
+  children,
+}: {
+  c: Candidate<VideoMedia>;
+  index: number;
+  clock: VideoClock;
+  blind: boolean;
+  isReference: boolean;
+  children: (loading: boolean) => React.ReactNode;
+}) {
   const view = useInView({ rootMargin: "200px", unsupported: true });
   const { setVisible } = clock;
   // The clock keeps the cell out of the sync while it is out of sight. (`setVisible` is new each render; only the visibility is a dependency.)
@@ -100,13 +126,43 @@ function Cell({ c, index, clock, blind, isReference, children }: { c: Candidate<
 }
 
 /** Many videos in a grid on one clock, zoomed and panned together, with regions, a loop, stepping and full screen. */
-export function CompareVideoGrid({ label, items, reference, blind, missing, catchingUp = "Catching up", actions, columns = 3, regions, rates = SLOW_RATES, moments = [], loop, onLoopChange, audio = null, autoPlay = false, loopWhole = false, pixelated = "zoomed", keys = true, extraShortcuts = [], footer, className }: CompareVideoGridProps) {
+export function CompareVideoGrid({
+  label,
+  items,
+  reference,
+  blind,
+  missing,
+  catchingUp = "Catching up",
+  actions,
+  columns = 3,
+  regions,
+  rates = SLOW_RATES,
+  moments = [],
+  loop,
+  onLoopChange,
+  audio = null,
+  autoPlay = false,
+  loopWhole = false,
+  pixelated = "zoomed",
+  keys = true,
+  extraShortcuts = [],
+  footer,
+  className,
+}: CompareVideoGridProps) {
   const cells = reference ? [reference, ...items] : [...items];
   const first = cells[0];
   const fps = first?.media.fps ?? 30;
   const audioIndex = audio === null ? null : cells.findIndex((c) => c.id === audio);
   const key = cells.map((c) => c.media.src).join("|");
-  const clock = useVideoClock({ fps, loop, onLoopChange, audio: audioIndex === null || audioIndex < 0 ? null : audioIndex, autoPlay, loopWhole, pairKey: key });
+  const clock = useVideoClock({
+    fps,
+    loop,
+    onLoopChange,
+    audio: audioIndex === null || audioIndex < 0 ? null : audioIndex,
+    autoPlay,
+    loopWhole,
+    pairKey: key,
+  });
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const frameRef = React.useRef<HTMLDivElement>(null);
@@ -115,7 +171,12 @@ export function CompareVideoGrid({ label, items, reference, blind, missing, catc
   const natural = first ? ([first.media.width, first.media.height] as const) : null;
   const rg = useRegions({ regions, viewport, setViewport, frame: frameRef, reset: key });
   const zoom = useZoom({ viewport, setViewport: rg.setViewport, frame: frameRef, natural });
-  const shortcuts: Shortcut[] = [...extraShortcuts, ...clock.shortcuts(), ...rg.shortcuts, ...zoomShortcuts(zoom, full, setFull)];
+  const shortcuts: Shortcut[] = [
+    ...extraShortcuts,
+    ...clock.shortcuts(),
+    ...rg.shortcuts,
+    ...zoomShortcuts(zoom, full, setFull),
+  ];
   useHotkeys(shortcuts, { enabled: keys });
 
   const frameHeight = frameWidth / aspect;
@@ -147,7 +208,16 @@ export function CompareVideoGrid({ label, items, reference, blind, missing, catc
               <Cell key={c.id} c={c} index={i} clock={clock} blind={blind} isReference={isReference}>
                 {(loading) => (
                   <>
-                    <ViewportFrame viewport={viewport} setViewport={rg.setViewport} onBox={clock.wanted ? undefined : rg.add} outline={rg.peek} aspect={aspect} maxHeight={VIEWPORT_HEIGHT} label={`Frame ${c.label}`} ref={i === 0 ? frameRef : undefined}>
+                    <ViewportFrame
+                      viewport={viewport}
+                      setViewport={rg.setViewport}
+                      onBox={clock.wanted ? undefined : rg.add}
+                      outline={rg.peek}
+                      aspect={aspect}
+                      maxHeight={VIEWPORT_HEIGHT}
+                      label={`Frame ${c.label}`}
+                      ref={i === 0 ? frameRef : undefined}
+                    >
                       {loading && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />}
                       <video
                         ref={clock.attach(i)}

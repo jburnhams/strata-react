@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -57,10 +57,16 @@ describe("recording arithmetic", () => {
   });
 
   it("turns the browser's refusals into sentences a person can act on", () => {
-    expect(explainMicrophoneError(new DOMException("no", "NotAllowedError")).message).toMatch(/not allowed.*address bar/);
+    expect(explainMicrophoneError(new DOMException("no", "NotAllowedError")).message).toMatch(
+      /not allowed.*address bar/,
+    );
     expect(explainMicrophoneError(new DOMException("no", "NotFoundError")).message).toMatch(/No microphone was found/);
-    expect(explainMicrophoneError(new DOMException("busy", "NotReadableError")).message).toMatch(/in use by another program/);
-    expect(explainMicrophoneError(new DOMException("odd", "AbortError")).message).toBe("The microphone could not be opened (odd).");
+    expect(explainMicrophoneError(new DOMException("busy", "NotReadableError")).message).toMatch(
+      /in use by another program/,
+    );
+    expect(explainMicrophoneError(new DOMException("odd", "AbortError")).message).toBe(
+      "The microphone could not be opened (odd).",
+    );
     expect(explainMicrophoneError("strange").message).toBe("The microphone could not be opened (strange).");
   });
 });
@@ -91,7 +97,9 @@ function Booth({ maxSeconds = 60, microphone }: { maxSeconds?: number; microphon
         Start again
       </Button>
       <span>{again}</span>
-      {recorder.state.phase === "recording" && <InputLevel level={recorder.state.level} seconds={recorder.state.seconds} maxSeconds={maxSeconds} />}
+      {recorder.state.phase === "recording" && (
+        <InputLevel level={recorder.state.level} seconds={recorder.state.seconds} maxSeconds={maxSeconds} />
+      )}
       {recorder.state.phase === "failed" && <p role="alert">{recorder.state.reason}</p>}
       {take && (
         <>
@@ -147,14 +155,22 @@ describe("useRecorder", () => {
 
   it("says why the microphone would not open", async () => {
     const user = userEvent.setup();
-    const { unmount } = renderWithStrata(<Booth microphone={fakeMicrophone({ refuse: "No microphone was found. Plug one in, then try again." })} />);
+    const { unmount } = renderWithStrata(
+      <Booth
+        microphone={fakeMicrophone({
+          refuse: "No microphone was found. Plug one in, then try again.",
+        })}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Record" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No microphone was found.");
     expect(screen.getByRole("button", { name: "Record" })).toBeInTheDocument();
     unmount();
     renderWithStrata(<Booth microphone={fakeMicrophone({ crash: true })} />);
     await user.click(screen.getByRole("button", { name: "Record" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("The microphone could not be opened (TypeError: audio graph exploded).");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The microphone could not be opened (TypeError: audio graph exploded).",
+    );
   });
 
   it("closes the microphone when the screen goes mid-take, and ignores a late chunk", async () => {

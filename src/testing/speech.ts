@@ -44,7 +44,9 @@ export function installFakeSpeech(voices: { name: string; lang: string }[] = [])
   const hadAudio = Object.getOwnPropertyDescriptor(window, "Audio");
   let clip: { entry: Spoken; audio: FakeAudio } | undefined;
   let current: { entry: Spoken; utterance: FakeUtterance } | undefined;
-  let installed = voices.map((v) => ({ ...v, default: false, localService: true, voiceURI: v.name }) as SpeechSynthesisVoice);
+  let installed = voices.map(
+    (v) => ({ ...v, default: false, localService: true, voiceURI: v.name }) as SpeechSynthesisVoice,
+  );
   const listeners = new Set<EventListener>();
   const said: Spoken[] = [];
 
@@ -81,7 +83,14 @@ export function installFakeSpeech(voices: { name: string; lang: string }[] = [])
       return current !== undefined;
     },
     speak(utterance: FakeUtterance) {
-      const entry: Spoken = { text: utterance.text, lang: utterance.lang, rate: utterance.rate, voice: utterance.voice?.name ?? null, cancelled: false, clip: null };
+      const entry: Spoken = {
+        text: utterance.text,
+        lang: utterance.lang,
+        rate: utterance.rate,
+        voice: utterance.voice?.name ?? null,
+        cancelled: false,
+        clip: null,
+      };
       said.push(entry);
       current = { entry, utterance };
     },
@@ -98,7 +107,11 @@ export function installFakeSpeech(voices: { name: string; lang: string }[] = [])
   };
 
   Object.defineProperty(window, "speechSynthesis", { configurable: true, value: synth });
-  Object.defineProperty(globalThis, "SpeechSynthesisUtterance", { configurable: true, writable: true, value: FakeUtterance });
+  Object.defineProperty(globalThis, "SpeechSynthesisUtterance", {
+    configurable: true,
+    writable: true,
+    value: FakeUtterance,
+  });
   Object.defineProperty(window, "Audio", { configurable: true, writable: true, value: FakeAudio });
 
   return {
@@ -122,7 +135,9 @@ export function installFakeSpeech(voices: { name: string; lang: string }[] = [])
       failed?.audio.onerror?.();
     },
     setVoices(next) {
-      installed = next.map((v) => ({ ...v, default: false, localService: true, voiceURI: v.name }) as SpeechSynthesisVoice);
+      installed = next.map(
+        (v) => ({ ...v, default: false, localService: true, voiceURI: v.name }) as SpeechSynthesisVoice,
+      );
       for (const l of listeners) l(new Event("voiceschanged"));
     },
     uninstall() {

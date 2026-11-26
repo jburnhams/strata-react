@@ -1,11 +1,5 @@
 import * as React from "react";
-import {
-  Dialog as AriaDialog,
-  DialogTrigger,
-  Heading,
-  Modal,
-  ModalOverlay,
-} from "react-aria-components";
+import { Dialog as AriaDialog, DialogTrigger, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { X } from "lucide-react";
 import { Button, IconButton } from "./button";
 import { describeActionError } from "../lib/errors";
@@ -62,7 +56,17 @@ const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl", full: "h-full m
 // nothing pressable to put in a trigger, and React Aria warns "A PressResponder was rendered without a
 // pressable child" for an empty one on every mount (issue #116), so it gets the controlled
 // ModalOverlay alone: it still traps focus and, on close, returns it to whatever had it before.
-function Overlay({ trigger, open, onOpenChange, children }: { trigger?: React.ReactElement; open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>> }) {
+function Overlay({
+  trigger,
+  open,
+  onOpenChange,
+  children,
+}: {
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>>;
+}) {
   if (trigger) {
     return (
       <DialogTrigger isOpen={open} onOpenChange={onOpenChange}>
@@ -71,13 +75,25 @@ function Overlay({ trigger, open, onOpenChange, children }: { trigger?: React.Re
       </DialogTrigger>
     );
   }
-  return <Driven open={open} onOpenChange={onOpenChange}>{children}</Driven>;
+  return (
+    <Driven open={open} onOpenChange={onOpenChange}>
+      {children}
+    </Driven>
+  );
 }
 
 // Without a trigger, React Aria has no element to hand focus back to, so the one that had it when
 // the dialog opened is kept (read while rendering, before the dialog moves focus in) and given it
 // back on close, unless the app has already put focus somewhere on purpose.
-function Driven({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>> }) {
+function Driven({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: React.ReactElement<React.ComponentProps<typeof ModalOverlay>>;
+}) {
   const opener = React.useRef<Element | null>(null);
   const wasOpen = React.useRef(false);
   if (open && !wasOpen.current) opener.current = typeof document === "undefined" ? null : document.activeElement;
@@ -100,13 +116,34 @@ const overlayClass = "layer-overlay fixed inset-0 grid overflow-hidden scrim";
 
 /** A modal dialog with a required title; focus goes in and returns, Escape and a close control dismiss it. `placement="end"` makes it a sheet. */
 export function Dialog({
-  title, description, trigger, open, onOpenChange, className, children, actions,
-  hideTitle, closable = true, placement = "center", size = "md",
+  title,
+  description,
+  trigger,
+  open,
+  onOpenChange,
+  className,
+  children,
+  actions,
+  hideTitle,
+  closable = true,
+  placement = "center",
+  size = "md",
 }: DialogProps) {
   const descriptionId = React.useId();
   return (
     <Overlay trigger={trigger} open={open} onOpenChange={onOpenChange}>
-      <ModalOverlay isDismissable={closable} isKeyboardDismissDisabled={!closable} className={cn(overlayClass, placement === "end" ? "justify-items-end" : size === "full" ? "grid-cols-1 grid-rows-1 p-4" : "place-items-center p-4")}>
+      <ModalOverlay
+        isDismissable={closable}
+        isKeyboardDismissDisabled={!closable}
+        className={cn(
+          overlayClass,
+          placement === "end"
+            ? "justify-items-end"
+            : size === "full"
+              ? "grid-cols-1 grid-rows-1 p-4"
+              : "place-items-center p-4",
+        )}
+      >
         <Modal
           className={cn(
             "flex max-h-full min-h-0 w-full flex-col outline-none",
@@ -115,7 +152,10 @@ export function Dialog({
             className,
           )}
         >
-          <AriaDialog aria-describedby={description != null ? descriptionId : undefined} className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
+          <AriaDialog
+            aria-describedby={description != null ? descriptionId : undefined}
+            className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none"
+          >
             {({ close }) => (
               <>
                 <div className="flex items-start justify-between gap-4">
@@ -123,13 +163,21 @@ export function Dialog({
                     <Heading slot="title" className={cn("type-heading", hideTitle && "sr-only")}>
                       {title}
                     </Heading>
-                    {description != null && <p id={descriptionId} className="type-body-sm text-muted-foreground">{description}</p>}
+                    {description != null && (
+                      <p id={descriptionId} className="type-body-sm text-muted-foreground">
+                        {description}
+                      </p>
+                    )}
                   </div>
                   {closable && <IconButton icon={X} label="Close" onPress={close} className="-mr-2 -mt-2 shrink-0" />}
                 </div>
-                {children != null && <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>}
+                {children != null && (
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+                )}
                 {actions != null && (
-                  <div className="flex flex-wrap justify-end gap-2">{typeof actions === "function" ? actions(close) : actions}</div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {typeof actions === "function" ? actions(close) : actions}
+                  </div>
                 )}
               </>
             )}
@@ -157,7 +205,16 @@ export type AlertDialogProps = Common & {
  * verb on the confirm button, focuses Cancel first and ignores outside presses.
  */
 export function AlertDialog({
-  title, description, trigger, open, onOpenChange, className, confirm, onConfirm, cancel = "Cancel", tone = "destructive",
+  title,
+  description,
+  trigger,
+  open,
+  onOpenChange,
+  className,
+  confirm,
+  onConfirm,
+  cancel = "Cancel",
+  tone = "destructive",
 }: AlertDialogProps) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -186,16 +243,30 @@ export function AlertDialog({
   };
   return (
     <Overlay trigger={trigger} open={isOpen} onOpenChange={change}>
-      <ModalOverlay isDismissable={false} isKeyboardDismissDisabled={busy} className={cn(overlayClass, "place-items-center p-4")}>
+      <ModalOverlay
+        isDismissable={false}
+        isKeyboardDismissDisabled={busy}
+        className={cn(overlayClass, "place-items-center p-4")}
+      >
         <Modal className={cn("flex max-h-full w-full max-w-sm flex-col outline-none", overlaySurface, className)}>
-          <AriaDialog role="alertdialog" aria-describedby={description != null ? descriptionId : undefined} className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none">
+          <AriaDialog
+            role="alertdialog"
+            aria-describedby={description != null ? descriptionId : undefined}
+            className="flex min-h-0 flex-1 flex-col gap-4 p-4 outline-none"
+          >
             {({ close }) => (
               <>
                 {/* The message scrolls inside the dialog on a short window or with large text; the buttons stay in view. */}
                 <div className="grid min-h-0 gap-3 overflow-y-auto overscroll-contain">
                   <div className="grid gap-1">
-                    <Heading slot="title" className="type-heading">{title}</Heading>
-                    {description != null && <p id={descriptionId} className="type-body-sm text-muted-foreground">{description}</p>}
+                    <Heading slot="title" className="type-heading">
+                      {title}
+                    </Heading>
+                    {description != null && (
+                      <p id={descriptionId} className="type-body-sm text-muted-foreground">
+                        {description}
+                      </p>
+                    )}
                   </div>
                   {error && (
                     <p role="alert" className="rounded-control bg-danger-subtle px-3 py-2 type-body-sm text-danger">
@@ -204,8 +275,15 @@ export function AlertDialog({
                   )}
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Button autoFocus disabled={busy} onPress={close}>{cancel}</Button>
-                  <Button variant={tone === "destructive" ? "destructive" : "default"} disabled={busy} aria-busy={busy || undefined} onPress={run}>
+                  <Button autoFocus disabled={busy} onPress={close}>
+                    {cancel}
+                  </Button>
+                  <Button
+                    variant={tone === "destructive" ? "destructive" : "default"}
+                    disabled={busy}
+                    aria-busy={busy || undefined}
+                    onPress={run}
+                  >
                     {busy ? `${confirm}…` : confirm}
                   </Button>
                 </div>
@@ -217,4 +295,3 @@ export function AlertDialog({
     </Overlay>
   );
 }
-

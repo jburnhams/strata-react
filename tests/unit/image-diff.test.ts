@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { differences, resample, type Pixels } from "../../src/lib/image-diff";
 
 const solid = (width: number, height: number, rgba: [number, number, number, number]): Pixels => ({
@@ -6,7 +6,8 @@ const solid = (width: number, height: number, rgba: [number, number, number, num
   height,
   data: Uint8ClampedArray.from({ length: width * height * 4 }, (_, i) => rgba[i % 4]),
 });
-const set = (p: Pixels, x: number, y: number, rgba: [number, number, number, number]) => p.data.set(rgba, (y * p.width + x) * 4);
+const set = (p: Pixels, x: number, y: number, rgba: [number, number, number, number]) =>
+  p.data.set(rgba, (y * p.width + x) * 4);
 const markAt = (d: ReturnType<typeof differences>, x: number, y: number) => d.marks[(y * d.width + x) * 4 + 3];
 
 describe("differences", () => {
@@ -56,7 +57,7 @@ describe("resample", () => {
     expect(resample(p, 2, 1)).toBe(p);
     const big = resample(p, 4, 2);
     expect([...big.data.slice(0, 4)]).toEqual([0, 0, 0, 255]);
-    expect(big.data[(0 * 4 + 3) * 4]).toBe(255);
+    expect(big.data[12]).toBe(255);
     expect(big.data[(1 * 4 + 1) * 4]).toBe(0);
   });
 });

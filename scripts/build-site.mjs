@@ -41,7 +41,10 @@ const body = [...groups]
       (s) => `<article>
     <h3><a href="../?path=/story/${esc(s.id)}">${esc(s.name)}</a></h3>
     <div class="shots">${s.shots
-      .map((f) => `<figure class="${f.endsWith("--dark.png") ? "dark" : "light"}"><img src="img/${esc(f)}" alt="${esc(`${title}: ${s.name}, ${f.endsWith("--dark.png") ? "dark" : "light"} theme`)}" loading="lazy"><figcaption>${f.endsWith("--dark.png") ? "Dark" : "Light"}</figcaption></figure>`)
+      .map(
+        (f) =>
+          `<figure class="${f.endsWith("--dark.png") ? "dark" : "light"}"><img src="img/${esc(f)}" alt="${esc(`${title}: ${s.name}, ${f.endsWith("--dark.png") ? "dark" : "light"} theme`)}" loading="lazy"><figcaption>${f.endsWith("--dark.png") ? "Dark" : "Light"}</figcaption></figure>`,
+      )
       .join("")}</div>
   </article>`,
     )
@@ -50,7 +53,9 @@ const body = [...groups]
   )
   .join("\n");
 
-const toc = [...groups.keys()].map((t) => `<a href="#${esc(t.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${esc(t)}</a>`).join("");
+const toc = [...groups.keys()]
+  .map((t) => `<a href="#${esc(t.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${esc(t)}</a>`)
+  .join("");
 
 writeFileSync(
   join(site, "visuals/index.html"),

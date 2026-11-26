@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { http, HttpResponse } from "msw";
 import { HttpError, fetchJson } from "../../src";
 import { server } from "../utils/server";
 
 describe("fetchJson", () => {
   const echo = http.get("/api/echo", ({ request }) =>
-    HttpResponse.json({ accept: request.headers.get("accept"), auth: request.headers.get("authorization") }),
+    HttpResponse.json({
+      accept: request.headers.get("accept"),
+      auth: request.headers.get("authorization"),
+    }),
   );
 
   it("keeps a caller's Headers instance and adds Accept", async () => {
@@ -19,7 +22,10 @@ describe("fetchJson", () => {
   it("keeps tuple-array headers and a caller's own Accept", async () => {
     server.use(echo);
     const body = await fetchJson<{ accept: string; auth: string }>("/api/echo", {
-      headers: [["Authorization", "Bearer t"], ["Accept", "application/vnd.kiln+json"]],
+      headers: [
+        ["Authorization", "Bearer t"],
+        ["Accept", "application/vnd.kiln+json"],
+      ],
     });
     expect(body).toEqual({ accept: "application/vnd.kiln+json", auth: "Bearer t" });
   });

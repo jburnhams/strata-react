@@ -21,7 +21,11 @@ export const wordId = (phraseId: string, index: number) => `${phraseId}:${index}
 export const phraseOfWordId = (id: string) => id.slice(0, id.lastIndexOf(":"));
 
 /** A mark an app puts on a phrase ("Not sung", "Not a lyric"): a word, always, and the tone it is drawn in. */
-export type TranscriptPhraseState = { id: string; label: string; tone: "neutral" | "info" | "success" | "warning" | "danger" };
+export type TranscriptPhraseState = {
+  id: string;
+  label: string;
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+};
 
 /** A phrase: timed words, who said it, and its other texts (a translation) by mode. */
 export type TranscriptPhrase = {
@@ -47,7 +51,13 @@ export function phraseDoubtful(phrase: Pick<TranscriptPhrase, "words">, below = 
 }
 
 /** Phrases that belong together (a clip), with a heading. */
-export type TranscriptGroup = { id: string; title: string; /** Defaults to the first phrase's start. */ start?: number; /** Defaults to the last phrase's end. */ end?: number; phrases: readonly TranscriptPhrase[] };
+export type TranscriptGroup = {
+  id: string;
+  title: string;
+  /** Defaults to the first phrase's start. */ start?: number;
+  /** Defaults to the last phrase's end. */ end?: number;
+  phrases: readonly TranscriptPhrase[];
+};
 
 /** The phrase being heard at `time`, as an index into `phrases` (sorted by start), or -1. A phrase is heard from its `start` up to, not including, its `end`. */
 export function phraseAt(phrases: readonly Pick<TranscriptPhrase, "start" | "end">[], time: number): number {

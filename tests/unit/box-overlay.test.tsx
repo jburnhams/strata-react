@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BoxList, BoxOverlay, ViewportFrame, useBoxes, useViewport, type PictureBox } from "../../src";
@@ -7,7 +7,15 @@ import { renderWithStrata } from "../../src/testing";
 // Issue #237: read-only boxes on a picture, linked to a list beside it.
 
 const lines: PictureBox[] = [
-  { id: "l2", x: 40, y: 120, w: 500, h: 30, label: "Line 2: The Play of Puncn anp Jupy, 62%", tone: "warning" },
+  {
+    id: "l2",
+    x: 40,
+    y: 120,
+    w: 500,
+    h: 30,
+    label: "Line 2: The Play of Puncn anp Jupy, 62%",
+    tone: "warning",
+  },
   { id: "l1", x: 40, y: 60, w: 500, h: 30, label: "Line 1: Punch and Judy, 97%" },
   { id: "l3", x: 40, y: 180, w: 500, h: 30, label: "Line 3: a scene in one act, 94%" },
 ];
@@ -18,7 +26,13 @@ function Screen({ onChoose }: { onChoose?: (b: PictureBox) => void }) {
   return (
     <div>
       <ViewportFrame label="Page 22" aspect={2 / 3} {...view}>
-        <BoxOverlay label="Lines the reader found" of={{ w: 600, h: 900 }} boxes={lines} state={state} onChoose={onChoose} />
+        <BoxOverlay
+          label="Lines the reader found"
+          of={{ w: 600, h: 900 }}
+          boxes={lines}
+          state={state}
+          onChoose={onChoose}
+        />
       </ViewportFrame>
       <BoxList label="Lines on this page" boxes={lines} state={state} />
       <output aria-label="Active">{state.active ?? "none"}</output>
@@ -32,7 +46,11 @@ describe("BoxOverlay and BoxList", () => {
     const layer = screen.getByRole("group", { name: "Lines the reader found" });
     expect(within(layer).getAllByRole("button")).toHaveLength(3);
     expect(within(layer).getByRole("button", { name: "Line 2: The Play of Puncn anp Jupy, 62%" })).toBeInTheDocument();
-    expect(within(screen.getByRole("listbox", { name: "Lines on this page" })).getAllByRole("option").map((o) => o.textContent?.slice(0, 6))).toEqual(["Line 1", "Line 2", "Line 3"]);
+    expect(
+      within(screen.getByRole("listbox", { name: "Lines on this page" }))
+        .getAllByRole("option")
+        .map((o) => o.textContent?.slice(0, 6)),
+    ).toEqual(["Line 1", "Line 2", "Line 3"]);
   });
 
   it("is one tab stop, and the arrows move through the boxes in reading order", async () => {
@@ -61,7 +79,11 @@ describe("BoxOverlay and BoxList", () => {
     expect(screen.getByLabelText("Active")).toHaveTextContent("l3");
     expect(screen.getByRole("option", { name: /^Line 3/ })).toHaveFocus();
     expect(screen.getByRole("option", { name: /^Line 3/ })).toHaveAttribute("aria-selected", "true");
-    expect(within(layer).getAllByRole("button", { name: /^Line 3/ }).find((b) => b.getAttribute("aria-pressed") === "true")).toBeDefined();
+    expect(
+      within(layer)
+        .getAllByRole("button", { name: /^Line 3/ })
+        .find((b) => b.getAttribute("aria-pressed") === "true"),
+    ).toBeDefined();
   });
 
   it("choosing a line in the list marks its box without taking focus from the list", async () => {
@@ -70,7 +92,11 @@ describe("BoxOverlay and BoxList", () => {
     await user.click(screen.getByRole("option", { name: /^Line 2/ }));
     expect(screen.getByLabelText("Active")).toHaveTextContent("l2");
     const layer = screen.getByRole("group", { name: "Lines the reader found" });
-    expect(within(layer).getAllByRole("button", { name: /^Line 2/ }).some((b) => b.getAttribute("aria-pressed") === "true")).toBe(true);
+    expect(
+      within(layer)
+        .getAllByRole("button", { name: /^Line 2/ })
+        .some((b) => b.getAttribute("aria-pressed") === "true"),
+    ).toBe(true);
     expect(screen.getByRole("option", { name: /^Line 2/ })).toHaveFocus();
   });
 
@@ -98,7 +124,16 @@ describe("a box inside a frame that picks on a click (review of #251)", () => {
       const state = useBoxes();
       const view = useViewport();
       return (
-        <ViewportFrame label="Page" aspect={2 / 3} {...view} pick={{ zoneAt: () => ({ value: "next", from: 0, to: 1, hint: "Next" }), onPick: picked, describe: "Click to turn" }}>
+        <ViewportFrame
+          label="Page"
+          aspect={2 / 3}
+          {...view}
+          pick={{
+            zoneAt: () => ({ value: "next", from: 0, to: 1, hint: "Next" }),
+            onPick: picked,
+            describe: "Click to turn",
+          }}
+        >
           <BoxOverlay label="Lines" of={{ w: 600, h: 900 }} boxes={lines} state={state} />
         </ViewportFrame>
       );

@@ -11,7 +11,13 @@ const meta = {
   title: "Status and figures/SystemPanel",
   component: SystemPanel,
   args: { load: ready(systemInfo), now: systemNow },
-  decorators: [(Story) => <div className="max-w-xl"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xl">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof SystemPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -21,12 +27,35 @@ export const WithTrouble: Story = { tags: ["visual-wide"] };
 /** Nothing to report: one folder, no services, installed as a package so there is no commit. */
 export const Plain: Story = { args: { load: ready(systemInfoPlain) } };
 /** The app's own numbers beside the server's. */
-export const WithFacts: Story = { args: { load: ready(systemInfoPlain), facts: [{ term: "Pieces kept", value: <span className="tabular-nums">1,284</span> }] } };
+export const WithFacts: Story = {
+  args: {
+    load: ready(systemInfoPlain),
+    facts: [{ term: "Pieces kept", value: <span className="tabular-nums">1,284</span> }],
+  },
+};
 /** The first read has not come back: a skeleton shaped like the panel. */
 export const Loading: Story = { args: { load: { status: "loading" } } };
 /** The server did not answer and there is nothing to show yet. */
-export const Failed: Story = { args: { load: { status: "error", message: "The server could not answer (503). Nothing was changed.", retry: () => undefined } } };
+export const Failed: Story = {
+  args: {
+    load: {
+      status: "error",
+      message: "The server could not answer (503). Nothing was changed.",
+      retry: () => undefined,
+    },
+  },
+};
 /** A refresh failed after a good read: the readings stay, with how old they are. */
 export const Stale: Story = {
-  args: { load: { status: "ready", data: systemInfo, stale: { message: "The server could not answer (503).", readAt: new Date("2026-11-24T09:41:00Z"), retry: () => undefined } } },
+  args: {
+    load: {
+      status: "ready",
+      data: systemInfo,
+      stale: {
+        message: "The server could not answer (503).",
+        readAt: new Date("2026-11-24T09:41:00Z"),
+        retry: () => undefined,
+      },
+    },
+  },
 };

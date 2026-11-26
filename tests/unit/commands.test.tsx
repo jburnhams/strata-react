@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -33,7 +33,12 @@ describe("chords", () => {
   });
 
   it("matches exactly on modifiers: Undo is not Redo", () => {
-    const undo = (e: KeyboardEventInit & { key: string }) => matchesChord({ code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...e }, "Mod+Z", "other");
+    const undo = (e: KeyboardEventInit & { key: string }) =>
+      matchesChord(
+        { code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...e },
+        "Mod+Z",
+        "other",
+      );
     expect(undo(key({ key: "z", ctrlKey: true }))).toBe(true);
     expect(undo(key({ key: "Z", ctrlKey: true, shiftKey: true }))).toBe(false); // Shift held: that is Redo
     expect(undo(key({ key: "z" }))).toBe(false);
@@ -155,7 +160,13 @@ describe("useCommands", () => {
 });
 
 describe("one list, every surface", () => {
-  const entries = (commands: Command[]): MenuEntry[] => [commands[0], commands[1], "separator", commands[2], commands[4]];
+  const entries = (commands: Command[]): MenuEntry[] => [
+    commands[0],
+    commands[1],
+    "separator",
+    commands[2],
+    commands[4],
+  ];
 
   function Surfaces({ commands, platform = "other" as const }: { commands: Command[]; platform?: "mac" | "other" }) {
     useCommands(commands, { platform });
@@ -203,7 +214,9 @@ describe("one list, every surface", () => {
     const { commands } = editor();
     render(<Surfaces commands={commands} platform="mac" />);
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent("Command Z");
+    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent(
+      "Command Z",
+    );
     expect(commandShortcut(commands[1], "mac")).toBe("⇧⌘Z");
   });
 });
@@ -231,7 +244,14 @@ describe("Menu", () => {
   it("opens by pointer, supports Home, End and typeahead", async () => {
     const user = userEvent.setup();
     const { commands } = editor();
-    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[0], commands[2], commands[4]]} platform="other" />);
+    render(
+      <Menu
+        label="Edit"
+        trigger={<Button>Edit</Button>}
+        items={[commands[0], commands[2], commands[4]]}
+        platform="other"
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Edit" }));
     const menu = await screen.findByRole("menu");
     await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
@@ -268,14 +288,22 @@ describe("Menu", () => {
   it("draws groups with a heading, separators, and checkable items that report their state", async () => {
     const user = userEvent.setup();
     const toggled: string[] = [];
-    const view = (id: string, label: string, checked: boolean): Command => ({ id, label, checked, run: () => void toggled.push(id) });
+    const view = (id: string, label: string, checked: boolean): Command => ({
+      id,
+      label,
+      checked,
+      run: () => void toggled.push(id),
+    });
     render(
       <Menu
         label="View"
         trigger={<Button>View</Button>}
         platform="other"
         items={[
-          { group: "Overlays", items: [view("grid", "Show grid", true), view("safe", "Show safe areas", false)] },
+          {
+            group: "Overlays",
+            items: [view("grid", "Show grid", true), view("safe", "Show safe areas", false)],
+          },
           "separator",
           { id: "fit", label: "Fit to window", run: () => undefined },
         ]}
@@ -298,7 +326,12 @@ describe("Menu", () => {
         label="File"
         trigger={<Button>File</Button>}
         platform="other"
-        items={[{ submenu: "Export", items: [{ id: "mp4", label: "As video", run: () => void ran.push("mp4") }] }]}
+        items={[
+          {
+            submenu: "Export",
+            items: [{ id: "mp4", label: "As video", run: () => void ran.push("mp4") }],
+          },
+        ]}
       />,
     );
     await user.click(screen.getByRole("button", { name: "File" }));
@@ -315,7 +348,9 @@ describe("ContextMenu", () => {
   function Clip({ commands }: { commands: Command[] }) {
     return (
       <ContextMenu label="Clip actions" items={[commands[2], commands[4]]} platform="other">
-        <div role="button" tabIndex={0} aria-label="Clip run.mp4">run.mp4</div>
+        <div role="button" tabIndex={0} aria-label="Clip run.mp4">
+          run.mp4
+        </div>
       </ContextMenu>
     );
   }
@@ -324,7 +359,10 @@ describe("ContextMenu", () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
     render(<Clip commands={commands} />);
-    await user.pointer({ keys: "[MouseRight]", target: screen.getByRole("button", { name: "Clip run.mp4" }) });
+    await user.pointer({
+      keys: "[MouseRight]",
+      target: screen.getByRole("button", { name: "Clip run.mp4" }),
+    });
     const menu = await screen.findByRole("menu", { name: "Clip actions" });
     await user.click(within(menu).getByRole("menuitem", { name: /Split clip/ }));
     expect(log).toEqual(["split"]);

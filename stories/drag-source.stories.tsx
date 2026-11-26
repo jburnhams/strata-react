@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DragSource, RowAction, Status } from "../src";
 
-
 // Issue #286: rows that are dragged onto a target elsewhere (a timeline lane, a shelf). Kiln-room
 // version: the pieces waiting to be loaded. A drag in progress needs a pointer or a keyboard, so it is
 // shown live in Timeline's "Drop from outside" story; these are the resting states.
@@ -17,7 +16,12 @@ function Waiting({ disabledId }: { disabledId?: string }) {
     <ul aria-label="Waiting to load" className="grid w-96 gap-1">
       {pieces.map((p) => (
         <li key={p.id}>
-          <DragSource label={p.name} items={() => [{ "application/x-piece": p.id, "text/plain": p.name }]} disabled={p.id === disabledId} className="rounded-control border border-border py-1 pe-1 ps-1">
+          <DragSource
+            label={p.name}
+            items={() => [{ "application/x-piece": p.id, "text/plain": p.name }]}
+            disabled={p.id === disabledId}
+            className="rounded-control border border-border py-1 pe-1 ps-1"
+          >
             <span className="flex items-center gap-3 type-body">
               <span className="min-w-0 flex-1 truncate">{p.name}</span>
               <Status tone={p.kind === "Pot" ? "info" : "neutral"}>{p.kind}</Status>

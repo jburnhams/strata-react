@@ -61,8 +61,20 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
   const concurrency = config.concurrency ?? 4;
   // A worker count that is not a positive integer would start no workers and report an empty,
   // passing run, so it is refused up front.
-  if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error(`concurrency must be a whole number of pages, 1 or more (got ${String(config.concurrency)})`);
-  const report: VisualReport = { total: 0, same: 0, tolerated: [], changed: [], added: [], obsolete: [], errors: [], warnings: pinWarnings(cwd), updated: update, failed: false };
+  if (!Number.isInteger(concurrency) || concurrency < 1)
+    throw new Error(`concurrency must be a whole number of pages, 1 or more (got ${String(config.concurrency)})`);
+  const report: VisualReport = {
+    total: 0,
+    same: 0,
+    tolerated: [],
+    changed: [],
+    added: [],
+    obsolete: [],
+    errors: [],
+    warnings: pinWarnings(cwd),
+    updated: update,
+    failed: false,
+  };
 
   const batches: Batch[] = [];
   let pinned: PinnedFonts | undefined;
@@ -70,7 +82,8 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     if (config.storybook !== undefined) {
       const target = typeof config.storybook === "string" ? { dir: config.storybook } : config.storybook;
       const dir = resolve(cwd, target.dir ?? "storybook-static");
-      if (!existsSync(join(dir, "index.json"))) throw new Error(`${join(dir, "index.json")} not found: build Storybook first (storybook build)`);
+      if (!existsSync(join(dir, "index.json")))
+        throw new Error(`${join(dir, "index.json")} not found: build Storybook first (storybook build)`);
       // Shots first: if building them throws, no server is left running to hold the process open.
       const shots = storybookShots({ ...target, dir }, themes);
       const batch: Batch = { shots, baseUrl: "", blockServiceWorkers: false };
@@ -80,13 +93,20 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     }
     if (config.app !== undefined) {
       const app = config.app;
-      if (!app.dir === !app.url) throw new Error("app needs exactly one of dir (a build to serve) or url (a running server)");
+      if (!app.dir === !app.url)
+        throw new Error("app needs exactly one of dir (a build to serve) or url (a running server)");
       const shots = routeShots(app, themes);
-      const batch: Batch = { shots, baseUrl: "", blockServiceWorkers: true, onUnhandledRequest: app.onUnhandledRequest ?? "error" };
+      const batch: Batch = {
+        shots,
+        baseUrl: "",
+        blockServiceWorkers: true,
+        onUnhandledRequest: app.onUnhandledRequest ?? "error",
+      };
       batches.push(batch);
       if (app.dir) {
         const dir = resolve(cwd, app.dir);
-        if (!existsSync(join(dir, "index.html"))) throw new Error(`${join(dir, "index.html")} not found: build the app first`);
+        if (!existsSync(join(dir, "index.html")))
+          throw new Error(`${join(dir, "index.html")} not found: build the app first`);
         batch.server = await serveStatic(dir, { spa: true, base: app.base });
         batch.baseUrl = batch.server.url;
       } else {
@@ -109,7 +129,9 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     mkdirSync(outputDir, { recursive: true });
 
     const { chromium } = await import("playwright").catch(() => {
-      throw new Error("strata-visual needs Playwright: npm install -D -E playwright, then npx playwright install chromium");
+      throw new Error(
+        "strata-visual needs Playwright: npm install -D -E playwright, then npx playwright install chromium",
+      );
     });
     // Font hinting and LCD anti-aliasing off and an sRGB profile: the same pixels on every machine.
     // STRATA_VISUAL_CHROMIUM_ARGS adds flags, for experiments such as checking that the
@@ -117,7 +139,10 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     const extraArgs = (process.env.STRATA_VISUAL_CHROMIUM_ARGS ?? "").split(/\s+/).filter(Boolean);
     // A pinned system face (issue #342): on Linux a fontconfig file of the runner's own makes every system family that face.
     const pin = typeof config.systemFonts === "object" ? config.systemFonts : undefined;
-    if (pin && process.platform !== "linux") report.warnings.push(`systemFonts.pin works through fontconfig and applies on Linux only; this run (${process.platform}) draws system text in the machine's own faces, so record baselines where CI does`);
+    if (pin && process.platform !== "linux")
+      report.warnings.push(
+        `systemFonts.pin works through fontconfig and applies on Linux only; this run (${process.platform}) draws system text in the machine's own faces, so record baselines where CI does`,
+      );
     pinned = pin && process.platform === "linux" ? pinSystemFont(pin, cwd) : undefined;
     const browser = await chromium.launch({
       args: ["--font-render-hinting=none", "--disable-lcd-text", "--force-color-profile=srgb", ...extraArgs],
@@ -125,7 +150,16 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
     });
     const meta: Meta = { chromium: browser.version(), platform: `${process.platform}-${process.arch}` };
     try {
-      for (const batch of batches) await runBatch(browser, batch, { config, baselineDir, outputDir, update, report, log, pinnedFamily: pinned?.family });
+      for (const batch of batches)
+        await runBatch(browser, batch, {
+          config,
+          baselineDir,
+          outputDir,
+          update,
+          report,
+          log,
+          pinnedFamily: pinned?.family,
+        });
     } finally {
       await browser.close();
     }
@@ -154,7 +188,15 @@ export async function runVisual(config: VisualConfig, options: RunOptions = {}):
 async function runBatch(
   browser: Browser,
   batch: Batch,
-  ctx: { config: VisualConfig; baselineDir: string; outputDir: string; update: boolean; report: VisualReport; log: (l: string) => void; pinnedFamily?: string },
+  ctx: {
+    config: VisualConfig;
+    baselineDir: string;
+    outputDir: string;
+    update: boolean;
+    report: VisualReport;
+    log: (l: string) => void;
+    pinnedFamily?: string;
+  },
 ) {
   const { baselineDir, outputDir, update, report } = ctx;
   const shoot = async (shot: Shot) => {
@@ -263,7 +305,10 @@ export function formatReport(report: VisualReport): string {
     ...report.warnings.map((l) => `warning  ${l}`),
   ];
   if (report.failed) {
-    lines.push("", "Diffs are in the output folder (tests/visual/output by default). Look at them; if the change is intended, run with --update and commit the baselines.");
+    lines.push(
+      "",
+      "Diffs are in the output folder (tests/visual/output by default). Look at them; if the change is intended, run with --update and commit the baselines.",
+    );
   }
   return lines.join("\n");
 }

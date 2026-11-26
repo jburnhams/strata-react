@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
@@ -14,18 +14,38 @@ let media: FakeMedia;
 beforeEach(() => void (media = installFakeMedia()));
 afterEach(() => media.uninstall());
 
-const clip = (id: string, label: string, size: [number, number], note?: string): Candidate<VideoMedia> => ({ id, label, note, media: { kind: "video", src: `/clips/${label}.mp4`, width: size[0], height: size[1], fps: 25 } });
+const clip = (id: string, label: string, size: [number, number], note?: string): Candidate<VideoMedia> => ({
+  id,
+  label,
+  note,
+  media: { kind: "video", src: `/clips/${label}.mp4`, width: size[0], height: size[1], fps: 25 },
+});
 const a = clip("model-x", "A", [1440, 1080], "secret-note");
 const b = clip("model-y", "B", [2816, 2304]);
 const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
-const load = () => act(() => {
-  media.loaded(el("A"), 10);
-  media.loaded(el("B"), 10);
-});
+const load = () =>
+  act(() => {
+    media.loaded(el("A"), 10);
+    media.loaded(el("B"), 10);
+  });
 
-function Harness({ initial = "side", ...props }: Partial<React.ComponentProps<typeof CompareVideo>> & { initial?: VideoMode }) {
+function Harness({
+  initial = "side",
+  ...props
+}: Partial<React.ComponentProps<typeof CompareVideo>> & { initial?: VideoMode }) {
   const [mode, setMode] = React.useState<VideoMode>(initial);
-  return <CompareVideo label="Pair 1, two upscales" a={a} b={b} blind missing="Video not found" mode={mode} onModeChange={setMode} {...props} />;
+  return (
+    <CompareVideo
+      label="Pair 1, two upscales"
+      a={a}
+      b={b}
+      blind
+      missing="Video not found"
+      mode={mode}
+      onModeChange={setMode}
+      {...props}
+    />
+  );
 }
 
 describe("CompareVideo", () => {
@@ -175,7 +195,9 @@ describe("CompareVideo", () => {
     const seen: unknown[] = [];
     const { rerender } = renderWithStrata(<Harness loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);
     expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
-    rerender(<Harness a={clip("x2", "A", [1440, 1080])} loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);
+    rerender(
+      <Harness a={clip("x2", "A", [1440, 1080])} loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />,
+    );
     expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
     await userEvent.keyboard("c");
     expect(seen).toEqual([{ start: null, end: null }]);
@@ -250,7 +272,9 @@ describe("CompareVideo", () => {
     renderWithStrata(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     const [fa, fb] = [screen.getByRole("group", { name: "Frame A" }), screen.getByRole("group", { name: "Frame B" })];
-    expect(fa.firstElementChild).toHaveStyle({ transform: fb.firstElementChild!.getAttribute("style")!.match(/transform: ([^;]+)/)![1] });
+    expect(fa.firstElementChild).toHaveStyle({
+      transform: fb.firstElementChild!.getAttribute("style")!.match(/transform: ([^;]+)/)![1],
+    });
     expect((fa.firstElementChild as HTMLElement).style.transform).toContain("scale(1.5");
   });
 
@@ -265,7 +289,17 @@ describe("CompareVideo", () => {
   it("decides nearest-neighbour for each video against its own pixels", () => {
     // jsdom has no layout: give the frame a 1000 px width, as a browser would measure.
     const saved = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = () => ({ width: 1000, height: 750, top: 0, left: 0, right: 1000, bottom: 750, x: 0, y: 0, toJSON: () => ({}) });
+    Element.prototype.getBoundingClientRect = () => ({
+      width: 1000,
+      height: 750,
+      top: 0,
+      left: 0,
+      right: 1000,
+      bottom: 750,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     try {
       renderWithStrata(<Harness a={clip("x", "A", [1440, 1080])} b={clip("y", "B", [720, 540])} initial="fade" />);
       expect(el("A").style.imageRendering).toBe(""); // 1000 px for 1440 px of picture: smaller than its pixels
@@ -290,7 +324,9 @@ describe("CompareVideo", () => {
 
   it("takes the answer keys and the vote bar, as pictures do", async () => {
     let pressed = 0;
-    renderWithStrata(<Harness extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]} footer={<p>Vote bar</p>} />);
+    renderWithStrata(
+      <Harness extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]} footer={<p>Vote bar</p>} />,
+    );
     await userEvent.keyboard("a");
     expect(pressed).toBe(1);
     expect(screen.getByText("Prefer A")).toBeInTheDocument();
@@ -306,7 +342,16 @@ describe("CompareVideo", () => {
         onAnswer={() => undefined}
         pending={false}
         progress="3 left"
-        view={(slot, pair) => <CompareVideo {...pair} {...slot} blind missing="Video not found" mode="side" onModeChange={() => undefined} />}
+        view={(slot, pair) => (
+          <CompareVideo
+            {...pair}
+            {...slot}
+            blind
+            missing="Video not found"
+            mode="side"
+            onModeChange={() => undefined}
+          />
+        )}
       />,
     );
     expect(screen.getByRole("button", { name: "Prefer A" })).toBeInTheDocument();

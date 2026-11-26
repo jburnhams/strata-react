@@ -20,7 +20,11 @@ function move<T extends { id: string }>(list: T[], keys: string[], target: DropT
   const rest = list.filter((i) => !keys.includes(i.id));
   const at = rest.findIndex((i) => i.id === target.key);
   if (target.position === "root" || at < 0) return [...rest, ...moving];
-  return [...rest.slice(0, target.position === "after" ? at + 1 : at), ...moving, ...rest.slice(target.position === "after" ? at + 1 : at)];
+  return [
+    ...rest.slice(0, target.position === "after" ? at + 1 : at),
+    ...moving,
+    ...rest.slice(target.position === "after" ? at + 1 : at),
+  ];
 }
 
 function Row({ p }: { p: Piece }) {
@@ -45,7 +49,9 @@ function Shelf({ initial = all, selected }: { initial?: Piece[]; selected?: stri
         onReorder={(keys, target) => setItems((l) => move(l, keys, target))}
         selectionMode="single"
         selectedKeys={selected ? new Set([selected]) : undefined}
-        renderActions={(p) => <RowAction label="Remove" subject={p.name} onClick={() => setItems((l) => l.filter((x) => x.id !== p.id))} />}
+        renderActions={(p) => (
+          <RowAction label="Remove" subject={p.name} onClick={() => setItems((l) => l.filter((x) => x.id !== p.id))} />
+        )}
       >
         {(p) => <Row p={p} />}
       </SortableList>
@@ -70,7 +76,15 @@ function TwoLists() {
     <div className="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
       <div className="grid gap-2">
         <p className="type-heading">Pieces</p>
-        <SortableList label="Pieces" items={library} getKey={(p) => p.id} getLabel={(p) => p.name} getKind={(p) => p.kind} empty={<p>All placed</p>} onReorder={(k, t) => setLibrary((l) => move(l, k, t))}>
+        <SortableList
+          label="Pieces"
+          items={library}
+          getKey={(p) => p.id}
+          getLabel={(p) => p.name}
+          getKind={(p) => p.kind}
+          empty={<p>All placed</p>}
+          onReorder={(k, t) => setLibrary((l) => move(l, k, t))}
+        >
           {(p) => <Row p={p} />}
         </SortableList>
       </div>
@@ -86,7 +100,11 @@ function TwoLists() {
           refuses={{ tile: "The top shelf takes pots, not test tiles. Tiles go on the bottom shelf." }}
           empty={<p className="type-body text-muted-foreground">Drag a pot here</p>}
           onReorder={(k, t) => setShelf((l) => move(l, k, t))}
-          onInsert={(ids, t) => setShelf((l) => move([...l, ...library.filter((p) => ids.includes(p.id) && !l.some((x) => x.id === p.id))], ids, t))}
+          onInsert={(ids, t) =>
+            setShelf((l) =>
+              move([...l, ...library.filter((p) => ids.includes(p.id) && !l.some((x) => x.id === p.id))], ids, t),
+            )
+          }
         >
           {(p) => <Row p={p} />}
         </SortableList>

@@ -6,8 +6,16 @@ import { renderingsLoading } from "./mocks/handlers";
 // A blind pairwise judgment: the pictures from MSW (`/api/renderings/:variant`), the answer keys in
 // Compare's one legend, and a vote bar with no filled button.
 
-const a = { id: "final", label: "A", media: { kind: "image", src: "/api/renderings/final.svg", alt: "", size: [400, 300] } } as const;
-const b = { id: "auto", label: "B", media: { kind: "image", src: "/api/renderings/auto.svg", alt: "", size: [400, 300] } } as const;
+const a = {
+  id: "final",
+  label: "A",
+  media: { kind: "image", src: "/api/renderings/final.svg", alt: "", size: [400, 300] },
+} as const;
+const b = {
+  id: "auto",
+  label: "B",
+  media: { kind: "image", src: "/api/renderings/auto.svg", alt: "", size: [400, 300] },
+} as const;
 const ready = { status: "ready", data: { label: "Pair 3 of 12, two versions of one photo", a, b } } as const;
 
 function Stateful(args: React.ComponentProps<typeof PairVote>) {
@@ -16,7 +24,13 @@ function Stateful(args: React.ComponentProps<typeof PairVote>) {
   const say = (x: PairAnswer) => setLast(x.answer === "flag" ? `Flagged: ${x.reason}` : `Answered ${x.answer}`);
   return (
     <div className="max-w-3xl">
-      <PairVote {...args} mode={mode} onModeChange={setMode} onAnswer={say} last={last ? { text: last, onUndo: () => setLast(null) } : args.last} />
+      <PairVote
+        {...args}
+        mode={mode}
+        onModeChange={setMode}
+        onAnswer={say}
+        last={last ? { text: last, onUndo: () => setLast(null) } : args.last}
+      />
     </div>
   );
 }
@@ -35,7 +49,11 @@ const meta = {
     pending: false,
     progress: "12 pairs left",
     skeleton: <Skeleton className="h-72 w-full" />,
-    empty: <EmptyState title="Nothing left to judge">Every pair in this set has your answer. Pick another set to keep going.</EmptyState>,
+    empty: (
+      <EmptyState title="Nothing left to judge">
+        Every pair in this set has your answer. Pick another set to keep going.
+      </EmptyState>
+    ),
   },
 } satisfies Meta<typeof PairVote>;
 export default meta;
@@ -51,13 +69,18 @@ export const WithFlag: Story = { args: { flagReasons: ["Picture missing", "Not t
 export const Pending: Story = { args: { pending: true } };
 
 /** The pair is on its way. */
-export const Loading: Story = { args: { pair: { status: "loading" } }, parameters: { msw: { handlers: [renderingsLoading] } } };
+export const Loading: Story = {
+  args: { pair: { status: "loading" } },
+  parameters: { msw: { handlers: [renderingsLoading] } },
+};
 
 /** Nothing left. */
 export const Empty: Story = { args: { pair: { status: "ready", data: null } } };
 
 /** The last answer, with Undo and what it was (shown only after the answer, never during). */
-export const AfterAnswer: Story = { args: { last: { text: "You preferred A.", onUndo: () => undefined, reveal: <span>A was your final.</span> } } };
+export const AfterAnswer: Story = {
+  args: { last: { text: "You preferred A.", onUndo: () => undefined, reveal: <span>A was your final.</span> } },
+};
 
 /** A click on the picture you prefer answers like the key and the button (hover shows "Click to choose A"); a drag still pans and a double click still zooms. The line above the bar says what was answered. */
 export const ClickToChoose: Story = { tags: ["no-visual"] };

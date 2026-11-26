@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -32,7 +32,14 @@ import {
   renderWithStrata,
 } from "../../src/testing";
 import { server } from "../utils/server";
-import { api, firingsLaterPageError, firingsServerError, logSyncs, type FiringPage, type LogSync } from "../../stories/mocks/handlers";
+import {
+  api,
+  firingsLaterPageError,
+  firingsServerError,
+  logSyncs,
+  type FiringPage,
+  type LogSync,
+} from "../../stories/mocks/handlers";
 import type { Firing } from "../../stories/fixtures/kiln";
 
 // Tests for the issues filed from Tubes and python-app-template on 2026-11-09 (#43, #45, #47,
@@ -74,7 +81,12 @@ describe("DataTable missing values (#47)", () => {
   const columns: Column<Channel>[] = [
     { key: "name", header: "Channel", value: (c) => c.name },
     { key: "total", header: "Videos", numeric: true, value: (c) => c.total },
-    { key: "synced", header: "Last synced", value: (c) => (c.synced ? new Date(c.synced) : null), missing: "Never" },
+    {
+      key: "synced",
+      header: "Last synced",
+      value: (c) => (c.synced ? new Date(c.synced) : null),
+      missing: "Never",
+    },
   ];
   // The first column is the row header (React Aria requires one); the rest are grid cells.
   const cells = (row: HTMLElement) => [...row.querySelectorAll<HTMLElement>("[role=rowheader], [role=gridcell]")];
@@ -108,7 +120,11 @@ describe("DataTable missing values (#47)", () => {
   });
 
   it("sorts text in the locale's order with numbers read as numbers, and keeps a column's own sort among present values", async () => {
-    const rows = [{ id: "1", n: "Kiln 10" }, { id: "2", n: "kiln 2" }, { id: "3", n: null }];
+    const rows = [
+      { id: "1", n: "Kiln 10" },
+      { id: "2", n: "kiln 2" },
+      { id: "3", n: null },
+    ];
     renderWithStrata(
       <DataTable
         caption="Kilns"
@@ -123,7 +139,12 @@ describe("DataTable missing values (#47)", () => {
 
   it("does not sort a value column when sort is false", () => {
     renderWithStrata(
-      <DataTable caption="Channels" columns={[{ key: "name", header: "Channel", value: (c: Channel) => c.name, sort: false }]} rows={channels} rowKey={(c) => c.id} />,
+      <DataTable
+        caption="Channels"
+        columns={[{ key: "name", header: "Channel", value: (c: Channel) => c.name, sort: false }]}
+        rows={channels}
+        rowKey={(c) => c.id}
+      />,
     );
     expect(screen.getByRole("columnheader", { name: "Channel" })).not.toHaveAttribute("aria-sort");
   });
@@ -132,7 +153,11 @@ describe("DataTable missing values (#47)", () => {
 describe("DataView's error renderer (#50)", () => {
   it("keeps the state machine and lets the app draw the failure, still as an alert", async () => {
     let retried = 0;
-    const state: Load<string[]> = { status: "error", message: "The feed could not be read.", retry: () => retried++ };
+    const state: Load<string[]> = {
+      status: "error",
+      message: "The feed could not be read.",
+      retry: () => retried++,
+    };
     render(
       <DataView<string[]>
         state={state}
@@ -164,7 +189,10 @@ describe("LoadMore and a page-scrolled grid (#49)", () => {
   function useFirings() {
     return useInfiniteLoad({
       queryKey: ["firings", "grid"],
-      queryFn: ({ cursor, signal }) => fetchJson<FiringPage>(`${api.firings}?limit=6${cursor ? `&after=${cursor}` : ""}`, { signal }),
+      queryFn: ({ cursor, signal }) =>
+        fetchJson<FiringPage>(`${api.firings}?limit=6${cursor ? `&after=${cursor}` : ""}`, {
+          signal,
+        }),
       items: (page) => page.firings,
       itemKey: (f: Firing) => f.id,
       hasMore: (page) => page.hasMore,
@@ -220,9 +248,19 @@ describe("LoadMore and a page-scrolled grid (#49)", () => {
       return (
         <div>
           <ul aria-label="Cards">
-            {load.status === "ready" && load.data.map((f, i) => <li key={f.id} data-index={i}>Firing {f.id}</li>)}
+            {load.status === "ready" &&
+              load.data.map((f, i) => (
+                <li key={f.id} data-index={i}>
+                  Firing {f.id}
+                </li>
+              ))}
           </ul>
-          <LoadMore state={load} moreLabel="Show older firings" moreSkeleton={<Skeleton className="h-24" />} end="That is every firing." />
+          <LoadMore
+            state={load}
+            moreLabel="Show older firings"
+            moreSkeleton={<Skeleton className="h-24" />}
+            end="That is every firing."
+          />
         </div>
       );
     }
@@ -276,7 +314,13 @@ describe("Thumbnail overlays and fallback (#51)", () => {
 
   it("draws an app's fallback, named by alt, and takes a round shape", () => {
     const { container } = render(
-      <Thumbnail src={null} alt="Night Sky" aspect={1} className="rounded-pill" fallback={<span className="grid place-items-center">N</span>} />,
+      <Thumbnail
+        src={null}
+        alt="Night Sky"
+        aspect={1}
+        className="rounded-pill"
+        fallback={<span className="grid place-items-center">N</span>}
+      />,
     );
     const missing = screen.getByRole("img", { name: "Night Sky" });
     expect(missing).toHaveTextContent("N");
@@ -310,7 +354,9 @@ describe("strata-react/testing: filled buttons and AsyncButton's phase (#48)", (
         </BulkBar>
       </div>,
     );
-    expect(() => expectOneFilledButton()).toThrow('Expected one filled button in the view, found 2: "Send greeting", "Remove 2".');
+    expect(() => expectOneFilledButton()).toThrow(
+      'Expected one filled button in the view, found 2: "Send greeting", "Remove 2".',
+    );
   });
 
   it("reads an AsyncButton's phase from the button or any element in it", () => {
@@ -328,7 +374,16 @@ describe("JobStatus and useJob (#45)", () => {
   const words = { running: "Syncing", finished: "Finished", failed: "Finished with failures" };
 
   it("shows the word, the sentence and a progress bar while running", () => {
-    render(<JobStatus label="Log sync" running words={words} summary="Reading Kiln 2: 412 new readings so far." current={1} total={3} />);
+    render(
+      <JobStatus
+        label="Log sync"
+        running
+        words={words}
+        summary="Reading Kiln 2: 412 new readings so far."
+        current={1}
+        total={3}
+      />,
+    );
     const section = screen.getByRole("region", { name: "Log sync" });
     expect(section).toHaveTextContent("Syncing");
     expect(screen.getByRole("progressbar", { name: "Log sync" })).toHaveAttribute("aria-valuetext", "1 of 3");
@@ -346,11 +401,15 @@ describe("JobStatus and useJob (#45)", () => {
     );
     expect(screen.getByText("Finished with failures")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(within(screen.getByRole("list", { name: "Failures" })).getByRole("listitem")).toHaveTextContent("Kiln 3: its controller did not answer");
+    expect(within(screen.getByRole("list", { name: "Failures" })).getByRole("listitem")).toHaveTextContent(
+      "Kiln 3: its controller did not answer",
+    );
   });
 
   it("announces when the item changes or the job ends, not on every poll", () => {
-    const { rerender } = render(<JobStatus label="Log sync" running words={words} summary="10 so far." current={1} total={3} />);
+    const { rerender } = render(
+      <JobStatus label="Log sync" running words={words} summary="10 so far." current={1} total={3} />,
+    );
     const live = screen.getByRole("status");
     expect(live).toHaveTextContent("");
     rerender(<JobStatus label="Log sync" running words={words} summary="20 so far." current={1} total={3} />);
@@ -364,7 +423,11 @@ describe("JobStatus and useJob (#45)", () => {
   });
 
   it("polls while the job runs, stops when it ends, and reads the changed data again once", async () => {
-    const stages: LogSync[] = [logSyncs.running, { ...logSyncs.running, current: 3, kiln: "Kiln 3" }, logSyncs.finished];
+    const stages: LogSync[] = [
+      logSyncs.running,
+      { ...logSyncs.running, current: 3, kiln: "Kiln 3" },
+      logSyncs.finished,
+    ];
     let polls = 0;
     let readingsReads = 0;
     server.use(
@@ -375,7 +438,10 @@ describe("JobStatus and useJob (#45)", () => {
       }),
     );
     function Sync() {
-      const readings = useLoad({ queryKey: ["readings"], queryFn: () => fetchJson<unknown[]>(api.readings) });
+      const readings = useLoad({
+        queryKey: ["readings"],
+        queryFn: () => fetchJson<unknown[]>(api.readings),
+      });
       const job = useJob({
         queryKey: ["log-sync"],
         queryFn: () => fetchJson<LogSync>(api.logSync),
@@ -447,7 +513,12 @@ describe("JobStatus and useJob (#45)", () => {
     let poll = () => undefined as void;
     function Sync() {
       useLoad({ queryKey: ["readings"], queryFn: () => fetchJson<unknown[]>(api.readings) });
-      const job = useJob({ queryKey: ["log-sync"], queryFn: () => fetchJson<LogSync>(api.logSync), isRunning: (s) => s.running, invalidates: [["readings"]] });
+      const job = useJob({
+        queryKey: ["log-sync"],
+        queryFn: () => fetchJson<LogSync>(api.logSync),
+        isRunning: (s) => s.running,
+        invalidates: [["readings"]],
+      });
       poll = job.poll;
       return <p>{job.status}</p>;
     }
@@ -471,7 +542,10 @@ describe("LoadMore's rows in a second look (#210)", () => {
   function Cards(props: Partial<Omit<LoadMoreProps<Firing>, "state">>) {
     const load = useInfiniteLoad({
       queryKey: ["firings", "second-look"],
-      queryFn: ({ cursor, signal }) => fetchJson<FiringPage>(`${api.firings}?limit=6${cursor ? `&after=${cursor}` : ""}`, { signal }),
+      queryFn: ({ cursor, signal }) =>
+        fetchJson<FiringPage>(`${api.firings}?limit=6${cursor ? `&after=${cursor}` : ""}`, {
+          signal,
+        }),
       items: (page) => page.firings,
       itemKey: (f: Firing) => f.id,
       hasMore: (page) => page.hasMore,
@@ -479,15 +553,34 @@ describe("LoadMore's rows in a second look (#210)", () => {
     return (
       <div>
         <ul aria-label="Cards">
-          {load.status === "ready" && load.data.map((f, i) => <li key={f.id} data-index={i}>Firing {f.id}</li>)}
+          {load.status === "ready" &&
+            load.data.map((f, i) => (
+              <li key={f.id} data-index={i}>
+                Firing {f.id}
+              </li>
+            ))}
         </ul>
-        <LoadMore state={load} moreLabel="Show older firings" moreSkeleton={<Skeleton className="h-24" />} end="That is every firing." {...props} />
+        <LoadMore
+          state={load}
+          moreLabel="Show older firings"
+          moreSkeleton={<Skeleton className="h-24" />}
+          end="That is every firing."
+          {...props}
+        />
       </div>
     );
   }
 
   it("draws the row the app's way, and what it presses still loads and still moves focus to the first new item", async () => {
-    renderWithStrata(<Cards more={({ label, load }) => <button type="button" className="mx-auto rounded-pill" onClick={load}>{label} ›</button>} />);
+    renderWithStrata(
+      <Cards
+        more={({ label, load }) => (
+          <button type="button" className="mx-auto rounded-pill" onClick={load}>
+            {label} ›
+          </button>
+        )}
+      />,
+    );
     await screen.findByText("Firing f-0412");
     expect(screen.queryByRole("button", { name: "Show older firings" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Show older firings ›" }));
@@ -509,7 +602,10 @@ describe("LoadMore's rows in a second look (#210)", () => {
     server.use(
       http.get(api.firings, async ({ request }) => {
         if (new URL(request.url).searchParams.has("after")) await delay("infinite");
-        return HttpResponse.json({ firings: Array.from({ length: 6 }, (_, i) => ({ id: `f-${i}` })), hasMore: true });
+        return HttpResponse.json({
+          firings: Array.from({ length: 6 }, (_, i) => ({ id: `f-${i}` })),
+          hasMore: true,
+        });
       }),
     );
     renderWithStrata(<Cards loading={(skeleton) => <div data-testid="mine">{skeleton}</div>} ruled={false} />);

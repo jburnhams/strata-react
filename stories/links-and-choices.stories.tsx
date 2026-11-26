@@ -10,9 +10,15 @@ type Story = StoryObj<typeof meta>;
 export const ButtonLinks: Story = {
   render: () => (
     <div className="flex flex-wrap items-center gap-3">
-      <ButtonLink to="/learners/7" variant="default">Play as Fox</ButtonLink>
-      <ButtonLink href="/export.csv" download icon={Download}>Export</ButtonLink>
-      <ButtonLink to="/report" variant="ghost" icon={FileText} size="sm">Open the report</ButtonLink>
+      <ButtonLink to="/learners/7" variant="default">
+        Play as Fox
+      </ButtonLink>
+      <ButtonLink href="/export.csv" download icon={Download}>
+        Export
+      </ButtonLink>
+      <ButtonLink to="/report" variant="ghost" icon={FileText} size="sm">
+        Open the report
+      </ButtonLink>
     </div>
   ),
 };
@@ -21,7 +27,11 @@ export const ButtonLinks: Story = {
 export const TextLinks: Story = {
   render: () => (
     <p className="type-body">
-      Nobody has played yet. <TextLink to="/learners">Add a learner</TextLink> or <TextLink href="https://example.test/guide" newTab>read the guide</TextLink>.
+      Nobody has played yet. <TextLink to="/learners">Add a learner</TextLink> or{" "}
+      <TextLink href="https://example.test/guide" newTab>
+        read the guide
+      </TextLink>
+      .
     </p>
   ),
 };
@@ -34,8 +44,23 @@ export const InTheUrl: Story = {
         <option value="all">All cards</option>
         <option value="due">Due today</option>
       </NativeSelect>
-      <ChoiceGroup legend="Who is playing" name="who" param="who" choices={[{ value: "fox", label: "Fox" }, { value: "owl", label: "Owl" }]} />
-      <ToggleGroup label="Size" param="size" options={[{ value: "s", label: "Small" }, { value: "l", label: "Large" }]} />
+      <ChoiceGroup
+        legend="Who is playing"
+        name="who"
+        param="who"
+        choices={[
+          { value: "fox", label: "Fox" },
+          { value: "owl", label: "Owl" },
+        ]}
+      />
+      <ToggleGroup
+        label="Size"
+        param="size"
+        options={[
+          { value: "s", label: "Small" },
+          { value: "l", label: "Large" },
+        ]}
+      />
     </div>
   ),
 };

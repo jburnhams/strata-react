@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Tree, useChoices, useExpanded, useSelection, type Load } from "../../src";
@@ -26,16 +26,32 @@ describe("choice rules", () => {
 
 type Node = { id: string; name: string; branch: boolean };
 const clip = (id: string): Node => ({ id, name: id, branch: true });
-const stage = (clipId: string, s: string): Node => ({ id: `${clipId}/${s}`, name: s, branch: false });
+const stage = (clipId: string, s: string): Node => ({
+  id: `${clipId}/${s}`,
+  name: s,
+  branch: false,
+});
 const STAGES = ["detect", "track", "render"];
 const implies = (key: string) => {
   const [c, s] = key.split("/");
   const i = STAGES.indexOf(s);
   return s && i >= 0 && i < STAGES.length - 1 ? [`${c}/${STAGES[i + 1]}`] : [];
 };
-const roots: Load<readonly Node[]> = { status: "ready", data: [clip("c1"), clip("c2")], refreshing: false } as never;
+const roots: Load<readonly Node[]> = {
+  status: "ready",
+  data: [clip("c1"), clip("c2")],
+  refreshing: false,
+} as never;
 
-function Host({ initial = [] as string[], summary, openKeys = ["c1", "c2"] }: { initial?: string[]; summary?: boolean; openKeys?: string[] }) {
+function Host({
+  initial = [] as string[],
+  summary,
+  openKeys = ["c1", "c2"],
+}: {
+  initial?: string[];
+  summary?: boolean;
+  openKeys?: string[];
+}) {
   const choices = useChoices({ initial, implies });
   const expanded = useExpanded({ initial: openKeys } as never);
   return (
@@ -56,7 +72,6 @@ function Host({ initial = [] as string[], summary, openKeys = ["c1", "c2"] }: { 
   );
 }
 
-
 describe("Tree with choices", () => {
   it("draws a checkbox per row, and ticking a stage ticks what depends on it, with the reason in text", async () => {
     const user = userEvent.setup();
@@ -64,17 +79,20 @@ describe("Tree with choices", () => {
     const c1 = screen.getAllByRole("row").filter((r) => /detect/.test(r.textContent ?? ""))[0];
     await user.click(within(c1).getByRole("checkbox"));
     const rows = screen.getAllByRole("row");
-    const tracks = rows.filter((r) => /^track/.test(r.textContent ?? ""));
+    const tracks = rows.filter((r) => (r.textContent ?? "").startsWith("track"));
     expect(tracks[0]).toHaveTextContent("Included because of detect");
     expect(within(tracks[0]).getByRole("checkbox")).toBeChecked();
     expect(screen.getByText("2 more chosen because they depend on it")).toBeInTheDocument();
-    expect(screen.getByTestId("summary")).toHaveTextContent(/3\s+results will be forgotten: 1 chosen, 2 that depend on them/);
+    expect(screen.getByTestId("summary")).toHaveTextContent(
+      /3\s+results will be forgotten: 1 chosen, 2 that depend on them/,
+    );
   });
 
   it("a key that is implied cannot be cleared on its own; clearing what implied it releases it", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Host initial={["c1/detect"]} summary />);
-    const rowOf = (name: string, nth = 0) => screen.getAllByRole("row").filter((r) => new RegExp(`^${name}`).test(r.textContent ?? ""))[nth];
+    const rowOf = (name: string, nth = 0) =>
+      screen.getAllByRole("row").filter((r) => new RegExp(`^${name}`).test(r.textContent ?? ""))[nth];
     expect(within(rowOf("track")).getByRole("checkbox")).toBeChecked();
     await user.click(within(rowOf("track")).getByRole("checkbox"));
     expect(within(rowOf("track")).getByRole("checkbox")).toBeChecked(); // refused
@@ -87,11 +105,15 @@ describe("Tree with choices", () => {
   it("shows a parent as mixed when only some of what is under it is chosen, and ticks all of it when pressed", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Host initial={["c1/render"]} />);
-    const c1 = screen.getAllByRole("row").find((r) => /^c1/.test(r.textContent ?? ""))!;
+    const c1 = screen.getAllByRole("row").find((r) => (r.textContent ?? "").startsWith("c1"))!;
     expect(within(c1).getByRole("checkbox")).toBePartiallyChecked();
     await user.click(within(c1).getByRole("checkbox"));
     expect(within(c1).getByRole("checkbox")).toBeChecked();
-    for (const r of screen.getAllByRole("row").filter((r) => /^(detect|track|render)/.test(r.textContent ?? "")).slice(0, 3)) expect(within(r).getByRole("checkbox")).toBeChecked();
+    for (const r of screen
+      .getAllByRole("row")
+      .filter((r) => /^(detect|track|render)/.test(r.textContent ?? ""))
+      .slice(0, 3))
+      expect(within(r).getByRole("checkbox")).toBeChecked();
     await user.click(within(c1).getByRole("checkbox"));
     expect(within(c1).getByRole("checkbox")).not.toBeChecked();
   });
@@ -137,7 +159,17 @@ describe("useSelection implies", () => {
       <div>
         {rows.map((r) => (
           <label key={r.id}>
-            <input type="checkbox" aria-label={r.id} checked={s.selected.has(r.id)} onChange={(e) => { const n = new Set(s.selected); if (e.target.checked) n.add(r.id); else n.delete(r.id); s.onChange(n); }} />
+            <input
+              type="checkbox"
+              aria-label={r.id}
+              checked={s.selected.has(r.id)}
+              onChange={(e) => {
+                const n = new Set(s.selected);
+                if (e.target.checked) n.add(r.id);
+                else n.delete(r.id);
+                s.onChange(n);
+              }}
+            />
             {s.implied.has(r.id) && <span>because of {s.because(r.id).join()}</span>}
           </label>
         ))}

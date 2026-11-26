@@ -71,8 +71,21 @@ export function ScheduleTable({ caption, rows, now, className }: ScheduleTablePr
       },
       value: (r) => lookOf(r).word,
     },
-    { key: "last", header: "Last run", cell: (r) => format.ago(r.last, now), value: (r) => (r.last == null ? null : new Date(r.last)), missing: "Never", hideBelow: "sm" },
-    { key: "next", header: "Next run", cell: (r) => format.ago(r.next, now), value: (r) => (r.next == null ? null : new Date(r.next)), hideBelow: "sm" },
+    {
+      key: "last",
+      header: "Last run",
+      cell: (r) => format.ago(r.last, now),
+      value: (r) => (r.last == null ? null : new Date(r.last)),
+      missing: "Never",
+      hideBelow: "sm",
+    },
+    {
+      key: "next",
+      header: "Next run",
+      cell: (r) => format.ago(r.next, now),
+      value: (r) => (r.next == null ? null : new Date(r.next)),
+      hideBelow: "sm",
+    },
   ];
   return <DataTable caption={caption} columns={columns} rows={rows} rowKey={(r) => r.label} className={className} />;
 }

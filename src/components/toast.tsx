@@ -1,5 +1,12 @@
 import * as React from "react";
-import { UNSTABLE_Toast as AriaToast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion, Button as AriaButton, Text } from "react-aria-components";
+import {
+  UNSTABLE_Toast as AriaToast,
+  UNSTABLE_ToastContent as ToastContent,
+  UNSTABLE_ToastQueue as ToastQueue,
+  UNSTABLE_ToastRegion as ToastRegion,
+  Button as AriaButton,
+  Text,
+} from "react-aria-components";
 import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import { Button } from "./button";
 import { cn } from "../lib/utils";
@@ -60,7 +67,9 @@ export const toast = {
     // Nothing appears without a region, and nothing says so: in development the first such call does (issue #249).
     if (mounted.length === 0 && !warnedNoRegion && isDev()) {
       warnedNoRegion = true;
-      console.warn("strata-react: toast.show() was called but no StrataToastRegion is mounted, so nothing will appear. Render <StrataToastRegion /> once at the app root.");
+      console.warn(
+        "strata-react: toast.show() was called but no StrataToastRegion is mounted, so nothing will appear. Render <StrataToastRegion /> once at the app root.",
+      );
     }
     return queue.add(content, { timeout: toastTimeout(content) });
   },
@@ -72,7 +81,11 @@ export const toast = {
   },
 };
 
-const marks = { info: { icon: Info, color: "text-info" }, success: { icon: CircleCheck, color: "text-success" }, warning: { icon: TriangleAlert, color: "text-warning" } } as const;
+const marks = {
+  info: { icon: Info, color: "text-info" },
+  success: { icon: CircleCheck, color: "text-success" },
+  warning: { icon: TriangleAlert, color: "text-warning" },
+} as const;
 
 /** Props for `ToastRegion`. */
 export type StrataToastRegionProps = {
@@ -106,13 +119,19 @@ function useOwnsQueue(): boolean {
       changed();
     };
   }, [id]);
-  const owns = React.useSyncExternalStore(watch, () => mounted[0] === id, () => true);
+  const owns = React.useSyncExternalStore(
+    watch,
+    () => mounted[0] === id,
+    () => true,
+  );
   const [warned, setWarned] = React.useState(false);
   React.useEffect(() => {
     if (owns || warned || mounted.indexOf(id) < 1) return;
     setWarned(true);
     if (isDev()) {
-      console.warn("strata-react: a StrataToastRegion is already mounted, so this one draws nothing. Render it once at the app root; in a test of a route tree that draws its own, pass `toasts: false` to renderRoutes.");
+      console.warn(
+        "strata-react: a StrataToastRegion is already mounted, so this one draws nothing. Render it once at the app root; in a test of a route tree that draws its own, pass `toasts: false` to renderRoutes.",
+      );
     }
   }, [owns, warned, id]);
   return owns;
@@ -126,12 +145,18 @@ export function StrataToastRegion({ label = "Notifications", className }: Strata
     <ToastRegion
       queue={queue}
       aria-label={label}
-      className={cn("layer-bar fixed inset-x-4 top-4 grid justify-items-end gap-2 outline-none sm:inset-x-auto sm:top-auto sm:right-4 sm:bottom-4", className)}
+      className={cn(
+        "layer-bar fixed inset-x-4 top-4 grid justify-items-end gap-2 outline-none sm:inset-x-auto sm:top-auto sm:right-4 sm:bottom-4",
+        className,
+      )}
     >
       {({ toast: t }) => (
         <AriaToast
           toast={t}
-          className={cn("flex w-full max-w-sm items-start gap-3 p-3 outline-none focus-visible:outline-2 focus-visible:outline-ring", overlaySurface)}
+          className={cn(
+            "flex w-full max-w-sm items-start gap-3 p-3 outline-none focus-visible:outline-2 focus-visible:outline-ring",
+            overlaySurface,
+          )}
         >
           {(() => {
             const { icon: Icon, color } = marks[t.content.tone ?? "info"];
@@ -141,14 +166,28 @@ export function StrataToastRegion({ label = "Notifications", className }: Strata
             <Text slot="title" className="type-label">
               {t.content.title}
             </Text>
-            {t.content.description && <Text slot="description" className="type-body-sm text-muted-foreground">{t.content.description}</Text>}
+            {t.content.description && (
+              <Text slot="description" className="type-body-sm text-muted-foreground">
+                {t.content.description}
+              </Text>
+            )}
           </ToastContent>
           {t.content.action && (
-            <Button size="sm" onPress={() => { t.content.action?.onPress(); queue.close(t.key); }}>
+            <Button
+              size="sm"
+              onPress={() => {
+                t.content.action?.onPress();
+                queue.close(t.key);
+              }}
+            >
               {t.content.action.label}
             </Button>
           )}
-          <AriaButton slot="close" aria-label="Dismiss" className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-control text-muted-foreground transition-state hover:bg-muted hover:text-foreground">
+          <AriaButton
+            slot="close"
+            aria-label="Dismiss"
+            className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-control text-muted-foreground transition-state hover:bg-muted hover:text-foreground"
+          >
             <X aria-hidden className="size-4" />
           </AriaButton>
         </AriaToast>

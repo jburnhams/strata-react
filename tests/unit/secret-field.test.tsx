@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Field, SecretField, type SecretFieldProps } from "../../src";
@@ -69,7 +69,15 @@ describe("SecretField", () => {
     const onSave = vi.fn().mockRejectedValueOnce(new Error("That key was refused.")).mockResolvedValue(undefined);
     function Saving() {
       const [isSet, setIsSet] = React.useState(false);
-      return <Host isSet={isSet} onSave={async (v) => { await onSave(v); setIsSet(true); }} />;
+      return (
+        <Host
+          isSet={isSet}
+          onSave={async (v) => {
+            await onSave(v);
+            setIsSet(true);
+          }}
+        />
+      );
     }
     renderWithStrata(<Saving />);
     const save = screen.getByRole("button", { name: /Save API key/ });
@@ -95,13 +103,20 @@ describe("SecretField", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onRemove).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Remove API key" }));
-    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Remove API key" }));
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "Remove API key",
+      }),
+    );
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 
   it("test: the stored key is tested as null; accepted and refused both read as text", async () => {
     const user = userEvent.setup();
-    const test = vi.fn().mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, message: "The provider says the key has expired." });
+    const test = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, message: "The provider says the key has expired." });
     renderWithStrata(<Host isSet test={test} />);
     await user.click(screen.getByRole("button", { name: "Test API key" }));
     expect(await screen.findByText("API key accepted")).toBeInTheDocument();

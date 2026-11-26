@@ -11,7 +11,10 @@ export function rangeBetween(ids: readonly string[], a: string | null, b: string
 }
 
 /** How many ids carry each mark key. Ids with no mark are not counted. */
-export function countMarks(marks: Readonly<Record<string, string | undefined>>, ids?: readonly string[]): Record<string, number> {
+export function countMarks(
+  marks: Readonly<Record<string, string | undefined>>,
+  ids?: readonly string[],
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const id of ids ?? Object.keys(marks)) {
     const m = marks[id];

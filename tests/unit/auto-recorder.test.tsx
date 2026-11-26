@@ -1,8 +1,17 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Button, ListeningLevel, createSegmenter, rmsDb, useAutoRecorder, type AutoTake, type Microphone, type Segment } from "../../src";
+import {
+  Button,
+  ListeningLevel,
+  createSegmenter,
+  rmsDb,
+  useAutoRecorder,
+  type AutoTake,
+  type Microphone,
+  type Segment,
+} from "../../src";
 import { fakeMicrophone, renderWithStrata, speechScript } from "../../src/testing";
 
 // Hands-free recording: the segmenter read sample by sample over made-up speech and quiet, then the hook
@@ -14,7 +23,8 @@ const RATE = 16_000;
 function sound(seconds: number, amplitude: number, hiss = 0): Float32Array {
   const out = new Float32Array(Math.round(seconds * RATE));
   // A fixed pattern for the hiss, not Math.random, so every run reads the same.
-  for (let i = 0; i < out.length; i++) out[i] = amplitude * Math.sin((2 * Math.PI * 220 * i) / RATE) + hiss * (((i * 7919) % 13) / 6 - 1);
+  for (let i = 0; i < out.length; i++)
+    out[i] = amplitude * Math.sin((2 * Math.PI * 220 * i) / RATE) + hiss * (((i * 7919) % 13) / 6 - 1);
   return out;
 }
 
@@ -29,7 +39,11 @@ function feed(parts: Float32Array[], options: Parameters<typeof createSegmenter>
   }
   const takes: Segment[] = [];
   for (let i = 0; i < all.length; i += 2048) takes.push(...seg.push(all.subarray(i, i + 2048)));
-  return { seg, takes, seconds: takes.map((t) => Math.round((t.samples.length / RATE) * 100) / 100) };
+  return {
+    seg,
+    takes,
+    seconds: takes.map((t) => Math.round((t.samples.length / RATE) * 100) / 100),
+  };
 }
 
 describe("createSegmenter", () => {
@@ -40,7 +54,13 @@ describe("createSegmenter", () => {
   });
 
   it("cuts each stretch of speech out with the pad either side, and learns the room", () => {
-    const { seg, takes, seconds } = feed([sound(1, 0, 0.001), sound(1.5, 0.3, 0.001), sound(1.5, 0, 0.001), sound(2, 0.2, 0.001), sound(1.2, 0, 0.001)]);
+    const { seg, takes, seconds } = feed([
+      sound(1, 0, 0.001),
+      sound(1.5, 0.3, 0.001),
+      sound(1.5, 0, 0.001),
+      sound(2, 0.2, 0.001),
+      sound(1.2, 0, 0.001),
+    ]);
     // 0.3 s before, the speech, 0.3 s after, to the 20 ms frame.
     expect(seconds).toEqual([2.1, 2.6]);
     expect(takes.every((t) => !t.cut)).toBe(true);
@@ -52,7 +72,9 @@ describe("createSegmenter", () => {
   it("keeps a pause at a comma inside the take, and ends it after a second of quiet", () => {
     const { seconds } = feed([sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)]);
     expect(seconds).toEqual([3.2]);
-    const split = feed([sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)], { silenceSeconds: 0.5 });
+    const split = feed([sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)], {
+      silenceSeconds: 0.5,
+    });
     expect(split.seconds).toEqual([1.6, 1.6]);
   });
 
@@ -66,7 +88,9 @@ describe("createSegmenter", () => {
   });
 
   it("cuts a take at the longest and waits for quiet before the next", () => {
-    const { takes, seconds } = feed([sound(0.5, 0), sound(3, 0.3), sound(1.5, 0), sound(1, 0.3), sound(1.5, 0)], { maxSeconds: 2 });
+    const { takes, seconds } = feed([sound(0.5, 0), sound(3, 0.3), sound(1.5, 0), sound(1, 0.3), sound(1.5, 0)], {
+      maxSeconds: 2,
+    });
     expect(seconds).toEqual([2, 1.6]);
     expect(takes.map((t) => t.cut)).toEqual([true, false]);
   });
@@ -97,7 +121,12 @@ function Booth({ microphone, maxSeconds = 30 }: { microphone?: Microphone; maxSe
   const [paused, setPaused] = React.useState(false);
   const [takes, setTakes] = React.useState<AutoTake[]>([]);
   const [started, setStarted] = React.useState("");
-  const recorder = useAutoRecorder({ maxSeconds, paused, microphone, onTake: (t) => setTakes((all) => [...all, t]) });
+  const recorder = useAutoRecorder({
+    maxSeconds,
+    paused,
+    microphone,
+    onTake: (t) => setTakes((all) => [...all, t]),
+  });
   return (
     <div>
       {recorder.listening ? (
@@ -124,7 +153,9 @@ function Booth({ microphone, maxSeconds = 30 }: { microphone?: Microphone; maxSe
 describe("useAutoRecorder", () => {
   it("hands over each take as it ends while the microphone stays open", async () => {
     const user = userEvent.setup();
-    renderWithStrata(<Booth />, { microphone: fakeMicrophone({ script: speechScript(2, { speak: 1, gap: 1.5 }), speed: 40 }) });
+    renderWithStrata(<Booth />, {
+      microphone: fakeMicrophone({ script: speechScript(2, { speak: 1, gap: 1.5 }), speed: 40 }),
+    });
     await user.click(screen.getByRole("button", { name: "Listen" }));
     expect(await screen.findByText(/Listening: start speaking to record/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(2), { timeout: 3000 });
@@ -137,7 +168,15 @@ describe("useAutoRecorder", () => {
 
   it("says when it is hearing a take, and Stop hands it over", async () => {
     const user = userEvent.setup();
-    renderWithStrata(<Booth />, { microphone: fakeMicrophone({ script: [{ seconds: 0.5, amplitude: 0 }, { seconds: 60, amplitude: 0.3 }], speed: 20 }) });
+    renderWithStrata(<Booth />, {
+      microphone: fakeMicrophone({
+        script: [
+          { seconds: 0.5, amplitude: 0 },
+          { seconds: 60, amplitude: 0.3 },
+        ],
+        speed: 20,
+      }),
+    });
     await user.click(screen.getByRole("button", { name: "Listen" }));
     expect(await screen.findByText(/Hearing you: 0:0\d of at most 0:30/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(/Hearing you: 0:01/)).toBeInTheDocument());
@@ -149,7 +188,15 @@ describe("useAutoRecorder", () => {
 
   it("cuts a take that runs past the longest", async () => {
     const user = userEvent.setup();
-    renderWithStrata(<Booth maxSeconds={1} />, { microphone: fakeMicrophone({ script: [{ seconds: 0.5, amplitude: 0 }, { seconds: 60, amplitude: 0.3 }], speed: 40 }) });
+    renderWithStrata(<Booth maxSeconds={1} />, {
+      microphone: fakeMicrophone({
+        script: [
+          { seconds: 0.5, amplitude: 0 },
+          { seconds: 60, amplitude: 0.3 },
+        ],
+        speed: 40,
+      }),
+    });
     await user.click(screen.getByRole("button", { name: "Listen" }));
     expect(await screen.findByText(/^1\.0 s cut/)).toBeInTheDocument();
   });
@@ -175,7 +222,9 @@ describe("useAutoRecorder", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     say(sound(1, 0.3), sound(1.5, 0));
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription(/Paused: nothing is kept until you resume; the room is at/);
+    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription(
+      /Paused: nothing is kept until you resume; the room is at/,
+    );
     await user.click(screen.getByRole("button", { name: "Resume" }));
     say(sound(0.5, 0), sound(1, 0.3), sound(1.5, 0));
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
@@ -183,15 +232,25 @@ describe("useAutoRecorder", () => {
 
   it("starts paused when asked, refuses a second start, and says why a microphone would not open", async () => {
     const user = userEvent.setup();
-    const { unmount } = renderWithStrata(<Booth />, { microphone: fakeMicrophone({ silent: true }) });
+    const { unmount } = renderWithStrata(<Booth />, {
+      microphone: fakeMicrophone({ silent: true }),
+    });
     await user.click(screen.getByRole("button", { name: "Pause" }));
     await user.click(screen.getByRole("button", { name: "Listen" }));
     expect(await screen.findByText("started true")).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription("Paused: nothing is kept until you resume");
+    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription(
+      "Paused: nothing is kept until you resume",
+    );
     await user.click(screen.getByRole("button", { name: "Listen again" }));
     expect(await screen.findByText("started false")).toBeInTheDocument();
     unmount();
-    renderWithStrata(<Booth microphone={fakeMicrophone({ refuse: "No microphone was found. Plug one in, then try again." })} />);
+    renderWithStrata(
+      <Booth
+        microphone={fakeMicrophone({
+          refuse: "No microphone was found. Plug one in, then try again.",
+        })}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Listen" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No microphone was found.");
     expect(screen.getByText("started false")).toBeInTheDocument();
@@ -201,7 +260,9 @@ describe("useAutoRecorder", () => {
     const user = userEvent.setup();
     renderWithStrata(<Booth microphone={fakeMicrophone({ crash: true })} />);
     await user.click(screen.getByRole("button", { name: "Listen" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("The microphone could not be opened (TypeError: audio graph exploded).");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The microphone could not be opened (TypeError: audio graph exploded).",
+    );
   });
 
   it("closes the microphone when the screen goes, keeps nothing, and closes one that opens late", async () => {
@@ -241,7 +302,14 @@ describe("fakeMicrophone's script", () => {
     const heard = (loop: boolean) =>
       new Promise<number[]>((resolve) => {
         const peaks: number[] = [];
-        void fakeMicrophone({ script: [{ seconds: 0.1, amplitude: 0.5 }, { seconds: 0.1, amplitude: 0 }], loop, speed: 100 })
+        void fakeMicrophone({
+          script: [
+            { seconds: 0.1, amplitude: 0.5 },
+            { seconds: 0.1, amplitude: 0 },
+          ],
+          loop,
+          speed: 100,
+        })
           .open((chunk) => {
             peaks.push(Math.round(Math.max(...chunk.map(Math.abs)) * 10) / 10);
           })

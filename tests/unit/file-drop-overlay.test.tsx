@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { FileDropOverlay, Pane, Split, Workspace, useWorkspaceState, STRATA_DRAG_TYPE } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -77,7 +77,9 @@ describe("Workspace onFiles", () => {
       return (
         <Workspace label="Explorer" state={state} onFiles={onFiles} acceptLabel="PAK files">
           <Split direction="row">
-            <Pane id="stage" name="Stage" grow>Stage</Pane>
+            <Pane id="stage" name="Stage" grow>
+              Stage
+            </Pane>
           </Split>
         </Workspace>
       );

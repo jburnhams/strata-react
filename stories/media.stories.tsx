@@ -1,13 +1,30 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { MediaStage, RateChoice, SeekBar, StageGuides, TimeReadout, TimelinePlayer, Transport, VolumeControl, useTimeline } from "../src";
+import {
+  MediaStage,
+  RateChoice,
+  SeekBar,
+  StageGuides,
+  TimeReadout,
+  TimelinePlayer,
+  Transport,
+  VolumeControl,
+  useTimeline,
+} from "../src";
 
 // Issue #78: the controls around anything that plays. The app owns the player; these are drawn
 // from its state, so the same set serves a video, a recording and a replay of a kiln firing. The
 // stories show each resting state; the stage stories show a picture at three aspect ratios with
 // guides over it.
 
-type Props = { playing?: boolean; time?: number; volume?: number; marks?: boolean; precision?: "seconds" | "ms" | "frames"; compact?: boolean };
+type Props = {
+  playing?: boolean;
+  time?: number;
+  volume?: number;
+  marks?: boolean;
+  precision?: "seconds" | "ms" | "frames";
+  compact?: boolean;
+};
 
 function Player({ playing = false, time: t0 = 83, volume: v0 = 80, marks, precision, compact }: Props) {
   const [time, setTime] = React.useState(t0);
@@ -16,9 +33,31 @@ function Player({ playing = false, time: t0 = 83, volume: v0 = 80, marks, precis
   const duration = 245;
   return (
     <div data-density={compact ? "compact" : undefined} className="grid w-full max-w-3xl gap-2">
-      <SeekBar time={time} duration={duration} onSeek={setTime} buffered={170} precision={precision} marks={marks ? [{ time: 40, label: "Pour begins" }, { time: 150, label: "Peak" }] : []} />
+      <SeekBar
+        time={time}
+        duration={duration}
+        onSeek={setTime}
+        buffered={170}
+        precision={precision}
+        marks={
+          marks
+            ? [
+                { time: 40, label: "Pour begins" },
+                { time: 150, label: "Peak" },
+              ]
+            : []
+        }
+      />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Transport playing={playing} onPlayPause={() => {}} onStop={() => {}} onStepBack={() => {}} onStepForward={() => {}} onToStart={() => {}} onToEnd={() => {}} />
+        <Transport
+          playing={playing}
+          onPlayPause={() => {}}
+          onStop={() => {}}
+          onStepBack={() => {}}
+          onStepForward={() => {}}
+          onToStart={() => {}}
+          onToEnd={() => {}}
+        />
         <TimeReadout time={time} duration={duration} precision={precision} />
         <span className="ml-auto flex items-center gap-3">
           <RateChoice rate={rate} onRateChange={setRate} />
@@ -42,7 +81,14 @@ export const WithMarks: Story = { args: { marks: true } };
 /** Frame-accurate timecode for an editor: m:ss:ff at 30 frames a second. */
 export const FrameTimecode: Story = { args: { precision: "frames", time: 83.5 } };
 export const Compact: Story = { args: { compact: true } };
-export const Phone: Story = { tags: ["visual-phone"], render: () => <div className="w-full"><Player marks /></div> };
+export const Phone: Story = {
+  tags: ["visual-phone"],
+  render: () => (
+    <div className="w-full">
+      <Player marks />
+    </div>
+  ),
+};
 
 function Stage({ aspect, guides }: { aspect: `${number}/${number}`; guides?: boolean }) {
   return (

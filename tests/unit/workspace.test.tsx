@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button, Pane, Split, Workspace, useWorkspaceState } from "../../src";
@@ -40,8 +40,13 @@ describe("Workspace", () => {
   it("is a named group of regions, each named by its own header", () => {
     renderWithStrata(<Editor />);
     const ws = screen.getByRole("group", { name: "Editor" });
-    for (const name of ["Library", "Preview", "Inspector", "Timeline"]) expect(within(ws).getByRole("region", { name })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Inspector" })).getByRole("button", { name: "Reset" })).toBeInTheDocument();
+    for (const name of ["Library", "Preview", "Inspector", "Timeline"])
+      expect(within(ws).getByRole("region", { name })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Inspector" })).getByRole("button", {
+        name: "Reset",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("gives each separator its role, value and limits, and puts it in the tab order", () => {

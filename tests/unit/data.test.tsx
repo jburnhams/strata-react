@@ -1,21 +1,46 @@
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "vite-plus/test";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { useLocation } from "react-router";
-import { DataTable, DataView, EmptyState, StaleNotice, TableSkeleton, fetchJson, format, useLoad, type Column, type Load } from "../../src";
+import {
+  DataTable,
+  DataView,
+  EmptyState,
+  StaleNotice,
+  TableSkeleton,
+  fetchJson,
+  format,
+  useLoad,
+  type Column,
+  type Load,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { api, bookingsEmpty, bookingsServerError, manyBookings } from "../../stories/mocks/handlers";
 import { bookings, type Booking } from "../../stories/fixtures/kiln";
 
 const columns: Column<Booking>[] = [
-  { key: "member", header: "Member", cell: (b) => b.member, sort: (a, b) => a.member.localeCompare(b.member) },
-  { key: "pieces", header: "Pieces", cell: (b) => b.pieces, numeric: true, sort: (a, b) => a.pieces - b.pieces },
+  {
+    key: "member",
+    header: "Member",
+    cell: (b) => b.member,
+    sort: (a, b) => a.member.localeCompare(b.member),
+  },
+  {
+    key: "pieces",
+    header: "Pieces",
+    cell: (b) => b.pieces,
+    numeric: true,
+    sort: (a, b) => a.pieces - b.pieces,
+  },
 ];
 
 function Bookings() {
-  const load = useLoad({ queryKey: ["bookings"], queryFn: () => fetchJson<Booking[]>(api.bookings) });
+  const load = useLoad({
+    queryKey: ["bookings"],
+    queryFn: () => fetchJson<Booking[]>(api.bookings),
+  });
   return (
     <DataView
       state={load}
@@ -88,7 +113,12 @@ describe("a refresh that fails after a good read (issue #26)", () => {
     const load: Load<Booking[]> = {
       status: "ready",
       data: [],
-      stale: { message: "Kiln 2's controller is not answering.", readAt: new Date(2026, 10, 7, 13, 50), retry: () => undefined, retrying: true },
+      stale: {
+        message: "Kiln 2's controller is not answering.",
+        readAt: new Date(2026, 10, 7, 13, 50),
+        retry: () => undefined,
+        retrying: true,
+      },
     };
     render(
       <DataView
@@ -102,7 +132,9 @@ describe("a refresh that fails after a good read (issue #26)", () => {
       </DataView>,
     );
     expect(screen.getByText("All three kilns are cold")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(`Kiln 2's controller is not answering. Readings from ${format.shortDay.format(load.stale!.readAt)}.`);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      `Kiln 2's controller is not answering. Readings from ${format.shortDay.format(load.stale!.readAt)}.`,
+    );
     // A fetch on its way: the button says so and cannot be pressed twice.
     expect(screen.getByRole("button", { name: "Trying again…" })).toBeDisabled();
   });
@@ -145,7 +177,9 @@ describe("DataTable", () => {
   });
 
   it("renders only the visible rows of a long table (React Aria's Virtualizer)", () => {
-    renderWithStrata(<DataTable caption="Many" columns={columns} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />);
+    renderWithStrata(
+      <DataTable caption="Many" columns={columns} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />,
+    );
     const rendered = bodyRows().filter((r) => r.getAttribute("aria-hidden") !== "true");
     expect(rendered.length).toBeGreaterThan(0);
     expect(rendered.length).toBeLessThan(40);
@@ -157,28 +191,55 @@ describe("DataTable", () => {
     renderWithStrata(<DataTable caption="Work" columns={narrowing} rows={bookings} rowKey={(b) => b.id} />);
     const header = screen.getByRole("columnheader", { name: /Pieces/ });
     expect(header).toHaveClass("max-sm:hidden");
-    expect(within(bodyRows()[0]).getAllByRole("gridcell").filter((c) => c.classList.contains("max-sm:hidden"))).toHaveLength(1);
+    expect(
+      within(bodyRows()[0])
+        .getAllByRole("gridcell")
+        .filter((c) => c.classList.contains("max-sm:hidden")),
+    ).toHaveLength(1);
     expect(screen.getByRole("columnheader", { name: /Member/ })).not.toHaveClass("max-sm:hidden");
   });
 
   it("drops the column from a virtualised table on a narrow screen, where CSS cannot (issue #339)", async () => {
     const real = window.matchMedia;
-    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
     onTestFinished(() => void (window.matchMedia = real));
     const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
-    renderWithStrata(<DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />);
+    renderWithStrata(
+      <DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />,
+    );
     await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
     expect(screen.getByRole("columnheader", { name: /Member/ })).toBeInTheDocument();
   });
 
   it("keeps ordering rows by a column that a narrow screen hides from a virtualised table (issue #339)", async () => {
     const real = window.matchMedia;
-    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
     onTestFinished(() => void (window.matchMedia = real));
     const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
-    renderWithStrata(<DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} sortParam="sort" />, { route: "/?sort=pieces.desc" });
+    renderWithStrata(
+      <DataTable
+        caption="Many"
+        columns={narrowing}
+        rows={manyBookings}
+        rowKey={(b) => b.id}
+        maxHeight={280}
+        sortParam="sort"
+      />,
+      { route: "/?sort=pieces.desc" },
+    );
     await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
-    const first = within(bodyRows().find((r) => r.getAttribute("aria-hidden") !== "true")!).getAllByRole("rowheader")[0].textContent;
+    const first = within(bodyRows().find((r) => r.getAttribute("aria-hidden") !== "true")!).getAllByRole("rowheader")[0]
+      .textContent;
     const top = [...manyBookings].sort((a, b) => b.pieces - a.pieces)[0];
     expect(manyBookings.find((b) => b.member === first)?.pieces).toBe(top.pieces);
   });

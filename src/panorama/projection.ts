@@ -33,8 +33,15 @@ export function wrapYaw(yaw: number): number {
 export const yawDelta = (from: number, to: number) => wrapYaw(to - from);
 
 /** Keeps a view inside its limits: heading wrapped, pitch within +-`maxPitch`, field of view within `minFov` to `maxFov`. */
-export function clampView(view: PanoramaView, { maxPitch = 85, minFov = 20, maxFov = 120 }: { maxPitch?: number; minFov?: number; maxFov?: number } = {}): PanoramaView {
-  return { yaw: wrapYaw(view.yaw), pitch: Math.min(Math.max(view.pitch, -maxPitch), maxPitch), fov: Math.min(Math.max(view.fov, minFov), maxFov) };
+export function clampView(
+  view: PanoramaView,
+  { maxPitch = 85, minFov = 20, maxFov = 120 }: { maxPitch?: number; minFov?: number; maxFov?: number } = {},
+): PanoramaView {
+  return {
+    yaw: wrapYaw(view.yaw),
+    pitch: Math.min(Math.max(view.pitch, -maxPitch), maxPitch),
+    fov: Math.min(Math.max(view.fov, minFov), maxFov),
+  };
 }
 
 const focal = (view: PanoramaView, size: PanoramaSize) => size.width / 2 / Math.tan((view.fov * RAD) / 2);
@@ -64,18 +71,30 @@ export function project(view: PanoramaView, size: PanoramaSize, yaw: number, pit
 }
 
 /** The direction under a point of the box for `view`: the inverse of `project`. */
-export function unproject(view: PanoramaView, size: PanoramaSize, x: number, y: number): { yaw: number; pitch: number } {
+export function unproject(
+  view: PanoramaView,
+  size: PanoramaSize,
+  x: number,
+  y: number,
+): { yaw: number; pitch: number } {
   const { forward, right, up } = basis(view);
   const f = focal(view, size);
   const a = (x - size.width / 2) / f;
   const b = -(y - size.height / 2) / f;
-  const v = [forward[0] + a * right[0] + b * up[0], forward[1] + a * right[1] + b * up[1], forward[2] + a * right[2] + b * up[2]] as const;
+  const v = [
+    forward[0] + a * right[0] + b * up[0],
+    forward[1] + a * right[1] + b * up[1],
+    forward[2] + a * right[2] + b * up[2],
+  ] as const;
   const length = Math.hypot(v[0], v[1], v[2]);
-  return { yaw: wrapYaw(Math.atan2(v[0], v[2]) * DEG), pitch: Math.asin(Math.min(Math.max(v[1] / length, -1), 1)) * DEG };
+  return {
+    yaw: wrapYaw(Math.atan2(v[0], v[2]) * DEG),
+    pitch: Math.asin(Math.min(Math.max(v[1] / length, -1), 1)) * DEG,
+  };
 }
 
 /** Pixels to degrees at the middle of the box: how far a drag of `px` turns the view. */
-export const degreesPerPixel = (view: PanoramaView, size: PanoramaSize) => (Math.atan(1 / focal(view, size)) * DEG);
+export const degreesPerPixel = (view: PanoramaView, size: PanoramaSize) => Math.atan(1 / focal(view, size)) * DEG;
 
 /** The flat picture's own mapping, for the fallback with no WebGL: longitude and latitude are straight across and down, the visible rectangle is `fov` wide and as tall as the box's shape makes it. */
 export function projectFlat(view: PanoramaView, size: PanoramaSize, yaw: number, pitch: number): PanoramaPoint {
@@ -86,9 +105,17 @@ export function projectFlat(view: PanoramaView, size: PanoramaSize, yaw: number,
 }
 
 /** The inverse of `projectFlat`. */
-export function unprojectFlat(view: PanoramaView, size: PanoramaSize, x: number, y: number): { yaw: number; pitch: number } {
+export function unprojectFlat(
+  view: PanoramaView,
+  size: PanoramaSize,
+  x: number,
+  y: number,
+): { yaw: number; pitch: number } {
   const perPixel = view.fov / size.width;
-  return { yaw: wrapYaw(view.yaw + (x - size.width / 2) * perPixel), pitch: Math.min(Math.max(view.pitch - (y - size.height / 2) * perPixel, -90), 90) };
+  return {
+    yaw: wrapYaw(view.yaw + (x - size.width / 2) * perPixel),
+    pitch: Math.min(Math.max(view.pitch - (y - size.height / 2) * perPixel, -90), 90),
+  };
 }
 
 /** The direction in words: "Looking 40° right, 5° up", "Looking straight ahead". Whole degrees; nothing is said for less than half a degree. */

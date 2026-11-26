@@ -60,12 +60,19 @@ function leavesSite(href: string): boolean {
 }
 
 /** A destination as a card that is one link: its title is the link's name, the description and status marks are its description, and the whole card is the target. */
-export function LinkCard({ title, description, marks, as: Heading = "h3", className, external, ...destination }: LinkCardProps) {
+export function LinkCard({
+  title,
+  description,
+  marks,
+  as: Heading = "h3",
+  className,
+  external,
+  ...destination
+}: LinkCardProps) {
   const descriptionId = React.useId();
   const marksId = React.useId();
   const describedBy = [description && descriptionId, marks && marksId].filter(Boolean).join(" ") || undefined;
-  const linkClass =
-    "rounded-control outline-none after:absolute after:inset-0 after:rounded-surface";
+  const linkClass = "rounded-control outline-none after:absolute after:inset-0 after:rounded-surface";
 
   return (
     <div
@@ -82,7 +89,9 @@ export function LinkCard({ title, description, marks, as: Heading = "h3", classN
             <a href={destination.href} aria-describedby={describedBy} className={linkClass}>
               {title}
             </a>
-            {(external ?? leavesSite(destination.href)) && <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />}
+            {(external ?? leavesSite(destination.href)) && (
+              <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            )}
           </>
         ) : (
           <Link to={destination.to} aria-describedby={describedBy} className={linkClass}>
@@ -105,7 +114,15 @@ export function LinkCard({ title, description, marks, as: Heading = "h3", classN
 }
 
 /** A labelled list of `LinkCard`s in a grid: one column on a phone, up to three on a wide screen. */
-export function LinkCardList({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+export function LinkCardList({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <ul aria-label={label} className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3", className)}>
       {React.Children.toArray(children).map((child, i) => (

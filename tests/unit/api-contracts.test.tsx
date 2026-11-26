@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { HttpError, apiPage, errorPayload, fetchJson, isTaskRunning, readErrorBody, useInfiniteLoad, type ApiPage } from "../../src";
+import {
+  HttpError,
+  apiPage,
+  errorPayload,
+  fetchJson,
+  isTaskRunning,
+  readErrorBody,
+  useInfiniteLoad,
+  type ApiPage,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 
@@ -22,7 +31,10 @@ describe("isTaskRunning", () => {
 describe("the error body's payload", () => {
   it("is kept beside the reason and read typed", () => {
     const body = { detail: "A firing is already running.", payload: { running: "f-0412" } };
-    expect(readErrorBody(body)).toEqual({ reason: "A firing is already running.", payload: { running: "f-0412" } });
+    expect(readErrorBody(body)).toEqual({
+      reason: "A firing is already running.",
+      payload: { running: "f-0412" },
+    });
     const error = new HttpError(409, "Conflict", "/api/firings", body);
     expect(error.reason).toBe("A firing is already running.");
     expect(errorPayload<{ running: string }>(error)).toEqual({ running: "f-0412" });
@@ -31,7 +43,11 @@ describe("the error body's payload", () => {
   });
 
   it("reaches the app from a real 409 through fetchJson", async () => {
-    server.use(http.get("/api/start", () => HttpResponse.json({ detail: "Busy.", payload: { running: "f-1" } }, { status: 409 })));
+    server.use(
+      http.get("/api/start", () =>
+        HttpResponse.json({ detail: "Busy.", payload: { running: "f-1" } }, { status: 409 }),
+      ),
+    );
     const error = await fetchJson("/api/start").catch((e: unknown) => e);
     expect(errorPayload<{ running: string }>(error)?.running).toBe("f-1");
   });
@@ -41,14 +57,17 @@ type Item = { id: string };
 function Pages() {
   const load = useInfiniteLoad({
     queryKey: ["contract-pages"],
-    queryFn: ({ cursor, signal }) => fetchJson<ApiPage<Item>>(`/api/items${cursor ? `?after=${cursor}` : ""}`, { signal }),
+    queryFn: ({ cursor, signal }) =>
+      fetchJson<ApiPage<Item>>(`/api/items${cursor ? `?after=${cursor}` : ""}`, { signal }),
     itemKey: (i: Item) => i.id,
     ...apiPage<Item>(),
   });
   return (
     <>
       <p data-testid="ids">{load.status === "ready" ? load.data.map((i) => i.id).join(",") : load.status}</p>
-      <button disabled={!load.more.hasMore} onClick={load.more.loadMore}>More</button>
+      <button disabled={!load.more.hasMore} onClick={load.more.loadMore}>
+        More
+      </button>
     </>
   );
 }
@@ -60,7 +79,11 @@ describe("apiPage", () => {
       http.get("/api/items", ({ request }) => {
         const after = new URL(request.url).searchParams.get("after");
         seen.push(after);
-        return HttpResponse.json(after === null ? { items: [{ id: "a" }, { id: "b" }], next: "cursor-1", total: 3 } : { items: [{ id: "c" }], next: null, total: 3 });
+        return HttpResponse.json(
+          after === null
+            ? { items: [{ id: "a" }, { id: "b" }], next: "cursor-1", total: 3 }
+            : { items: [{ id: "c" }], next: null, total: 3 },
+        );
       }),
     );
     renderWithStrata(<Pages />);

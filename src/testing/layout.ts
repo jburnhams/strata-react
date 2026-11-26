@@ -9,7 +9,19 @@ import { installStorageShim } from "./storage";
 // jsdom has no DOMRect constructor in every version, so rects are plain objects of the same shape.
 /** A DOMRect-shaped object, for stand-ins that report geometry. */
 export function box(x: number, y: number, width: number, height: number): DOMRect {
-  return { x, y, width, height, top: y, left: x, right: x + width, bottom: y + height, toJSON() { return this; } } as DOMRect;
+  return {
+    x,
+    y,
+    width,
+    height,
+    top: y,
+    left: x,
+    right: x + width,
+    bottom: y + height,
+    toJSON() {
+      return this;
+    },
+  } as DOMRect;
 }
 
 /** The box every element reports while the shims are installed. */
@@ -51,7 +63,12 @@ export function installLayoutShims({ width = 640, height = 280 }: Partial<Layout
     writable: true,
     value: () => box(0, 0, width, height),
   });
-  for (const [prop, value] of [["offsetWidth", width], ["offsetHeight", height], ["clientWidth", width], ["clientHeight", height]] as const) {
+  for (const [prop, value] of [
+    ["offsetWidth", width],
+    ["offsetHeight", height],
+    ["clientWidth", width],
+    ["clientHeight", height],
+  ] as const) {
     replace(HTMLElement.prototype, prop, { get: () => value });
   }
 

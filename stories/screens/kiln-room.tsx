@@ -100,8 +100,17 @@ export function KilnRoomScreen() {
           }}
         />
         <MetricStrip label="Kiln room now">
-          <Metric label="Kiln 2 temperature" value={format.integer(now.y)} unit="°C" note={`Safe to open below ${format.celsius(SAFE_TO_OPEN_C)}`} />
-          <Metric label="Pieces waiting in kiln 2" value={load.status === "ready" ? format.integer(pieces) : "–"} note="Summed from the table below" />
+          <Metric
+            label="Kiln 2 temperature"
+            value={format.integer(now.y)}
+            unit="°C"
+            note={`Safe to open below ${format.celsius(SAFE_TO_OPEN_C)}`}
+          />
+          <Metric
+            label="Pieces waiting in kiln 2"
+            value={load.status === "ready" ? format.integer(pieces) : "–"}
+            note="Summed from the table below"
+          />
           <Metric
             label="Shelves free in Friday's bisque"
             value={format.integer(kiln1Shelves.total - kiln1Shelves.booked)}
@@ -137,7 +146,15 @@ export function KilnRoomScreen() {
               </EmptyState>
             }
           >
-            {() => <DataTable caption="Work in the kilns" columns={columns} rows={rows} rowKey={(b) => b.id} sortParam="sort" />}
+            {() => (
+              <DataTable
+                caption="Work in the kilns"
+                columns={columns}
+                rows={rows}
+                rowKey={(b) => b.id}
+                sortParam="sort"
+              />
+            )}
           </DataView>
         </section>
       </div>

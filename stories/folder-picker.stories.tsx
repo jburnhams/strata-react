@@ -5,7 +5,9 @@ import { FolderChooser } from "./screens/folder-chooser";
 // Issue #188: a folder browser over the server's disk, answered by the same MSW handlers the tests
 // use. `/home/ada/slow-share` is slow, `/home/ada/locked` refuses, `/media/library` has 500 folders.
 
-const meta = { title: "Data/FolderPicker", component: FolderChooser, parameters: { layout: "padded" } } satisfies Meta<typeof FolderChooser>;
+const meta = { title: "Data/FolderPicker", component: FolderChooser, parameters: { layout: "padded" } } satisfies Meta<
+  typeof FolderChooser
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -17,12 +19,32 @@ export const Fresh: Story = {};
 
 /** The top level never arrives: a skeleton, not a blank. */
 export const Loading: Story = {
-  parameters: { msw: { handlers: [http.get("/api/folders", async () => { await delay("infinite"); return HttpResponse.json({ folders: [] }); })] } },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("/api/folders", async () => {
+          await delay("infinite");
+          return HttpResponse.json({ folders: [] });
+        }),
+      ],
+    },
+  },
 };
 
 /** The top level fails: the server's reason and Try again. */
 export const Failed: Story = {
-  parameters: { msw: { handlers: [http.get("/api/folders", () => HttpResponse.json({ detail: "You are not allowed to browse this server." }, { status: 403, statusText: "Forbidden" }))] } },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("/api/folders", () =>
+          HttpResponse.json(
+            { detail: "You are not allowed to browse this server." },
+            { status: 403, statusText: "Forbidden" },
+          ),
+        ),
+      ],
+    },
+  },
 };
 
 /** 500 folders under /media/library: virtualised when a level reaches 100. */
@@ -33,7 +55,9 @@ export const FiveHundred: Story = { args: { start: "/media/library" } };
 const makeProject = {
   chooseLabel: "Create project here",
   canChoose: (path: string, folder?: { badge?: string }) =>
-    folder?.badge === "project" || path.endsWith("/rushes") ? (true as const) : "Open a folder that holds camera files, or an existing project.",
+    folder?.badge === "project" || path.endsWith("/rushes")
+      ? (true as const)
+      : "Open a folder that holds camera files, or an existing project.",
   onOpen: (folder: { badge?: string }) => (folder.badge === "project" ? ("choose" as const) : ("enter" as const)),
 };
 

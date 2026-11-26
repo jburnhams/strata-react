@@ -45,7 +45,11 @@ export function Tabs({
   // React Aria's Tabs owns the keyboard model (arrows, Home and End, roving tab stop, automatic
   // activation) and the ids that tie each tab to the panel; the selected key is the URL's.
   return (
-    <AriaTabs selectedKey={value} onSelectionChange={(key) => select(String(key))} className={cn("grid gap-4", className)}>
+    <AriaTabs
+      selectedKey={value}
+      onSelectionChange={(key) => select(String(key))}
+      className={cn("grid gap-4", className)}
+    >
       <TabList aria-label={label} className="flex gap-4 overflow-x-auto border-b border-border">
         {items.map((item) => (
           <Tab

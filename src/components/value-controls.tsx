@@ -178,7 +178,8 @@ export function NumberField({
   "aria-label": ariaLabel,
 }: NumberFieldProps) {
   const { field, report } = useFieldControl();
-  const digits = places ?? Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min), ...(nudge ?? []).map(decimalsOf));
+  const digits =
+    places ?? Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min), ...(nudge ?? []).map(decimalsOf));
   const show = useNumberText(locale, digits);
   const [own, setOwn] = React.useState(false); // invalid, when there is no Field to say so
   const unitId = React.useId();
@@ -219,7 +220,8 @@ export function NumberField({
       accept(null);
       return;
     }
-    if ((min !== undefined && n < min) || (max !== undefined && n > max)) return fail(describeRange(min, max, show, unit));
+    if ((min !== undefined && n < min) || (max !== undefined && n > max))
+      return fail(describeRange(min, max, show, unit));
     ok();
     accept(n);
   };
@@ -274,7 +276,12 @@ export function NumberField({
         isInvalid={invalid || undefined}
         name={name}
         aria-label={ariaLabel ?? field?.label}
-        className={cn(box, controlHeight[size], nudge ? "min-w-32 flex-1" : undefined, !nudge && !suggestion && !held && className)}
+        className={cn(
+          box,
+          controlHeight[size],
+          nudge ? "min-w-32 flex-1" : undefined,
+          !nudge && !suggestion && !held && className,
+        )}
       >
         <AriaInput
           id={idProp ?? field?.id}
@@ -294,7 +301,13 @@ export function NumberField({
   if (!nudge && !suggestion && !held) return field_;
 
   const sizes = [...new Set(nudge ?? [])].filter((n) => n > 0).sort((a, b) => a - b);
-  const steps = [...sizes.slice().reverse().map((n) => -n), ...sizes];
+  const steps = [
+    ...sizes
+      .slice()
+      .reverse()
+      .map((n) => -n),
+    ...sizes,
+  ];
   const row = (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       {field_}
@@ -338,7 +351,11 @@ export function NumberField({
         </div>
       )}
       {held && pending !== undefined && (
-        <div role="group" aria-label="Change not applied yet" className="grid gap-3 rounded-surface bg-surface-sunken p-3">
+        <div
+          role="group"
+          aria-label="Change not applied yet"
+          className="grid gap-3 rounded-surface bg-surface-sunken p-3"
+        >
           {typeof preview === "function" ? preview(pending) : preview}
           <div className="flex flex-wrap items-center gap-2">
             <AsyncButton
@@ -418,13 +435,32 @@ export function Slider({
           {({ state }) => (
             <>
               <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
-              <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${state.getThumbPercent(0) * 100}%` }} />
+              <span
+                aria-hidden
+                className="absolute left-0 h-1.5 rounded-pill bg-primary"
+                style={{ width: `${state.getThumbPercent(0) * 100}%` }}
+              />
               <SliderThumb className="top-1/2 size-5 rounded-pill border-2 border-primary bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
             </>
           )}
         </SliderTrack>
         {editable ? (
-          <NumberField className="w-28 shrink-0" aria-label={`${name}, exact value`} value={value} onChange={(v) => { if (v !== null) onChange(v); }} min={min} max={max} step={step} unit={unit} locale={locale} places={digits} required disabled={disabled} />
+          <NumberField
+            className="w-28 shrink-0"
+            aria-label={`${name}, exact value`}
+            value={value}
+            onChange={(v) => {
+              if (v !== null) onChange(v);
+            }}
+            min={min}
+            max={max}
+            step={step}
+            unit={unit}
+            locale={locale}
+            places={digits}
+            required
+            disabled={disabled}
+          />
         ) : (
           !hideValue && (
             <SliderOutput aria-hidden className="w-16 shrink-0 text-right type-body-sm tabular-nums text-foreground">
@@ -458,7 +494,18 @@ export type ColorFieldProps = {
 };
 
 /** Choose a colour with the platform picker, see and type its hex value, pick from the app's suggestions, and get a note when it would be hard to see on `against`. A half-typed value is never passed on. */
-export function ColorField({ value, onChange, suggestions, against, againstLabel = "the background", minContrast = 3, disabled, id: idProp, className, "aria-label": ariaLabel }: ColorFieldProps) {
+export function ColorField({
+  value,
+  onChange,
+  suggestions,
+  against,
+  againstLabel = "the background",
+  minContrast = 3,
+  disabled,
+  id: idProp,
+  className,
+  "aria-label": ariaLabel,
+}: ColorFieldProps) {
   const { field, report } = useFieldControl();
   // Named for the `aria-label` or, failing that, the surrounding Field's label, so two colour fields in one panel never share a name (issue #116).
   const label = ariaLabel ?? field?.label;
@@ -500,7 +547,11 @@ export function ColorField({ value, onChange, suggestions, against, againstLabel
       <div className={cn(box, controlHeight.default, "gap-2 px-2")} aria-invalid={invalid || undefined}>
         <span className="relative size-6 shrink-0 overflow-hidden rounded-control border border-input">
           {/* The swatch is the chosen colour itself: user content, not a theme role. */}
-          <span aria-hidden className={cn("absolute inset-0", value === null && "bg-muted")} style={value ? { background: value } : undefined} />
+          <span
+            aria-hidden
+            className={cn("absolute inset-0", value === null && "bg-muted")}
+            style={value ? { background: value } : undefined}
+          />
           <input
             type="color"
             aria-label={pickerName}
@@ -554,7 +605,8 @@ export function ColorField({ value, onChange, suggestions, against, againstLabel
       )}
       {ratio !== null && ratio < minContrast && (
         <p className="type-body-sm text-warning">
-          Hard to see on {againstLabel}: contrast {format.decimal(ratio)}:1, aim for {format.decimal(minContrast)}:1 or more.
+          Hard to see on {againstLabel}: contrast {format.decimal(ratio)}:1, aim for {format.decimal(minContrast)}:1 or
+          more.
         </p>
       )}
     </div>

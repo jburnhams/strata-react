@@ -1,8 +1,18 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Timeline, noOverlap, tickLabel, tickStep, ticksBetween, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineProps } from "../../src";
+import {
+  Timeline,
+  noOverlap,
+  tickLabel,
+  tickStep,
+  ticksBetween,
+  useTimelineZoom,
+  type TimelineChange,
+  type TimelineItem,
+  type TimelineProps,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const lanes = [
@@ -237,7 +247,13 @@ describe("Timeline review fixes", () => {
   });
 
   it("keeps the tab-stop item mounted when the view is scrolled far from it", () => {
-    const many: TimelineItem[] = Array.from({ length: 500 }, (_, i) => ({ id: `i${i}`, lane: "t1", start: i * 10, length: 8, label: `Clip ${i}` }));
+    const many: TimelineItem[] = Array.from({ length: 500 }, (_, i) => ({
+      id: `i${i}`,
+      lane: "t1",
+      start: i * 10,
+      length: 8,
+      label: `Clip ${i}`,
+    }));
     const { container } = renderWithStrata(<Timeline label="Many" lanes={lanes} items={many} to={5000} zoom={10} />);
     const scroller = container.querySelector<HTMLElement>(".overflow-x-auto")!;
     Object.defineProperty(scroller, "scrollLeft", { value: 40000, configurable: true });
@@ -294,7 +310,13 @@ describe("Timeline pointer and size", () => {
   });
 
   it("renders only the items near the view, so thousands of items cost what is on screen", () => {
-    const many: TimelineItem[] = Array.from({ length: 3000 }, (_, i) => ({ id: `i${i}`, lane: "t1", start: i * 10, length: 8, label: `Clip ${i}` }));
+    const many: TimelineItem[] = Array.from({ length: 3000 }, (_, i) => ({
+      id: `i${i}`,
+      lane: "t1",
+      start: i * 10,
+      length: 8,
+      label: `Clip ${i}`,
+    }));
     renderWithStrata(<Timeline label="Many" lanes={lanes} items={many} to={30000} zoom={10} />);
     const rendered = screen.getAllByRole("button").length;
     expect(rendered).toBeGreaterThan(5);
@@ -302,7 +324,9 @@ describe("Timeline pointer and size", () => {
   });
 
   it("shows the empty content when there are no lanes", () => {
-    renderWithStrata(<Timeline label="Edit" lanes={[]} items={[]} to={60} zoom={10} empty={<p>Add a track to begin</p>} />);
+    renderWithStrata(
+      <Timeline label="Edit" lanes={[]} items={[]} to={60} zoom={10} empty={<p>Add a track to begin</p>} />,
+    );
     expect(screen.getByText("Add a track to begin")).toBeInTheDocument();
   });
 });

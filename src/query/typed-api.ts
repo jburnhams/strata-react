@@ -11,10 +11,13 @@ import { createApi, type ApiOptions } from "./api";
 type Method = "get" | "post" | "put" | "patch" | "delete";
 type Json = "application/json";
 
-type PathsWith<P, M extends Method> = { [K in keyof P]: P[K] extends { [m in M]: object } ? K : never }[keyof P] & string;
+type PathsWith<P, M extends Method> = { [K in keyof P]: P[K] extends { [m in M]: object } ? K : never }[keyof P] &
+  string;
 type Operation<P, K extends keyof P, M extends Method> = P[K] extends { [m in M]: infer O } ? O : never;
 
-type Params<O, Where extends "path" | "query"> = O extends { parameters: { [w in Where]?: infer V } } ? Exclude<V, undefined | never> : never;
+type Params<O, Where extends "path" | "query"> = O extends { parameters: { [w in Where]?: infer V } }
+  ? Exclude<V, undefined | never>
+  : never;
 // `requestBody?: never` (an operation with no body) must not match the pattern below: an optional
 // `never` property matches `{ requestBody?: {…} }` and infers `unknown`, which asked for a `json` the
 // server does not take (issue #305). So the body is read from `NonNullable<…>`, and `never` stays `never`.
@@ -75,18 +78,27 @@ export type TypedApi<P> = {
   /** The path with the app's base: for an `<img src>`, a download link or an `EventSource`. */
   url(path: string): string;
 } & {
-  [M in Method]: <K extends PathsWith<P, M>>(path: K, ...args: Args<Operation<P, K, M>, M extends "get" | "delete" ? false : true>) => Promise<Answer<Operation<P, K, M>>>;
+  [M in Method]: <K extends PathsWith<P, M>>(
+    path: K,
+    ...args: Args<Operation<P, K, M>, M extends "get" | "delete" ? false : true>
+  ) => Promise<Answer<Operation<P, K, M>>>;
 };
 
-function fill(path: string, values: Record<string, unknown> | undefined, query: Record<string, unknown> | undefined): string {
+function fill(
+  path: string,
+  values: Record<string, unknown> | undefined,
+  query: Record<string, unknown> | undefined,
+): string {
   const filled = path.replace(/\{([^}]+)\}/g, (_, name: string) => {
     const value = values?.[name];
-    if (value === undefined || value === null) throw new Error(`strata-react: the path ${path} needs "${name}" in \`path\``);
+    if (value === undefined || value === null)
+      throw new Error(`strata-react: the path ${path} needs "${name}" in \`path\``);
     return encodeURIComponent(String(value));
   });
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
-    for (const item of Array.isArray(value) ? value : [value]) if (item !== undefined && item !== null) search.append(key, String(item));
+    for (const item of Array.isArray(value) ? value : [value])
+      if (item !== undefined && item !== null) search.append(key, String(item));
   }
   const text = search.toString();
   return text ? `${filled}${filled.includes("?") ? "&" : "?"}${text}` : filled;
@@ -99,10 +111,25 @@ function fill(path: string, values: Record<string, unknown> | undefined, query: 
 export function createTypedApi<P>(options: ApiOptions = {}): TypedApi<P> {
   const api = createApi(options);
   const call = (method: Method) => (path: string, request?: Record<string, unknown>) => {
-    const { path: values, query, json, body, ...init } = (request ?? {}) as { path?: Record<string, unknown>; query?: Record<string, unknown>; json?: unknown; body?: unknown } & Record<string, unknown>;
+    const {
+      path: values,
+      query,
+      json,
+      body,
+      ...init
+    } = (request ?? {}) as {
+      path?: Record<string, unknown>;
+      query?: Record<string, unknown>;
+      json?: unknown;
+      body?: unknown;
+    } & Record<string, unknown>;
     const target = fill(path, values, query);
     const rest = init as Parameters<typeof api.get>[1];
-    return method === "get" ? api.get(target, rest) : method === "delete" ? api.delete(target, rest) : api[method](target, body ?? json, rest);
+    return method === "get"
+      ? api.get(target, rest)
+      : method === "delete"
+        ? api.delete(target, rest)
+        : api[method](target, body ?? json, rest);
   };
   return {
     url: api.url,

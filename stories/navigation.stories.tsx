@@ -9,7 +9,11 @@ const nav: NavItem[] = [
   { to: "/members", label: "Members", icon: Users },
 ];
 
-const meta = { title: "Page/Navigation", component: AppShell, args: { product: "Back Lane Clay", nav, children: null } } satisfies Meta<typeof AppShell>;
+const meta = {
+  title: "Page/Navigation",
+  component: AppShell,
+  args: { product: "Back Lane Clay", nav, children: null },
+} satisfies Meta<typeof AppShell>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -30,7 +34,15 @@ export const Shell: Story = {
 export const ShellOnAPhone: Story = { ...Shell, tags: ["visual-phone"] };
 
 export const BreadcrumbTrail: Story = {
-  render: () => <Breadcrumb items={[{ label: "Kiln room", to: "/" }, { label: "Kiln 2", to: "/kilns/2" }, { label: "Tuesday's glaze firing" }]} />,
+  render: () => (
+    <Breadcrumb
+      items={[
+        { label: "Kiln room", to: "/" },
+        { label: "Kiln 2", to: "/kilns/2" },
+        { label: "Tuesday's glaze firing" },
+      ]}
+    />
+  ),
 };
 
 const tabs = [

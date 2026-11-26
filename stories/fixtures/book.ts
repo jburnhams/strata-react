@@ -13,8 +13,21 @@ const LINES = 14;
 export function pageLines(n: number): PictureBox[] {
   return Array.from({ length: LINES }, (_, i) => {
     const confidence = (i + n) % 5 === 0 ? 62 : 90 + ((i * 3 + n) % 9);
-    const text = i === 0 ? "THE PLAY OF PUNCH AND JUDY" : i % 5 === 0 ? "a scene in one act (scrawled)" : "Enter Punch with his stick, and a dog";
-    return { id: `p${n}-l${i + 1}`, x: 140, y: 200 + i * 100, w: 920 - ((i * 37 + n * 11) % 260), h: 56, label: `Line ${i + 1}: ${text}, ${confidence}%`, tone: confidence < 70 ? "warning" : undefined };
+    const text =
+      i === 0
+        ? "THE PLAY OF PUNCH AND JUDY"
+        : i % 5 === 0
+          ? "a scene in one act (scrawled)"
+          : "Enter Punch with his stick, and a dog";
+    return {
+      id: `p${n}-l${i + 1}`,
+      x: 140,
+      y: 200 + i * 100,
+      w: 920 - ((i * 37 + n * 11) % 260),
+      h: 56,
+      label: `Line ${i + 1}: ${text}, ${confidence}%`,
+      tone: confidence < 70 ? "warning" : undefined,
+    };
   });
 }
 
@@ -31,7 +44,15 @@ function pageSvg(n: number): string {
 /** Twelve scanned pages; the first two have no printed number, the next four are roman. */
 export const bookPages: BookPage[] = Array.from({ length: 12 }, (_, i) => {
   const src = pageSvg(i + 1);
-  return { id: `scan-${i + 1}`, src, thumb: src, label: `Page ${i + 1} of The Play of Punch and Judy`, scan: String(i + 1), printed: printedLabels[i] || undefined, natural: PAGE_SIZE };
+  return {
+    id: `scan-${i + 1}`,
+    src,
+    thumb: src,
+    label: `Page ${i + 1} of The Play of Punch and Judy`,
+    scan: String(i + 1),
+    printed: printedLabels[i] || undefined,
+    natural: PAGE_SIZE,
+  };
 });
 
 /** The pages that need a look, as the page finder was unsure of them. */

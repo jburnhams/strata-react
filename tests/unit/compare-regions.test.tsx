@@ -1,8 +1,19 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Compare, CompareGrid, CompareVideo, FIT, boxViewport, regionShares, type Candidate, type CompareMode, type Region, type VideoMedia } from "../../src";
+import {
+  Compare,
+  CompareGrid,
+  CompareVideo,
+  FIT,
+  boxViewport,
+  regionShares,
+  type Candidate,
+  type CompareMode,
+  type Region,
+  type VideoMedia,
+} from "../../src";
 import { frameBoxToShares } from "../../src/lib/viewport";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
@@ -42,13 +53,43 @@ describe("region arithmetic", () => {
   });
 });
 
-const side = (label: string, id: string) => ({ id, label, note: `note-${id}`, media: { kind: "image" as const, src: `/img/${label}`, alt: `alt-${id}`, size: [704, 576] as const } });
+const side = (label: string, id: string) => ({
+  id,
+  label,
+  note: `note-${id}`,
+  media: {
+    kind: "image" as const,
+    src: `/img/${label}`,
+    alt: `alt-${id}`,
+    size: [704, 576] as const,
+  },
+});
 
-function Harness({ regions = [face, text], blind = true, start = "side" as CompareMode }: { regions?: readonly Region[]; blind?: boolean; start?: CompareMode }) {
+function Harness({
+  regions = [face, text],
+  blind = true,
+  start = "side" as CompareMode,
+}: {
+  regions?: readonly Region[];
+  blind?: boolean;
+  start?: CompareMode;
+}) {
   const [mode, setMode] = React.useState<CompareMode>(start);
-  return <Compare label="Photo 1" blind={blind} missing="Gone" mode={mode} onModeChange={setMode} regions={regions} a={side("A", "model-x")} b={side("B", "model-y")} />;
+  return (
+    <Compare
+      label="Photo 1"
+      blind={blind}
+      missing="Gone"
+      mode={mode}
+      onModeChange={setMode}
+      regions={regions}
+      a={side("A", "model-x")}
+      b={side("B", "model-y")}
+    />
+  );
 }
-const transformOf = (name: string) => (screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform;
+const transformOf = (name: string) =>
+  (screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform;
 
 describe("Compare regions", () => {
   it("offers the whole frame and each region as chips, and shows a region in both pictures", async () => {
@@ -104,7 +145,17 @@ describe("Compare regions", () => {
   it("works the region out again when the frame changes size", async () => {
     const saved = Element.prototype.getBoundingClientRect;
     let width = 400;
-    Element.prototype.getBoundingClientRect = () => ({ width, height: width * 0.75, top: 0, left: 0, right: width, bottom: width * 0.75, x: 0, y: 0, toJSON: () => ({}) });
+    Element.prototype.getBoundingClientRect = () => ({
+      width,
+      height: width * 0.75,
+      top: 0,
+      left: 0,
+      right: width,
+      bottom: width * 0.75,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     try {
       render(<Harness regions={[{ id: "r", label: "Corner", box: [0.25, 0.25, 0.25, 0.25] }]} />);
       await userEvent.keyboard("q");
@@ -127,7 +178,17 @@ describe("Compare regions", () => {
 
   it("makes a region from a Shift-drag, named for its number, and shows it", () => {
     const saved = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = () => ({ width: 400, height: 300, top: 0, left: 0, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
+    Element.prototype.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      top: 0,
+      left: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     try {
       render(<Harness />);
       const frameA = screen.getByRole("group", { name: "Picture A" });
@@ -143,14 +204,35 @@ describe("Compare regions", () => {
 
   it("drops a hand-drawn region when the pair changes", () => {
     const saved = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = () => ({ width: 400, height: 300, top: 0, left: 0, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
+    Element.prototype.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      top: 0,
+      left: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     try {
       const { rerender } = render(<Harness />);
       const frameA = screen.getByRole("group", { name: "Picture A" });
       fireEvent.pointerDown(frameA, { clientX: 100, clientY: 75, shiftKey: true, button: 0 });
       fireEvent.pointerMove(frameA, { clientX: 300, clientY: 225 });
       fireEvent.pointerUp(frameA, { clientX: 300, clientY: 225 });
-      rerender(<Compare label="Photo 2" blind missing="Gone" mode="side" onModeChange={() => undefined} regions={[face, text]} a={side("A2", "x")} b={side("B2", "y")} />);
+      rerender(
+        <Compare
+          label="Photo 2"
+          blind
+          missing="Gone"
+          mode="side"
+          onModeChange={() => undefined}
+          regions={[face, text]}
+          a={side("A2", "x")}
+          b={side("B2", "y")}
+        />,
+      );
       expect(screen.queryByRole("radio", { name: "Region 3" })).toBeNull();
       expect(screen.getByRole("radio", { name: "Whole frame" })).toBeChecked();
     } finally {
@@ -166,10 +248,17 @@ describe("Compare regions", () => {
 
 describe("CompareGrid regions", () => {
   it("shows the same region in every tile", async () => {
-    const items: Candidate[] = ["A", "B", "C"].map((l) => ({ id: l, label: l, media: { kind: "image", src: `/img/${l}`, alt: l, size: [704, 576] } }));
+    const items: Candidate[] = ["A", "B", "C"].map((l) => ({
+      id: l,
+      label: l,
+      media: { kind: "image", src: `/img/${l}`, alt: l, size: [704, 576] },
+    }));
     render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" regions={[face]} />);
     await userEvent.click(screen.getByRole("radio", { name: "Face" }));
-    for (const l of ["A", "B", "C"]) expect((within(screen.getByRole("group", { name: l })).getByRole("img") as HTMLImageElement).style.imageRendering).toBe("pixelated");
+    for (const l of ["A", "B", "C"])
+      expect(
+        (within(screen.getByRole("group", { name: l })).getByRole("img") as HTMLImageElement).style.imageRendering,
+      ).toBe("pixelated");
     const t = (l: string) => (screen.getByRole("group", { name: l }).firstElementChild as HTMLElement).style.transform;
     expect(t("B")).toBe(t("A"));
     expect(t("C")).toContain("scale(4)");
@@ -180,10 +269,25 @@ describe("CompareVideo regions", () => {
   let media: FakeMedia;
   beforeEach(() => void (media = installFakeMedia()));
   afterEach(() => media.uninstall());
-  const clip = (label: string, size: [number, number]): Candidate<VideoMedia> => ({ id: `id-${label}`, label, media: { kind: "video", src: `/clips/${label}.mp4`, width: size[0], height: size[1], fps: 25 } });
+  const clip = (label: string, size: [number, number]): Candidate<VideoMedia> => ({
+    id: `id-${label}`,
+    label,
+    media: { kind: "video", src: `/clips/${label}.mp4`, width: size[0], height: size[1], fps: 25 },
+  });
 
   it("shows the region in both videos, which keep playing on the clock, nearest-neighbour", async () => {
-    render(<CompareVideo label="Pair" a={clip("A", [1440, 1080])} b={clip("B", [2816, 2304])} blind missing="Gone" mode="swipe" onModeChange={() => undefined} regions={[face]} />);
+    render(
+      <CompareVideo
+        label="Pair"
+        a={clip("A", [1440, 1080])}
+        b={clip("B", [2816, 2304])}
+        blind
+        missing="Gone"
+        mode="swipe"
+        onModeChange={() => undefined}
+        regions={[face]}
+      />,
+    );
     act(() => {
       media.loaded(screen.getByLabelText("Video A"), 10);
       media.loaded(screen.getByLabelText("Video B"), 10);
@@ -199,9 +303,30 @@ describe("CompareVideo regions", () => {
 
   it("makes a hand-drawn region only while paused", () => {
     const saved = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = () => ({ width: 400, height: 300, top: 0, left: 0, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
+    Element.prototype.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      top: 0,
+      left: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     try {
-      render(<CompareVideo label="Pair" a={clip("A", [400, 300])} b={clip("B", [800, 600])} blind missing="Gone" mode="side" onModeChange={() => undefined} regions={[face]} />);
+      render(
+        <CompareVideo
+          label="Pair"
+          a={clip("A", [400, 300])}
+          b={clip("B", [800, 600])}
+          blind
+          missing="Gone"
+          mode="side"
+          onModeChange={() => undefined}
+          regions={[face]}
+        />,
+      );
       const frameA = screen.getByRole("group", { name: "Frame A" });
       fireEvent.pointerDown(frameA, { clientX: 100, clientY: 75, shiftKey: true, button: 0 });
       fireEvent.pointerMove(frameA, { clientX: 300, clientY: 225 });

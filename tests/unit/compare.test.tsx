@@ -1,9 +1,18 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Pixels } from "../../src/lib/image-diff";
-import { Compare, CompareGrid, FullscreenFrame, FIT, actualPixelsScale, clampViewport, zoomAt, type CompareMode } from "../../src";
+import {
+  Compare,
+  CompareGrid,
+  FullscreenFrame,
+  FIT,
+  actualPixelsScale,
+  clampViewport,
+  zoomAt,
+  type CompareMode,
+} from "../../src";
 
 const frame = { width: 400, height: 300 };
 
@@ -20,7 +29,11 @@ describe("viewport arithmetic", () => {
   });
 
   it("never lets the picture leave its frame, and fit is always centred", () => {
-    expect(clampViewport({ scale: 2, x: 9999, y: -9999 }, frame)).toEqual({ scale: 2, x: 200, y: -150 });
+    expect(clampViewport({ scale: 2, x: 9999, y: -9999 }, frame)).toEqual({
+      scale: 2,
+      x: 200,
+      y: -150,
+    });
     expect(clampViewport({ scale: 0.3, x: 50, y: 50 }, frame)).toEqual(FIT);
     expect(clampViewport({ scale: 500, x: 0, y: 0 }, frame).scale).toBe(32);
   });
@@ -32,7 +45,17 @@ describe("viewport arithmetic", () => {
   });
 });
 
-function Harness({ blind = false, start = "side" as CompareMode, keys = true, readPixels }: { blind?: boolean; start?: CompareMode; keys?: boolean; readPixels?: (src: string) => Promise<Pixels> }) {
+function Harness({
+  blind = false,
+  start = "side" as CompareMode,
+  keys = true,
+  readPixels,
+}: {
+  blind?: boolean;
+  start?: CompareMode;
+  keys?: boolean;
+  readPixels?: (src: string) => Promise<Pixels>;
+}) {
   const [mode, setMode] = React.useState<CompareMode>(start);
   return (
     <Compare
@@ -43,8 +66,28 @@ function Harness({ blind = false, start = "side" as CompareMode, keys = true, re
       onModeChange={setMode}
       keys={keys}
       readPixels={readPixels}
-      a={{ id: "lightroom-final", label: blind ? "A" : "Your final", note: "Lightroom", media: { kind: "image", src: "/img/1/left", alt: "Celadon bowl, Lightroom final", size: [1600, 1200] } }}
-      b={{ id: "auto2", label: blind ? "B" : "auto2", note: "14 s", media: { kind: "image", src: "/img/1/right", alt: "Celadon bowl, auto2", size: [1600, 1200] } }}
+      a={{
+        id: "lightroom-final",
+        label: blind ? "A" : "Your final",
+        note: "Lightroom",
+        media: {
+          kind: "image",
+          src: "/img/1/left",
+          alt: "Celadon bowl, Lightroom final",
+          size: [1600, 1200],
+        },
+      }}
+      b={{
+        id: "auto2",
+        label: blind ? "B" : "auto2",
+        note: "14 s",
+        media: {
+          kind: "image",
+          src: "/img/1/right",
+          alt: "Celadon bowl, auto2",
+          size: [1600, 1200],
+        },
+      }}
     />
   );
 }
@@ -68,8 +111,27 @@ describe("Compare", () => {
   });
 
   it("names the flip key after the candidates' own labels, not A and B", () => {
-    const side = (label: string) => ({ id: label, label, media: { kind: "image" as const, src: `/img/${label}`, alt: label, size: [400, 300] as const } });
-    render(<Compare label="Which is better?" blind missing="Gone" mode="blink" onModeChange={() => undefined} a={side("X")} b={side("Y")} />);
+    const side = (label: string) => ({
+      id: label,
+      label,
+      media: {
+        kind: "image" as const,
+        src: `/img/${label}`,
+        alt: label,
+        size: [400, 300] as const,
+      },
+    });
+    render(
+      <Compare
+        label="Which is better?"
+        blind
+        missing="Gone"
+        mode="blink"
+        onModeChange={() => undefined}
+        a={side("X")}
+        b={side("Y")}
+      />,
+    );
     expect(screen.getByText("Flip X and Y")).toBeInTheDocument();
     expect(screen.queryByText(/Flip A and B/)).toBeNull();
   });
@@ -79,7 +141,10 @@ describe("Compare", () => {
     render(<Harness />);
     expect(screen.getByRole("button", { name: "Zoom out" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Zoom in" }));
-    const [left, right] = [screen.getByRole("group", { name: "Your final" }), screen.getByRole("group", { name: "auto2" })];
+    const [left, right] = [
+      screen.getByRole("group", { name: "Your final" }),
+      screen.getByRole("group", { name: "auto2" }),
+    ];
     const transform = (g: HTMLElement) => (g.firstElementChild as HTMLElement).style.transform;
     expect(transform(left)).toContain("scale(1.5)");
     expect(transform(right)).toBe(transform(left));
@@ -154,7 +219,9 @@ describe("Compare", () => {
   it("says in the product's words that a picture failed and keeps the other side usable", () => {
     render(<Harness />);
     fireEvent.error(screen.getByRole("img", { name: "Celadon bowl, auto2" }));
-    expect(screen.getByRole("img", { name: "Celadon bowl, auto2: Picture not found" })).toHaveTextContent("Picture not found");
+    expect(screen.getByRole("img", { name: "Celadon bowl, auto2: Picture not found" })).toHaveTextContent(
+      "Picture not found",
+    );
     expect(screen.getByRole("img", { name: "Celadon bowl, Lightroom final" })).toBeInTheDocument();
   });
 
@@ -174,7 +241,10 @@ describe("Compare", () => {
     let fsElement: Element | null = null;
     const requested: Element[] = [];
     Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: true });
-    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => fsElement });
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => fsElement,
+    });
     Element.prototype.requestFullscreen = function (this: Element) {
       requested.push(this);
       fsElement = this;
@@ -201,12 +271,22 @@ describe("Compare", () => {
   });
 
   it("learns a new frame shape when the pictures change, and uses a supplied size at once", () => {
-    const side = (src: string, size?: [number, number]) => ({ id: src, label: src, media: { kind: "image" as const, src, alt: src, size } });
+    const side = (src: string, size?: [number, number]) => ({
+      id: src,
+      label: src,
+      media: { kind: "image" as const, src, alt: src, size },
+    });
     const ratio = (name: string) => {
       const [w, h = "1"] = screen.getByRole("group", { name }).style.aspectRatio.split("/");
       return Number(w) / Number(h);
     };
-    const props = { label: "x", blind: false, missing: "Gone", mode: "side" as const, onModeChange: () => undefined };
+    const props = {
+      label: "x",
+      blind: false,
+      missing: "Gone",
+      mode: "side" as const,
+      onModeChange: () => undefined,
+    };
     const { rerender } = render(<Compare {...props} a={side("/a1", [1600, 900])} b={side("/b1")} />);
     expect(ratio("/a1")).toBeCloseTo(1.7778, 3);
     rerender(<Compare {...props} a={side("/a2", [1000, 1000])} b={side("/b2")} />);
@@ -300,7 +380,9 @@ describe("Compare", () => {
       const user = userEvent.setup();
       render(<Harness start="difference" readPixels={() => Promise.reject(new Error("tainted"))} />);
       await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
-      expect(await screen.findByRole("alert")).toHaveTextContent("Could not read these pictures to compare their pixels.");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Could not read these pictures to compare their pixels.",
+      );
       await user.click(screen.getByRole("radio", { name: "Brightness" }));
       expect(screen.getByRole("slider", { name: "Amplify differences" })).toBeInTheDocument();
     });
@@ -327,28 +409,50 @@ describe("Compare", () => {
 
 describe("FullscreenFrame", () => {
   it("renders its children in place while not active", () => {
-    render(<FullscreenFrame label="x" active={false} onActiveChange={() => undefined}><p>inside</p></FullscreenFrame>);
+    render(
+      <FullscreenFrame label="x" active={false} onActiveChange={() => undefined}>
+        <p>inside</p>
+      </FullscreenFrame>,
+    );
     expect(screen.getByText("inside")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
 describe("CompareGrid", () => {
-  const items = ["one", "two", "three"].map((n) => ({ id: `secret-${n}`, label: n === "one" ? "A" : n === "two" ? "B" : "C", note: `note ${n}`, media: { kind: "image" as const, src: `/img/${n}`, alt: `alt ${n}`, size: [400, 300] as const } }));
+  const items = ["one", "two", "three"].map((n) => ({
+    id: `secret-${n}`,
+    label: n === "one" ? "A" : n === "two" ? "B" : "C",
+    note: `note ${n}`,
+    media: { kind: "image" as const, src: `/img/${n}`, alt: `alt ${n}`, size: [400, 300] as const },
+  }));
 
   it("zooms every tile together", async () => {
     const user = userEvent.setup();
     render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" />);
     await user.click(screen.getByRole("button", { name: "Zoom in" }));
-    for (const name of ["A", "B", "C"]) expect((screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform).toContain("scale(1.5)");
+    for (const name of ["A", "B", "C"])
+      expect((screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform).toContain(
+        "scale(1.5)",
+      );
     await user.keyboard("0");
-    expect((screen.getByRole("group", { name: "C" }).firstElementChild as HTMLElement).style.transform).toContain("scale(1)");
+    expect((screen.getByRole("group", { name: "C" }).firstElementChild as HTMLElement).style.transform).toContain(
+      "scale(1)",
+    );
   });
 
   it("draws the caller's actions under each tile", async () => {
     const user = userEvent.setup();
     const opened: string[] = [];
-    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" actions={(c) => <button onClick={() => opened.push(c.id)}>{`Compare ${c.label}`}</button>} />);
+    render(
+      <CompareGrid
+        label="Three versions"
+        items={items}
+        blind={false}
+        missing="Gone"
+        actions={(c) => <button onClick={() => opened.push(c.id)}>{`Compare ${c.label}`}</button>}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Compare B" }));
     expect(opened).toEqual(["secret-two"]);
   });
@@ -368,7 +472,26 @@ describe("CompareGrid", () => {
   });
 
   it("narrows a frame to a height limit so the picture keeps its shape", () => {
-    render(<Compare label="L" a={{ id: "a", label: "A", media: { kind: "image", src: "/a.svg", alt: "a", size: [400, 300] } }} b={{ id: "b", label: "B", media: { kind: "image", src: "/b.svg", alt: "b", size: [400, 300] } }} blind={false} missing="Missing" mode="swipe" onModeChange={() => undefined} maxHeight="60svh" />);
+    render(
+      <Compare
+        label="L"
+        a={{
+          id: "a",
+          label: "A",
+          media: { kind: "image", src: "/a.svg", alt: "a", size: [400, 300] },
+        }}
+        b={{
+          id: "b",
+          label: "B",
+          media: { kind: "image", src: "/b.svg", alt: "b", size: [400, 300] },
+        }}
+        blind={false}
+        missing="Missing"
+        mode="swipe"
+        onModeChange={() => undefined}
+        maxHeight="60svh"
+      />,
+    );
     const frame = screen.getByRole("group", { name: /A over B/ });
     // Width is the limit times the aspect ratio: 60svh × 400/300 = 80svh (jsdom folds the calc), centred.
     expect(frame.style.maxWidth).toBe("calc(80svh)");

@@ -44,7 +44,11 @@ export type Api = {
 export function createApi({ base, ...options }: ApiOptions = {}): Api {
   const url = (path: string) => withBase(path, base ?? appBase());
   const send = <T>(method: string, path: string, body: unknown, init?: Init) =>
-    fetchJson<T>(url(path), { ...init, method, ...(body === undefined ? {} : isRaw(body) ? { body } : { json: body }) }, options);
+    fetchJson<T>(
+      url(path),
+      { ...init, method, ...(body === undefined ? {} : isRaw(body) ? { body } : { json: body }) },
+      options,
+    );
   return {
     url,
     get: (path, init) => send("GET", path, undefined, init),

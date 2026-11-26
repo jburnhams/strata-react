@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KeysLegend, ShortcutEditor, checkKey, useHotkeys, useRebindableShortcuts, type Shortcut } from "../../src";
@@ -32,12 +32,21 @@ describe("checkKey", () => {
   it("refuses a chord, naming a browser one, and Tab; names a conflict; takes a free key", () => {
     const list = defaults();
     const base = { ctrlKey: false, metaKey: false, altKey: false, shiftKey: false };
-    expect(checkKey({ ...base, key: "w", ctrlKey: true }, "fire", list)).toMatchObject({ ok: false, reason: expect.stringContaining("belongs to the browser") });
-    expect(checkKey({ ...base, key: "q", altKey: true }, "fire", list)).toMatchObject({ ok: false, reason: expect.stringContaining("single keys") });
+    expect(checkKey({ ...base, key: "w", ctrlKey: true }, "fire", list)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("belongs to the browser"),
+    });
+    expect(checkKey({ ...base, key: "q", altKey: true }, "fire", list)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("single keys"),
+    });
     expect(checkKey({ ...base, key: "Tab" }, "fire", list)).toMatchObject({ ok: false });
     expect(checkKey({ ...base, key: "j" }, "fire", list)).toMatchObject({ ok: "conflict" });
     expect(checkKey({ ...base, key: "x" }, "fire", list)).toEqual({ ok: true, key: "x" }); // a disabled shortcut does not conflict
-    expect(checkKey({ ...base, key: "?", shiftKey: true }, "fire", list)).toEqual({ ok: true, key: "?" });
+    expect(checkKey({ ...base, key: "?", shiftKey: true }, "fire", list)).toEqual({
+      ok: true,
+      key: "?",
+    });
   });
 });
 

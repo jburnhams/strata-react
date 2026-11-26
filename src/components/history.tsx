@@ -89,7 +89,12 @@ const compose = (older: HistoryStep, newer: HistoryStep): HistoryStep => ({
 
 /** A history of named, undoable steps with grouping, a limit, and Undo and Redo as commands. */
 export function useHistory({ limit = 100 }: HistoryOptions = {}): History {
-  const store = React.useRef({ past: [] as HistoryStep[], future: [] as HistoryStep[], open: [] as HistoryStep[][], merge: false });
+  const store = React.useRef({
+    past: [] as HistoryStep[],
+    future: [] as HistoryStep[],
+    open: [] as HistoryStep[][],
+    merge: false,
+  });
   const [version, bump] = React.useReducer((n: number) => n + 1, 0);
   const max = Math.max(1, limit);
 

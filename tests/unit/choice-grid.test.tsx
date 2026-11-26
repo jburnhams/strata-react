@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as React from "react";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,7 +17,15 @@ const animals: Animal[] = [
 const marks = { wrong: "Not this one", right: "Right", answer: "This one" };
 
 // The app's side of a round: it knows the answer and keeps each tile's state.
-function Round({ answer = "cow", tries, onChoose = () => {} }: { answer?: string; tries?: number; onChoose?: (a: Animal) => void }) {
+function Round({
+  answer = "cow",
+  tries,
+  onChoose = () => {},
+}: {
+  answer?: string;
+  tries?: number;
+  onChoose?: (a: Animal) => void;
+}) {
   const [tapped, setTapped] = React.useState<string[]>([]);
   const missed = tries !== undefined && !tapped.includes(answer) && tapped.length >= tries;
   const state = (a: Animal): ChoiceState =>
@@ -129,7 +137,10 @@ describe("ChoiceGrid", () => {
           renderPicture={(a) => a.picture}
           state={(a) => (picked === a.id ? "picked" : "open")}
           marks={{ picked: "Picked" }}
-          onChoose={(a) => { onChoose(a); setPicked(a.id); }}
+          onChoose={(a) => {
+            onChoose(a);
+            setPicked(a.id);
+          }}
         />
       );
     }

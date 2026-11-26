@@ -1,15 +1,30 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { filledButtons, renderWithStrata } from "../../src/testing";
 import { PairVote, type Candidate, type CompareMode, type Pair, type PairAnswer } from "../../src";
 
-const a: Candidate = { id: "model-x", label: "A", note: "secret-a", media: { kind: "image", src: "/api/renderings/final.svg", alt: "secret alt a", size: [400, 300] } };
-const b: Candidate = { id: "model-y", label: "B", note: "secret-b", media: { kind: "image", src: "/api/renderings/auto.svg", alt: "secret alt b", size: [400, 300] } };
+const a: Candidate = {
+  id: "model-x",
+  label: "A",
+  note: "secret-a",
+  media: { kind: "image", src: "/api/renderings/final.svg", alt: "secret alt a", size: [400, 300] },
+};
+const b: Candidate = {
+  id: "model-y",
+  label: "B",
+  note: "secret-b",
+  media: { kind: "image", src: "/api/renderings/auto.svg", alt: "secret alt b", size: [400, 300] },
+};
 const pair: Pair = { label: "Pair 1 of 12", a, b };
 
-function Harness({ pair: state = { status: "ready", data: pair } as const, pending = false, onAnswer = () => undefined, ...rest }: Partial<React.ComponentProps<typeof PairVote>>) {
+function Harness({
+  pair: state = { status: "ready", data: pair } as const,
+  pending = false,
+  onAnswer = () => undefined,
+  ...rest
+}: Partial<React.ComponentProps<typeof PairVote>>) {
   const [mode, setMode] = React.useState<CompareMode>("side");
   return (
     <PairVote
@@ -66,7 +81,8 @@ describe("PairVote", () => {
 
   it("never writes the id, note or alt of a blind pair", () => {
     const { container } = renderWithStrata(<Harness flagReasons={["Picture missing"]} />);
-    for (const secret of ["model-x", "model-y", "secret-a", "secret-b", "secret alt"]) expect(container.innerHTML).not.toContain(secret);
+    for (const secret of ["model-x", "model-y", "secret-a", "secret-b", "secret alt"])
+      expect(container.innerHTML).not.toContain(secret);
   });
 
   it("fills no button while either side can win", () => {
@@ -76,7 +92,9 @@ describe("PairVote", () => {
 
   it("flags a pair with a reason", async () => {
     const answers: PairAnswer[] = [];
-    renderWithStrata(<Harness flagReasons={["Picture missing", "Not the same scene"]} onAnswer={(x) => answers.push(x)} />);
+    renderWithStrata(
+      <Harness flagReasons={["Picture missing", "Not the same scene"]} onAnswer={(x) => answers.push(x)} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Flag this pair" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Not the same scene" }));
     expect(answers).toEqual([{ answer: "flag", reason: "Not the same scene" }]);
@@ -95,7 +113,12 @@ describe("PairVote", () => {
 
   it("shows a progress line and offers Undo for the last answer", async () => {
     const onUndo = vi.fn();
-    renderWithStrata(<Harness progress="12 pairs left" last={{ text: "You preferred A.", onUndo, reveal: <span>A was model-x</span> }} />);
+    renderWithStrata(
+      <Harness
+        progress="12 pairs left"
+        last={{ text: "You preferred A.", onUndo, reveal: <span>A was model-x</span> }}
+      />,
+    );
     expect(screen.getByText("12 pairs left")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(onUndo).toHaveBeenCalled();
@@ -103,10 +126,18 @@ describe("PairVote", () => {
   });
 
   it("keeps Undo inside full screen, and shows it when the queue has just run out", async () => {
-    const { container, rerender } = renderWithStrata(<Harness last={{ text: "You preferred A.", onUndo: () => undefined }} />);
+    const { container, rerender } = renderWithStrata(
+      <Harness last={{ text: "You preferred A.", onUndo: () => undefined }} />,
+    );
     // It is in the footer Compare keeps in full screen: inside the comparison's own section.
-    expect(within(screen.getByRole("region", { name: "Pair 1 of 12" })).getByRole("button", { name: "Undo" })).toBeInTheDocument();
-    rerender(<Harness pair={{ status: "ready", data: null }} last={{ text: "You preferred A.", onUndo: () => undefined }} />);
+    expect(
+      within(screen.getByRole("region", { name: "Pair 1 of 12" })).getByRole("button", {
+        name: "Undo",
+      }),
+    ).toBeInTheDocument();
+    rerender(
+      <Harness pair={{ status: "ready", data: null }} last={{ text: "You preferred A.", onUndo: () => undefined }} />,
+    );
     expect(container.querySelectorAll("button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
   });
@@ -114,7 +145,11 @@ describe("PairVote", () => {
   it("fetches the next pictures ahead", () => {
     const made: string[] = [];
     const Real = globalThis.Image;
-    globalThis.Image = class { set src(v: string) { made.push(v); } } as unknown as typeof Image;
+    globalThis.Image = class {
+      set src(v: string) {
+        made.push(v);
+      }
+    } as unknown as typeof Image;
     try {
       renderWithStrata(<Harness preload={["/next/a.svg", "/next/b.svg"]} />);
     } finally {

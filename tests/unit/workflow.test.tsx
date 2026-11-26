@@ -1,10 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { DataView, JobsTable, WorkflowSteps, WorkflowSummary, summariseWorkflow, fetchJson, isWorkflowRunning, useLoad, useWorkflowRun } from "../../src";
+import {
+  DataView,
+  JobsTable,
+  WorkflowSteps,
+  WorkflowSummary,
+  summariseWorkflow,
+  fetchJson,
+  isWorkflowRunning,
+  useLoad,
+  useWorkflowRun,
+} from "../../src";
 import { expectOneFilledButton, renderWithStrata } from "../../src/testing";
-import { describeJob, firingRuns, studioJobs, workflowNow, type Task, type WorkflowRun } from "../../stories/fixtures/workflow";
+import {
+  describeJob,
+  firingRuns,
+  studioJobs,
+  workflowNow,
+  type Task,
+  type WorkflowRun,
+} from "../../stories/fixtures/workflow";
 import { api } from "../../stories/mocks/handlers";
 import { server } from "../utils/server";
 
@@ -14,7 +31,10 @@ import { server } from "../utils/server";
 
 const FINISHED = ["done", "failed", "cancelled"] as const;
 
-function steps(run: WorkflowRun, actions: { approve?: (s: string) => Promise<unknown>; retry?: () => Promise<unknown> } = {}) {
+function steps(
+  run: WorkflowRun,
+  actions: { approve?: (s: string) => Promise<unknown>; retry?: () => Promise<unknown> } = {},
+) {
   return (
     <WorkflowSteps
       label="Firing f-0412"
@@ -63,7 +83,12 @@ describe("WorkflowSteps", () => {
 
   it("says a gate approved by its policy was approved automatically; no buttons without actions; renamed words", () => {
     renderWithStrata(
-      <WorkflowSteps label="Firing" stages={firingRuns.done.stages} now={workflowNow} words={{ approved: "Passed", done: "Finished" }} />,
+      <WorkflowSteps
+        label="Firing"
+        stages={firingRuns.done.stages}
+        now={workflowNow}
+        words={{ approved: "Passed", done: "Finished" }}
+      />,
     );
     expect(screen.getByText("Approved automatically 5 minutes ago")).toBeInTheDocument();
     expect(screen.getByText("Passed")).toBeInTheDocument();
@@ -72,7 +97,15 @@ describe("WorkflowSteps", () => {
   });
 
   it("draws a state it does not know as waiting, and a cleared record as nothing", () => {
-    const odd = [{ name: "x", title: "Glaze", gate: false, state: "new-word", last: { status: "cleared", at: workflowNow.toISOString() } }];
+    const odd = [
+      {
+        name: "x",
+        title: "Glaze",
+        gate: false,
+        state: "new-word",
+        last: { status: "cleared", at: workflowNow.toISOString() },
+      },
+    ];
     renderWithStrata(<WorkflowSteps label="Odd" stages={odd} />);
     expect(screen.getByRole("listitem")).toHaveTextContent(/^GlazeWaiting$/);
   });
@@ -119,7 +152,10 @@ describe("useWorkflowRun", () => {
 });
 
 function Jobs() {
-  const load = useLoad({ queryKey: ["jobs"], queryFn: () => fetchJson<{ items: Task[] }>(api.jobs) });
+  const load = useLoad({
+    queryKey: ["jobs"],
+    queryFn: () => fetchJson<{ items: Task[] }>(api.jobs),
+  });
   return (
     <DataView state={load} skeleton={<p>Loading</p>} isEmpty={(p) => p.items.length === 0} empty={<p>No jobs</p>}>
       {(p) => (
@@ -149,7 +185,13 @@ describe("JobsTable", () => {
     renderWithStrata(<Jobs />);
     const table = await screen.findByRole("grid", { name: "Jobs" });
     const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows.map((r) => within(r).getAllByRole("gridcell")[0]!.textContent)).toEqual(["Running", "Queued", "Failed", "Cancelled", "Done"]);
+    expect(rows.map((r) => within(r).getAllByRole("gridcell")[0]!.textContent)).toEqual([
+      "Running",
+      "Queued",
+      "Failed",
+      "Cancelled",
+      "Done",
+    ]);
     expect(within(rows[0]!).getByText("Tile 3 of 12")).toBeInTheDocument();
     expect(within(rows[2]!).getByText("OSError: the camera on shelf 2 did not answer")).toBeInTheDocument();
     expect(within(rows[4]!).queryByRole("button")).toBeNull();
@@ -171,16 +213,42 @@ describe("JobsTable", () => {
 
 describe("WorkflowSummary (#373)", () => {
   it("reduces a run to the state that matters and the stage it is about", () => {
-    expect(summariseWorkflow(firingRuns.notStarted.stages)).toMatchObject({ state: "ready", done: 0, total: 4 });
-    expect(summariseWorkflow(firingRuns.running.stages, { running: true })).toMatchObject({ state: "running", step: 2, stage: { name: "fire" } });
-    expect(summariseWorkflow(firingRuns.waiting.stages)).toMatchObject({ state: "waiting", step: 3, stage: { name: "inspect" } });
-    expect(summariseWorkflow(firingRuns.failed.stages)).toMatchObject({ state: "failed", stage: { name: "photograph" } });
-    expect(summariseWorkflow(firingRuns.done.stages)).toMatchObject({ state: "done", done: 4, total: 4 });
+    expect(summariseWorkflow(firingRuns.notStarted.stages)).toMatchObject({
+      state: "ready",
+      done: 0,
+      total: 4,
+    });
+    expect(summariseWorkflow(firingRuns.running.stages, { running: true })).toMatchObject({
+      state: "running",
+      step: 2,
+      stage: { name: "fire" },
+    });
+    expect(summariseWorkflow(firingRuns.waiting.stages)).toMatchObject({
+      state: "waiting",
+      step: 3,
+      stage: { name: "inspect" },
+    });
+    expect(summariseWorkflow(firingRuns.failed.stages)).toMatchObject({
+      state: "failed",
+      stage: { name: "photograph" },
+    });
+    expect(summariseWorkflow(firingRuns.done.stages)).toMatchObject({
+      state: "done",
+      done: 4,
+      total: 4,
+    });
   });
 
   it("says running before a failure its job is trying again, and part done for a run stopped part way", () => {
-    expect(summariseWorkflow(firingRuns.failed.stages, { running: true })).toMatchObject({ state: "running", stage: { name: "photograph" }, step: 4 });
-    const part = firingRuns.running.stages.map((s) => ({ ...s, state: s.state === "done" ? "done" : "ready" }));
+    expect(summariseWorkflow(firingRuns.failed.stages, { running: true })).toMatchObject({
+      state: "running",
+      stage: { name: "photograph" },
+      step: 4,
+    });
+    const part = firingRuns.running.stages.map((s) => ({
+      ...s,
+      state: s.state === "done" ? "done" : "ready",
+    }));
     expect(summariseWorkflow(part)).toMatchObject({ state: "partial", done: 1 });
   });
 

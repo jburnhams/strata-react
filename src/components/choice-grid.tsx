@@ -39,7 +39,9 @@ import { Status } from "./status";
 export type ChoiceState = "open" | "wrong" | "right" | "answer" | "picked";
 
 /** The word under each closed tile. A quiz gives `wrong`, `right` and `answer` (and `picked` if it ever uses it); a choice with no answer key gives only `picked`. A state with no word draws no word, so name every state the grid can reach. */
-export type ChoiceMarks = (Record<"wrong" | "right" | "answer", string> & { picked?: string }) | { picked: string; wrong?: never; right?: never; answer?: never };
+export type ChoiceMarks =
+  | (Record<"wrong" | "right" | "answer", string> & { picked?: string })
+  | { picked: string; wrong?: never; right?: never; answer?: never };
 
 /** Smallest tile side: `md` 120px, `lg` 160px. Tiles grow to fill the row. */
 export type ChoiceSize = "md" | "lg";
@@ -68,10 +70,23 @@ export type ChoiceGridProps<T> = {
   className?: string;
 };
 
-const columns = (size: ChoiceSize) => ({ gridTemplateColumns: `repeat(auto-fill, minmax(min(${minSide[size]}px, 100%), 1fr))` });
+const columns = (size: ChoiceSize) => ({
+  gridTemplateColumns: `repeat(auto-fill, minmax(min(${minSide[size]}px, 100%), 1fr))`,
+});
 
 /** A grid of large picture tiles for answering one question with a tap: each tile open, wrong, right, shown as the answer or (no answer key) picked, with its word; answered tiles cannot be pressed again, and the grid closes once the answer shows. */
-export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture, state, marks, onChoose, size = "md", className }: ChoiceGridProps<T>) {
+export function ChoiceGrid<T>({
+  label,
+  items,
+  itemKey,
+  itemLabel,
+  renderPicture,
+  state,
+  marks,
+  onChoose,
+  size = "md",
+  className,
+}: ChoiceGridProps<T>) {
   const byKey = new Map(items.map((item) => [itemKey(item), item]));
   const over = items.some((item) => closed(state(item)));
   const disabledKeys = items.filter((item) => over || state(item) !== "open").map(itemKey);
@@ -103,7 +118,8 @@ export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture,
             className={cn(
               "flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-2 text-card-foreground select-none outline-offset-2 transition-state press",
               "hover:border-primary disabled:cursor-default disabled:hover:border-border",
-              (s === "right" || s === "answer") && "border-4 border-success bg-success-subtle disabled:hover:border-success",
+              (s === "right" || s === "answer") &&
+                "border-4 border-success bg-success-subtle disabled:hover:border-success",
               s === "picked" && "border-4 border-primary bg-surface-sunken disabled:hover:border-primary",
             )}
           >
@@ -123,7 +139,15 @@ export function ChoiceGrid<T>({ label, items, itemKey, itemLabel, renderPicture,
 }
 
 /** The loading shape of a `ChoiceGrid`: `count` tiles at the same size, for a `DataView` skeleton. */
-export function ChoiceGridSkeleton({ count = 4, size = "md", className }: { count?: number; size?: ChoiceSize; className?: string }) {
+export function ChoiceGridSkeleton({
+  count = 4,
+  size = "md",
+  className,
+}: {
+  count?: number;
+  size?: ChoiceSize;
+  className?: string;
+}) {
   return (
     <div aria-hidden className={cn("grid min-w-0 gap-4", className)} style={columns(size)}>
       {Array.from({ length: count }, (_, i) => (

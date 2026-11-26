@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RefreshCw } from "lucide-react";
@@ -61,7 +61,9 @@ describe("AsyncButton", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let resolve!: () => void;
     function Live() {
-      const { phase, run } = useAsyncAction(() => new Promise<void>((r) => (resolve = r)), { settleMs: 2000 });
+      const { phase, run } = useAsyncAction(() => new Promise<void>((r) => (resolve = r)), {
+        settleMs: 2000,
+      });
       return <AsyncButton phase={phase} labels={labels} onClick={() => run()} />;
     }
     render(<Live />);
@@ -161,7 +163,9 @@ describe("AsyncButton", () => {
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
     expect(await screen.findByRole("button", { name: "Try again" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("The request was refused: Kiln 2 is already booked for Friday's bisque. Try again");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The request was refused: Kiln 2 is already booked for Friday's bisque. Try again",
+    );
   });
 
   it("falls back to the status text when the refusal has no body", async () => {

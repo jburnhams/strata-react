@@ -61,7 +61,9 @@ const readPersisted = (key: string | undefined): Persisted => {
   const empty: Persisted = { sizes: {}, collapsed: {} };
   if (!key) return empty;
   try {
-    const raw = JSON.parse(window.localStorage.getItem(`strata:workspace:${key}`) ?? "null") as Partial<Persisted> | null;
+    const raw = JSON.parse(
+      window.localStorage.getItem(`strata:workspace:${key}`) ?? "null",
+    ) as Partial<Persisted> | null;
     if (!raw || typeof raw !== "object") return empty;
     const sizes: Record<string, number> = {};
     for (const [k, v] of Object.entries(raw.sizes ?? {})) if (typeof v === "number" && Number.isFinite(v)) sizes[k] = v;
@@ -112,7 +114,8 @@ export function useWorkspaceState(persist?: string): WorkspaceState {
   }, [persist, saved]);
 
   return React.useMemo<WorkspaceState>(() => {
-    const isCollapsed = (id: string, fallback = defaults.current.get(id) ?? false) => (narrow ? !narrowOpen[id] : (saved.collapsed[id] ?? fallback));
+    const isCollapsed = (id: string, fallback = defaults.current.get(id) ?? false) =>
+      narrow ? !narrowOpen[id] : (saved.collapsed[id] ?? fallback);
     const setCollapsed = (id: string, collapsed: boolean) => {
       if (narrow) setNarrowOpen((o) => ({ ...o, [id]: !collapsed }));
       else setSaved((s) => ({ ...s, collapsed: { ...s.collapsed, [id]: collapsed } }));
@@ -185,7 +188,12 @@ export function Workspace({
 
   return (
     <StateContext.Provider value={state}>
-      <div ref={ref} role="group" aria-label={label} className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background", className)}>
+      <div
+        ref={ref}
+        role="group"
+        aria-label={label}
+        className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background", className)}
+      >
         {children}
         {onFiles && <FileDropOverlay onFiles={onFiles} acceptLabel={acceptLabel ?? "files"} />}
       </div>
@@ -222,7 +230,13 @@ export type WorkspaceBarProps = {
 /** The bar across the top of a `Workspace`: the tool's name as the heading, a polite status line, the few actions, then an end slot for the scheme and palette choice. Wraps on a phone. */
 export function WorkspaceBar({ title, status, actions, end, className }: WorkspaceBarProps) {
   return (
-    <header data-part="workspace-bar" className={cn("flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1", className)}>
+    <header
+      data-part="workspace-bar"
+      className={cn(
+        "flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1",
+        className,
+      )}
+    >
       <h1 className="type-label min-w-0 shrink-0">{title}</h1>
       <p role="status" className="type-body-sm min-w-0 flex-1 truncate text-muted-foreground tabular-nums">
         {status}
@@ -260,12 +274,26 @@ export type PaneProps = {
 };
 
 const iconsFor = (direction: "row" | "column", edge: Slot["edge"], stacked: boolean) => {
-  if (stacked || direction === "column") return edge === "start" ? [PanelTopClose, PanelTopOpen] : [PanelBottomClose, PanelBottomOpen];
+  if (stacked || direction === "column")
+    return edge === "start" ? [PanelTopClose, PanelTopOpen] : [PanelBottomClose, PanelBottomOpen];
   return edge === "end" ? [PanelRightClose, PanelRightOpen] : [PanelLeftClose, PanelLeftOpen];
 };
 
 /** A region of a workspace with a consistent header (name, actions, fold button) and a body that scrolls. */
-export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaultCollapsed, actions, flush, className, children }: PaneProps) {
+export function Pane({
+  id,
+  name,
+  grow,
+  size = 280,
+  min,
+  max,
+  collapsible,
+  defaultCollapsed,
+  actions,
+  flush,
+  className,
+  children,
+}: PaneProps) {
   const state = useState_();
   const { direction, edge, stacked } = React.useContext(SlotContext);
   const headingId = React.useId();
@@ -300,10 +328,25 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
       data-min={grow ? least : undefined}
       data-size={grow || folded ? undefined : current}
       style={style}
-      className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden bg-background", rail && cn("w-(--control-h) items-center", edge === "end" ? "border-l border-border" : "border-r border-border"), className)}
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col overflow-hidden bg-background",
+        rail &&
+          cn("w-(--control-h) items-center", edge === "end" ? "border-l border-border" : "border-r border-border"),
+        className,
+      )}
     >
-      <header data-part="pane-header" className={cn("flex shrink-0 items-center gap-1 pl-3 pr-1", rail ? "h-auto flex-col py-1 pl-1" : "h-(--control-h) border-b border-border")}>
-        <h2 id={headingId} data-part="pane-title" className={cn("type-label min-w-0 flex-1 truncate", rail && "sr-only")}>
+      <header
+        data-part="pane-header"
+        className={cn(
+          "flex shrink-0 items-center gap-1 pl-3 pr-1",
+          rail ? "h-auto flex-col py-1 pl-1" : "h-(--control-h) border-b border-border",
+        )}
+      >
+        <h2
+          id={headingId}
+          data-part="pane-title"
+          className={cn("type-label min-w-0 flex-1 truncate", rail && "sr-only")}
+        >
           {name}
         </h2>
         {!folded && actions}
@@ -318,7 +361,11 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
           />
         )}
       </header>
-      <div id={`pane-body-${id}`} hidden={folded} className={cn("min-h-0 min-w-0 flex-1 overflow-auto", !flush && "p-3")}>
+      <div
+        id={`pane-body-${id}`}
+        hidden={folded}
+        className={cn("min-h-0 min-w-0 flex-1 overflow-auto", !flush && "p-3")}
+      >
         {children}
       </div>
     </section>
@@ -431,7 +478,9 @@ function Separator({
       {...mergeProps(moveProps, keys)}
       className={cn(
         "relative shrink-0 touch-none bg-border transition-state hover:bg-primary focus-visible:bg-primary data-[moving]:bg-primary",
-        vertical ? "w-px cursor-col-resize before:absolute before:inset-y-0 before:-inset-x-1" : "h-px cursor-row-resize before:absolute before:inset-x-0 before:-inset-y-1",
+        vertical
+          ? "w-px cursor-col-resize before:absolute before:inset-y-0 before:-inset-x-1"
+          : "h-px cursor-row-resize before:absolute before:inset-x-0 before:-inset-y-1",
         "pointer-coarse:before:-inset-x-2",
       )}
     />
@@ -439,7 +488,15 @@ function Separator({
 }
 
 /** Lays its children out in a row or a column, with a separator between a fixed pane and its neighbour. A nested split takes the space the fixed panes leave. */
-export function Split({ direction, className, children }: { direction: "row" | "column"; className?: string; children: React.ReactNode }) {
+export function Split({
+  direction,
+  className,
+  children,
+}: {
+  direction: "row" | "column";
+  className?: string;
+  children: React.ReactNode;
+}) {
   const state = useState_();
   const ref = React.useRef<HTMLDivElement>(null);
   const stacked = direction === "row" && state.narrow;
@@ -453,18 +510,30 @@ export function Split({ direction, className, children }: { direction: "row" | "
     const growIndex = items.findIndex((c) => slotted(c) && grows(c));
     const edge: Slot["edge"] = growIndex < 0 ? "only" : i < growIndex ? "start" : i > growIndex ? "end" : "only";
     out.push(
-      <SlotContext.Provider key={React.isValidElement(child) && child.key != null ? child.key : i} value={{ direction: effective, edge, stacked }}>
+      <SlotContext.Provider
+        key={React.isValidElement(child) && child.key != null ? child.key : i}
+        value={{ direction: effective, edge, stacked }}
+      >
         {child}
       </SlotContext.Provider>,
     );
     const next = items[i + 1];
     if (next === undefined || !slotted(child) || !slotted(next)) return;
-    const fixed = (c: React.ReactNode) => isPane(c) && !c.props.grow && !(c.props.collapsible && state.isCollapsed(c.props.id, c.props.defaultCollapsed));
+    const fixed = (c: React.ReactNode) =>
+      isPane(c) && !c.props.grow && !(c.props.collapsible && state.isCollapsed(c.props.id, c.props.defaultCollapsed));
     const before = fixed(child);
     const after = fixed(next);
     if (stacked || (!before && !after)) return;
     const controlled = (before ? child : next) as PaneElement;
-    out.push(<Separator key={`sep-${i}`} pane={controlled.props} direction={effective} sign={before ? 1 : -1} container={ref} />);
+    out.push(
+      <Separator
+        key={`sep-${i}`}
+        pane={controlled.props}
+        direction={effective}
+        sign={before ? 1 : -1}
+        container={ref}
+      />,
+    );
   });
 
   const growPane = items.find((c): c is PaneElement => isPane(c) && Boolean(c.props.grow));

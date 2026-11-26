@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EmptyState, Input, Inspector, InspectorSection, NumberField, PropertyList, PropertyRow } from "../../src";
@@ -7,14 +7,32 @@ import { renderWithStrata } from "../../src/testing";
 const KEY = "test-inspector";
 beforeEach(() => window.localStorage.clear());
 
-function Panel({ title = "Moonbeam bowl", selectionKey = "p1", storageKey = KEY }: { title?: string | null; selectionKey?: string; storageKey?: string }) {
+function Panel({
+  title = "Moonbeam bowl",
+  selectionKey = "p1",
+  storageKey = KEY,
+}: {
+  title?: string | null;
+  selectionKey?: string;
+  storageKey?: string;
+}) {
   return (
-    <Inspector title={title} kind="Piece" selectionKey={selectionKey} storageKey={storageKey} empty={<EmptyState title="Nothing selected">Select a piece to see its glaze and firing.</EmptyState>}>
+    <Inspector
+      title={title}
+      kind="Piece"
+      selectionKey={selectionKey}
+      storageKey={storageKey}
+      empty={<EmptyState title="Nothing selected">Select a piece to see its glaze and firing.</EmptyState>}
+    >
       <InspectorSection id="glaze" title="Glaze">
-        <PropertyRow label="Glaze name"><Input defaultValue="Celadon" /></PropertyRow>
+        <PropertyRow label="Glaze name">
+          <Input defaultValue="Celadon" />
+        </PropertyRow>
       </InspectorSection>
       <InspectorSection id="firing" title="Firing" defaultOpen={false}>
-        <PropertyRow label="Cone"><Input defaultValue="6" /></PropertyRow>
+        <PropertyRow label="Cone">
+          <Input defaultValue="6" />
+        </PropertyRow>
       </InspectorSection>
     </Inspector>
   );
@@ -187,7 +205,14 @@ describe("PropertyList", () => {
   });
 
   it("prints a missing value as an en dash that a screen reader hears as not known", () => {
-    const { container } = renderWithStrata(<PropertyList items={[{ term: "Created", value: undefined }, { term: "Codec", value: "" }]} />);
+    const { container } = renderWithStrata(
+      <PropertyList
+        items={[
+          { term: "Created", value: undefined },
+          { term: "Codec", value: "" },
+        ]}
+      />,
+    );
     const dds = container.querySelectorAll("dd");
     expect(dds[0]).toHaveTextContent("–Not known");
     expect(dds[0].querySelector("[aria-hidden]")).toHaveTextContent("–");

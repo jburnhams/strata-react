@@ -14,7 +14,11 @@ export const trackPeaks = Array.from({ length: 900 }, (_, i) => {
 /** 120 bpm: a beat every half second, a bar every two seconds, the first downbeat at 2 s, and the chapters. */
 export const trackMarks = [
   ...Array.from({ length: 170 }, (_, i) => ({ time: 2 + i * 0.5, kind: "beat" as const })),
-  ...Array.from({ length: 44 }, (_, i) => ({ time: 2 + i * 2, kind: i === 0 ? ("downbeat" as const) : ("bar" as const), label: i === 0 ? "First downbeat" : `Bar ${i + 1}` })),
+  ...Array.from({ length: 44 }, (_, i) => ({
+    time: 2 + i * 2,
+    kind: i === 0 ? ("downbeat" as const) : ("bar" as const),
+    label: i === 0 ? "First downbeat" : `Bar ${i + 1}`,
+  })),
   { time: 40, kind: "chapter" as const, label: "Bridge" },
   { time: 52, kind: "chapter" as const, label: "Chorus" },
 ];
@@ -25,18 +29,43 @@ export const trackSpans = [
 ];
 
 const talk = [
-  ["Ada", "Welcome, everyone, and thank you for coming this evening", "Bienvenue à tous, et merci d'être venus ce soir"],
-  ["Ada", "Tonight we are going to look at how the kiln is loaded", "Ce soir, nous allons voir comment le four est chargé"],
-  ["Ben", "Can I ask about the shelves before we start", "Puis-je poser une question sur les étagères avant de commencer"],
+  [
+    "Ada",
+    "Welcome, everyone, and thank you for coming this evening",
+    "Bienvenue à tous, et merci d'être venus ce soir",
+  ],
+  [
+    "Ada",
+    "Tonight we are going to look at how the kiln is loaded",
+    "Ce soir, nous allons voir comment le four est chargé",
+  ],
+  [
+    "Ben",
+    "Can I ask about the shelves before we start",
+    "Puis-je poser une question sur les étagères avant de commencer",
+  ],
   ["Ada", "Of course, the shelves come first", "Bien sûr, les étagères d'abord"],
   ["Ben", "They look quite close together to me", "Elles me semblent assez proches les unes des autres"],
   ["Ada", "A finger's width is enough for stoneware", "La largeur d'un doigt suffit pour le grès"],
 ] as const;
 
 /** Builds a phrase from a sentence, one word every 0.4 s (the last a little longer). */
-export function makePhrase(id: string, start: number, text: string, speaker?: string, translated?: string): TranscriptPhrase {
+export function makePhrase(
+  id: string,
+  start: number,
+  text: string,
+  speaker?: string,
+  translated?: string,
+): TranscriptPhrase {
   const words = text.split(" ").map((w, i) => ({ text: w, start: start + i * 0.4, end: start + (i + 1) * 0.4 }));
-  return { id, start, end: start + words.length * 0.4 + 0.3, words, speaker, alt: translated ? { french: translated } : undefined };
+  return {
+    id,
+    start,
+    end: start + words.length * 0.4 + 0.3,
+    words,
+    speaker,
+    alt: translated ? { french: translated } : undefined,
+  };
 }
 
 /** A short talk in two clips with two speakers and a French alternate. */

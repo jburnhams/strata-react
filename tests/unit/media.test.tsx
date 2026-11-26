@@ -1,8 +1,20 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { KeysLegend, MediaStage, RateChoice, SeekBar, StageGuides, TimeReadout, Transport, VolumeControl, format, transportShortcuts, useHotkeys } from "../../src";
+import {
+  KeysLegend,
+  MediaStage,
+  RateChoice,
+  SeekBar,
+  StageGuides,
+  TimeReadout,
+  Transport,
+  VolumeControl,
+  format,
+  transportShortcuts,
+  useHotkeys,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 describe("format.timecode", () => {
@@ -22,18 +34,37 @@ function Player({ initialTime = 30 }: { initialTime?: number }) {
   const [time, setTime] = React.useState(initialTime);
   const [volume, setVolume] = React.useState(80);
   const [rate, setRate] = React.useState(1);
-  const shortcuts = transportShortcuts({ toggle: () => setPlaying((p) => !p), seek: setTime, time, duration: 120, toggleMute: () => setVolume((v) => (v === 0 ? 80 : 0)) });
+  const shortcuts = transportShortcuts({
+    toggle: () => setPlaying((p) => !p),
+    seek: setTime,
+    time,
+    duration: 120,
+    toggleMute: () => setVolume((v) => (v === 0 ? 80 : 0)),
+  });
   useHotkeys(shortcuts);
   return (
     <div>
-      <Transport playing={playing} onPlayPause={() => setPlaying((p) => !p)} onStop={() => { setPlaying(false); setTime(0); }} onStepBack={() => setTime((t) => t - 1 / 30)} onStepForward={() => setTime((t) => t + 1 / 30)} onToStart={() => setTime(0)} onToEnd={() => setTime(120)}>
+      <Transport
+        playing={playing}
+        onPlayPause={() => setPlaying((p) => !p)}
+        onStop={() => {
+          setPlaying(false);
+          setTime(0);
+        }}
+        onStepBack={() => setTime((t) => t - 1 / 30)}
+        onStepForward={() => setTime((t) => t + 1 / 30)}
+        onToStart={() => setTime(0)}
+        onToEnd={() => setTime(120)}
+      >
         <TimeReadout time={time} duration={120} />
       </Transport>
       <SeekBar time={time} duration={120} onSeek={setTime} marks={[{ time: 60, label: "Take 2" }]} />
       <VolumeControl volume={volume} onVolumeChange={setVolume} />
       <RateChoice rate={rate} onRateChange={setRate} />
       <KeysLegend shortcuts={shortcuts} />
-      <output data-testid="state">{JSON.stringify({ playing, time: Math.round(time * 100) / 100, volume, rate })}</output>
+      <output data-testid="state">
+        {JSON.stringify({ playing, time: Math.round(time * 100) / 100, volume, rate })}
+      </output>
     </div>
   );
 }
@@ -43,7 +74,8 @@ describe("Transport", () => {
   it("has every control by role and name, and the play button's name follows playback", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Player />);
-    for (const name of ["Go to start", "Back one frame", "Stop", "Forward one frame", "Go to end"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    for (const name of ["Go to start", "Back one frame", "Stop", "Forward one frame", "Go to end"])
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Play" }));
     expect(state().playing).toBe(true);
     expect(screen.queryByRole("button", { name: "Play" })).not.toBeInTheDocument();
@@ -133,7 +165,15 @@ describe("SeekBar disabled", () => {
   it("ignores keys, pointer and marks, and stops browser panning from cancelling a touch scrub", async () => {
     const user = userEvent.setup();
     const seen: number[] = [];
-    renderWithStrata(<SeekBar time={10} duration={120} onSeek={(t) => seen.push(t)} marks={[{ time: 60, label: "Take 2" }]} disabled />);
+    renderWithStrata(
+      <SeekBar
+        time={10}
+        duration={120}
+        onSeek={(t) => seen.push(t)}
+        marks={[{ time: 60, label: "Take 2" }]}
+        disabled
+      />,
+    );
     const bar = screen.getByRole("slider", { name: "Seek" });
     expect(bar.closest("[style*='touch-action']")).toHaveClass("touch-none");
     bar.focus();
@@ -171,7 +211,10 @@ describe("VolumeControl", () => {
   });
   it("speaks the level with its unit", () => {
     renderWithStrata(<Player />);
-    expect(screen.getByRole("slider", { name: "Volume" })).toHaveAttribute("aria-valuetext", expect.stringMatching(/80\s?%/));
+    expect(screen.getByRole("slider", { name: "Volume" })).toHaveAttribute(
+      "aria-valuetext",
+      expect.stringMatching(/80\s?%/),
+    );
   });
 });
 
@@ -227,7 +270,17 @@ describe("SeekBar marks (#387)", () => {
   it("names each mark in a tooltip with its time, draws scenes apart from chapters, and seeks without starting a drag", async () => {
     const user = userEvent.setup();
     const seen: number[] = [];
-    renderWithStrata(<SeekBar time={10} duration={1200} onSeek={(t) => seen.push(t)} marks={[{ time: 600, label: "Christmas dinner" }, { time: 640, label: "The pudding", kind: "scene" }]} />);
+    renderWithStrata(
+      <SeekBar
+        time={10}
+        duration={1200}
+        onSeek={(t) => seen.push(t)}
+        marks={[
+          { time: 600, label: "Christmas dinner" },
+          { time: 640, label: "The pudding", kind: "scene" },
+        ]}
+      />,
+    );
     const dinner = screen.getByRole("button", { name: "Christmas dinner, 10:00" });
     expect(dinner).toHaveAttribute("data-kind", "chapter");
     expect(screen.getByRole("button", { name: "The pudding, 10:40" })).toHaveAttribute("data-kind", "scene");

@@ -1,5 +1,21 @@
-import { describe, expect, it } from "vitest";
-import { drawRect, ease, lerpRect, moveRect, gutterOf, joinRects, moveGutter, normaliseAngle, readingOrder, splitRect, turnRect, turnedSize, resizeRect, zoomToBox, type Rect } from "../../src";
+import { describe, expect, it } from "vite-plus/test";
+import {
+  drawRect,
+  ease,
+  lerpRect,
+  moveRect,
+  gutterOf,
+  joinRects,
+  moveGutter,
+  normaliseAngle,
+  readingOrder,
+  splitRect,
+  turnRect,
+  turnedSize,
+  resizeRect,
+  zoomToBox,
+  type Rect,
+} from "../../src";
 
 const bounds: Rect = { x: 0, y: 0, w: 1000, h: 500 };
 const r: Rect = { x: 100, y: 100, w: 200, h: 100 };
@@ -21,9 +37,19 @@ describe("resizeRect without an aspect", () => {
   });
   it("refuses to go below the minimum or to flip over", () => {
     const min = { w: 40, h: 20 };
-    expect(resizeRect(r, "e", -5000, 0, { bounds, min })).toEqual({ x: 100, y: 100, w: 40, h: 100 });
+    expect(resizeRect(r, "e", -5000, 0, { bounds, min })).toEqual({
+      x: 100,
+      y: 100,
+      w: 40,
+      h: 100,
+    });
     expect(resizeRect(r, "w", 5000, 0, { bounds, min })).toEqual({ x: 260, y: 100, w: 40, h: 100 });
-    expect(resizeRect(r, "s", 0, -5000, { bounds, min })).toEqual({ x: 100, y: 100, w: 200, h: 20 });
+    expect(resizeRect(r, "s", 0, -5000, { bounds, min })).toEqual({
+      x: 100,
+      y: 100,
+      w: 200,
+      h: 20,
+    });
   });
   it("an edge changes one dimension only", () => {
     expect(resizeRect(r, "e", 40, 999, { bounds })).toEqual({ x: 100, y: 100, w: 240, h: 100 });
@@ -53,8 +79,16 @@ describe("resizeRect with an aspect lock", () => {
   });
   it("never leaves the bounds, whichever way it is pushed", () => {
     for (const handle of ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const) {
-      for (const [dx, dy] of [[5000, 5000], [-5000, -5000], [5000, -5000], [-5000, 5000]]) {
-        const out = resizeRect({ x: 400, y: 200, w: 200, h: 100 }, handle, dx!, dy!, { ...limits, min: { w: 20, h: 10 } });
+      for (const [dx, dy] of [
+        [5000, 5000],
+        [-5000, -5000],
+        [5000, -5000],
+        [-5000, 5000],
+      ]) {
+        const out = resizeRect({ x: 400, y: 200, w: 200, h: 100 }, handle, dx!, dy!, {
+          ...limits,
+          min: { w: 20, h: 10 },
+        });
         expect(out.x).toBeGreaterThanOrEqual(-1e-9);
         expect(out.y).toBeGreaterThanOrEqual(-1e-9);
         expect(out.x + out.w).toBeLessThanOrEqual(1000 + 1e-9);
@@ -68,12 +102,27 @@ describe("resizeRect with an aspect lock", () => {
 
 describe("drawRect", () => {
   it("orders the corners whichever way it is dragged and clamps to the bounds", () => {
-    expect(drawRect({ x: 300, y: 300 }, { x: 100, y: 200 }, { bounds })).toEqual({ x: 100, y: 200, w: 200, h: 100 });
-    expect(drawRect({ x: 900, y: 400 }, { x: 5000, y: 5000 }, { bounds })).toEqual({ x: 900, y: 400, w: 100, h: 100 });
+    expect(drawRect({ x: 300, y: 300 }, { x: 100, y: 200 }, { bounds })).toEqual({
+      x: 100,
+      y: 200,
+      w: 200,
+      h: 100,
+    });
+    expect(drawRect({ x: 900, y: 400 }, { x: 5000, y: 5000 }, { bounds })).toEqual({
+      x: 900,
+      y: 400,
+      w: 100,
+      h: 100,
+    });
   });
   it("starts a drag that began outside the bounds at their edge", () => {
     const inner = { x: 100, y: 100, w: 300, h: 300 };
-    expect(drawRect({ x: 0, y: 0 }, { x: 200, y: 200 }, { bounds: inner })).toEqual({ x: 100, y: 100, w: 100, h: 100 });
+    expect(drawRect({ x: 0, y: 0 }, { x: 200, y: 200 }, { bounds: inner })).toEqual({
+      x: 100,
+      y: 100,
+      w: 100,
+      h: 100,
+    });
   });
   it("keeps the aspect and stays inside", () => {
     const out = drawRect({ x: 900, y: 400 }, { x: 990, y: 410 }, { bounds, aspect: 2 });
@@ -126,13 +175,23 @@ describe("turning and spreads (issue #241)", () => {
   it("turns a window's centre with the picture and keeps its size, inside the new canvas", () => {
     // The top-left window of a 1000×500 picture turned clockwise: its centre goes to (450, 100) of the 500×1000 canvas, and the window, which keeps its size, is held inside.
     const quarter = turnRect({ x: 0, y: 0, w: 200, h: 100 }, [1000, 500], 0, 90);
-    expect(quarter).toMatchObject({ x: expect.closeTo(300, 3), y: expect.closeTo(50, 3), w: 200, h: 100 });
+    expect(quarter).toMatchObject({
+      x: expect.closeTo(300, 3),
+      y: expect.closeTo(50, 3),
+      w: 200,
+      h: 100,
+    });
     // A window that stays inside turns there and back again to where it started.
     const small = { x: 100, y: 100, w: 100, h: 50 };
     const there = turnRect(small, [1000, 500], 0, 90);
     expect(there).toMatchObject({ x: expect.closeTo(325, 3), w: 100, h: 50 });
     const back = turnRect(there, [1000, 500], 90, 0);
-    expect(back).toMatchObject({ x: expect.closeTo(100, 3), y: expect.closeTo(100, 3), w: 100, h: 50 });
+    expect(back).toMatchObject({
+      x: expect.closeTo(100, 3),
+      y: expect.closeTo(100, 3),
+      w: 100,
+      h: 50,
+    });
   });
   it("shrinks a window that no longer fits the canvas", () => {
     const r = turnRect({ x: 0, y: 0, w: 1000, h: 500 }, [1000, 500], 0, 90);

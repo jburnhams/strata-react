@@ -36,7 +36,9 @@ export async function dropFiles(page: Page, target: string | Locator, files: Dro
     bytes: Array.from(typeof f.content === "string" ? new TextEncoder().encode(f.content) : f.content),
   }));
   await locator.evaluate((element, list) => {
-    const made = list.map((f) => new File([new Uint8Array(f.bytes)], f.name, { type: f.type, lastModified: f.lastModified }));
+    const made = list.map(
+      (f) => new File([new Uint8Array(f.bytes)], f.name, { type: f.type, lastModified: f.lastModified }),
+    );
     const items = made.map((file) => ({
       kind: "file" as const,
       type: file.type,
@@ -50,7 +52,17 @@ export async function dropFiles(page: Page, target: string | Locator, files: Dro
         file: (ok: (f: File) => void) => ok(file),
       }),
     }));
-    const transfer = { dropEffect: "copy", effectAllowed: "all", types: ["Files"], files: made, items, getData: () => "", setData: () => {}, clearData: () => {}, setDragImage: () => {} };
+    const transfer = {
+      dropEffect: "copy",
+      effectAllowed: "all",
+      types: ["Files"],
+      files: made,
+      items,
+      getData: () => "",
+      setData: () => {},
+      clearData: () => {},
+      setDragImage: () => {},
+    };
     const rect = element.getBoundingClientRect();
     const at = { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
     for (const type of ["dragenter", "dragover", "drop"]) {

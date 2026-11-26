@@ -1,22 +1,59 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
-import { Compare, CompareVideo, PairVote, type Candidate, type CompareMode, type ImageMedia, type PairAnswer, type VideoMedia, type VideoMode } from "../../src";
+import {
+  Compare,
+  CompareVideo,
+  PairVote,
+  type Candidate,
+  type CompareMode,
+  type ImageMedia,
+  type PairAnswer,
+  type VideoMedia,
+  type VideoMode,
+} from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Click to choose (issue #201): a click on the picture you prefer is the same answer as the key and
 // the button. The layout shim gives every frame 640 × 280 at the origin, so x < 320 is the left half.
 // The frame waits out the double-click window (300 ms) before it picks, so these wait for the call.
 
-const img = (id: string, label: string): Candidate<ImageMedia> => ({ id, label, note: `note-${id}`, media: { kind: "image", src: `/img/${label}`, alt: `alt-${id}`, size: [1600, 1200] } });
+const img = (id: string, label: string): Candidate<ImageMedia> => ({
+  id,
+  label,
+  note: `note-${id}`,
+  media: { kind: "image", src: `/img/${label}`, alt: `alt-${id}`, size: [1600, 1200] },
+});
 const A = img("model-x", "A");
 const B = img("model-y", "B");
 
-function Pictures({ start = "side" as CompareMode, onPick, pick, blind = true }: { start?: CompareMode; onPick?: (side: "a" | "b") => void; pick?: boolean; blind?: boolean }) {
+function Pictures({
+  start = "side" as CompareMode,
+  onPick,
+  pick,
+  blind = true,
+}: {
+  start?: CompareMode;
+  onPick?: (side: "a" | "b") => void;
+  pick?: boolean;
+  blind?: boolean;
+}) {
   const [mode, setMode] = React.useState<CompareMode>(start);
-  return <Compare label="Pair 1" a={A} b={B} blind={blind} missing="Picture not found" mode={mode} onModeChange={setMode} onPick={onPick} pick={pick} />;
+  return (
+    <Compare
+      label="Pair 1"
+      a={A}
+      b={B}
+      blind={blind}
+      missing="Picture not found"
+      mode={mode}
+      onModeChange={setMode}
+      onPick={onPick}
+      pick={pick}
+    />
+  );
 }
 
 const frameA = () => screen.getByRole("group", { name: "Picture A" });
@@ -38,9 +75,17 @@ describe("click to choose, pictures", () => {
     const onPick = vi.fn();
     renderWithStrata(<Pictures start="swipe" onPick={onPick} />);
     const frame = screen.getByRole("group", { name: "A over B" });
-    await userEvent.pointer({ keys: "[MouseLeft]", target: frame, coords: { clientX: 100, clientY: 50 } });
+    await userEvent.pointer({
+      keys: "[MouseLeft]",
+      target: frame,
+      coords: { clientX: 100, clientY: 50 },
+    });
     await waitFor(() => expect(onPick).toHaveBeenCalledWith("a"));
-    await userEvent.pointer({ keys: "[MouseLeft]", target: frame, coords: { clientX: 500, clientY: 50 } });
+    await userEvent.pointer({
+      keys: "[MouseLeft]",
+      target: frame,
+      coords: { clientX: 500, clientY: 50 },
+    });
     await waitFor(() => expect(onPick).toHaveBeenLastCalledWith("b"));
   });
 
@@ -100,14 +145,25 @@ describe("click to choose, pictures", () => {
     expect(frameA()).toHaveAccessibleDescription("Click to choose A");
     await userEvent.hover(frameB());
     expect(screen.getAllByText("Click to choose B").length).toBeGreaterThan(0);
-    for (const secret of ["model-x", "model-y", "note-model", "alt-model"]) expect(container.innerHTML).not.toContain(secret);
+    for (const secret of ["model-x", "model-y", "note-model", "alt-model"])
+      expect(container.innerHTML).not.toContain(secret);
   });
 });
 
 describe("click to choose, a pair judgment", () => {
   const pair = { label: "Pair 1", a: A, b: B };
   const Vote = ({ pending = false, onAnswer }: { pending?: boolean; onAnswer: (a: PairAnswer) => void }) => (
-    <PairVote pair={{ status: "ready", data: pair }} skeleton={<p>Loading</p>} empty={<p>Nothing left</p>} onAnswer={onAnswer} pending={pending} blind missing="Picture not found" mode="side" onModeChange={() => undefined} />
+    <PairVote
+      pair={{ status: "ready", data: pair }}
+      skeleton={<p>Loading</p>}
+      empty={<p>Nothing left</p>}
+      onAnswer={onAnswer}
+      pending={pending}
+      blind
+      missing="Picture not found"
+      mode="side"
+      onModeChange={() => undefined}
+    />
   );
 
   it("answers a click like the button", async () => {
@@ -133,11 +189,26 @@ describe("click to choose, videos", () => {
   let media: FakeMedia;
   beforeEach(() => void (media = installFakeMedia()));
   afterEach(() => media.uninstall());
-  const clip = (id: string, label: string): Candidate<VideoMedia> => ({ id, label, media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 } });
+  const clip = (id: string, label: string): Candidate<VideoMedia> => ({
+    id,
+    label,
+    media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 },
+  });
   const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
   function Clips({ onPick, initial = "side" as VideoMode }: { onPick: (s: "a" | "b") => void; initial?: VideoMode }) {
     const [mode, setMode] = React.useState<VideoMode>(initial);
-    return <CompareVideo label="Pair 1" a={clip("x", "A")} b={clip("y", "B")} blind missing="Video not found" mode={mode} onModeChange={setMode} onPick={onPick} />;
+    return (
+      <CompareVideo
+        label="Pair 1"
+        a={clip("x", "A")}
+        b={clip("y", "B")}
+        blind
+        missing="Video not found"
+        mode={mode}
+        onModeChange={setMode}
+        onPick={onPick}
+      />
+    );
   }
 
   it("chooses a side while paused or playing, and does not play or pause", async () => {
@@ -161,9 +232,31 @@ describe("a click that is still waiting", () => {
   it("is dropped when the pair changes before the double-click window ends", async () => {
     const onPick = vi.fn();
     const C = img("model-z", "A");
-    const { rerender } = renderWithStrata(<Compare label="Pair 1" a={A} b={B} blind missing="x" mode="side" onModeChange={() => undefined} onPick={onPick} />);
+    const { rerender } = renderWithStrata(
+      <Compare
+        label="Pair 1"
+        a={A}
+        b={B}
+        blind
+        missing="x"
+        mode="side"
+        onModeChange={() => undefined}
+        onPick={onPick}
+      />,
+    );
     await userEvent.click(screen.getByRole("group", { name: "Picture A" }));
-    rerender(<Compare label="Pair 2" a={C} b={B} blind missing="x" mode="side" onModeChange={() => undefined} onPick={onPick} />);
+    rerender(
+      <Compare
+        label="Pair 2"
+        a={C}
+        b={B}
+        blind
+        missing="x"
+        mode="side"
+        onModeChange={() => undefined}
+        onPick={onPick}
+      />,
+    );
     await settle();
     expect(onPick).not.toHaveBeenCalled();
   });

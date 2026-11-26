@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Composer, Conversation, RichText, matchEntities, plainText, safeHref, type ConversationTurn } from "../../src";
@@ -13,13 +13,19 @@ describe("RichText and entity matching", () => {
   });
 
   it("accepts a matcher function", () => {
-    const m = matchEntities("abc 12", (text) => [{ start: text.indexOf("12"), end: text.indexOf("12") + 2, id: "n12" }]);
+    const m = matchEntities("abc 12", (text) => [
+      { start: text.indexOf("12"), end: text.indexOf("12") + 2, id: "n12" },
+    ]);
     expect(m).toEqual([{ start: 4, end: 6, id: "n12" }]);
   });
 
   it("turns an id into a button that calls onOpen, inside bold and lists too", async () => {
     const onOpen = vi.fn();
-    renderWithStrata(<RichText entities={["f-0412", "k-2"]} onOpen={onOpen}>{"Look at **firing f-0412** first.\n\n- kiln k-2 ran hot\n- nothing else"}</RichText>);
+    renderWithStrata(
+      <RichText entities={["f-0412", "k-2"]} onOpen={onOpen}>
+        {"Look at **firing f-0412** first.\n\n- kiln k-2 ran hot\n- nothing else"}
+      </RichText>,
+    );
     await userEvent.click(screen.getByRole("button", { name: "f-0412" }));
     expect(onOpen).toHaveBeenCalledWith("f-0412");
     await userEvent.click(screen.getByRole("button", { name: "k-2" }));
@@ -29,7 +35,13 @@ describe("RichText and entity matching", () => {
   });
 
   it("never injects HTML and refuses unsafe link targets", () => {
-    const { container } = renderWithStrata(<RichText>{'<img src=x onerror=alert(1)> <script>boom()</script> [bad](javascript:alert(1)) [good](https://example.com/a)'}</RichText>);
+    const { container } = renderWithStrata(
+      <RichText>
+        {
+          "<img src=x onerror=alert(1)> <script>boom()</script> [bad](javascript:alert(1)) [good](https://example.com/a)"
+        }
+      </RichText>,
+    );
     expect(container.querySelector("img, script")).toBeNull();
     expect(container.textContent).toContain("<img src=x onerror=alert(1)>");
     expect(screen.queryByRole("link", { name: "bad" })).toBeNull();
@@ -49,33 +61,70 @@ describe("RichText and entity matching", () => {
 });
 
 function Thread({ turns, onRetry = () => {} }: { turns: ConversationTurn[]; onRetry?: (id: string) => void }) {
-  return <Conversation label="Questions" turns={turns} answerName="Assistant" onRetry={onRetry} empty={<p>Ask anything.</p>} />;
+  return (
+    <Conversation
+      label="Questions"
+      turns={turns}
+      answerName="Assistant"
+      onRetry={onRetry}
+      empty={<p>Ask anything.</p>}
+    />
+  );
 }
 
 describe("Conversation", () => {
   it("shows the empty invitation, then articles named by speaker and time", () => {
     const { rerender } = renderWithStrata(<Thread turns={[]} />);
     expect(screen.getByText("Ask anything.")).toBeInTheDocument();
-    rerender(<Thread turns={[{ id: "1", role: "person", time: t0, text: "Which firing ran hot?" }, { id: "2", role: "answer", time: t0, text: "Firing **f-1**.", state: "done" }]} />);
+    rerender(
+      <Thread
+        turns={[
+          { id: "1", role: "person", time: t0, text: "Which firing ran hot?" },
+          { id: "2", role: "answer", time: t0, text: "Firing **f-1**.", state: "done" },
+        ]}
+      />,
+    );
     expect(screen.getAllByRole("article")).toHaveLength(2);
     expect(screen.getByRole("region", { name: "Questions" })).toBeInTheDocument();
   });
 
   it("announces a finished answer once and does not announce tokens while it streams", () => {
-    const streaming: ConversationTurn = { id: "2", role: "answer", time: t0, text: "Fir", state: "streaming" };
+    const streaming: ConversationTurn = {
+      id: "2",
+      role: "answer",
+      time: t0,
+      text: "Fir",
+      state: "streaming",
+    };
     const { rerender } = renderWithStrata(<Thread turns={[streaming]} />);
     const live = screen.getByRole("status");
     expect(live).toHaveTextContent("");
     rerender(<Thread turns={[{ ...streaming, text: "Firing f-1 ran" }]} />);
     expect(live).toHaveTextContent("");
     expect(screen.getByRole("article")).toHaveAttribute("aria-busy", "true");
-    rerender(<Thread turns={[{ id: "2", role: "answer", time: t0, text: "Firing **f-1** ran hot.", state: "done" }]} />);
+    rerender(
+      <Thread turns={[{ id: "2", role: "answer", time: t0, text: "Firing **f-1** ran hot.", state: "done" }]} />,
+    );
     expect(live).toHaveTextContent("Assistant answered: Firing f-1 ran hot.");
   });
 
   it("puts Try again on the failed turn, in place, with the app's sentence", async () => {
     const onRetry = vi.fn();
-    renderWithStrata(<Thread onRetry={onRetry} turns={[{ id: "9", role: "answer", time: t0, text: "", state: "failed", error: "The lookup timed out." }]} />);
+    renderWithStrata(
+      <Thread
+        onRetry={onRetry}
+        turns={[
+          {
+            id: "9",
+            role: "answer",
+            time: t0,
+            text: "",
+            state: "failed",
+            error: "The lookup timed out.",
+          },
+        ]}
+      />,
+    );
     expect(screen.getByText("The lookup timed out.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalledWith("9");
@@ -83,10 +132,22 @@ describe("Conversation", () => {
 
   it("follows while at the bottom, stays put once scrolled up, and Jump to latest returns", () => {
     const geometry = { scrollHeight: 1000, clientHeight: 200 };
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => geometry.scrollHeight });
-    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => geometry.clientHeight });
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+      configurable: true,
+      get: () => geometry.scrollHeight,
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get: () => geometry.clientHeight,
+    });
     try {
-      const a: ConversationTurn = { id: "1", role: "answer", time: t0, text: "one", state: "streaming" };
+      const a: ConversationTurn = {
+        id: "1",
+        role: "answer",
+        time: t0,
+        text: "one",
+        state: "streaming",
+      };
       const { rerender } = renderWithStrata(<Thread turns={[a]} />);
       const box = screen.getByRole("region", { name: "Questions" });
       expect(box.scrollTop).toBe(1000);
@@ -109,7 +170,14 @@ describe("Conversation", () => {
       box.scrollTop = 50;
       fireEvent.scroll(box);
       geometry.scrollHeight = 2200;
-      rerender(<Thread turns={[{ ...a, text: "x", state: "done" }, { id: "2", role: "person", time: t0, text: "next" }]} />);
+      rerender(
+        <Thread
+          turns={[
+            { ...a, text: "x", state: "done" },
+            { id: "2", role: "person", time: t0, text: "next" },
+          ]}
+        />,
+      );
       expect(box.scrollTop).toBe(2200);
     } finally {
       delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
@@ -119,10 +187,22 @@ describe("Conversation", () => {
 
   it("follows pictures that arrive after the text while the reader is at the bottom (#257)", () => {
     const geometry = { scrollHeight: 1000 };
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => geometry.scrollHeight });
-    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 400 });
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+      configurable: true,
+      get: () => geometry.scrollHeight,
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get: () => 400,
+    });
     try {
-      const a = { id: "1", role: "answer" as const, time: t0, text: "Here.", state: "done" as const };
+      const a = {
+        id: "1",
+        role: "answer" as const,
+        time: t0,
+        text: "Here.",
+        state: "done" as const,
+      };
       const { rerender } = renderWithStrata(<Thread turns={[a]} />);
       const box = screen.getByRole("region", { name: "Questions" });
       geometry.scrollHeight = 1400;
@@ -135,7 +215,24 @@ describe("Conversation", () => {
   });
 
   it("shows pictures with an answer, visible without opening anything, linked to full size when asked (#257)", () => {
-    renderWithStrata(<Thread turns={[{ id: "1", role: "answer", time: t0, text: "Here it is.", state: "done", lookedUp: <p>Read 3 clips</p>, images: [{ src: "/a.jpg", label: "Frame at 0:42", href: "/a-full.jpg" }, { src: "/b.jpg", label: "Frame at 1:10" }] }]} />);
+    renderWithStrata(
+      <Thread
+        turns={[
+          {
+            id: "1",
+            role: "answer",
+            time: t0,
+            text: "Here it is.",
+            state: "done",
+            lookedUp: <p>Read 3 clips</p>,
+            images: [
+              { src: "/a.jpg", label: "Frame at 0:42", href: "/a-full.jpg" },
+              { src: "/b.jpg", label: "Frame at 1:10" },
+            ],
+          },
+        ]}
+      />,
+    );
     expect(screen.getByText("Frame at 0:42")).toBeVisible();
     expect(screen.getByRole("link", { name: /Frame at 0:42/ })).toHaveAttribute("href", "/a-full.jpg");
     expect(screen.getAllByRole("link")).toHaveLength(1);
@@ -143,7 +240,20 @@ describe("Conversation", () => {
   });
 
   it("shows what it looked up behind a disclosure once the answer is done", async () => {
-    renderWithStrata(<Thread turns={[{ id: "1", role: "answer", time: t0, text: "Done.", state: "done", lookedUp: <p>Read 3 firings</p> }]} />);
+    renderWithStrata(
+      <Thread
+        turns={[
+          {
+            id: "1",
+            role: "answer",
+            time: t0,
+            text: "Done.",
+            state: "done",
+            lookedUp: <p>Read 3 firings</p>,
+          },
+        ]}
+      />,
+    );
     expect(screen.queryByText("Read 3 firings")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "What it looked up" }));
     expect(screen.getByText("Read 3 firings")).toBeInTheDocument();
@@ -151,7 +261,11 @@ describe("Conversation", () => {
 });
 
 describe("Composer", () => {
-  const base = { label: "Ask about the kiln", onStop: () => {}, answeringReason: "Waiting for the answer." };
+  const base = {
+    label: "Ask about the kiln",
+    onStop: () => {},
+    answeringReason: "Waiting for the answer.",
+  };
 
   it("sends on Enter, keeps Shift+Enter as a new line, ignores empty and IME input", async () => {
     const onSend = vi.fn();
@@ -172,7 +286,9 @@ describe("Composer", () => {
 
   it("is disabled with its reason while answering, and Stop replaces Send", async () => {
     const onStop = vi.fn();
-    renderWithStrata(<Composer {...base} onStop={onStop} onSend={() => {}} answering suggestions={["Which ran hot?"]} />);
+    renderWithStrata(
+      <Composer {...base} onStop={onStop} onSend={() => {}} answering suggestions={["Which ran hot?"]} />,
+    );
     const box = screen.getByRole("textbox", { name: "Ask about the kiln" });
     expect(box).toBeDisabled();
     expect(box).toHaveAccessibleDescription("Waiting for the answer.");
@@ -185,14 +301,25 @@ describe("Composer", () => {
   it("sends a suggested question as a button, and Send is the one filled button", async () => {
     const onSend = vi.fn();
     renderWithStrata(<Composer {...base} onSend={onSend} suggestions={["Which ran hot?", "What is next?"]} />);
-    await userEvent.click(within(screen.getByRole("group", { name: "Suggested questions" })).getByRole("button", { name: "What is next?" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Suggested questions" })).getByRole("button", {
+        name: "What is next?",
+      }),
+    );
     expect(onSend).toHaveBeenCalledWith("What is next?");
     expect(document.querySelectorAll('[data-variant="default"]')).toHaveLength(1);
   });
 
   it("is disabled with the app's reason when it is not ready, without an answer in flight (issue #243)", async () => {
     const onSend = vi.fn();
-    renderWithStrata(<Composer {...base} onSend={onSend} disabled="The footage is still being indexed." suggestions={["Which ran hot?"]} />);
+    renderWithStrata(
+      <Composer
+        {...base}
+        onSend={onSend}
+        disabled="The footage is still being indexed."
+        suggestions={["Which ran hot?"]}
+      />,
+    );
     const box = screen.getByRole("textbox", { name: "Ask about the kiln" });
     expect(box).toBeDisabled();
     expect(box).toHaveAccessibleDescription("The footage is still being indexed.");

@@ -33,9 +33,21 @@ export function Toolbar({ label, orientation = "horizontal", children, className
   const jump = (e: React.KeyboardEvent<HTMLElement>) => {
     // Only events from inside the toolbar's own DOM: a Popover opened from a control here renders in
     // a portal, and its events still reach this handler through React's tree.
-    if ((e.key !== "Home" && e.key !== "End") || isTypingTarget(e.target) || isRange(e.target) || !e.currentTarget.contains(e.target as Node)) return;
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>("button, input, select, textarea, a[href], [tabindex]")].filter(
-      (el) => !el.hasAttribute("disabled") && el.getAttribute("aria-disabled") !== "true" && el.tabIndex >= -1 && el.getAttribute("role") !== "separator",
+    if (
+      (e.key !== "Home" && e.key !== "End") ||
+      isTypingTarget(e.target) ||
+      isRange(e.target) ||
+      !e.currentTarget.contains(e.target as Node)
+    )
+      return;
+    const items = [
+      ...e.currentTarget.querySelectorAll<HTMLElement>("button, input, select, textarea, a[href], [tabindex]"),
+    ].filter(
+      (el) =>
+        !el.hasAttribute("disabled") &&
+        el.getAttribute("aria-disabled") !== "true" &&
+        el.tabIndex >= -1 &&
+        el.getAttribute("role") !== "separator",
     );
     const target = e.key === "Home" ? items[0] : items[items.length - 1];
     if (!target) return;
@@ -48,7 +60,11 @@ export function Toolbar({ label, orientation = "horizontal", children, className
       <AriaToolbar
         aria-label={label}
         orientation={orientation}
-        className={cn("flex flex-wrap items-center gap-1", orientation === "vertical" && "flex-col items-stretch", className)}
+        className={cn(
+          "flex flex-wrap items-center gap-1",
+          orientation === "vertical" && "flex-col items-stretch",
+          className,
+        )}
       >
         {children}
       </AriaToolbar>

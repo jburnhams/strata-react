@@ -67,7 +67,13 @@ const diskColumns: Column<Disk>[] = [
       />
     ),
   },
-  { key: "free", header: "Free", numeric: true, cell: (d) => format.bytes(d.size - d.used), sort: (a, b) => a.size - a.used - (b.size - b.used) },
+  {
+    key: "free",
+    header: "Free",
+    numeric: true,
+    cell: (d) => format.bytes(d.size - d.used),
+    sort: (a, b) => a.size - a.used - (b.size - b.used),
+  },
 ];
 
 function Finding({ disks }: { disks: Disk[] }) {
@@ -75,11 +81,17 @@ function Finding({ disks }: { disks: Disk[] }) {
   if (!worst) return <>The status agent reports no disks.</>;
   const share = worst.used / worst.size;
   const crossed = crossedThreshold(share, diskThresholds);
-  if (!crossed) return <>Every disk has room: the fullest, {worst.mount}, is {format.percent(share)} used.</>;
+  if (!crossed)
+    return (
+      <>
+        Every disk has room: the fullest, {worst.mount}, is {format.percent(share)} used.
+      </>
+    );
   return (
     <>
-      {worst.mount} ({worst.purpose.toLowerCase()}) is {format.percent(share)} full, with {format.bytes(worst.size - worst.used)} left.
-      Move last year&apos;s photos to the backup disk before the spring glaze tests.
+      {worst.mount} ({worst.purpose.toLowerCase()}) is {format.percent(share)} full, with{" "}
+      {format.bytes(worst.size - worst.used)} left. Move last year&apos;s photos to the backup disk before the spring
+      glaze tests.
     </>
   );
 }
@@ -101,7 +113,11 @@ function DashboardSkeleton() {
 export function StudioServerScreen() {
   // Polled, as the header says. A poll that fails keeps the last readings on screen and says how
   // old they are (DataView's stale notice), so a restarting agent does not blank the dashboard.
-  const load = useLoad({ queryKey: ["server"], queryFn: () => fetchJson<ServerStatus>(api.server), refetchInterval: 60_000 });
+  const load = useLoad({
+    queryKey: ["server"],
+    queryFn: () => fetchJson<ServerStatus>(api.server),
+    refetchInterval: 60_000,
+  });
 
   return (
     <main className="mx-auto grid max-w-5xl gap-10 px-4 py-8 sm:px-8">
@@ -109,14 +125,22 @@ export function StudioServerScreen() {
         title="Studio server"
         scope="kilnroom-office · checked every minute"
         actions={<ColorSchemeChoice compact />}
-        finding={load.status === "ready" && load.data.disks.length > 0 ? { text: <Finding disks={load.data.disks} /> } : undefined}
+        finding={
+          load.status === "ready" && load.data.disks.length > 0
+            ? { text: <Finding disks={load.data.disks} /> }
+            : undefined
+        }
       />
       <DataView
         state={load}
         isEmpty={(s) => s.apps.length === 0 && s.disks.length === 0}
         skeleton={<DashboardSkeleton />}
         staleNotice={(stale) => <StaleNotice stale={stale} shown={(when) => `These readings are from ${when}.`} />}
-        empty={<EmptyState title="The status agent has nothing to report">Start it on the server with <code className="font-mono">systemctl start status-agent</code>.</EmptyState>}
+        empty={
+          <EmptyState title="The status agent has nothing to report">
+            Start it on the server with <code className="font-mono">systemctl start status-agent</code>.
+          </EmptyState>
+        }
       >
         {(s) => (
           <div className="grid gap-10">
@@ -134,7 +158,13 @@ export function StudioServerScreen() {
                     </>
                   );
                   return app.external ? (
-                    <LinkCard key={app.id} href={app.path} title={app.name} description={app.description} marks={marks} />
+                    <LinkCard
+                      key={app.id}
+                      href={app.path}
+                      title={app.name}
+                      description={app.description}
+                      marks={marks}
+                    />
                   ) : (
                     <LinkCard key={app.id} to={app.path} title={app.name} description={app.description} marks={marks} />
                   );

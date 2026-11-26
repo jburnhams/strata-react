@@ -29,7 +29,11 @@ function PreviewBar({ density }: { density?: "compact" }) {
           label="Preview quality"
           value={quality}
           onChange={setQuality}
-          options={[{ value: "full", label: "Full" }, { value: "half", label: "Half" }, { value: "quarter", label: "Quarter" }]}
+          options={[
+            { value: "full", label: "Full" },
+            { value: "half", label: "Half" },
+            { value: "quarter", label: "Quarter" },
+          ]}
         />
         <ToolbarSeparator />
         <ToggleGroup

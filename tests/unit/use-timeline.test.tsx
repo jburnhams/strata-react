@@ -1,8 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import { KeysLegend, MediaGroup, SeekBar, Transport, joinMediaGroup, transportShortcuts, useHotkeys, useTimeline, type TimelineClockOptions } from "../../src";
+import {
+  KeysLegend,
+  MediaGroup,
+  SeekBar,
+  Transport,
+  joinMediaGroup,
+  transportShortcuts,
+  useHotkeys,
+  useTimeline,
+  type TimelineClockOptions,
+} from "../../src";
 
 // Issues #384 and #385. The clock is the real hook on fake animation frames; the transport, seek bar and keys are the real parts.
 
@@ -13,10 +23,22 @@ function Clock(options: TimelineClockOptions) {
   const clock = useTimeline(options);
   return (
     <div {...clock.regionProps}>
-      <Transport playing={clock.playing} onPlayPause={clock.toggle} onToStart={() => clock.seek(0)} onStepBack={() => clock.step(-1)} onStepForward={() => clock.step(1)}>
+      <Transport
+        playing={clock.playing}
+        onPlayPause={clock.toggle}
+        onToStart={() => clock.seek(0)}
+        onStepBack={() => clock.step(-1)}
+        onStepForward={() => clock.step(1)}
+      >
         <SeekBar time={clock.time} duration={clock.duration} onSeek={clock.seek} precision="frames" fps={40} />
       </Transport>
-      <output aria-label="state">{JSON.stringify({ time: Number(clock.time.toFixed(3)), playing: clock.playing, ended: clock.ended })}</output>
+      <output aria-label="state">
+        {JSON.stringify({
+          time: Number(clock.time.toFixed(3)),
+          playing: clock.playing,
+          ended: clock.ended,
+        })}
+      </output>
     </div>
   );
 }
@@ -83,7 +105,12 @@ describe("keys on a page with a stage (#385)", () => {
     const clock = useTimeline({ duration: 4 });
     const controls = React.useRef<HTMLDivElement>(null);
     const [turns, setTurns] = React.useState(0);
-    const shortcuts = transportShortcuts({ toggle: clock.toggle, seek: clock.seek, time: clock.time, duration: clock.duration });
+    const shortcuts = transportShortcuts({
+      toggle: clock.toggle,
+      seek: clock.seek,
+      time: clock.time,
+      duration: clock.duration,
+    });
     const { live } = useHotkeys(shortcuts, { enabled: clock.ownsKeys, within: controls });
     // The stage's own arrows.
     useHotkeys([{ keys: ["ArrowRight"], label: "Turn right", run: () => setTurns((n) => n + 1) }]);

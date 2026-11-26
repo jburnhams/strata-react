@@ -58,7 +58,10 @@ export type HlsAttacherOptions = {
 };
 
 /** Makes a `SourceAttacher` around an hls.js engine: the engine where the browser has Media Source Extensions, otherwise the element's own HLS. */
-export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config = {}, words = {} }: HlsAttacherOptions = {}): SourceAttacher {
+export function createHlsAttacher(
+  Engine: HlsEngine,
+  { prefer = "engine", config = {}, words = {} }: HlsAttacherOptions = {},
+): SourceAttacher {
   const say = { ...WORDS, ...words };
   return (el: HTMLMediaElement, src: string, context: StreamContext): StreamAttachment => {
     const canNative = el.canPlayType("application/vnd.apple.mpegurl") !== "";
@@ -92,7 +95,10 @@ export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config
       }
       // Where playback had reached, else the app's own start, else the beginning of a source still being made
       // (an EVENT playlist counts as live to hls.js, which with -1 would start at the newest part), else hls.js's choice.
-      const hls = new Engine({ ...config, startPosition: at > 0 ? at : (config.startPosition ?? (context.growing ? 0 : -1)) });
+      const hls = new Engine({
+        ...config,
+        startPosition: at > 0 ? at : (config.startPosition ?? (context.growing ? 0 : -1)),
+      });
       engine = hls;
       let recoveries = 0;
       hls.on(Engine.Events.FRAG_LOADED, () => {
@@ -107,7 +113,13 @@ export function createHlsAttacher(Engine: HlsEngine, { prefer = "engine", config
           recoveries++;
           hls.recoverMediaError();
         } else {
-          context.onProblem(data.type === Engine.ErrorTypes.NETWORK_ERROR ? say.network : data.type === Engine.ErrorTypes.MEDIA_ERROR ? say.media : say.other);
+          context.onProblem(
+            data.type === Engine.ErrorTypes.NETWORK_ERROR
+              ? say.network
+              : data.type === Engine.ErrorTypes.MEDIA_ERROR
+                ? say.media
+                : say.other,
+          );
           stop();
         }
       });

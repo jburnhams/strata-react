@@ -44,7 +44,11 @@ function FullscreenPlayer() {
       controls="strata"
       spans={[{ start: 1, end: 11, kind: "intro" }]}
       spanKinds={fullscreenSpanKinds}
-      status={<p role="status" className="type-body-sm">Playback details are loading</p>}
+      status={
+        <p role="status" className="type-body-sm">
+          Playback details are loading
+        </p>
+      }
       warning={warning}
       onTimeChange={(time) => {
         if (time < 4 || warned.current) return;
@@ -68,7 +72,16 @@ function Controls() {
   const [lid, setLid] = React.useState(true);
   return (
     <main className="mx-auto grid max-w-5xl gap-10 p-8">
-      <PageHeader title="Controls" scope="Strata's default look, every kind of control" actions={<><PaletteChoice compact /><Button variant="default">Book a firing</Button></>} />
+      <PageHeader
+        title="Controls"
+        scope="Strata's default look, every kind of control"
+        actions={
+          <>
+            <PaletteChoice compact />
+            <Button variant="default">Book a firing</Button>
+          </>
+        }
+      />
       <section aria-label="Buttons" className="flex flex-wrap items-center gap-3">
         <Button variant="default">Book firing</Button>
         <Button>Message owners</Button>
@@ -86,21 +99,36 @@ function Controls() {
           ))}
         </div>
         <Alert tone="info">Readings from Kiln 2 are logged every five minutes.</Alert>
-        <Alert tone="success" title="Imported">12 pieces added to the glaze library.</Alert>
-        <Alert tone="warning" title="Kiln 2 is behind">Its last reading is 40 minutes old.</Alert>
-        <Alert tone="danger" title="Export failed">The disk is full. Free some space and try again.</Alert>
+        <Alert tone="success" title="Imported">
+          12 pieces added to the glaze library.
+        </Alert>
+        <Alert tone="warning" title="Kiln 2 is behind">
+          Its last reading is 40 minutes old.
+        </Alert>
+        <Alert tone="danger" title="Export failed">
+          The disk is full. Free some space and try again.
+        </Alert>
       </section>
       <section aria-label="Form" className="grid gap-6 md:grid-cols-2">
         <div className="grid content-start gap-5">
-          <Field label="Pieces" hint="Up to 20 per booking."><Input name="pieces" inputMode="numeric" defaultValue="6" /></Field>
-          <Field label="Tallest piece (cm)" error="Kiln 2's shelves are 30 cm apart. Choose kiln 1, which takes up to 45 cm."><Input name="tallest" defaultValue="38" /></Field>
+          <Field label="Pieces" hint="Up to 20 per booking.">
+            <Input name="pieces" inputMode="numeric" defaultValue="6" />
+          </Field>
+          <Field
+            label="Tallest piece (cm)"
+            error="Kiln 2's shelves are 30 cm apart. Choose kiln 1, which takes up to 45 cm."
+          >
+            <Input name="tallest" defaultValue="38" />
+          </Field>
           <Field label="Kiln">
             <NativeSelect name="kiln" defaultValue="2">
               <option value="1">Kiln 1, large electric</option>
               <option value="2">Kiln 2, small electric</option>
             </NativeSelect>
           </Field>
-          <Field label="Notes" hint="Optional."><Textarea name="notes" defaultValue="The lidded jar fires with its lid on." /></Field>
+          <Field label="Notes" hint="Optional.">
+            <Textarea name="notes" defaultValue="The lidded jar fires with its lid on." />
+          </Field>
         </div>
         <div className="grid content-start gap-5">
           <ChoiceGroup
@@ -121,9 +149,27 @@ function Controls() {
       </section>
       <section aria-label="Levels and tabs" className="grid gap-6 md:grid-cols-2">
         <div className="grid gap-5">
-          <Meter label="/ (system and apps)" value={18.4 * GB} max={64 * GB} thresholds={diskThresholds} detail="18.4 GB of 64 GB" />
-          <Meter label="/mnt/backup" value={1640 * GB} max={1863 * GB} thresholds={diskThresholds} detail="1.6 TB of 1.9 TB" />
-          <Meter label="/srv/photos" value={431 * GB} max={466 * GB} thresholds={diskThresholds} detail="431 GB of 466 GB" />
+          <Meter
+            label="/ (system and apps)"
+            value={18.4 * GB}
+            max={64 * GB}
+            thresholds={diskThresholds}
+            detail="18.4 GB of 64 GB"
+          />
+          <Meter
+            label="/mnt/backup"
+            value={1640 * GB}
+            max={1863 * GB}
+            thresholds={diskThresholds}
+            detail="1.6 TB of 1.9 TB"
+          />
+          <Meter
+            label="/srv/photos"
+            value={431 * GB}
+            max={466 * GB}
+            thresholds={diskThresholds}
+            detail="431 GB of 466 GB"
+          />
         </div>
         <Tabs param="view" items={tabs} label="Kiln 2">
           {(v) => <p className="type-body py-4">Panel: {tabs.find((t) => t.value === v)?.label}</p>}

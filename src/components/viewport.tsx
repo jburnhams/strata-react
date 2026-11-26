@@ -137,7 +137,12 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       e.preventDefault();
       const r = el.getBoundingClientRect();
       const at = { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 };
-      setViewportRef.current(zoomAt(latest.current, latest.current.scale * Math.exp(-e.deltaY / 200), at, { width: r.width, height: r.height }));
+      setViewportRef.current(
+        zoomAt(latest.current, latest.current.scale * Math.exp(-e.deltaY / 200), at, {
+          width: r.width,
+          height: r.height,
+        }),
+      );
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -172,7 +177,8 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       aria-describedby={pick ? describeId : undefined}
       onPointerDown={(e) => {
         cancelPick();
-        press.current = pickRef.current && e.button === 0 && !e.shiftKey ? { x: e.clientX, y: e.clientY, at: e.timeStamp } : null;
+        press.current =
+          pickRef.current && e.button === 0 && !e.shiftKey ? { x: e.clientX, y: e.clientY, at: e.timeStamp } : null;
         if (e.shiftKey && onBox && e.button === 0) {
           const p = inFrame(e.clientX, e.clientY);
           setBand({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
@@ -186,7 +192,9 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       onPointerMove={(e) => {
         if (pickRef.current && e.pointerType !== "touch") {
           const zone = pickRef.current.zoneAt(shareAcross(e.clientX));
-          setHover((prev) => (prev?.value === zone?.value && prev?.from === zone?.from && prev?.to === zone?.to ? prev : zone));
+          setHover((prev) =>
+            prev?.value === zone?.value && prev?.from === zone?.from && prev?.to === zone?.to ? prev : zone,
+          );
         }
         if (bandRef.current) {
           const p = inFrame(e.clientX, e.clientY);
@@ -203,7 +211,13 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
         drag.current = null;
         const down = press.current;
         press.current = null;
-        if (down && pickRef.current && !bandRef.current && e.timeStamp - down.at <= CLICK_MAX_MS && Math.hypot(e.clientX - down.x, e.clientY - down.y) <= CLICK_SLOP) {
+        if (
+          down &&
+          pickRef.current &&
+          !bandRef.current &&
+          e.timeStamp - down.at <= CLICK_MAX_MS &&
+          Math.hypot(e.clientX - down.x, e.clientY - down.y) <= CLICK_SLOP
+        ) {
           const zone = pickRef.current.zoneAt(shareAcross(e.clientX));
           if (zone) {
             cancelPick();
@@ -232,7 +246,11 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
         const v = latest.current;
         setViewport(v.scale > 1 ? FIT : zoomAt(v, 2, fromCentre(e.clientX, e.clientY), size()));
       }}
-      style={{ aspectRatio: String(aspect), ...(maxHeight ? { maxWidth: `calc(${maxHeight} * ${aspect})`, marginInline: "auto" } : {}), touchAction: zoomed ? "none" : "pan-y" }}
+      style={{
+        aspectRatio: String(aspect),
+        ...(maxHeight ? { maxWidth: `calc(${maxHeight} * ${aspect})`, marginInline: "auto" } : {}),
+        touchAction: zoomed ? "none" : "pan-y",
+      }}
       className={cn(
         "relative w-full overflow-hidden rounded-surface border border-border bg-muted select-none",
         zoomed ? "cursor-grab active:cursor-grabbing" : pick ? "cursor-pointer" : "cursor-zoom-in",
@@ -245,18 +263,38 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
       </div>
       {cover && (
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - cover.shown}% 0 0)` }}>
-          <div className="absolute inset-0" style={{ transform: viewportTransform(viewport), transformOrigin: "center" }}>
+          <div
+            className="absolute inset-0"
+            style={{ transform: viewportTransform(viewport), transformOrigin: "center" }}
+          >
             {cover.content}
           </div>
         </div>
       )}
       {outline && viewport.scale === 1 && (
-        <div aria-hidden className="pointer-events-none absolute border-2 border-foreground ring-1 ring-background" style={{ left: `${outline[0] * 100}%`, top: `${outline[1] * 100}%`, width: `${outline[2] * 100}%`, height: `${outline[3] * 100}%` }} />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute border-2 border-foreground ring-1 ring-background"
+          style={{
+            left: `${outline[0] * 100}%`,
+            top: `${outline[1] * 100}%`,
+            width: `${outline[2] * 100}%`,
+            height: `${outline[3] * 100}%`,
+          }}
+        />
       )}
       {pick && hover && !band && (
         <>
-          <div aria-hidden className="pointer-events-none absolute inset-y-0 border-2 border-primary ring-1 ring-background" style={{ left: `${hover.from * 100}%`, width: `${(hover.to - hover.from) * 100}%` }} />
-          <p aria-hidden className="pointer-events-none absolute top-2 -translate-x-1/2 whitespace-nowrap rounded-pill border border-border bg-background px-2 py-0.5 type-caption text-foreground" style={{ left: `${((hover.from + hover.to) / 2) * 100}%` }}>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 border-2 border-primary ring-1 ring-background"
+            style={{ left: `${hover.from * 100}%`, width: `${(hover.to - hover.from) * 100}%` }}
+          />
+          <p
+            aria-hidden
+            className="pointer-events-none absolute top-2 -translate-x-1/2 whitespace-nowrap rounded-pill border border-border bg-background px-2 py-0.5 type-caption text-foreground"
+            style={{ left: `${((hover.from + hover.to) / 2) * 100}%` }}
+          >
             {hover.hint}
           </p>
         </>
@@ -266,7 +304,18 @@ export const ViewportFrame = React.forwardRef<HTMLDivElement, ViewportFrameProps
           {pick.describe}
         </span>
       )}
-      {band && <div aria-hidden className="pointer-events-none absolute border-2 border-dashed border-foreground" style={{ left: Math.min(band.x0, band.x1), top: Math.min(band.y0, band.y1), width: Math.abs(band.x1 - band.x0), height: Math.abs(band.y1 - band.y0) }} />}
+      {band && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute border-2 border-dashed border-foreground"
+          style={{
+            left: Math.min(band.x0, band.x1),
+            top: Math.min(band.y0, band.y1),
+            width: Math.abs(band.x1 - band.x0),
+            height: Math.abs(band.y1 - band.y0),
+          }}
+        />
+      )}
       {overlay != null && (
         <div
           className="pointer-events-none absolute inset-0"

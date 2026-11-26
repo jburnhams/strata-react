@@ -8,3 +8,4 @@ tests/visual/output
 *.log
 site
 examples/*/dist
+.vitest/

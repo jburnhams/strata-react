@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fanOut } from "../../src/map/fan";
 
 const at = (id: string, x: number, y: number) => ({ id, x, y });
@@ -7,7 +7,11 @@ const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.
 describe("fanOut", () => {
   it("leaves markers that are apart where they are", () => {
     const out = fanOut([at("a", 0, 0), at("b", 100, 0), at("c", 0, 100)]);
-    expect(out.map((o) => [o.x, o.y, o.fanned])).toEqual([[0, 0, false], [100, 0, false], [0, 100, false]]);
+    expect(out.map((o) => [o.x, o.y, o.fanned])).toEqual([
+      [0, 0, false],
+      [100, 0, false],
+      [0, 100, false],
+    ]);
   });
 
   it("moves two markers on one spot apart by the gap, centred on the spot, the first above", () => {
@@ -21,14 +25,22 @@ describe("fanOut", () => {
 
   it("keeps every neighbour in a small group at least the gap apart", () => {
     for (const n of [3, 4, 5, 6]) {
-      const out = fanOut(Array.from({ length: n }, (_, i) => at(`m${i}`, 10, 10)), 24);
-      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) expect(dist(out[i], out[j])).toBeGreaterThanOrEqual(24 - 1e-6);
+      const out = fanOut(
+        Array.from({ length: n }, (_, i) => at(`m${i}`, 10, 10)),
+        24,
+      );
+      for (let i = 0; i < n; i++)
+        for (let j = i + 1; j < n; j++) expect(dist(out[i], out[j])).toBeGreaterThanOrEqual(24 - 1e-6);
     }
   });
 
   it("fills rings for a big pile, none closer than the gap, none far from the spot", () => {
-    const out = fanOut(Array.from({ length: 40 }, (_, i) => at(`m${i}`, 0, 0)), 26);
-    for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) expect(dist(out[i], out[j])).toBeGreaterThan(26 * 0.7);
+    const out = fanOut(
+      Array.from({ length: 40 }, (_, i) => at(`m${i}`, 0, 0)),
+      26,
+    );
+    for (let i = 0; i < out.length; i++)
+      for (let j = i + 1; j < out.length; j++) expect(dist(out[i], out[j])).toBeGreaterThan(26 * 0.7);
     expect(Math.max(...out.map((o) => Math.hypot(o.x, o.y)))).toBeLessThan(26 * 5);
   });
 
@@ -42,7 +54,8 @@ describe("fanOut", () => {
     const items = [at("a", 5, 5), at("b", 6, 5), at("z", 300, 300), at("c", 5, 6)];
     expect(fanOut(items)).toEqual(fanOut(items));
     const shuffled = [items[2], items[0], items[3], items[1]];
-    const byId = (o: ReturnType<typeof fanOut>) => Object.fromEntries(o.map((p) => [p.id, [Math.round(p.x), Math.round(p.y)]]));
+    const byId = (o: ReturnType<typeof fanOut>) =>
+      Object.fromEntries(o.map((p) => [p.id, [Math.round(p.x), Math.round(p.y)]]));
     // The lone marker is the same wherever it is in the list; the group's members are the same set of places.
     expect(byId(fanOut(shuffled)).z).toEqual(byId(fanOut(items)).z);
   });

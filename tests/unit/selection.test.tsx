@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -109,9 +109,7 @@ describe("DataTable selection", () => {
   });
 
   it("select-all covers the rows a virtualised table has not rendered", async () => {
-    renderWithStrata(
-      <Harness rows={manyBookings.map((b) => ({ ...b, state: "booked" as const }))} />,
-    );
+    renderWithStrata(<Harness rows={manyBookings.map((b) => ({ ...b, state: "booked" as const }))} />);
     await userEvent.click(selectAll());
     expect(screen.getByText(`${manyBookings.length} bookings selected`)).toBeInTheDocument();
   });
@@ -142,7 +140,13 @@ describe("DataTable selection", () => {
         <>
           <button onClick={() => setAll((a) => !a)}>Toggle filter</button>
           <output data-testid="count">{selection.count}</output>
-          <DataTable caption="Work" columns={columns} rows={rows} rowKey={(b) => b.id} selection={{ ...selection, rowLabel: (b) => b.member }} />
+          <DataTable
+            caption="Work"
+            columns={columns}
+            rows={rows}
+            rowKey={(b) => b.id}
+            selection={{ ...selection, rowLabel: (b) => b.member }}
+          />
         </>
       );
     }
@@ -174,7 +178,13 @@ describe("Bulk removal through useUndoable", () => {
         <>
           <button
             onClick={() =>
-              undoable.schedule({ id: "bulk", ids: bookable.map((b) => b.id), message: "Withdrew 2 bookings.", failure: "They are back.", commit })
+              undoable.schedule({
+                id: "bulk",
+                ids: bookable.map((b) => b.id),
+                message: "Withdrew 2 bookings.",
+                failure: "They are back.",
+                commit,
+              })
             }
           >
             Withdraw all
@@ -216,7 +226,15 @@ describe("Row actions", () => {
     renderWithStrata(
       <DataTable
         caption="Work"
-        columns={[...columns, { key: "action", header: "Actions", hideHeader: true, cell: (b) => <RowAction label="Withdraw" subject={b.member} /> }]}
+        columns={[
+          ...columns,
+          {
+            key: "action",
+            header: "Actions",
+            hideHeader: true,
+            cell: (b) => <RowAction label="Withdraw" subject={b.member} />,
+          },
+        ]}
         rows={bookings.slice(0, 2)}
         rowKey={(b) => b.id}
       />,

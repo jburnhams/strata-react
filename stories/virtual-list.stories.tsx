@@ -25,7 +25,12 @@ function Row({ r }: { r: Reading }) {
 const meta = {
   title: "Data/VirtualList",
   component: VirtualList<Reading>,
-  args: { label: "Kiln 2 log, newest first", items: log, itemKey: (r: Reading) => String(r.x), children: (r: Reading) => <Row r={r} /> },
+  args: {
+    label: "Kiln 2 log, newest first",
+    items: log,
+    itemKey: (r: Reading) => String(r.x),
+    children: (r: Reading) => <Row r={r} />,
+  },
 } satisfies Meta<typeof VirtualList<Reading>>;
 export default meta;
 type Story = StoryObj<typeof meta>;

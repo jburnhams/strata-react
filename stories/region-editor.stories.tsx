@@ -20,20 +20,36 @@ function Editor(props: Partial<RegionEditorProps> & { initial: EditableRegion[] 
   const [preview, setPreview] = React.useState<Rect | null>(null);
   return (
     <div className="max-w-2xl space-y-3">
-      <RegionEditor label="Window on the photo" size={[1500, 1000]} regions={regions} onChange={setRegions} defaults={props.initial} onPreview={(r) => setPreview(r)} {...props}>
+      <RegionEditor
+        label="Window on the photo"
+        size={[1500, 1000]}
+        regions={regions}
+        onChange={setRegions}
+        defaults={props.initial}
+        onPreview={(r) => setPreview(r)}
+        {...props}
+      >
         <Picture />
       </RegionEditor>
-      {preview && <p className="type-caption tabular-nums text-muted-foreground">Preview at {Math.round(preview.x)}, {Math.round(preview.y)}, {Math.round(preview.w)} wide</p>}
+      {preview && (
+        <p className="type-caption tabular-nums text-muted-foreground">
+          Preview at {Math.round(preview.x)}, {Math.round(preview.y)}, {Math.round(preview.w)} wide
+        </p>
+      )}
     </div>
   );
 }
 
-const meta = { title: "Data/RegionEditor", component: Editor, parameters: { layout: "padded" } } satisfies Meta<typeof Editor>;
+const meta = { title: "Data/RegionEditor", component: Editor, parameters: { layout: "padded" } } satisfies Meta<
+  typeof Editor
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** A 3:2 crop, locked to its shape. Drag it, pull a handle, or use the arrow keys; the numbers follow. */
-export const Crop: Story = { args: { aspect: 3 / 2, initial: [{ id: "crop", label: "Crop", x: 300, y: 200, w: 900, h: 600, tone: "info" }] } };
+export const Crop: Story = {
+  args: { aspect: 3 / 2, initial: [{ id: "crop", label: "Crop", x: 300, y: 200, w: 900, h: 600, tone: "info" }] },
+};
 
 /** A pan from one window to another: the line joins their centres; Watch plays the move. */
 export const PanFromTo: Story = {
@@ -55,7 +71,18 @@ export const DrawNew: Story = {
     const [regions, setRegions] = React.useState<readonly EditableRegion[]>([]);
     return (
       <div className="max-w-2xl">
-        <RegionEditor label="Faces" size={[1500, 1000]} regions={regions} onChange={setRegions} onDraw={(r) => setRegions([...regions, { ...r, id: `r${regions.length + 1}`, label: `Face ${regions.length + 1}`, tone: "warning" }])}>
+        <RegionEditor
+          label="Faces"
+          size={[1500, 1000]}
+          regions={regions}
+          onChange={setRegions}
+          onDraw={(r) =>
+            setRegions([
+              ...regions,
+              { ...r, id: `r${regions.length + 1}`, label: `Face ${regions.length + 1}`, tone: "warning" },
+            ])
+          }
+        >
           <Picture />
         </RegionEditor>
       </div>
@@ -70,7 +97,15 @@ function Turned({ initialAngle = 0, initial }: { initialAngle?: number; initial:
   const [regions, setRegions] = React.useState<readonly EditableRegion[]>(initial);
   return (
     <div className="max-w-md">
-      <RegionEditor label="Crop of the scan" size={[1200, 1800]} regions={regions} onChange={setRegions} angle={angle} onAngleChange={setAngle} guide>
+      <RegionEditor
+        label="Crop of the scan"
+        size={[1200, 1800]}
+        regions={regions}
+        onChange={setRegions}
+        angle={angle}
+        onAngleChange={setAngle}
+        guide
+      >
         <img src={bookPages[6]!.src} alt="" className="size-full object-cover" />
       </RegionEditor>
     </div>
@@ -90,7 +125,14 @@ function Spread() {
   ]);
   return (
     <div className="max-w-2xl">
-      <RegionEditor label="Cut of the scan" size={[2400, 1500]} regions={regions} onChange={setRegions} mode="spread" fields={false}>
+      <RegionEditor
+        label="Cut of the scan"
+        size={[2400, 1500]}
+        regions={regions}
+        onChange={setRegions}
+        mode="spread"
+        fields={false}
+      >
         <div className="size-full bg-muted" />
       </RegionEditor>
     </div>

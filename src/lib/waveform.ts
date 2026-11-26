@@ -10,7 +10,8 @@ export type WaveformPeaks = ArrayLike<number> | { min: ArrayLike<number>; max: A
 /** Peaks as the lowest and highest sample of each slice. */
 export type PeakPair = { min: Float32Array; max: Float32Array };
 
-const isPair = (p: WaveformPeaks): p is { min: ArrayLike<number>; max: ArrayLike<number> } => typeof (p as { min?: unknown }).min === "object";
+const isPair = (p: WaveformPeaks): p is { min: ArrayLike<number>; max: ArrayLike<number> } =>
+  typeof (p as { min?: unknown }).min === "object";
 
 /** Makes the lowest and highest sample of each slice from either form. A magnitude `m` is the pair `-m` to `m`. */
 export function toPeakPair(peaks: WaveformPeaks): PeakPair {
@@ -68,7 +69,10 @@ export function resamplePeaks(peaks: WaveformPeaks, buckets: number): PeakPair {
  * so one thump or click on a quiet recording (a dropped camcorder, a tape splice) does not keep the rest
  * flat; a ceiling, so a recording that is only hiss is not drawn as if it were speech.
  */
-export function peakGain(pair: PeakPair, { percentile = 0.995, maxGain = 16 }: { percentile?: number; maxGain?: number } = {}): number {
+export function peakGain(
+  pair: PeakPair,
+  { percentile = 0.995, maxGain = 16 }: { percentile?: number; maxGain?: number } = {},
+): number {
   const n = Math.min(pair.min.length, pair.max.length);
   if (n === 0) return 1;
   // A long file is sampled (at most 50,000 slices) rather than sorted whole: the percentile barely moves.
@@ -82,13 +86,22 @@ export function peakGain(pair: PeakPair, { percentile = 0.995, maxGain = 16 }: {
 }
 
 /** What a decoded file looks like to this code: the shape of the browser's `AudioBuffer`. */
-export type DecodedAudio = { duration: number; numberOfChannels: number; length: number; getChannelData: (channel: number) => ArrayLike<number> };
+export type DecodedAudio = {
+  duration: number;
+  numberOfChannels: number;
+  length: number;
+  getChannelData: (channel: number) => ArrayLike<number>;
+};
 
 /**
  * Reduces decoded audio to `buckets` peaks over all channels, in chunks, calling `progress` with
  * the buckets done and awaiting between chunks so the page stays responsive and `signal` can stop it.
  */
-export async function peaksFromAudio(audio: DecodedAudio, buckets: number, options: { signal?: AbortSignal; progress?: (done: number, total: number) => void; chunk?: number } = {}): Promise<PeakPair> {
+export async function peaksFromAudio(
+  audio: DecodedAudio,
+  buckets: number,
+  options: { signal?: AbortSignal; progress?: (done: number, total: number) => void; chunk?: number } = {},
+): Promise<PeakPair> {
   const { signal, progress, chunk = 256 } = options;
   const min = new Float32Array(buckets);
   const max = new Float32Array(buckets);
@@ -118,7 +131,8 @@ export async function peaksFromAudio(audio: DecodedAudio, buckets: number, optio
 }
 
 /** The time at the pointer, given the visible range and the width. */
-export const timeAt = (px: number, width: number, from: number, to: number) => from + (Math.min(Math.max(px, 0), width) / (width || 1)) * (to - from);
+export const timeAt = (px: number, width: number, from: number, to: number) =>
+  from + (Math.min(Math.max(px, 0), width) / (width || 1)) * (to - from);
 
 /** Keeps a visible range of `span` seconds inside `0` to `duration`. */
 export function clampView(from: number, span: number, duration: number): [number, number] {

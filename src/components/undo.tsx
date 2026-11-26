@@ -232,9 +232,7 @@ export function UndoBar({
   return (
     <div
       aria-live="polite"
-      className={
-        inline ? "flex" : "layer-bar pointer-events-none fixed inset-x-0 bottom-4 flex justify-center px-4"
-      }
+      className={inline ? "flex" : "layer-bar pointer-events-none fixed inset-x-0 bottom-4 flex justify-center px-4"}
     >
       {(pending || failed) && (
         <div className="pointer-events-auto flex max-w-lg items-center gap-4 rounded-overlay bg-foreground py-2 pr-2 pl-4 text-background shadow-overlay">
@@ -252,7 +250,12 @@ export function UndoBar({
                   {failed.message ? `${failed.removal.failure} ${failed.message}` : failed.removal.failure}
                 </p>
                 <div className="flex shrink-0 gap-1">
-                  <Button size="sm" variant="ghost" className={ghost} onClick={() => void retry().catch(() => undefined)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={ghost}
+                    onClick={() => void retry().catch(() => undefined)}
+                  >
                     Try again
                   </Button>
                   <Button size="sm" variant="ghost" className={ghost} onClick={dismiss}>

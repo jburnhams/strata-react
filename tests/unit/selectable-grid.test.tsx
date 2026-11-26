@@ -1,8 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BulkBar, Button, DataTable, SelectableGrid, useHotkeys, useSelection, type Column, type InitialSelection } from "../../src";
+import {
+  BulkBar,
+  Button,
+  DataTable,
+  SelectableGrid,
+  useHotkeys,
+  useSelection,
+  type Column,
+  type InitialSelection,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { shelfPhotos, type ShelfPhoto } from "../../stories/fixtures/kiln";
 
@@ -140,7 +149,10 @@ describe("SelectableGrid", () => {
     // React Aria's Virtualizer sizes a tile by its scroll size, which jsdom does not do (0, so every
     // tile would count as visible). Give tiles one, like a drawn tile.
     const before = Object.getOwnPropertyDescriptor(Element.prototype, "scrollHeight");
-    Object.defineProperty(Element.prototype, "scrollHeight", { configurable: true, get: () => 180 });
+    Object.defineProperty(Element.prototype, "scrollHeight", {
+      configurable: true,
+      get: () => 180,
+    });
     onTestFinished(() => {
       if (before) Object.defineProperty(Element.prototype, "scrollHeight", before);
       else delete (Element.prototype as unknown as Record<string, unknown>).scrollHeight;
@@ -236,7 +248,12 @@ describe("useSelection initial", () => {
 
 describe("DataTable range select", () => {
   const columns: Column<ShelfPhoto>[] = [
-    { key: "piece", header: "Piece", cell: (p) => p.piece, sort: (a, b) => a.piece.localeCompare(b.piece) },
+    {
+      key: "piece",
+      header: "Piece",
+      cell: (p) => p.piece,
+      sort: (a, b) => a.piece.localeCompare(b.piece),
+    },
   ];
   function Table() {
     const rows = photos.slice(0, 8);

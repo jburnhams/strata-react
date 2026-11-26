@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { PNG } from "pngjs";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -59,13 +59,28 @@ describe("visual compare (pixelmatch)", () => {
   // as another machine's rasteriser does. Plain pixelmatch counts the whole edge; after the 3×3
   // blur nothing differs.
   const ink = [40, 40, 40] as const;
-  const mix = (cover: number) => [0, 1, 2].map((c) => Math.round(250 + (ink[c] - 250) * cover)) as [number, number, number];
+  const mix = (cover: number) =>
+    [0, 1, 2].map((c) => Math.round(250 + (ink[c] - 250) * cover)) as [number, number, number];
   const edge = (shift: number) =>
-    image(60, 40, (x, y) => (y < 4 || y > 35 ? undefined : x < 20 ? [...ink] : x === 20 ? mix(0.6 - shift) : x === 21 ? mix(0.2 + shift) : undefined));
+    image(60, 40, (x, y) =>
+      y < 4 || y > 35
+        ? undefined
+        : x < 20
+          ? [...ink]
+          : x === 20
+            ? mix(0.6 - shift)
+            : x === 21
+              ? mix(0.2 + shift)
+              : undefined,
+    );
 
   it("absorbs anti-aliasing that moved along an edge", () => {
     expect(compare(edge(0), edge(0.2), { blur: 0, includeAA: true }).diffPixels).toBe(64);
-    expect(compare(edge(0), edge(0.2))).toMatchObject({ same: true, diffPixels: 0, reason: expect.stringMatching(/^0 pixels differ \(0\.000%\), \d+ without the blur$/) });
+    expect(compare(edge(0), edge(0.2))).toMatchObject({
+      same: true,
+      diffPixels: 0,
+      reason: expect.stringMatching(/^0 pixels differ \(0\.000%\), \d+ without the blur$/),
+    });
   });
 
   it("still fails a small mark the size of a changed letter's stroke", () => {
@@ -111,7 +126,11 @@ describe("storybookShots", () => {
             "button--default": { id: "button--default", type: "story", tags: ["autodocs"] },
             "screen--wide": { id: "screen--wide", type: "story", tags: ["visual-wide"] },
             // A story's own phone tag beats its file's wide tag (Storybook merges both).
-            "screen--phone": { id: "screen--phone", type: "story", tags: ["visual-wide", "visual-phone"] },
+            "screen--phone": {
+              id: "screen--phone",
+              type: "story",
+              tags: ["visual-wide", "visual-phone"],
+            },
             "demo--interactive": { id: "demo--interactive", type: "story", tags: ["no-visual"] },
             "button--docs": { id: "button--docs", type: "docs" },
           },
@@ -126,7 +145,11 @@ describe("storybookShots", () => {
         "screen--phone--light",
         "screen--phone--dark",
       ]);
-      expect(shots[0]).toMatchObject({ viewport: { width: 1024, height: 200 }, root: "#storybook-root", clip: "paint" });
+      expect(shots[0]).toMatchObject({
+        viewport: { width: 1024, height: 200 },
+        root: "#storybook-root",
+        clip: "paint",
+      });
       expect(shots[1].path).toBe("iframe.html?id=button--default&viewMode=story&globals=theme:dark");
       expect(shots[2].viewport).toEqual({ width: 1440, height: 900 });
       expect(shots[4].viewport).toEqual({ width: 390, height: 844 });
@@ -145,7 +168,17 @@ describe("routeShots", () => {
       dir: "dist",
       handlers: base,
       viewports: ["wide", "phone"],
-      routes: [{ name: "review", path: "/review", states: { ready: [], empty: [empty], sorted: { path: "/review?sort=added.desc", waitFor: "role=table" } } }],
+      routes: [
+        {
+          name: "review",
+          path: "/review",
+          states: {
+            ready: [],
+            empty: [empty],
+            sorted: { path: "/review?sort=added.desc", waitFor: "role=table" },
+          },
+        },
+      ],
     });
     expect(shots).toHaveLength(12);
     expect(shots.map((s) => s.name).slice(0, 4)).toEqual([
@@ -156,19 +189,44 @@ describe("routeShots", () => {
     ]);
     const emptyShot = shots.find((s) => s.name === "review--empty--wide--light")!;
     expect(emptyShot.handlers).toEqual([empty, ...base]);
-    expect(emptyShot).toMatchObject({ path: "/review", root: "#root", clip: "page", darkClass: "dark", viewport: { width: 1440, height: 900 } });
-    expect(shots.find((s) => s.name === "review--sorted--phone--dark")).toMatchObject({ path: "/review?sort=added.desc", waitFor: "role=table" });
+    expect(emptyShot).toMatchObject({
+      path: "/review",
+      root: "#root",
+      clip: "page",
+      darkClass: "dark",
+      viewport: { width: 1440, height: 900 },
+    });
+    expect(shots.find((s) => s.name === "review--sorted--phone--dark")).toMatchObject({
+      path: "/review?sort=added.desc",
+      waitFor: "role=table",
+    });
   });
 
   it("gives a route with no states one default state, at the wide viewport", () => {
-    const shots = routeShots({ dir: "dist", routes: [{ name: "settings", path: "/settings", viewports: [{ width: 800, height: 600 }] }] }, ["light"]);
+    const shots = routeShots(
+      {
+        dir: "dist",
+        routes: [{ name: "settings", path: "/settings", viewports: [{ width: 800, height: 600 }] }],
+      },
+      ["light"],
+    );
     expect(shots.map((s) => s.name)).toEqual(["settings--default--800x600--light"]);
   });
 
   it("runs the route's setup, then the state's", async () => {
     const calls: string[] = [];
     const [shot] = routeShots(
-      { dir: "dist", routes: [{ name: "a", path: "/", setup: () => void calls.push("route"), states: { open: { setup: () => void calls.push("state") } } }] },
+      {
+        dir: "dist",
+        routes: [
+          {
+            name: "a",
+            path: "/",
+            setup: () => void calls.push("route"),
+            states: { open: { setup: () => void calls.push("state") } },
+          },
+        ],
+      },
       ["light"],
     );
     await shot.setup!(undefined as never, shot);
@@ -177,14 +235,20 @@ describe("routeShots", () => {
 
   it("refuses names that would make awkward file names, and unknown viewports", () => {
     expect(() => routeShots({ dir: "d", routes: [{ name: "Review page", path: "/" }] })).toThrow(/lower-case/);
-    expect(() => routeShots({ dir: "d", routes: [{ name: "r", path: "/", states: { "Not OK": [] } }] })).toThrow(/lower-case/);
-    expect(() => routeShots({ dir: "d", routes: [{ name: "r", path: "/", viewports: ["tablet" as never] }] })).toThrow(/unknown viewport "tablet"/);
+    expect(() => routeShots({ dir: "d", routes: [{ name: "r", path: "/", states: { "Not OK": [] } }] })).toThrow(
+      /lower-case/,
+    );
+    expect(() => routeShots({ dir: "d", routes: [{ name: "r", path: "/", viewports: ["tablet" as never] }] })).toThrow(
+      /unknown viewport "tablet"/,
+    );
   });
 });
 
 describe("shot URLs and requests", () => {
   it("resolves a path under the app's base path", () => {
-    expect(resolveShotUrl("/review?tab=queue", "http://127.0.0.1:4000/app/")).toBe("http://127.0.0.1:4000/app/review?tab=queue");
+    expect(resolveShotUrl("/review?tab=queue", "http://127.0.0.1:4000/app/")).toBe(
+      "http://127.0.0.1:4000/app/review?tab=queue",
+    );
     expect(resolveShotUrl("iframe.html?id=a", "http://127.0.0.1:4000/")).toBe("http://127.0.0.1:4000/iframe.html?id=a");
     expect(resolveShotUrl("https://example.test/x", "http://127.0.0.1:4000/")).toBe("https://example.test/x");
   });
@@ -204,7 +268,17 @@ describe("shot URLs and requests", () => {
 
 describe("report", () => {
   const report = (over: Partial<VisualReport>): VisualReport => ({
-    total: 4, same: 4, tolerated: [], changed: [], added: [], obsolete: [], errors: [], warnings: [], updated: false, failed: false, ...over,
+    total: 4,
+    same: 4,
+    tolerated: [],
+    changed: [],
+    added: [],
+    obsolete: [],
+    errors: [],
+    warnings: [],
+    updated: false,
+    failed: false,
+    ...over,
   });
 
   it("prints what matched and, when failing, where the diffs are", () => {
@@ -232,7 +306,9 @@ describe("report", () => {
 
 describe("serving an app build with a relative base (issue #242)", () => {
   it("puts a base tag first in the head, so a nested route finds its assets", () => {
-    expect(withBaseTag('<html><head><meta charset="utf-8"></head></html>', "/")).toBe('<html><head><base href="/"><meta charset="utf-8"></head></html>');
+    expect(withBaseTag('<html><head><meta charset="utf-8"></head></html>', "/")).toBe(
+      '<html><head><base href="/"><meta charset="utf-8"></head></html>',
+    );
   });
   it("leaves a page that has its own base tag alone", () => {
     const html = '<head><base href="/app/"></head>';
@@ -259,7 +335,9 @@ describe("pinSystemFont (issue #342)", () => {
   });
 
   it("names a font file that is missing, and leaves nothing behind", () => {
-    expect(() => pinSystemFont({ pin: "Test Face", files: ["nowhere/Face.ttf"] }, tmpdir())).toThrow(/Face\.ttf not found/);
+    expect(() => pinSystemFont({ pin: "Test Face", files: ["nowhere/Face.ttf"] }, tmpdir())).toThrow(
+      /Face\.ttf not found/,
+    );
     expect(() => pinSystemFont({ pin: "", files: [] }, tmpdir())).toThrow(/family name/);
   });
 });

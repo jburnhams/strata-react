@@ -37,7 +37,13 @@ export type Justified = { key: string; x: number; width: number; row: number };
  * every tile's width on top of the picture (the picture is `aspect` times the row's height). Returns
  * the placements and each row's picture height.
  */
-export function justifyRows(items: readonly JustifyItem[], width: number, rowHeight: number, gap: number, padding: number): { placed: Justified[]; heights: number[] } {
+export function justifyRows(
+  items: readonly JustifyItem[],
+  width: number,
+  rowHeight: number,
+  gap: number,
+  padding: number,
+): { placed: Justified[]; heights: number[] } {
   const placed: Justified[] = [];
   const heights: number[] = [];
   let run: JustifyItem[] = [];
@@ -94,7 +100,10 @@ export class GroupedGridLayout<T = unknown> extends GridLayout<T> {
     const collection = this.virtualizer!.collection;
 
     // What the base layout worked out: the tile's width and each tile's x, from the first row.
-    const tiles = [...collection].filter((n) => !isGroupKey(n.key)).map((n) => super.getLayoutInfo(n.key)).filter((l): l is LayoutInfo => l !== null);
+    const tiles = [...collection]
+      .filter((n) => !isGroupKey(n.key))
+      .map((n) => super.getLayoutInfo(n.key))
+      .filter((l): l is LayoutInfo => l !== null);
     const first = tiles[0];
     const columns = Math.max(1, (this as unknown as { numColumns: number }).numColumns);
     // The column positions come from the first row of the base layout whatever sits in it (a heading
@@ -102,20 +111,31 @@ export class GroupedGridLayout<T = unknown> extends GridLayout<T> {
     const xs = [...collection].slice(0, columns).map((n) => super.getLayoutInfo(n.key)?.rect.x ?? 0);
     const tileHeight = tiles.reduce((h, t) => Math.max(h, t.rect.height), 0) || first?.rect.height || 0;
 
-    const justify = (options as { justify?: unknown }).justify as { aspects: ReadonlyMap<string, number>; rowHeight: number; padding: number; chrome: number } | undefined;
+    const justify = (options as { justify?: unknown }).justify as
+      | { aspects: ReadonlyMap<string, number>; rowHeight: number; padding: number; chrome: number }
+      | undefined;
     const next = new Map<string, LayoutInfo>();
     this.headers = [];
     let y = space;
     let col = 0;
     let rowInfos: LayoutInfo[] = [];
-    let run: { node: (typeof collection extends Iterable<infer N> ? N : never); base: LayoutInfo; aspect: number }[] = [];
+    let run: { node: typeof collection extends Iterable<infer N> ? N : never; base: LayoutInfo; aspect: number }[] = [];
     // A justified run (a group's tiles, or all of them) is packed into rows of equal height.
     const endRun = () => {
       if (!justify || !run.length) return;
-      const { placed, heights } = justifyRows(run.map((r) => ({ key: String(r.node.key), aspect: r.aspect })), width, justify.rowHeight, space, justify.padding);
+      const { placed, heights } = justifyRows(
+        run.map((r) => ({ key: String(r.node.key), aspect: r.aspect })),
+        width,
+        justify.rowHeight,
+        space,
+        justify.padding,
+      );
       const byKey = new Map(run.map((r) => [String(r.node.key), r]));
       const tops: number[] = [];
-      for (const h of heights) { tops.push(y); y += h + justify.chrome + space; }
+      for (const h of heights) {
+        tops.push(y);
+        y += h + justify.chrome + space;
+      }
       for (const p of placed) {
         const r = byKey.get(p.key)!;
         const info = r.base.copy();

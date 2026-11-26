@@ -1,7 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Lock, Volume2 } from "lucide-react";
-import { DragSource, IconButton, Timeline, TimelineZoomControls, noOverlap, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineLane, type TimelineProps } from "../src";
+import {
+  DragSource,
+  IconButton,
+  Timeline,
+  TimelineZoomControls,
+  noOverlap,
+  useTimelineZoom,
+  type TimelineChange,
+  type TimelineItem,
+  type TimelineLane,
+  type TimelineProps,
+} from "../src";
 
 // Issue #77. Two subjects on one component, because they are one picture: kiln bookings across a
 // working day (hours on the axis, no current-time rule) and a media edit (seconds, a current time,
@@ -19,7 +30,8 @@ const bookings: TimelineItem[] = [
   { id: "b3", lane: "k2", start: 9, length: 8, label: "Bisque firing", kind: "Bisque" },
   { id: "b4", lane: "k3", start: 11, length: 2.5, label: "Raku, Ana R.", kind: "Raku" },
 ];
-const clock = (t: number) => `${String(Math.floor(t)).padStart(2, "0")}:${String(Math.round((t % 1) * 60)).padStart(2, "0")}`;
+const clock = (t: number) =>
+  `${String(Math.floor(t)).padStart(2, "0")}:${String(Math.round((t % 1) * 60)).padStart(2, "0")}`;
 
 const tracks: TimelineLane[] = [
   { id: "v1", label: "Video 1" },
@@ -60,13 +72,28 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** No lanes: the empty content says what to do. */
-export const Empty: Story = { args: { lanes: [], items: [], empty: <p className="type-body text-muted-foreground">Add a track to begin editing.</p> } };
+export const Empty: Story = {
+  args: {
+    lanes: [],
+    items: [],
+    empty: <p className="type-body text-muted-foreground">Add a track to begin editing.</p>,
+  },
+};
 
 /** A schedule: bookings across resources, hours on the axis, no current-time rule. Item kind is a word as well as a stripe. */
 export const Schedule: Story = {
   render: () => (
     <div className="w-full max-w-3xl">
-      <Timeline label="Kiln bookings" lanes={kilns} items={bookings} from={8} to={18} zoom={72} formatTime={clock} step={0.25} />
+      <Timeline
+        label="Kiln bookings"
+        lanes={kilns}
+        items={bookings}
+        from={8}
+        to={18}
+        zoom={72}
+        formatTime={clock}
+        step={0.25}
+      />
     </div>
   ),
 };
@@ -80,7 +107,12 @@ export const MediaEdit: Story = {
       { id: "m1", time: 12, label: "Take 2" },
       { id: "m2", time: 46, label: "Cut here" },
     ],
-    renderItem: (item, { width }) => (item.kind === "Audio" ? <Wave width={width} /> : <span className="flex h-full items-center truncate">{item.label}</span>),
+    renderItem: (item, { width }) =>
+      item.kind === "Audio" ? (
+        <Wave width={width} />
+      ) : (
+        <span className="flex h-full items-center truncate">{item.label}</span>
+      ),
   },
 };
 
@@ -97,7 +129,14 @@ export const Compact: Story = { args: { compact: true, position: 20 } };
 export const ManyItems: Story = {
   args: {
     lanes: [{ id: "t", label: "Clips" }],
-    items: Array.from({ length: 3000 }, (_, i): TimelineItem => ({ id: `i${i}`, lane: "t", start: i * 12, length: 10, label: `Clip ${i + 1}`, kind: i % 2 ? "Video" : "Audio" })),
+    items: Array.from({ length: 3000 }, (_, i): TimelineItem => ({
+      id: `i${i}`,
+      lane: "t",
+      start: i * 12,
+      length: 10,
+      label: `Clip ${i + 1}`,
+      kind: i % 2 ? "Video" : "Audio",
+    })),
     to: 36000,
   },
 };
@@ -110,7 +149,8 @@ function LiveStage() {
   const [selected, setSelected] = React.useState<string[]>([]);
   const [position, setPosition] = React.useState(0);
   const z = useTimelineZoom({ initial: 10 });
-  const change = (id: string, c: TimelineChange) => setItems((all) => all.map((i) => (i.id === id ? { ...i, ...c } : i)));
+  const change = (id: string, c: TimelineChange) =>
+    setItems((all) => all.map((i) => (i.id === id ? { ...i, ...c } : i)));
   return (
     <div className="grid w-full max-w-3xl gap-2">
       <TimelineZoomControls zoom={{ ...z, fit: () => z.fit(560, 90) }} />
@@ -130,7 +170,10 @@ function LiveStage() {
         onDelete={(ids) => setItems((all) => all.filter((i) => !ids.includes(i.id)))}
         validate={noOverlap(items)}
       />
-      <p className="type-body-sm text-muted-foreground">Drag a clip (it snaps to edges, the marker and the current time) or an edge. Keys: arrows move, Enter selects, Ctrl+arrows nudge, Alt+arrows trim, +/-/0 zoom.</p>
+      <p className="type-body-sm text-muted-foreground">
+        Drag a clip (it snaps to edges, the marker and the current time) or an edge. Keys: arrows move, Enter selects,
+        Ctrl+arrows nudge, Alt+arrows trim, +/-/0 zoom.
+      </p>
     </div>
   );
 }
@@ -165,7 +208,16 @@ export const KindColours: Story = {
 export const LongLaneName: Story = {
   args: {
     lanes: [
-      { id: "v1", label: "Footage from the north ridge, take two", header: <><IconButton icon={Volume2} label="Mute" /><IconButton icon={Lock} label="Lock" /></> },
+      {
+        id: "v1",
+        label: "Footage from the north ridge, take two",
+        header: (
+          <>
+            <IconButton icon={Volume2} label="Mute" />
+            <IconButton icon={Lock} label="Lock" />
+          </>
+        ),
+      },
       { id: "a1", label: "Audio" },
     ],
     items: [{ id: "c1", lane: "v1", start: 2, length: 24, label: "run-02.mp4", kind: "Video" }],
@@ -182,7 +234,11 @@ const library: Clip[] = [
 /** A library row that drags a clip: `DragSource`, with a grip for the keyboard (Enter picks it up). */
 function LibraryClip({ clip }: { clip: Clip }) {
   return (
-    <DragSource label={clip.name} items={() => [{ "application/x-clip": clip.id, "text/plain": clip.name }]} className="rounded-control border border-border py-1 pe-3 ps-1">
+    <DragSource
+      label={clip.name}
+      items={() => [{ "application/x-clip": clip.id, "text/plain": clip.name }]}
+      className="rounded-control border border-border py-1 pe-3 ps-1"
+    >
       {clip.name} <span className="text-muted-foreground tabular-nums">{clip.length} s</span>
     </DragSource>
   );
@@ -194,10 +250,17 @@ function DropStage() {
   const lib = (id: string) => library.find((c) => c.id === id)!;
   return (
     <div className="grid w-full max-w-3xl gap-3">
-      <div className="flex flex-wrap gap-2">{library.map((c) => <LibraryClip key={c.id} clip={c} />)}</div>
+      <div className="flex flex-wrap gap-2">
+        {library.map((c) => (
+          <LibraryClip key={c.id} clip={c} />
+        ))}
+      </div>
       <Timeline
         label="Edit"
-        lanes={[...tracks.slice(0, 2), { id: "a1", label: "Audio (locked)", header: <Lock aria-label="Locked" className="size-4" /> }]}
+        lanes={[
+          ...tracks.slice(0, 2),
+          { id: "a1", label: "Audio (locked)", header: <Lock aria-label="Locked" className="size-4" /> },
+        ]}
         items={items}
         to={90}
         zoom={10}
@@ -209,11 +272,24 @@ function DropStage() {
           const [first] = d.items;
           const id = first.kind === "text" ? await first.getText("application/x-clip") : "";
           const clip = lib(id);
-          setItems((all) => [...all, { id: `n${all.length}`, lane: d.lane, start: d.start, length: clip.length, label: clip.name, kind: clip.name.endsWith(".wav") ? "Audio" : "Video" }]);
+          setItems((all) => [
+            ...all,
+            {
+              id: `n${all.length}`,
+              lane: d.lane,
+              start: d.start,
+              length: clip.length,
+              label: clip.name,
+              kind: clip.name.endsWith(".wav") ? "Audio" : "Video",
+            },
+          ]);
           setSaid(`Added ${clip.name} at ${d.start} s.`);
         }}
       />
-      <p className="type-body-sm text-muted-foreground">{said} Drag a clip onto a lane (it snaps to edges); the locked lane refuses with its reason. By keyboard: focus a clip's grip, press Enter, Tab to a lane, Enter to drop it at the current time (30 s).</p>
+      <p className="type-body-sm text-muted-foreground">
+        {said} Drag a clip onto a lane (it snaps to edges); the locked lane refuses with its reason. By keyboard: focus
+        a clip's grip, press Enter, Tab to a lane, Enter to drop it at the current time (30 s).
+      </p>
     </div>
   );
 }

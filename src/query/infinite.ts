@@ -94,7 +94,10 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
   const queryHash = hashKey(queryKey);
   const [stored, setStored] = React.useState<Dismissed>(() => ({ query: queryHash, keys: new Set() }));
   const dismissed = stored.query === queryHash ? stored.keys : none;
-  const hidden = React.useCallback((key: string) => dismissed.has(key) || (isRemoved?.(key) ?? false), [dismissed, isRemoved]);
+  const hidden = React.useCallback(
+    (key: string) => dismissed.has(key) || (isRemoved?.(key) ?? false),
+    [dismissed, isRemoved],
+  );
   // TanStack calls getNextPageParam outside render; it reads the latest hidden set and accessors.
   const latest = React.useRef({ hidden, items, itemKey, hasMore, cursorAfter, nextCursor });
   latest.current = { hidden, items, itemKey, hasMore, cursorAfter, nextCursor };
@@ -154,14 +157,20 @@ export function useInfiniteLoad<T, Page, Cursor = string, K extends QueryKey = Q
     const stale = query.isRefetchError ? staleOf(query, describeError) : undefined;
     return { status: "ready", data: list, ...(stale && { stale }), ...extra };
   }
-  if (query.status === "error") return { status: "error", message: describeError(query.error), retry: () => void refetch(), ...extra };
+  if (query.status === "error")
+    return { status: "error", message: describeError(query.error), retry: () => void refetch(), ...extra };
   return { status: "loading", ...extra };
 }
 
 const none: ReadonlySet<string> = new Set();
 
 /** Every page's items, in order, once each by key: the ones held (not dismissed) and the last one seen. */
-function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, hidden: (key: string) => boolean) {
+function merge<T, Page>(
+  pages: Page[],
+  items: (page: Page) => T[],
+  itemKey: (item: T) => string,
+  hidden: (key: string) => boolean,
+) {
   const seen = new Set<string>();
   const held: T[] = [];
   let last: T | undefined;
@@ -180,7 +189,12 @@ function merge<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (ite
 }
 
 /** The item the next page goes after: the last held, or the last seen when nothing is held or the last page brought nothing new. */
-function nextAfter<T, Page>(pages: Page[], items: (page: Page) => T[], itemKey: (item: T) => string, hidden: (key: string) => boolean) {
+function nextAfter<T, Page>(
+  pages: Page[],
+  items: (page: Page) => T[],
+  itemKey: (item: T) => string,
+  hidden: (key: string) => boolean,
+) {
   const { held, last, lastPageAddedAny } = merge(pages, items, itemKey, hidden);
   if (held.length === 0 || (pages.length > 1 && !lastPageAddedAny)) return last;
   return held[held.length - 1];

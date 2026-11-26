@@ -69,7 +69,11 @@ export function markerPlace(m: MapMarker, routes: readonly { id: string; points:
 }
 
 /** The markers near the view, with the overlapping ones fanned apart for this zoom. */
-export function placeMarkers(map: L.Map, markers: readonly MapMarker[], routes: readonly { id: string; points: readonly LatLng[] }[]): Placed[] {
+export function placeMarkers(
+  map: L.Map,
+  markers: readonly MapMarker[],
+  routes: readonly { id: string; points: readonly LatLng[] }[],
+): Placed[] {
   const near = map.getBounds().pad(0.25);
   const zoom = map.getZoom();
   const here: { marker: MapMarker; at: LatLng }[] = [];
@@ -108,7 +112,11 @@ function Pin({ map, placed, active, onActivate, onMove, register, onSelect, card
   }, []);
   const layer = React.useRef<L.Marker | null>(null);
   React.useEffect(() => {
-    const m = L.marker([shown[0], shown[1]], { icon: L.divIcon({ className: "strata-map-marker", html: host, iconSize: [28, 28], iconAnchor: [14, 14] }), interactive: false, keyboard: false }).addTo(map);
+    const m = L.marker([shown[0], shown[1]], {
+      icon: L.divIcon({ className: "strata-map-marker", html: host, iconSize: [28, 28], iconAnchor: [14, 14] }),
+      interactive: false,
+      keyboard: false,
+    }).addTo(map);
     layer.current = m;
     return () => {
       layer.current = null;
@@ -124,7 +132,9 @@ function Pin({ map, placed, active, onActivate, onMove, register, onSelect, card
     layer.current?.setZIndexOffset(marker.selected ? 1000 : marker.highlighted ? 500 : 0);
   }, [marker.selected, marker.highlighted]);
   const kind = state(marker);
-  const swatch = marker.colour ?? (kind === "highlighted" ? "var(--success)" : kind === "selected" ? "var(--foreground)" : "var(--primary)");
+  const swatch =
+    marker.colour ??
+    (kind === "highlighted" ? "var(--success)" : kind === "selected" ? "var(--foreground)" : "var(--primary)");
   return createPortal(
     <Tooltip label={card ? card(marker) : marker.label} side="top">
       <AriaButton
@@ -135,7 +145,16 @@ function Pin({ map, placed, active, onActivate, onMove, register, onSelect, card
         onFocus={() => onActivate(marker.id)}
         onPress={() => onSelect?.(marker.id)}
         onKeyDown={(e) => {
-          const to = e.key === "ArrowRight" || e.key === "ArrowDown" ? "next" : e.key === "ArrowLeft" || e.key === "ArrowUp" ? "previous" : e.key === "Home" ? "first" : e.key === "End" ? "last" : null;
+          const to =
+            e.key === "ArrowRight" || e.key === "ArrowDown"
+              ? "next"
+              : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                ? "previous"
+                : e.key === "Home"
+                  ? "first"
+                  : e.key === "End"
+                    ? "last"
+                    : null;
           if (!to) return;
           e.preventDefault();
           e.stopPropagation();
@@ -155,7 +174,11 @@ function Shape({ kind, colour }: { kind: "marker" | "selected" | "highlighted"; 
   return (
     <span
       aria-hidden
-      className={cn("block border-2 border-background", kind === "highlighted" ? "size-3.5 rotate-45 rounded-sm" : "rounded-pill", kind === "selected" ? "size-4 ring-2 ring-foreground" : kind === "marker" ? "size-3.5" : "")}
+      className={cn(
+        "block border-2 border-background",
+        kind === "highlighted" ? "size-3.5 rotate-45 rounded-sm" : "rounded-pill",
+        kind === "selected" ? "size-4 ring-2 ring-foreground" : kind === "marker" ? "size-3.5" : "",
+      )}
       style={{ background: colour }}
     />
   );
@@ -180,14 +203,29 @@ export function MarkerLayer({ map, placed, onSelect, card }: LayerProps) {
   }, []);
   const move = (id: string, to: "next" | "previous" | "first" | "last") => {
     const i = ids.indexOf(id);
-    const next = to === "first" ? 0 : to === "last" ? ids.length - 1 : Math.min(ids.length - 1, Math.max(0, i + (to === "next" ? 1 : -1)));
+    const next =
+      to === "first"
+        ? 0
+        : to === "last"
+          ? ids.length - 1
+          : Math.min(ids.length - 1, Math.max(0, i + (to === "next" ? 1 : -1)));
     setActiveId(ids[next]);
     els.current.get(ids[next])?.focus();
   };
   return (
     <>
       {placed.map((p) => (
-        <Pin key={p.marker.id} map={map} placed={p} active={p.marker.id === active} onActivate={setActiveId} onMove={move} register={register} onSelect={onSelect} card={card} />
+        <Pin
+          key={p.marker.id}
+          map={map}
+          placed={p}
+          active={p.marker.id === active}
+          onActivate={setActiveId}
+          onMove={move}
+          register={register}
+          onSelect={onSelect}
+          card={card}
+        />
       ))}
     </>
   );
@@ -196,7 +234,11 @@ export function MarkerLayer({ map, placed, onSelect, card }: LayerProps) {
 /** The key to the marker states that are on the map, each with its shape and its words. */
 export function MarkerKey({ markers, words }: { markers: readonly MapMarker[]; words?: MarkerKeyWords }) {
   const kinds = (["marker", "selected", "highlighted"] as const).filter((k) => markers.some((m) => state(m) === k));
-  const text = { marker: words?.marker ?? "Item", selected: words?.selected ?? "Selected", highlighted: words?.highlighted ?? "Highlighted" };
+  const text = {
+    marker: words?.marker ?? "Item",
+    selected: words?.selected ?? "Selected",
+    highlighted: words?.highlighted ?? "Highlighted",
+  };
   if (!kinds.length) return null;
   return (
     <div className="rounded-control border border-border bg-background px-2 py-1.5 type-caption text-foreground">
@@ -204,7 +246,12 @@ export function MarkerKey({ markers, words }: { markers: readonly MapMarker[]; w
         {kinds.map((k) => (
           <li key={k} className="flex items-center gap-2">
             <span className="grid size-4 place-items-center">
-              <Shape kind={k} colour={k === "highlighted" ? "var(--success)" : k === "selected" ? "var(--foreground)" : "var(--primary)"} />
+              <Shape
+                kind={k}
+                colour={
+                  k === "highlighted" ? "var(--success)" : k === "selected" ? "var(--foreground)" : "var(--primary)"
+                }
+              />
             </span>
             {text[k]}
           </li>

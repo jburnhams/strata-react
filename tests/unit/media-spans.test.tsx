@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MediaPlayer, SeekBar, type MediaElementState, type MediaSpanData, type SpanKind } from "../../src";
@@ -34,7 +34,15 @@ async function start(ui: React.ReactElement, duration = 100) {
 
 describe("spans on the seek bar", () => {
   it("draws each stretch as a named range, in order, cut to the bar", () => {
-    const { container } = render(<Player spans={[{ start: 60, end: 400, kind: "credits" }, { start: 0, end: 12, kind: "intro" }, { start: 30, end: 20, kind: "recap" }]} />);
+    const { container } = render(
+      <Player
+        spans={[
+          { start: 60, end: 400, kind: "credits" },
+          { start: 0, end: 12, kind: "intro" },
+          { start: 30, end: 20, kind: "recap" },
+        ]}
+      />,
+    );
     act(() => media.loaded(video(container), 100));
     const drawn = screen.getAllByRole("img").filter((e) => e.hasAttribute("data-span"));
     expect(drawn.map((e) => e.getAttribute("aria-label"))).toEqual(["Intro, 0:00 to 0:12", "Credits, 1:00 to 1:40"]); // the backwards one is dropped, the long one is cut to 100 s
@@ -42,7 +50,14 @@ describe("spans on the seek bar", () => {
   });
 
   it("is a prop of the bar itself, for an app that uses the parts", () => {
-    render(<SeekBar time={0} duration={50} onSeek={() => undefined} spans={[{ start: 5, end: 6, label: "Ad break", tone: "danger" }]} />);
+    render(
+      <SeekBar
+        time={0}
+        duration={50}
+        onSeek={() => undefined}
+        spans={[{ start: 5, end: 6, label: "Ad break", tone: "danger" }]}
+      />,
+    );
     expect(screen.getByRole("img", { name: "Ad break, 0:05 to 0:06" })).toBeInTheDocument();
   });
 
@@ -264,7 +279,9 @@ describe("the app's hold on the player (issue #211)", () => {
     act(() => media.tick(el, 9));
     const button = screen.getByRole("button", { name: "Comment at 9" });
     expect(el.parentElement).toContainElement(button);
-    expect(screen.getByRole("group", { name: "Episode 4" }).querySelector("[aria-label='Seek in Episode 4']")).not.toContainElement(button); // not among the controls
+    expect(
+      screen.getByRole("group", { name: "Episode 4" }).querySelector("[aria-label='Seek in Episode 4']"),
+    ).not.toContainElement(button); // not among the controls
     await userEvent.click(button);
     expect(seek).toHaveBeenCalledWith(9);
     expect(container).toBeTruthy();

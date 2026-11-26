@@ -5,7 +5,18 @@ import { useSettledStatus, useViewPointers, useWheelZoom } from "../lib/viewer-i
 import { cn } from "../lib/utils";
 import { Slider } from "../components/value-controls";
 import { createRenderer, type PanoramaPicture, type PanoramaRenderer } from "./gl";
-import { clampView, degreesPerPixel, describeView, project, projectFlat, unproject, unprojectFlat, type PanoramaPoint, type PanoramaSize, type PanoramaView } from "./projection";
+import {
+  clampView,
+  degreesPerPixel,
+  describeView,
+  project,
+  projectFlat,
+  unproject,
+  unprojectFlat,
+  type PanoramaPoint,
+  type PanoramaSize,
+  type PanoramaView,
+} from "./projection";
 
 // A 360 picture or video as a window you pan and zoom (strata-react issue #178, from strata-360, which
 // drew equirectangular footage with a hand-written WebGL2 shader and its own pointer, transport and
@@ -44,7 +55,9 @@ import { clampView, degreesPerPixel, describeView, project, projectFlat, unproje
 // A GL context that is lost (a GPU reset, a tab in the background on a phone) is restored without the
 // app doing anything: the picture is sent again and the view redrawn.
 
-export type PanoramaPictureSource = { image: string; video?: never } | { video: React.RefObject<HTMLVideoElement | null>; image?: never };
+export type PanoramaPictureSource =
+  | { image: string; video?: never }
+  | { video: React.RefObject<HTMLVideoElement | null>; image?: never };
 
 /** What an overlay is given. */
 export type PanoramaOverlayApi = {
@@ -91,7 +104,24 @@ const HOME: PanoramaView = { yaw: 0, pitch: 0, fov: 90 };
 const STILL_MS = 600;
 
 /** A 360 picture or video as a window you pan and zoom, controlled from outside, with an overlay in the picture's coordinates. */
-export function PanoramaViewer({ label, image, video, view: controlled, defaultView = HOME, onViewChange, onPick, maxPitch = 85, minFov = 20, maxFov = 120, wheelZoom = true, fovSlider = false, overlay, mode = "auto", aspect = "16/9", className }: PanoramaViewerProps) {
+export function PanoramaViewer({
+  label,
+  image,
+  video,
+  view: controlled,
+  defaultView = HOME,
+  onViewChange,
+  onPick,
+  maxPitch = 85,
+  minFov = 20,
+  maxFov = 120,
+  wheelZoom = true,
+  fovSlider = false,
+  overlay,
+  mode = "auto",
+  aspect = "16/9",
+  className,
+}: PanoramaViewerProps) {
   const limits = React.useMemo(() => ({ maxPitch, minFov, maxFov }), [maxPitch, minFov, maxFov]);
   const [own, setOwn] = React.useState(() => clampView(defaultView, limits));
   const view = React.useMemo(() => clampView(controlled ?? own, limits), [controlled, own, limits]);
@@ -193,7 +223,18 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
       for (const shift of [-sw, 0, sw]) {
         const a = Math.max(left + shift, 0);
         const b = Math.min(left + shift + wide, sw);
-        if (b > a) ctx.drawImage(picture as CanvasImageSource, a, Math.max(top, 0), b - a, Math.min(tall, sh), ((a - (left + shift)) / wide) * w, 0, ((b - a) / wide) * w, h);
+        if (b > a)
+          ctx.drawImage(
+            picture as CanvasImageSource,
+            a,
+            Math.max(top, 0),
+            b - a,
+            Math.min(tall, sh),
+            ((a - (left + shift)) / wide) * w,
+            0,
+            ((b - a) / wide) * w,
+            h,
+          );
       }
       return;
     }
@@ -301,12 +342,16 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
       const s = { width: r.width, height: r.height };
       const x = e.clientX - r.left;
       const y = e.clientY - r.top;
-      live.current.onPick(current.current.flat ? unprojectFlat(live.current.view, s, x, y) : unproject(live.current.view, s, x, y));
+      live.current.onPick(
+        current.current.flat ? unprojectFlat(live.current.view, s, x, y) : unproject(live.current.view, s, x, y),
+      );
     },
   });
 
   // The wheel zooms; native, because React's wheel listener is passive and the page must not scroll too.
-  useWheelZoom(box, (factor) => change({ ...live.current.view, fov: live.current.view.fov * factor }), { enabled: wheelZoom });
+  useWheelZoom(box, (factor) => change({ ...live.current.view, fov: live.current.view.fov * factor }), {
+    enabled: wheelZoom,
+  });
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const v = live.current.view;
@@ -333,7 +378,17 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
     project: (yaw, pitch) => (flat ? projectFlat(view, size, yaw, pitch) : project(view, size, yaw, pitch)),
     unproject: (x, y) => (flat ? unprojectFlat(view, size, x, y) : unproject(view, size, x, y)),
   };
-  const slider = fovSlider ? <Slider aria-label="Field of view" value={Math.round(view.fov)} onChange={(fov) => change({ ...view, fov })} min={minFov} max={maxFov} step={1} unit="degree" /> : null;
+  const slider = fovSlider ? (
+    <Slider
+      aria-label="Field of view"
+      value={Math.round(view.fov)}
+      onChange={(fov) => change({ ...view, fov })}
+      min={minFov}
+      max={maxFov}
+      step={1}
+      unit="degree"
+    />
+  ) : null;
 
   return (
     <div className={cn("grid min-w-0 gap-2", className)}>
@@ -351,10 +406,20 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}
       >
-        <canvas key={mode === "flat" ? "2d" : "gl"} ref={canvas} role="img" aria-label={`${label}. ${direction}, field of view ${Math.round(view.fov)}°`} className="absolute inset-0 size-full" />
+        <canvas
+          key={mode === "flat" ? "2d" : "gl"}
+          ref={canvas}
+          role="img"
+          aria-label={`${label}. ${direction}, field of view ${Math.round(view.fov)}°`}
+          className="absolute inset-0 size-full"
+        />
         {overlay && size.width > 0 && <div className="pointer-events-none absolute inset-0">{overlay(api)}</div>}
       </div>
-      {flat && <p className="type-body-sm text-muted-foreground">This browser cannot draw the 360 view, so the flat picture is shown. The controls work the same.</p>}
+      {flat && (
+        <p className="type-body-sm text-muted-foreground">
+          This browser cannot draw the 360 view, so the flat picture is shown. The controls work the same.
+        </p>
+      )}
       {slider}
       <VisuallyHidden>
         <span role="status">{said}</span>

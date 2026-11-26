@@ -3,7 +3,10 @@
 // hours for a schedule); `pxPerUnit` is the zoom.
 
 /** Steps a person would write on a scale, in seconds: 1, 2, 5 and 10 × 10ⁿ below a minute, then 15 s, 30 s, minutes, quarter hours, hours, days. ux-research components.md §3.8: ticks land on values people would write. */
-const STEPS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200, 86400];
+const STEPS = [
+  0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200,
+  86400,
+];
 
 /** The smallest step whose ticks are at least `minGapPx` apart at this zoom, so labels thin out instead of colliding. */
 export function tickStep(pxPerUnit: number, minGapPx = 80): number {
@@ -35,9 +38,16 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /** The point to snap `time` to: the nearest of `points` within `thresholdPx` at this zoom, or `null`. */
-export function snapTo(time: number, points: readonly number[], pxPerUnit: number, thresholdPx = 8): { time: number; point: number } | null {
+export function snapTo(
+  time: number,
+  points: readonly number[],
+  pxPerUnit: number,
+  thresholdPx = 8,
+): { time: number; point: number } | null {
   let best: number | null = null;
-  for (const p of points) if (Math.abs(p - time) * pxPerUnit <= thresholdPx && (best === null || Math.abs(p - time) < Math.abs(best - time))) best = p;
+  for (const p of points)
+    if (Math.abs(p - time) * pxPerUnit <= thresholdPx && (best === null || Math.abs(p - time) < Math.abs(best - time)))
+      best = p;
   return best === null ? null : { time: best, point: best };
 }
 

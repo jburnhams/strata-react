@@ -1,15 +1,29 @@
 import * as React from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { ColorField, Field, NumberField, Slider } from "../../src";
 import { contrastRatio, parseHex } from "../../src/lib/number-input";
 
-function Controlled({ initial, spy, ...props }: { initial: number | null; spy?: (v: number | null) => void } & Partial<React.ComponentProps<typeof NumberField>>) {
+function Controlled({
+  initial,
+  spy,
+  ...props
+}: { initial: number | null; spy?: (v: number | null) => void } & Partial<React.ComponentProps<typeof NumberField>>) {
   const [value, setValue] = React.useState<number | null>(initial);
   return (
     <Field label="Volume" hint="Up to 500%. Over 100% makes it louder.">
-      <NumberField value={value} onChange={(v) => { spy?.(v); setValue(v); }} min={0} max={500} unit="%" {...props} />
+      <NumberField
+        value={value}
+        onChange={(v) => {
+          spy?.(v);
+          setValue(v);
+        }}
+        min={0}
+        max={500}
+        unit="%"
+        {...props}
+      />
     </Field>
   );
 }
@@ -158,7 +172,9 @@ describe("Slider", () => {
 
   it("reports changes as rounded numbers and prints decimals in the locale", () => {
     const spy = vi.fn();
-    render(<Slider aria-label="Tolerance" value={0.0005} onChange={spy} min={0} max={0.001} step={0.0001} locale="de-DE" />);
+    render(
+      <Slider aria-label="Tolerance" value={0.0005} onChange={spy} min={0} max={0.001} step={0.0001} locale="de-DE" />,
+    );
     expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "0,0005");
     fireEvent.change(screen.getByRole("slider"), { target: { value: "0.0007" } });
     expect(spy).toHaveBeenCalledWith(0.0007);
@@ -195,8 +211,12 @@ describe("ColorField picker names (issue #116)", () => {
   it("names each picker after its Field's label, so two in one panel never share a name", () => {
     render(
       <>
-        <Field label="Route colour"><ColorField value="#336699" onChange={() => {}} /></Field>
-        <Field label="Marker colour"><ColorField value="#993366" onChange={() => {}} /></Field>
+        <Field label="Route colour">
+          <ColorField value="#336699" onChange={() => {}} />
+        </Field>
+        <Field label="Marker colour">
+          <ColorField value="#993366" onChange={() => {}} />
+        </Field>
         <ColorField aria-label="Text colour" value="#000000" onChange={() => {}} />
       </>,
     );
@@ -208,11 +228,23 @@ describe("ColorField picker names (issue #116)", () => {
 });
 
 describe("ColorField", () => {
-  function Colour(props: Partial<React.ComponentProps<typeof ColorField>> & { spy?: (v: string | null) => void; initial?: string | null }) {
+  function Colour(
+    props: Partial<React.ComponentProps<typeof ColorField>> & {
+      spy?: (v: string | null) => void;
+      initial?: string | null;
+    },
+  ) {
     const [value, setValue] = React.useState<string | null>(props.initial ?? "#1a7f64");
     return (
       <Field label="Line colour">
-        <ColorField value={value} onChange={(v) => { props.spy?.(v); setValue(v); }} {...props} />
+        <ColorField
+          value={value}
+          onChange={(v) => {
+            props.spy?.(v);
+            setValue(v);
+          }}
+          {...props}
+        />
       </Field>
     );
   }
@@ -259,14 +291,20 @@ describe("ColorField", () => {
     await user.click(screen.getByRole("button", { name: "#c2410c" }));
     expect(spy).toHaveBeenLastCalledWith("#c2410c");
     expect(screen.getByRole("button", { name: "#c2410c" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.change(screen.getByLabelText("Line colour, picker"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("Line colour, picker"), {
+      target: { value: "#112233" },
+    });
     expect(spy).toHaveBeenLastCalledWith("#112233");
   });
 
   it("warns when the colour would be hard to see on what it is drawn on", () => {
-    const { rerender } = render(<ColorField aria-label="Route" value="#777777" onChange={() => {}} against="#808080" againstLabel="the map" />);
+    const { rerender } = render(
+      <ColorField aria-label="Route" value="#777777" onChange={() => {}} against="#808080" againstLabel="the map" />,
+    );
     expect(screen.getByText(/Hard to see on the map/)).toBeInTheDocument();
-    rerender(<ColorField aria-label="Route" value="#000000" onChange={() => {}} against="#ffffff" againstLabel="the map" />);
+    rerender(
+      <ColorField aria-label="Route" value="#000000" onChange={() => {}} against="#ffffff" againstLabel="the map" />,
+    );
     expect(screen.queryByText(/Hard to see/)).toBeNull();
   });
 });
@@ -278,11 +316,24 @@ describe("NumberField nudge, suggestion and preview", () => {
     const [v, setV] = React.useState<number | null>(2);
     return (
       <Field label="Camera clock offset">
-        <NumberField value={v} onChange={(n) => { spy?.(n); setV(n); }} min={-60} max={60} step={0.1} unit="s" nudge={[0.1, 1, 10]} {...rest} />
+        <NumberField
+          value={v}
+          onChange={(n) => {
+            spy?.(n);
+            setV(n);
+          }}
+          min={-60}
+          max={60}
+          step={0.1}
+          unit="s"
+          nudge={[0.1, 1, 10]}
+          {...rest}
+        />
       </Field>
     );
   }
-  const nudgeButtons = () => within(screen.getByRole("toolbar", { name: "Nudge Camera clock offset" })).getAllByRole("button");
+  const nudgeButtons = () =>
+    within(screen.getByRole("toolbar", { name: "Nudge Camera clock offset" })).getAllByRole("button");
 
   it("draws −10 −1 −0.1 +0.1 +1 +10, each named with its unit", () => {
     render(<Clock />);
@@ -332,7 +383,9 @@ describe("NumberField nudge, suggestion and preview", () => {
   it("a suggestion states its reason in text, changes nothing by itself, and Use this value sets it", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
-    render(<Clock spy={spy} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both saw you start running at 10:02" }} />);
+    render(
+      <Clock spy={spy} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both saw you start running at 10:02" }} />,
+    );
     expect(screen.getByText(/Suggested \+2\.4 s:/)).toBeInTheDocument();
     expect(screen.getByText(/both saw you start running at 10:02/)).toBeInTheDocument();
     expect(spy).not.toHaveBeenCalled();
@@ -355,7 +408,10 @@ describe("NumberField nudge, suggestion and preview", () => {
             unit="s"
             nudge={[1]}
             preview={(p) => <p>{`12 clips would move by ${p === null ? "–" : p - (saved ?? 0)} s`}</p>}
-            onChange={async (n) => { await onApply(n); setSaved(n); }}
+            onChange={async (n) => {
+              await onApply(n);
+              setSaved(n);
+            }}
           />
         </Field>
       );

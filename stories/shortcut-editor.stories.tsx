@@ -39,7 +39,9 @@ export const Working: Story = {
     useHotkeys(rebinding.shortcuts);
     return (
       <div className="grid max-w-xl gap-4">
-        <p role="status" className="type-body">{said}</p>
+        <p role="status" className="type-body">
+          {said}
+        </p>
         <KeysLegend shortcuts={rebinding.shortcuts} />
         <ShortcutEditor rebinding={rebinding} />
       </div>

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,9 +65,21 @@ const shot = (theme: "light" | "dark", extra: Partial<Shot> = {}): Shot => ({
 describe("capture", () => {
   it("reaches an app that defaults to dark with the light theme", async () => {
     let seen = "";
-    await capture(browser, shot("light", { setup: async (page) => void (seen = (await page.locator("#root").textContent()) ?? "") }), { baseUrl: server.url, checkFonts: false });
+    await capture(
+      browser,
+      shot("light", {
+        setup: async (page) => void (seen = (await page.locator("#root").textContent()) ?? ""),
+      }),
+      { baseUrl: server.url, checkFonts: false },
+    );
     expect(seen).toContain("preference light");
-    await capture(browser, shot("dark", { setup: async (page) => void (seen = (await page.locator("#root").textContent()) ?? "") }), { baseUrl: server.url, checkFonts: false });
+    await capture(
+      browser,
+      shot("dark", {
+        setup: async (page) => void (seen = (await page.locator("#root").textContent()) ?? ""),
+      }),
+      { baseUrl: server.url, checkFonts: false },
+    );
     expect(seen).toContain("preference dark");
   }, 60_000);
 });
@@ -81,7 +93,12 @@ describe("dropFiles", () => {
         setup: async (page) => {
           await dropFiles(page, "#zone", [
             { name: "clip.mp4", type: "video/mp4", content: new Uint8Array([1, 2, 3, 4]) },
-            { name: "notes.txt", type: "text/plain", content: "hello", lastModified: 1_700_000_000_000 },
+            {
+              name: "notes.txt",
+              type: "text/plain",
+              content: "hello",
+              lastModified: 1_700_000_000_000,
+            },
           ]);
           dropped = (await page.locator("#root").getAttribute("data-dropped")) ?? "";
         },

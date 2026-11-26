@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DragSource, FileButton, FileDropZone, Timeline, type TimelineDrop } from "../../src";
@@ -9,10 +9,23 @@ import { renderWithStrata } from "../../src/testing";
 
 const TYPE = "application/x-clip";
 
-function Screen({ onDrop, onDragEnd, disabled }: { onDrop: (d: TimelineDrop) => void; onDragEnd?: (dropped: boolean) => void; disabled?: boolean }) {
+function Screen({
+  onDrop,
+  onDragEnd,
+  disabled,
+}: {
+  onDrop: (d: TimelineDrop) => void;
+  onDragEnd?: (dropped: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
     <>
-      <DragSource label="run-02.mp4" items={() => [{ [TYPE]: "clip-9", "text/plain": "run-02.mp4" }]} onDragEnd={onDragEnd} disabled={disabled}>
+      <DragSource
+        label="run-02.mp4"
+        items={() => [{ [TYPE]: "clip-9", "text/plain": "run-02.mp4" }]}
+        onDragEnd={onDragEnd}
+        disabled={disabled}
+      >
         <button type="button">Select run-02.mp4</button>
       </DragSource>
       <Timeline
@@ -86,9 +99,21 @@ describe("FileDropZone and an in-app drag", () => {
         <button type="button">Select run-02.mp4</button>
       </DragSource>
       <FileDropZone title="Drag more files here" acceptLabel="a video" onFiles={() => {}} refuseTypes={refuseTypes}>
-        <FileButton accept={["video/*"]} onFiles={() => {}}>Add files</FileButton>
+        <FileButton accept={["video/*"]} onFiles={() => {}}>
+          Add files
+        </FileButton>
       </FileDropZone>
-      <Timeline label="Edit" lanes={[{ id: "t1", label: "Track 1" }]} items={[]} to={120} zoom={10} position={30} dropTypes={[TYPE]} dropLength={4} onDrop={() => {}} />
+      <Timeline
+        label="Edit"
+        lanes={[{ id: "t1", label: "Track 1" }]}
+        items={[]}
+        to={120}
+        zoom={10}
+        position={30}
+        dropTypes={[TYPE]}
+        dropLength={4}
+        onDrop={() => {}}
+      />
     </>
   );
 

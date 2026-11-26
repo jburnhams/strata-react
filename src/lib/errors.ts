@@ -84,7 +84,8 @@ export function readErrorBody(body: unknown): ErrorBody {
     }
     return { fields, ...payload };
   }
-  const nested = b.error && typeof b.error === "object" ? text((b.error as Record<string, unknown>).message) : undefined;
+  const nested =
+    b.error && typeof b.error === "object" ? text((b.error as Record<string, unknown>).message) : undefined;
   return { reason: text(b.detail) ?? text(b.message) ?? text(b.error) ?? nested, ...payload };
 }
 

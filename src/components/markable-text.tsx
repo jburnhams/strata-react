@@ -79,7 +79,19 @@ type Ctx = {
 const MarksContext = React.createContext<Ctx | null>(null);
 
 /** One word (or phrase, or clip) that can be marked. Draws its mark, its selection and the caret; inside a `MarkableText`. */
-export function Mark({ id, children, className, onClick, onHover }: { id: string; children: React.ReactNode; className?: string; /** A click on the word (a press and release on it), beside selecting it: a correction opens. */ onClick?: () => void; /** The pointer is over the word (its element) or has left (`null`). */ onHover?: (el: HTMLElement | null) => void }) {
+export function Mark({
+  id,
+  children,
+  className,
+  onClick,
+  onHover,
+}: {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+  /** A click on the word (a press and release on it), beside selecting it: a correction opens. */ onClick?: () => void;
+  /** The pointer is over the word (its element) or has left (`null`). */ onHover?: (el: HTMLElement | null) => void;
+}) {
   const c = React.useContext(MarksContext);
   if (!c) return <span className={className}>{children}</span>;
   const kind = c.kinds.find((k) => k.key === c.marks[id]);
@@ -98,8 +110,24 @@ export function Mark({ id, children, className, onClick, onHover }: { id: string
       }}
       onPointerLeave={onHover ? () => onHover(null) : undefined}
       onClick={onClick}
-      className={cn("cursor-text rounded-control px-px", on && "bg-primary/20", c.caret === id && "outline-2 outline-primary", className)}
-      style={kind && tone ? { backgroundColor: on ? undefined : tone.fill, textDecorationLine: "underline", textDecorationStyle: kind.pattern, textDecorationColor: tone.edge, textDecorationThickness: "2px", textUnderlineOffset: "3px" } : undefined}
+      className={cn(
+        "cursor-text rounded-control px-px",
+        on && "bg-primary/20",
+        c.caret === id && "outline-2 outline-primary",
+        className,
+      )}
+      style={
+        kind && tone
+          ? {
+              backgroundColor: on ? undefined : tone.fill,
+              textDecorationLine: "underline",
+              textDecorationStyle: kind.pattern,
+              textDecorationColor: tone.edge,
+              textDecorationThickness: "2px",
+              textUnderlineOffset: "3px",
+            }
+          : undefined
+      }
     >
       {children}
       {kind && <span className="sr-only"> ({kind.label.toLowerCase()})</span>}
@@ -108,7 +136,17 @@ export function Mark({ id, children, className, onClick, onHover }: { id: string
 }
 
 /** "12 words must use, 3 never": a count for each kind in use, with its icon. */
-export function MarkSummary({ marks, kinds, unit = ["word", "words"], className }: { marks: Readonly<Record<string, string | undefined>>; kinds: readonly MarkKind[]; unit?: readonly [string, string]; className?: string }) {
+export function MarkSummary({
+  marks,
+  kinds,
+  unit = ["word", "words"],
+  className,
+}: {
+  marks: Readonly<Record<string, string | undefined>>;
+  kinds: readonly MarkKind[];
+  unit?: readonly [string, string];
+  className?: string;
+}) {
   const counts = countMarks(marks);
   const used = kinds.filter((k) => counts[k.key]);
   if (!used.length) return <p className={cn("type-caption text-muted-foreground", className)}>Nothing marked yet.</p>;
@@ -119,7 +157,8 @@ export function MarkSummary({ marks, kinds, unit = ["word", "words"], className 
         return (
           <li key={k.key} className="inline-flex items-center gap-1.5">
             {Icon && <Icon aria-hidden className="size-4" />}
-            <span className="tabular-nums">{format.count(counts[k.key]!, unit[0], unit[1])}</span> {k.label.toLowerCase()}
+            <span className="tabular-nums">{format.count(counts[k.key]!, unit[0], unit[1])}</span>{" "}
+            {k.label.toLowerCase()}
           </li>
         );
       })}
@@ -153,7 +192,20 @@ export type MarkableTextProps = {
 };
 
 /** Selects ids over `<Mark>` words by drag, Shift+click and Shift+arrows (a run in the app's order, so it holds across virtualised rows), offers the app's marks as chorded commands in a bar, says each change in words, and lists what is marked. */
-export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [], onActivate, onCaretChange, unit = ["word", "words"], summary = true, children, className }: MarkableTextProps) {
+export function MarkableText({
+  label,
+  ids,
+  marks,
+  kinds,
+  onMark,
+  clearKeys = [],
+  onActivate,
+  onCaretChange,
+  unit = ["word", "words"],
+  summary = true,
+  children,
+  className,
+}: MarkableTextProps) {
   const [anchor, setAnchor] = React.useState<string | null>(null);
   const [caret, setCaret] = React.useState<string | null>(null);
   const [said, setSaid] = React.useState("");
@@ -178,8 +230,21 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
   };
 
   const commands: Command[] = [
-    ...kinds.map((k): Command => ({ id: `mark-${k.key}`, label: k.label, keys: k.keys, icon: k.icon, disabled: n ? false : "Select words first", run: () => apply(k.key) })),
-    { id: "mark-clear", label: "Clear mark", keys: clearKeys, disabled: n ? false : "Select words first", run: () => apply(null) },
+    ...kinds.map((k): Command => ({
+      id: `mark-${k.key}`,
+      label: k.label,
+      keys: k.keys,
+      icon: k.icon,
+      disabled: n ? false : "Select words first",
+      run: () => apply(k.key),
+    })),
+    {
+      id: "mark-clear",
+      label: "Clear mark",
+      keys: clearKeys,
+      disabled: n ? false : "Select words first",
+      run: () => apply(null),
+    },
   ];
   useCommands(commands);
 
@@ -190,7 +255,10 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
   }, []);
 
   const ctx: Ctx = {
-    kinds, marks, selected, caret,
+    kinds,
+    marks,
+    selected,
+    caret,
     press: (e, id) => {
       if (e.button !== 0) return;
       dragging.current = true;
@@ -210,7 +278,8 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
   // Say the selection when it changes by key or pointer; the word when the caret moves alone.
   React.useEffect(() => {
     if (n > 1) setSaid(`${counted(n)} selected`);
-    else if (n === 1 && caret) setSaid(`${document.querySelector(`[data-mark-id="${CSS.escape(caret)}"]`)?.textContent ?? caret}`);
+    else if (n === 1 && caret)
+      setSaid(`${document.querySelector(`[data-mark-id="${CSS.escape(caret)}"]`)?.textContent ?? caret}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [n, caret]);
 
@@ -218,7 +287,16 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
     // Keys from something focused inside (a transcript's list of rows) are that thing's own.
     if (e.target !== e.currentTarget) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const to = e.key === "ArrowRight" ? stepId(ids, caret, 1) : e.key === "ArrowLeft" ? stepId(ids, caret, -1) : e.key === "Home" ? ids[0] ?? null : e.key === "End" ? ids[ids.length - 1] ?? null : undefined;
+    const to =
+      e.key === "ArrowRight"
+        ? stepId(ids, caret, 1)
+        : e.key === "ArrowLeft"
+          ? stepId(ids, caret, -1)
+          : e.key === "Home"
+            ? (ids[0] ?? null)
+            : e.key === "End"
+              ? (ids[ids.length - 1] ?? null)
+              : undefined;
     if (to !== undefined) {
       e.preventDefault();
       moveCaret(to, e.shiftKey);
@@ -236,7 +314,10 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
   return (
     <div className={cn("space-y-2", className)}>
       {n > 0 && (
-        <Toolbar label="Marks" className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-surface border border-border bg-background p-1.5">
+        <Toolbar
+          label="Marks"
+          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-surface border border-border bg-background p-1.5"
+        >
           <span className="px-1 type-label tabular-nums">{counted(n)} selected</span>
           {kinds.map((k) => {
             const Icon = k.icon;
@@ -246,8 +327,19 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
               </Button>
             );
           })}
-          <Button size="sm" variant="ghost" onPress={() => apply(null)}>Clear mark</Button>
-          <Button size="sm" variant="ghost" onPress={() => { setAnchor(null); setCaret(null); }}>Deselect</Button>
+          <Button size="sm" variant="ghost" onPress={() => apply(null)}>
+            Clear mark
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={() => {
+              setAnchor(null);
+              setCaret(null);
+            }}
+          >
+            Deselect
+          </Button>
         </Toolbar>
       )}
       <MarksContext.Provider value={ctx}>
@@ -267,8 +359,9 @@ export function MarkableText({ label, ids, marks, kinds, onMark, clearKeys = [],
       </p>
       <CommandLegend commands={commands} label="Mark keys" />
       {summary && <MarkSummary marks={marks} kinds={kinds} unit={unit} />}
-      <div role="status" aria-live="polite" className="sr-only">{said}</div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {said}
+      </div>
     </div>
   );
 }
-

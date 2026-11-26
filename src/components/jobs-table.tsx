@@ -58,7 +58,17 @@ export type JobsTableProps<T extends JobRow> = {
   className?: string;
 };
 
-function JobAction<T extends JobRow>({ job, subject, run, labels }: { job: T; subject: string; run: (j: T) => Promise<unknown>; labels: { idle: string; pending: string; done: string } }) {
+function JobAction<T extends JobRow>({
+  job,
+  subject,
+  run,
+  labels,
+}: {
+  job: T;
+  subject: string;
+  run: (j: T) => Promise<unknown>;
+  labels: { idle: string; pending: string; done: string };
+}) {
   const action = useAsyncAction(() => run(job));
   return (
     <AsyncButton
@@ -75,7 +85,15 @@ function JobAction<T extends JobRow>({ job, subject, run, labels }: { job: T; su
 }
 
 /** A table of the queue's jobs (`GET /api/jobs`): what each is, its state as a word with its progress or error, when it started, and Cancel or Run again where they apply. */
-export function JobsTable<T extends JobRow>({ caption, jobs, describe = (j) => j.kind, onCancel, onRetry, now, className }: JobsTableProps<T>) {
+export function JobsTable<T extends JobRow>({
+  caption,
+  jobs,
+  describe = (j) => j.kind,
+  onCancel,
+  onRetry,
+  now,
+  className,
+}: JobsTableProps<T>) {
   const columns: Column<T>[] = [
     {
       key: "job",
@@ -124,11 +142,23 @@ export function JobsTable<T extends JobRow>({ caption, jobs, describe = (j) => j
       sort: false,
       cell: (j) =>
         (j.state === "queued" || j.state === "running") && onCancel ? (
-          <JobAction job={j} subject={describe(j)} run={onCancel} labels={{ idle: "Cancel", pending: "Cancelling…", done: "Cancelled" }} />
+          <JobAction
+            job={j}
+            subject={describe(j)}
+            run={onCancel}
+            labels={{ idle: "Cancel", pending: "Cancelling…", done: "Cancelled" }}
+          />
         ) : (j.state === "failed" || j.state === "cancelled") && onRetry ? (
-          <JobAction job={j} subject={describe(j)} run={onRetry} labels={{ idle: "Run again", pending: "Queuing…", done: "Queued" }} />
+          <JobAction
+            job={j}
+            subject={describe(j)}
+            run={onRetry}
+            labels={{ idle: "Run again", pending: "Queuing…", done: "Queued" }}
+          />
         ) : null,
     },
   ];
-  return <DataTable caption={caption} columns={columns} rows={jobs} rowKey={(j) => String(j.id)} className={cn(className)} />;
+  return (
+    <DataTable caption={caption} columns={columns} rows={jobs} rowKey={(j) => String(j.id)} className={cn(className)} />
+  );
 }

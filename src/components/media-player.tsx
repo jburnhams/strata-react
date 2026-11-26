@@ -1,5 +1,19 @@
 import * as React from "react";
-import { ArrowUp, FastForward, LoaderCircle, Maximize, Minimize, Pause, Play, Rewind, SkipBack, SkipForward, StepBack, StepForward, X } from "lucide-react";
+import {
+  ArrowUp,
+  FastForward,
+  LoaderCircle,
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+  Rewind,
+  SkipBack,
+  SkipForward,
+  StepBack,
+  StepForward,
+  X,
+} from "lucide-react";
 import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
@@ -13,7 +27,14 @@ import { skipAction, type MediaMark, type SkipSteps } from "./media-skip";
 import { Toolbar } from "./toolbar";
 import { useKeyOwner } from "./key-owner";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
-import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
+import {
+  SpanActions,
+  useMediaSpans,
+  type MediaSpanData,
+  type SpanKind,
+  type SpanOutcome,
+  type SpanWords,
+} from "./media-spans";
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 import { createWatchedRanges, type MediaProgress } from "./media-progress";
@@ -141,12 +162,38 @@ export type MediaElementOptions = {
   progressKey?: string;
 };
 
-type Snapshot = Omit<MediaElementState, "play" | "pause" | "toggle" | "seek" | "setVolume" | "setRate" | "retry" | "playWindow" | "window" | "reportProblem" | "markWatched">;
+type Snapshot = Omit<
+  MediaElementState,
+  | "play"
+  | "pause"
+  | "toggle"
+  | "seek"
+  | "setVolume"
+  | "setRate"
+  | "retry"
+  | "playWindow"
+  | "window"
+  | "reportProblem"
+  | "markWatched"
+>;
 
 /** How far one notch of the wheel over a focused video moves the volume, in percent. */
 const WHEEL_VOLUME_STEP = 5;
 
-const idle: Snapshot = { ready: 0, waitingForMore: false, playing: false, time: 0, duration: null, buffered: 0, volume: 100, muted: false, rate: 1, ended: false, loading: false, error: null };
+const idle: Snapshot = {
+  ready: 0,
+  waitingForMore: false,
+  playing: false,
+  time: 0,
+  duration: null,
+  buffered: 0,
+  volume: 100,
+  muted: false,
+  rate: 1,
+  ended: false,
+  loading: false,
+  error: null,
+};
 
 const LOAD_MESSAGES: Record<number, string> = {
   2: "The connection dropped while it was loading.",
@@ -156,13 +203,17 @@ const LOAD_MESSAGES: Record<number, string> = {
 
 function bufferedAhead(el: HTMLMediaElement) {
   const ranges = el.buffered;
-  for (let i = 0; i < ranges.length; i++) if (el.currentTime >= ranges.start(i) && el.currentTime <= ranges.end(i)) return ranges.end(i);
+  for (let i = 0; i < ranges.length; i++)
+    if (el.currentTime >= ranges.start(i) && el.currentTime <= ranges.end(i)) return ranges.end(i);
   return 0;
 }
 
 // Subscribes while an element is mounted, and again if the ref later holds another one (a player that
 // changes `kind` replaces its DOM node, and the old node's listeners are gone with it).
-function useElementListeners(ref: React.RefObject<HTMLMediaElement | null>, bind: (el: HTMLMediaElement) => () => void) {
+function useElementListeners(
+  ref: React.RefObject<HTMLMediaElement | null>,
+  bind: (el: HTMLMediaElement) => () => void,
+) {
   const bound = React.useRef<{ el: HTMLMediaElement; unbind: () => void } | null>(null);
   const latest = React.useRef(bind);
   latest.current = bind;
@@ -183,12 +234,30 @@ function useElementListeners(ref: React.RefObject<HTMLMediaElement | null>, bind
 }
 
 const EVENTS = [
-  "loadstart", "loadedmetadata", "durationchange", "timeupdate", "progress", "play", "playing", "pause", "ended",
-  "volumechange", "ratechange", "seeking", "seeked", "waiting", "canplay", "emptied", "error",
+  "loadstart",
+  "loadedmetadata",
+  "durationchange",
+  "timeupdate",
+  "progress",
+  "play",
+  "playing",
+  "pause",
+  "ended",
+  "volumechange",
+  "ratechange",
+  "seeking",
+  "seeked",
+  "waiting",
+  "canplay",
+  "emptied",
+  "error",
 ] as const;
 
 /** Follows an `<audio>` or `<video>` and returns its state and the requests a player makes. Works with the browser's own controls too. */
-export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, options: MediaElementOptions = {}): MediaElementState {
+export function useMediaElement(
+  ref: React.RefObject<HTMLMediaElement | null>,
+  options: MediaElementOptions = {},
+): MediaElementState {
   const [snapshot, setSnapshot] = React.useState<Snapshot>(idle);
   const blocked = React.useRef<MediaProblem | null>(null);
   const pendingSeek = React.useRef<number | null>(null);
@@ -216,13 +285,16 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
     const known = finite ? el.duration : growing && seekEnd > 0 ? seekEnd : null;
     const ready = growing ? (seekEnd > 0 ? seekEnd : (known ?? 0)) : (known ?? 0);
     const endedNow = el.ended && !growing;
-    let error: MediaProblem | null = blocked.current ?? (streamProblem.current ? { kind: "load", message: streamProblem.current } : null);
+    let error: MediaProblem | null =
+      blocked.current ?? (streamProblem.current ? { kind: "load", message: streamProblem.current } : null);
     // Code 1 is the load being abandoned on purpose (a new src), not a failure.
-    if (el.error && el.error.code !== 1) error = { kind: "load", message: LOAD_MESSAGES[el.error.code] ?? "It could not be played." };
+    if (el.error && el.error.code !== 1)
+      error = { kind: "load", message: LOAD_MESSAGES[el.error.code] ?? "It could not be played." };
     const next: Snapshot = {
       ready,
       // At the end of what exists, still being made: not an ending.
-      waitingForMore: growing && known !== null && (el.ended || (el.readyState < 3 && !el.paused)) && el.currentTime >= known - 2,
+      waitingForMore:
+        growing && known !== null && (el.ended || (el.readyState < 3 && !el.paused)) && el.currentTime >= known - 2,
       playing: !el.paused && !el.ended,
       time: Number.isFinite(el.currentTime) ? el.currentTime : 0,
       duration: known,
@@ -240,27 +312,34 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
       edgePause.current = false;
       void el.play().catch(() => {});
     }
-    setSnapshot((previous) => (Object.keys(next) as (keyof Snapshot)[]).every((k) => Object.is(previous[k], next[k]) || (k === "error" && previous.error?.message === next.error?.message && previous.error?.kind === next.error?.kind)) ? previous : next);
+    setSnapshot((previous) =>
+      (Object.keys(next) as (keyof Snapshot)[]).every(
+        (k) =>
+          Object.is(previous[k], next[k]) ||
+          (k === "error" &&
+            previous.error?.message === next.error?.message &&
+            previous.error?.kind === next.error?.kind),
+      )
+        ? previous
+        : next,
+    );
   }, [ref]);
 
   // Stops, or loops, at the end of the window. Called every frame while playing and on every
   // `timeupdate` (the frame loop is what makes it exact; the event is what a background tab still gets).
-  const enforce = React.useCallback(
-    (el: HTMLMediaElement) => {
-      const w = win.current;
-      if (!w || el.paused || windowEnded.current) return;
-      if (el.currentTime < w.end) return;
-      if (opts.current.loop) {
-        el.currentTime = w.start;
-        return;
-      }
-      windowEnded.current = true;
-      el.pause();
-      el.currentTime = w.end;
-      opts.current.onWindowEnd?.();
-    },
-    [],
-  );
+  const enforce = React.useCallback((el: HTMLMediaElement) => {
+    const w = win.current;
+    if (!w || el.paused || windowEnded.current) return;
+    if (el.currentTime < w.end) return;
+    if (opts.current.loop) {
+      el.currentTime = w.start;
+      return;
+    }
+    windowEnded.current = true;
+    el.pause();
+    el.currentTime = w.end;
+    opts.current.onWindowEnd?.();
+  }, []);
 
   useElementListeners(ref, (el) => {
     el.preservesPitch = true;
@@ -303,7 +382,16 @@ export function useMediaElement(ref: React.RefObject<HTMLMediaElement | null>, o
 
   // How much was seen (issue #272). Counted from the element's own events: a second counts when `timeupdate` shows the
   // playhead moved forward a little while playing; a seek (`seeking`) breaks the run, so a jump counts nothing.
-  const seen = React.useRef({ ranges: createWatchedRanges(), last: null as number | null, since: 0, position: 0, duration: null as number | null, reported: "", key: null as string | null, call: undefined as MediaElementOptions["onProgress"] });
+  const seen = React.useRef({
+    ranges: createWatchedRanges(),
+    last: null as number | null,
+    since: 0,
+    position: 0,
+    duration: null as number | null,
+    reported: "",
+    key: null as string | null,
+    call: undefined as MediaElementOptions["onProgress"],
+  });
   const report = React.useCallback(() => {
     const w = seen.current;
     const total = w.ranges.total();
@@ -543,8 +631,20 @@ export type SourceAttacher = (el: HTMLMediaElement, src: string, context: Stream
  * Use it for a plain `<video>` the app owns, with `useMediaElement`; `MediaPlayer` does it for `attach`.
  * Returns `reload`, for the player's Try again (`useMediaElement`'s `onRetry`), and gives the engine's failures to `onProblem` (`reportProblem`).
  */
-export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>, src: string | undefined, attach: SourceAttacher | undefined, onProblem?: (message: string) => void, growing?: boolean, start?: number): { reload: (at: number) => void } {
-  const hold = React.useRef<{ el: HTMLMediaElement; src: string; attach: SourceAttacher; attachment: StreamAttachment } | null>(null);
+export function useAttachedSource(
+  ref: React.RefObject<HTMLMediaElement | null>,
+  src: string | undefined,
+  attach: SourceAttacher | undefined,
+  onProblem?: (message: string) => void,
+  growing?: boolean,
+  start?: number,
+): { reload: (at: number) => void } {
+  const hold = React.useRef<{
+    el: HTMLMediaElement;
+    src: string;
+    attach: SourceAttacher;
+    attachment: StreamAttachment;
+  } | null>(null);
   const problem = React.useRef(onProblem);
   problem.current = onProblem;
   const grows = React.useRef(growing);
@@ -564,12 +664,24 @@ export function useAttachedSource(ref: React.RefObject<HTMLMediaElement | null>,
     if (!el || !attach || !src) return;
     first.current.src ??= src;
     const begin = src === first.current.src ? first.current.start : 0;
-    hold.current = { el, src, attach, attachment: attach(el, src, { startAt: begin ?? 0, onProblem: (m) => problem.current?.(m), growing: grows.current }) };
+    hold.current = {
+      el,
+      src,
+      attach,
+      attachment: attach(el, src, {
+        startAt: begin ?? 0,
+        onProblem: (m) => problem.current?.(m),
+        growing: grows.current,
+      }),
+    };
   });
-  React.useEffect(() => () => {
-    hold.current?.attachment.detach();
-    hold.current = null;
-  }, []);
+  React.useEffect(
+    () => () => {
+      hold.current?.attachment.detach();
+      hold.current = null;
+    },
+    [],
+  );
   return React.useMemo(() => ({ reload: (at: number) => hold.current?.attachment.reload(at) }), []);
 }
 
@@ -758,15 +870,32 @@ export function MediaPlayer({
   float = false,
   className,
 }: MediaPlayerProps) {
-  const list = React.useMemo<readonly MediaSource[]>(() => sources ?? (src ? [{ src, title: label }] : []), [sources, src, label]);
+  const list = React.useMemo<readonly MediaSource[]>(
+    () => sources ?? (src ? [{ src, title: label }] : []),
+    [sources, src, label],
+  );
   const [ownIndex, setOwnIndex] = React.useState(0);
   const index = Math.min(controlledIndex ?? ownIndex, Math.max(list.length - 1, 0));
   const current = list[index];
   const ref = React.useRef<HTMLMediaElement>(null);
   const stream = React.useRef<{ reload: (at: number) => void }>({ reload: () => {} });
   const sourceIndex = React.useRef(index);
-  const progress = React.useCallback((r: MediaProgress) => onProgress?.({ ...r, index: sourceIndex.current }), [onProgress]);
-  const media = useMediaElement(ref, { window: bound, loop, group, onTimeUpdate, onWindowEnd, growing: growing !== undefined, onRetry: attach ? (t) => stream.current.reload(t) : undefined, onProgress: onProgress ? progress : undefined, progressEvery, progressKey: current?.src });
+  const progress = React.useCallback(
+    (r: MediaProgress) => onProgress?.({ ...r, index: sourceIndex.current }),
+    [onProgress],
+  );
+  const media = useMediaElement(ref, {
+    window: bound,
+    loop,
+    group,
+    onTimeUpdate,
+    onWindowEnd,
+    growing: growing !== undefined,
+    onRetry: attach ? (t) => stream.current.reload(t) : undefined,
+    onProgress: onProgress ? progress : undefined,
+    progressEvery,
+    progressKey: current?.src,
+  });
   // After the hook's own effects, so a report made because the file changed still names the file it is about.
   React.useEffect(() => void (sourceIndex.current = index), [index]);
   stream.current = useAttachedSource(ref, current?.src, attach, media.reportProblem, growing !== undefined, start);
@@ -832,7 +961,9 @@ export function MediaPlayer({
   const total = offsets ? offsets[offsets.length - 1] + list[list.length - 1].duration! : null;
   // A window is the bar's whole length unless `showFull`: times are shown from its start.
   const cut = bound && !showFull ? bound : null;
-  const time = cut ? Math.min(Math.max(media.time - cut.start, 0), cut.end - cut.start) : (offsets ? offsets[index] : 0) + media.time;
+  const time = cut
+    ? Math.min(Math.max(media.time - cut.start, 0), cut.end - cut.start)
+    : (offsets ? offsets[index] : 0) + media.time;
   // A source still being made: the whole length when the app knows it, with the part that exists drawn as ready; otherwise the part that exists.
   const wholeLength = growing && list.length === 1 && list[0].duration ? list[0].duration : null;
   const duration = cut ? cut.end - cut.start : (total ?? wholeLength ?? media.duration);
@@ -859,14 +990,20 @@ export function MediaPlayer({
   // large); a sequence's large skip is its sources, and a window has no marks of its own, so both skip by time at the small level.
   const ownMarks = !cut && !offsets && list.length <= 1 && !bound ? (marks ?? []) : [];
   const skipping = skip !== false;
-  const skipTo = (level: "small" | "large", direction: -1 | 1) => skipAction(ownMarks, level, direction, time, { steps: skip || {}, duration });
+  const skipTo = (level: "small" | "large", direction: -1 | 1) =>
+    skipAction(ownMarks, level, direction, time, { steps: skip || {}, duration });
   // One frame: pause, then land in the middle of the next or previous frame (a seek to a frame's very start can show the one before it).
   const stepFrame = (direction: -1 | 1) => {
     if (!fps) return;
     media.pause();
     // From the element's own position: the rendered `time` can be a quarter second behind a playing video.
     const el = ref.current;
-    const now = el && Number.isFinite(el.currentTime) ? (cut ? el.currentTime - cut.start : (offsets ? offsets[index] : 0) + el.currentTime) : time;
+    const now =
+      el && Number.isFinite(el.currentTime)
+        ? cut
+          ? el.currentTime - cut.start
+          : (offsets ? offsets[index] : 0) + el.currentTime
+        : time;
     const at = Math.floor(now * fps + 0.001);
     seek(Math.max(0, (at + direction + 0.5) / fps));
   };
@@ -915,9 +1052,30 @@ export function MediaPlayer({
     if (index > 0) setPicked(false);
   }, [index]);
   const say = { pickedUp: (t: string) => `Picked up at ${t}`, startOver: "Start over", ...resumeWords };
-  const resumeNotice = picked ? { text: say.pickedUp(format.runningTime(pickedAt.current)), actionLabel: say.startOver, run: () => { setPicked(false); seek(0); } } : null;
+  const resumeNotice = picked
+    ? {
+        text: say.pickedUp(format.runningTime(pickedAt.current)),
+        actionLabel: say.startOver,
+        run: () => {
+          setPicked(false);
+          seek(0);
+        },
+      }
+    : null;
 
-  const spanState = useMediaSpans({ spans, kinds: spanKinds, words: spanWords, onSpan: spanSeen, time, playing: media.playing, duration: growing ? null : duration, limit: growing ? media.ready : undefined, seek, volume: media.volume, setVolume: media.setVolume });
+  const spanState = useMediaSpans({
+    spans,
+    kinds: spanKinds,
+    words: spanWords,
+    onSpan: spanSeen,
+    time,
+    playing: media.playing,
+    duration: growing ? null : duration,
+    limit: growing ? media.ready : undefined,
+    seek,
+    volume: media.volume,
+    setVolume: media.setVolume,
+  });
   const offer = spanState.offer;
 
   // The app's hold on the state: an object ref keeps the latest (no render of its own), a function ref hears every render.
@@ -927,7 +1085,8 @@ export function MediaPlayer({
   });
   React.useEffect(
     () => () => {
-      if (mediaRef && typeof mediaRef !== "function") (mediaRef as React.MutableRefObject<MediaElementState | null>).current = null;
+      if (mediaRef && typeof mediaRef !== "function")
+        (mediaRef as React.MutableRefObject<MediaElementState | null>).current = null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -935,7 +1094,12 @@ export function MediaPlayer({
   // The picture's own shape once it is known, so the box does not change when the metadata arrives.
   const [natural, setNatural] = React.useState<number | null>(null);
   useElementListeners(ref, (el) => {
-    const read = () => setNatural(el instanceof HTMLVideoElement && el.videoWidth > 0 && el.videoHeight > 0 ? el.videoWidth / el.videoHeight : null);
+    const read = () =>
+      setNatural(
+        el instanceof HTMLVideoElement && el.videoWidth > 0 && el.videoHeight > 0
+          ? el.videoWidth / el.videoHeight
+          : null,
+      );
     for (const t of ["loadedmetadata", "resize", "emptied"]) el.addEventListener(t, read);
     read();
     return () => {
@@ -1003,7 +1167,10 @@ export function MediaPlayer({
   const wantFloat = floatable && offTop && played && !closed && !full;
   const [held, setHeld] = React.useState<number | null>(null);
   // Measured as it starts to float, while it is still in its place.
-  React.useLayoutEffect(() => setHeld(wantFloat ? (box.current?.getBoundingClientRect().height ?? 0) : null), [wantFloat]);
+  React.useLayoutEffect(
+    () => setHeld(wantFloat ? (box.current?.getBoundingClientRect().height ?? 0) : null),
+    [wantFloat],
+  );
   const floating = wantFloat && held !== null;
   const backToPlayer = () => {
     below.current?.previousElementSibling?.scrollIntoView({ block: "nearest" });
@@ -1032,8 +1199,15 @@ export function MediaPlayer({
       { keys: ["j"], label: `Back ${JUMP} s`, run: () => seek(time - JUMP), repeat: true },
       { keys: ["l"], label: `Forward ${JUMP} s`, run: () => seek(time + JUMP), repeat: true },
       { keys: ["m"], label: "Mute", run: () => media.setVolume(media.muted ? 100 : 0) },
-      ...(frames ? [{ keys: [","], label: "Back one frame", run: () => stepFrame(-1), repeat: true }, { keys: ["."], label: "Forward one frame", run: () => stepFrame(1), repeat: true }] : []),
-      ...(canFull ? [{ keys: ["f"], label: full ? "Leave full screen" : "Full screen", run: () => setFull((f) => !f) }] : []),
+      ...(frames
+        ? [
+            { keys: [","], label: "Back one frame", run: () => stepFrame(-1), repeat: true },
+            { keys: ["."], label: "Forward one frame", run: () => stepFrame(1), repeat: true },
+          ]
+        : []),
+      ...(canFull
+        ? [{ keys: ["f"], label: full ? "Leave full screen" : "Full screen", run: () => setFull((f) => !f) }]
+        : []),
       ...(offer ? [{ keys: ["s"], label: offer.label, run: offer.run }] : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1041,20 +1215,33 @@ export function MediaPlayer({
   );
   // Several players on a page: the keys follow the last used (see useKeyOwner); alone, they are this one's.
   const owner = useKeyOwner(shortcuts && !native, media.playing);
-  const activeKeys = autoHide ? keys.map((shortcut) => ({
-    ...shortcut,
-    run: () => {
-      wakeControls();
-      shortcut.run();
-    },
-  })) : keys;
+  const activeKeys = autoHide
+    ? keys.map((shortcut) => ({
+        ...shortcut,
+        run: () => {
+          wakeControls();
+          shortcut.run();
+        },
+      }))
+    : keys;
   useHotkeys(activeKeys, { enabled: shortcuts && !native && owner.owns });
 
   // Lock-screen and headset controls.
   React.useEffect(() => {
-    if (!session || typeof navigator === "undefined" || !("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return;
+    if (
+      !session ||
+      typeof navigator === "undefined" ||
+      !("mediaSession" in navigator) ||
+      typeof MediaMetadata === "undefined"
+    )
+      return;
     const s = navigator.mediaSession;
-    s.metadata = new MediaMetadata({ title: current?.title ?? session.title, artist: session.artist, album: session.album ?? (list.length > 1 ? session.title : undefined), artwork: session.artwork ? [{ src: session.artwork }] : [] });
+    s.metadata = new MediaMetadata({
+      title: current?.title ?? session.title,
+      artist: session.artist,
+      album: session.album ?? (list.length > 1 ? session.title : undefined),
+      artwork: session.artwork ? [{ src: session.artwork }] : [],
+    });
     return () => {
       s.metadata = null;
     };
@@ -1076,20 +1263,44 @@ export function MediaPlayer({
     set("previoustrack", index > 0 ? () => step(-1) : null);
     set("nexttrack", index < list.length - 1 ? () => step(1) : null);
     return () => {
-      for (const a of ["play", "pause", "seekbackward", "seekforward", "previoustrack", "nexttrack"] as const) set(a, null);
+      for (const a of ["play", "pause", "seekbackward", "seekforward", "previoustrack", "nexttrack"] as const)
+        set(a, null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, media, time, index, list.length]);
 
-  const common = { ref: ref as React.Ref<never>, src: attach ? undefined : current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
+  const common = {
+    ref: ref as React.Ref<never>,
+    src: attach ? undefined : current?.src,
+    controls: native,
+    autoPlay,
+    preload: "metadata" as const,
+    "aria-label": `${label}, ${kind}`,
+  };
   const hasSpans = (spans?.length ?? 0) > 0;
   const showActions = hasSpans || picked;
-  const barMarks: readonly MediaMark[] = bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : (!bound && marks) || [];
+  const barMarks: readonly MediaMark[] =
+    bound && showFull
+      ? [
+          { time: bound.start, label: "Window starts" },
+          { time: bound.end, label: "Window ends" },
+        ]
+      : offsets
+        ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1)
+        : (!bound && marks) || [];
   // The picture sits in a box of its own shape (the app's `aspect`, else the video's, else 16:9 until it says), so the page does not jump
   // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
   const element =
     kind === "video" ? (
-      <div ref={stage} tabIndex={-1} className={cn("relative w-full overflow-hidden rounded-surface bg-surface-sunken outline-none", full && "min-h-0 flex-1")} style={full ? undefined : { aspectRatio: aspect ?? natural ?? 16 / 9 }}>
+      <div
+        ref={stage}
+        tabIndex={-1}
+        className={cn(
+          "relative w-full overflow-hidden rounded-surface bg-surface-sunken outline-none",
+          full && "min-h-0 flex-1",
+        )}
+        style={full ? undefined : { aspectRatio: aspect ?? natural ?? 16 / 9 }}
+      >
         <video
           {...common}
           poster={poster}
@@ -1102,7 +1313,13 @@ export function MediaPlayer({
         {(overlay || showActions) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {overlay?.(media)}
-            {showActions && <SpanActions state={spanState} other={resumeNotice} className={cn("absolute right-3 flex flex-col items-end gap-2", native ? "bottom-14" : "bottom-3")} />}
+            {showActions && (
+              <SpanActions
+                state={spanState}
+                other={resumeNotice}
+                className={cn("absolute right-3 flex flex-col items-end gap-2", native ? "bottom-14" : "bottom-3")}
+              />
+            )}
           </div>
         )}
       </div>
@@ -1118,121 +1335,219 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div ref={box} role="group" aria-label={label} data-floating={floating || undefined} onFocusCapture={owner.claim} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { owner.claim(); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col", floating && cn("fixed right-4 bottom-4 layer-bar w-80 max-w-full gap-1.5 p-2", overlaySurface))}>
-      {element}
-      {floating && (
-        <div className="grid gap-1">
-          {!native && <SeekBar time={time} duration={duration} onSeek={seek} spans={spanState.bars} marks={barMarks} step={JUMP} bigStep={60} label={`Seek in ${label}`} />}
-          <div className="flex items-center gap-1">
-            <IconButton icon={media.playing ? Pause : Play} label={media.playing ? "Pause" : "Play"} hint="Space" size="sm" onClick={media.toggle} />
-            <TimeReadout time={time} duration={duration} className="type-caption" />
-            <span className="ml-auto flex items-center gap-1">
-              <IconButton icon={ArrowUp} label="Back to the player" size="sm" onPress={backToPlayer} />
-              <IconButton icon={X} label="Close" size="sm" onPress={() => setClosed(true)} />
-            </span>
-          </div>
-        </div>
-      )}
-      {!floating && native && hasSpans && <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />}
-      {warningToast}
-      {!floating && kind === "audio" && showActions && <SpanActions state={spanState} other={resumeNotice} className="flex flex-wrap items-center gap-2" />}
-      {kind === "audio" && overlay?.(media)}
-      {media.error?.kind === "load" && (
-        <Alert
-          tone="danger"
-          announce
-          title={`Could not load ${what}`}
-          action={
-            <Button size="sm" variant="outline" onClick={media.retry}>
-              Try again
-            </Button>
-          }
-        >
-          {media.error.message}
-        </Alert>
-      )}
-      {media.error?.kind === "blocked" && (
-        <p role="status" className="type-body-sm text-muted-foreground">
-          {media.error.message}
-        </p>
-      )}
-      {/* Keep controls and status actions tabbable without reserving space for the idle panel. */}
-      {!floating && (growing || bound || !native || status) && (
-        <div className={cn("grid gap-2", hideControls && "pointer-events-none absolute inset-x-0 bottom-0 opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100")}>
-          {growing && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <Status tone="info" icon={LoaderCircle}>
-                Still being made
-              </Status>
-              {growing.status && <span className="type-body-sm text-muted-foreground">{growing.status}</span>}
-              <span role="status" className="type-body-sm text-muted-foreground">
-                {media.waitingForMore ? "Waiting for more to be made. It will carry on by itself." : ""}
+      <div
+        ref={box}
+        role="group"
+        aria-label={label}
+        data-floating={floating || undefined}
+        onFocusCapture={owner.claim}
+        onMouseMoveCapture={autoHide ? wakeControls : undefined}
+        onKeyDownCapture={autoHide ? wakeControls : undefined}
+        onMouseLeave={autoHide && !full ? sleepControls : undefined}
+        onPointerDownCapture={() => {
+          owner.claim();
+          if (autoHide) wakeControls();
+        }}
+        className={cn(
+          "relative grid w-full gap-2",
+          full && "flex h-full min-h-0 flex-col",
+          floating && cn("fixed right-4 bottom-4 layer-bar w-80 max-w-full gap-1.5 p-2", overlaySurface),
+        )}
+      >
+        {element}
+        {floating && (
+          <div className="grid gap-1">
+            {!native && (
+              <SeekBar
+                time={time}
+                duration={duration}
+                onSeek={seek}
+                spans={spanState.bars}
+                marks={barMarks}
+                step={JUMP}
+                bigStep={60}
+                label={`Seek in ${label}`}
+              />
+            )}
+            <div className="flex items-center gap-1">
+              <IconButton
+                icon={media.playing ? Pause : Play}
+                label={media.playing ? "Pause" : "Play"}
+                hint="Space"
+                size="sm"
+                onClick={media.toggle}
+              />
+              <TimeReadout time={time} duration={duration} className="type-caption" />
+              <span className="ml-auto flex items-center gap-1">
+                <IconButton icon={ArrowUp} label="Back to the player" size="sm" onPress={backToPlayer} />
+                <IconButton icon={X} label="Close" size="sm" onPress={() => setClosed(true)} />
               </span>
             </div>
-          )}
-          {bound && (
-            <>
-              <p className="type-caption text-muted-foreground tabular-nums">
-                {format.runningTime(bound.start)} to {format.runningTime(bound.end)}
-                {loop ? ", looping" : ""}
-              </p>
-              <VisuallyHidden>
-                <span role="status">{media.playing ? `Playing ${format.runningTime(bound.start)} to ${format.runningTime(bound.end)}` : ""}</span>
-              </VisuallyHidden>
-            </>
-          )}
-          {!native && (
-            <div className="grid gap-2">
-              <div className="flex min-w-0 items-center gap-3">
-                <SeekBar
-                  time={time}
-                  duration={duration}
-                  onSeek={seek}
-                  buffered={growing ? media.ready : offsets ? undefined : media.buffered}
-                  spans={spanState.bars}
-                  marks={barMarks}
-                  step={JUMP}
-                  bigStep={60}
-                  label={`Seek in ${label}`}
-                />
-                <TimeReadout time={time} duration={duration} />
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <Toolbar label="Playback" className="gap-2">
-                  {list.length > 1 ? <IconButton icon={SkipBack} label="Previous chapter" disabled={index === 0} onClick={() => step(-1)} /> : skipping && <SkipButton action={skipTo("large", -1)} icon={SkipBack} seek={seek} />}
-                  {skipping && <SkipButton action={skipTo("small", -1)} icon={Rewind} seek={seek} />}
-                  {frames && <IconButton icon={StepBack} label="Back one frame" hint="," onClick={() => stepFrame(-1)} />}
-                  <IconButton icon={media.playing ? Pause : Play} label={media.playing ? "Pause" : "Play"} hint="Space" variant="outline" onClick={media.toggle} />
-                  {frames && <IconButton icon={StepForward} label="Forward one frame" hint="." onClick={() => stepFrame(1)} />}
-                  {skipping && <SkipButton action={skipTo("small", 1)} icon={FastForward} seek={seek} />}
-                  {list.length > 1 ? <IconButton icon={SkipForward} label="Next chapter" disabled={index === list.length - 1} onClick={() => step(1)} /> : skipping && <SkipButton action={skipTo("large", 1)} icon={SkipForward} seek={seek} />}
-                </Toolbar>
-                {list.length > 1 && (
-                  <span className="type-body-sm text-muted-foreground">
-                    {current?.title} ({index + 1} of {list.length})
-                  </span>
-                )}
-                <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
-                  <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
-                  <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
-                  {canFull && <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />}
+          </div>
+        )}
+        {!floating && native && hasSpans && (
+          <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />
+        )}
+        {warningToast}
+        {!floating && kind === "audio" && showActions && (
+          <SpanActions state={spanState} other={resumeNotice} className="flex flex-wrap items-center gap-2" />
+        )}
+        {kind === "audio" && overlay?.(media)}
+        {media.error?.kind === "load" && (
+          <Alert
+            tone="danger"
+            announce
+            title={`Could not load ${what}`}
+            action={
+              <Button size="sm" variant="outline" onClick={media.retry}>
+                Try again
+              </Button>
+            }
+          >
+            {media.error.message}
+          </Alert>
+        )}
+        {media.error?.kind === "blocked" && (
+          <p role="status" className="type-body-sm text-muted-foreground">
+            {media.error.message}
+          </p>
+        )}
+        {/* Keep controls and status actions tabbable without reserving space for the idle panel. */}
+        {!floating && (growing || bound || !native || status) && (
+          <div
+            className={cn(
+              "grid gap-2",
+              hideControls &&
+                "pointer-events-none absolute inset-x-0 bottom-0 opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100",
+            )}
+          >
+            {growing && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Status tone="info" icon={LoaderCircle}>
+                  Still being made
+                </Status>
+                {growing.status && <span className="type-body-sm text-muted-foreground">{growing.status}</span>}
+                <span role="status" className="type-body-sm text-muted-foreground">
+                  {media.waitingForMore ? "Waiting for more to be made. It will carry on by itself." : ""}
                 </span>
               </div>
-            </div>
-          )}
-          {status}
-        </div>
-      )}
-    </div>
-    {floating && <div aria-hidden data-player-place="" style={{ height: held ?? 0 }} />}
-    {floatable && <span ref={below} aria-hidden data-player-end="" className="block" />}
+            )}
+            {bound && (
+              <>
+                <p className="type-caption text-muted-foreground tabular-nums">
+                  {format.runningTime(bound.start)} to {format.runningTime(bound.end)}
+                  {loop ? ", looping" : ""}
+                </p>
+                <VisuallyHidden>
+                  <span role="status">
+                    {media.playing
+                      ? `Playing ${format.runningTime(bound.start)} to ${format.runningTime(bound.end)}`
+                      : ""}
+                  </span>
+                </VisuallyHidden>
+              </>
+            )}
+            {!native && (
+              <div className="grid gap-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <SeekBar
+                    time={time}
+                    duration={duration}
+                    onSeek={seek}
+                    buffered={growing ? media.ready : offsets ? undefined : media.buffered}
+                    spans={spanState.bars}
+                    marks={barMarks}
+                    step={JUMP}
+                    bigStep={60}
+                    label={`Seek in ${label}`}
+                  />
+                  <TimeReadout time={time} duration={duration} />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Toolbar label="Playback" className="gap-2">
+                    {list.length > 1 ? (
+                      <IconButton
+                        icon={SkipBack}
+                        label="Previous chapter"
+                        disabled={index === 0}
+                        onClick={() => step(-1)}
+                      />
+                    ) : (
+                      skipping && <SkipButton action={skipTo("large", -1)} icon={SkipBack} seek={seek} />
+                    )}
+                    {skipping && <SkipButton action={skipTo("small", -1)} icon={Rewind} seek={seek} />}
+                    {frames && (
+                      <IconButton icon={StepBack} label="Back one frame" hint="," onClick={() => stepFrame(-1)} />
+                    )}
+                    <IconButton
+                      icon={media.playing ? Pause : Play}
+                      label={media.playing ? "Pause" : "Play"}
+                      hint="Space"
+                      variant="outline"
+                      onClick={media.toggle}
+                    />
+                    {frames && (
+                      <IconButton icon={StepForward} label="Forward one frame" hint="." onClick={() => stepFrame(1)} />
+                    )}
+                    {skipping && <SkipButton action={skipTo("small", 1)} icon={FastForward} seek={seek} />}
+                    {list.length > 1 ? (
+                      <IconButton
+                        icon={SkipForward}
+                        label="Next chapter"
+                        disabled={index === list.length - 1}
+                        onClick={() => step(1)}
+                      />
+                    ) : (
+                      skipping && <SkipButton action={skipTo("large", 1)} icon={SkipForward} seek={seek} />
+                    )}
+                  </Toolbar>
+                  {list.length > 1 && (
+                    <span className="type-body-sm text-muted-foreground">
+                      {current?.title} ({index + 1} of {list.length})
+                    </span>
+                  )}
+                  <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
+                    <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
+                    <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
+                    {canFull && (
+                      <IconButton
+                        icon={full ? Minimize : Maximize}
+                        label={full ? "Leave full screen" : "Full screen"}
+                        onPress={() => setFull(!full)}
+                      />
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+            {status}
+          </div>
+        )}
+      </div>
+      {floating && <div aria-hidden data-player-place="" style={{ height: held ?? 0 }} />}
+      {floatable && <span ref={below} aria-hidden data-player-end="" className="block" />}
     </FullscreenFrame>
   );
 }
 
 /** One skip button: named for where it goes ("Next scene", "Back 10 s"), and not pressable when there is nowhere to go. */
-function SkipButton({ action, icon, seek }: { action: { label: string; to: number | null }; icon: React.ComponentProps<typeof IconButton>["icon"]; seek: (t: number) => void }) {
-  return <IconButton icon={icon} label={action.label} disabled={action.to === null} onClick={() => action.to !== null && seek(action.to)} />;
+function SkipButton({
+  action,
+  icon,
+  seek,
+}: {
+  action: { label: string; to: number | null };
+  icon: React.ComponentProps<typeof IconButton>["icon"];
+  seek: (t: number) => void;
+}) {
+  return (
+    <IconButton
+      icon={icon}
+      label={action.label}
+      disabled={action.to === null}
+      onClick={() => action.to !== null && seek(action.to)}
+    />
+  );
 }
 
 // The heading over a video (issue #329): the words a video site puts across the top of its player, so a person who paused or
@@ -1241,31 +1556,80 @@ function SkipButton({ action, icon, seek }: { action: { label: string; to: numbe
 // still plays or pauses) except on its links, and only while shown; hidden, it stays in the accessibility tree, and a link
 // reached by Tab brings it back.
 function PictureHeading({ heading, shown }: { heading: MediaHeading; shown: boolean }) {
-  const link = cn("min-w-0 truncate rounded-control underline-offset-4 hover:underline", shown && "pointer-events-auto");
+  const link = cn(
+    "min-w-0 truncate rounded-control underline-offset-4 hover:underline",
+    shown && "pointer-events-auto",
+  );
   const avatar = heading.avatar !== undefined && (
     <Thumbnail
       src={heading.avatar}
       alt=""
       eager
       className="w-9 shrink-0 rounded-pill"
-      fallback={<span className="grid size-full place-items-center bg-surface-sunken type-label text-foreground">{(heading.subtitle ?? heading.title).slice(0, 1).toUpperCase()}</span>}
+      fallback={
+        <span className="grid size-full place-items-center bg-surface-sunken type-label text-foreground">
+          {(heading.subtitle ?? heading.title).slice(0, 1).toUpperCase()}
+        </span>
+      }
     />
   );
   return (
     <div
       data-shown={shown || undefined}
-      className={cn("picture-shade pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3 pb-10 transition-state", shown ? "opacity-100" : "opacity-0 has-[:focus-visible]:opacity-100 has-[:focus-visible]:[&_a]:pointer-events-auto")}
+      className={cn(
+        "picture-shade pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3 pb-10 transition-state",
+        shown
+          ? "opacity-100"
+          : "opacity-0 has-[:focus-visible]:opacity-100 has-[:focus-visible]:[&_a]:pointer-events-auto",
+      )}
     >
-      {avatar && (heading.subtitleTo && heading.subtitle ? <HeadingLink state={heading.state} to={heading.subtitleTo} className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")} label={heading.subtitle}>{avatar}</HeadingLink> : avatar)}
+      {avatar &&
+        (heading.subtitleTo && heading.subtitle ? (
+          <HeadingLink
+            state={heading.state}
+            to={heading.subtitleTo}
+            className={cn("shrink-0 rounded-pill", shown && "pointer-events-auto")}
+            label={heading.subtitle}
+          >
+            {avatar}
+          </HeadingLink>
+        ) : (
+          avatar
+        ))}
       <div className="grid min-w-0">
-        {heading.to ? <HeadingLink state={heading.state} to={heading.to} className={cn("type-heading", link)}>{heading.title}</HeadingLink> : <p className="type-heading truncate">{heading.title}</p>}
-        {heading.subtitle && (heading.subtitleTo ? <HeadingLink state={heading.state} to={heading.subtitleTo} className={cn("type-body-sm", link)}>{heading.subtitle}</HeadingLink> : <p className="type-body-sm truncate">{heading.subtitle}</p>)}
+        {heading.to ? (
+          <HeadingLink state={heading.state} to={heading.to} className={cn("type-heading", link)}>
+            {heading.title}
+          </HeadingLink>
+        ) : (
+          <p className="type-heading truncate">{heading.title}</p>
+        )}
+        {heading.subtitle &&
+          (heading.subtitleTo ? (
+            <HeadingLink state={heading.state} to={heading.subtitleTo} className={cn("type-body-sm", link)}>
+              {heading.subtitle}
+            </HeadingLink>
+          ) : (
+            <p className="type-body-sm truncate">{heading.subtitle}</p>
+          ))}
       </div>
     </div>
   );
 }
 
-function HeadingLink({ to, state, className, label, children }: { to: string; state?: unknown; className: string; label?: string; children: React.ReactNode }) {
+function HeadingLink({
+  to,
+  state,
+  className,
+  label,
+  children,
+}: {
+  to: string;
+  state?: unknown;
+  className: string;
+  label?: string;
+  children: React.ReactNode;
+}) {
   const { provide, props } = useTarget({ to }, false, state);
   return provide(
     <AriaLink {...props} aria-label={label} className={className}>

@@ -11,10 +11,19 @@ import { differences, readPixels, type Difference, type Pixels } from "../lib/im
 export type ReadPixels = (src: string) => Promise<Pixels>;
 
 /** The state of a difference: reading the pictures, unable to, or the result. */
-export type DifferenceState = { status: "loading" } | { status: "failed" } | { status: "ready"; difference: Difference };
+export type DifferenceState =
+  | { status: "loading" }
+  | { status: "failed" }
+  | { status: "ready"; difference: Difference };
 
 /** The pixels that differ between two pictures at a tolerance (0 to 1), read only while `enabled`. */
-export function useDifference(a: string, b: string, tolerance: number, enabled: boolean, read: ReadPixels = readPixels): DifferenceState {
+export function useDifference(
+  a: string,
+  b: string,
+  tolerance: number,
+  enabled: boolean,
+  read: ReadPixels = readPixels,
+): DifferenceState {
   const [loaded, setLoaded] = React.useState<{ key: string; a: Pixels; b: Pixels } | "failed" | null>(null);
   const key = `${a}|${b}`;
   const reader = React.useRef(read);
@@ -32,7 +41,10 @@ export function useDifference(a: string, b: string, tolerance: number, enabled: 
     };
   }, [a, b, key, enabled]);
   const deferred = React.useDeferredValue(tolerance);
-  const difference = React.useMemo(() => (loaded && loaded !== "failed" && loaded.key === key ? differences(loaded.a, loaded.b, deferred) : null), [loaded, key, deferred]);
+  const difference = React.useMemo(
+    () => (loaded && loaded !== "failed" && loaded.key === key ? differences(loaded.a, loaded.b, deferred) : null),
+    [loaded, key, deferred],
+  );
   if (loaded === "failed") return { status: "failed" };
   return difference ? { status: "ready", difference } : { status: "loading" };
 }

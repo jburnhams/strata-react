@@ -107,7 +107,22 @@ export function useBookUrl(count: number, { param = "page" }: { param?: string }
 }
 
 /** A scanned book read as a book: facing pages (the first alone on the right) or one page, printed and scan names with a go-to that takes either, arrows, Page Up/Down, Home/End and a click on a page's outer half, the position in the URL and in words, a thumbnail strip with badges, an optional text pane. */
-export function BookViewer({ label, pages, index, onIndexChange, missing, layout = "spread", side, sideLabel = "Text", badge, overlay, strip = true, aspect = 2 / 3, word = "Page", className }: BookViewerProps) {
+export function BookViewer({
+  label,
+  pages,
+  index,
+  onIndexChange,
+  missing,
+  layout = "spread",
+  side,
+  sideLabel = "Text",
+  badge,
+  overlay,
+  strip = true,
+  aspect = 2 / 3,
+  word = "Page",
+  className,
+}: BookViewerProps) {
   const narrow = useNarrow();
   const spread = layout === "spread" && !narrow;
   const views = React.useMemo(() => viewsOf(pages.length, spread), [pages.length, spread]);
@@ -122,7 +137,11 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
   };
 
   // The first page of a book stands alone on the right; a lone last page is on the left.
-  const slots: (BookPage | null)[] = spread ? (view === 0 ? [null, shown[0] ?? null] : [shown[0] ?? null, shown[1] ?? null]) : [shown[0] ?? null];
+  const slots: (BookPage | null)[] = spread
+    ? view === 0
+      ? [null, shown[0] ?? null]
+      : [shown[0] ?? null, shown[1] ?? null]
+    : [shown[0] ?? null];
 
   const { viewport, setViewport } = useViewport(FIT);
   const frame = React.useRef<HTMLDivElement>(null);
@@ -142,8 +161,22 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
   const root = React.useRef<HTMLDivElement>(null);
   const keys = (e: React.KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
-    if ((e.target as HTMLElement).closest?.('[role="toolbar"], [role="listbox"], input, textarea, select, [contenteditable="true"]')) return;
-    const to = e.key === "ArrowRight" || e.key === "PageDown" ? view + 1 : e.key === "ArrowLeft" || e.key === "PageUp" ? view - 1 : e.key === "Home" ? 0 : e.key === "End" ? lastView : null;
+    if (
+      (e.target as HTMLElement).closest?.(
+        '[role="toolbar"], [role="listbox"], input, textarea, select, [contenteditable="true"]',
+      )
+    )
+      return;
+    const to =
+      e.key === "ArrowRight" || e.key === "PageDown"
+        ? view + 1
+        : e.key === "ArrowLeft" || e.key === "PageUp"
+          ? view - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? lastView
+              : null;
     if (to === null) return;
     e.preventDefault();
     goView(to);
@@ -161,7 +194,9 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
     if (!query.trim()) return;
     const found = findPage(pages, query);
     if (found === null) {
-      setProblem(`No ${word.toLowerCase()} is called “${query.trim()}”. Try its number in the scan, or what is printed on it, such as iv or 12.`);
+      setProblem(
+        `No ${word.toLowerCase()} is called “${query.trim()}”. Try its number in the scan, or what is printed on it, such as iv or 12.`,
+      );
       return;
     }
     setProblem(undefined);
@@ -169,7 +204,18 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
     onIndexChange(found);
   };
 
-  const items = React.useMemo<LightboxItem[]>(() => pages.map((p) => ({ id: p.id, src: p.src, thumb: p.thumb, label: p.label, position: pageName(p, word), natural: p.natural })), [pages, word]);
+  const items = React.useMemo<LightboxItem[]>(
+    () =>
+      pages.map((p) => ({
+        id: p.id,
+        src: p.src,
+        thumb: p.thumb,
+        label: p.label,
+        position: pageName(p, word),
+        natural: p.natural,
+      })),
+    [pages, word],
+  );
   const position = sayPosition(shown, pages.length, word, `${word}s`);
   const prevWord = spread ? `Previous ${word.toLowerCase()}s` : `Previous ${word.toLowerCase()}`;
   const nextWord = spread ? `Next ${word.toLowerCase()}s` : `Next ${word.toLowerCase()}`;
@@ -182,22 +228,58 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
     return {
       describe: `Click the outer half of the page to turn it. Previous is on the left, next on the right.`,
       zoneAt: (x) =>
-        back && x < 0.5 && view > 0 ? { value: "prev", from: 0, to: 0.5, hint: prevWord } : forward && x >= 0.5 && view < lastView ? { value: "next", from: 0.5, to: 1, hint: nextWord } : null,
+        back && x < 0.5 && view > 0
+          ? { value: "prev", from: 0, to: 0.5, hint: prevWord }
+          : forward && x >= 0.5 && view < lastView
+            ? { value: "next", from: 0.5, to: 1, hint: nextWord }
+            : null,
     };
   };
 
   return (
-    <div ref={root} role="region" aria-label={label} aria-roledescription="book" tabIndex={-1} onKeyDown={keys} className={cn("grid min-w-0 gap-3 outline-none", className)}>
+    <div
+      ref={root}
+      role="region"
+      aria-label={label}
+      aria-roledescription="book"
+      tabIndex={-1}
+      onKeyDown={keys}
+      className={cn("grid min-w-0 gap-3 outline-none", className)}
+    >
       <div className="flex flex-wrap items-end gap-2">
         <IconButton icon={ChevronLeft} label={prevWord} onPress={() => goView(view - 1)} disabled={view === 0} />
-        <IconButton icon={ChevronRight} label={nextWord} onPress={() => goView(view + 1)} disabled={view === lastView} />
-        <span className="type-label tabular-nums" aria-hidden>{position}</span>
+        <IconButton
+          icon={ChevronRight}
+          label={nextWord}
+          onPress={() => goView(view + 1)}
+          disabled={view === lastView}
+        />
+        <span className="type-label tabular-nums" aria-hidden>
+          {position}
+        </span>
         <Toolbar label="Zoom" className="ml-2 flex items-center gap-1">
           <ZoomControls viewport={viewport} zoom={zoom} natural={shown[0] ? naturalOf(shown[0]) : null} />
         </Toolbar>
         <form onSubmit={goTo} className="ml-auto">
-          <Field label={`Go to ${word.toLowerCase()}`} error={problem} action={<Button type="submit" size="sm" variant="outline">Go</Button>}>
-            <Input size="sm" value={query} onChange={(e) => { setQuery(e.target.value); setProblem(undefined); }} className="w-32" autoComplete="off" />
+          <Field
+            label={`Go to ${word.toLowerCase()}`}
+            error={problem}
+            action={
+              <Button type="submit" size="sm" variant="outline">
+                Go
+              </Button>
+            }
+          >
+            <Input
+              size="sm"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setProblem(undefined);
+              }}
+              className="w-32"
+              autoComplete="off"
+            />
           </Field>
         </form>
       </div>
@@ -207,7 +289,14 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
             page === null ? (
               <div key={slot} aria-hidden />
             ) : failed.has(page.id) ? (
-              <p key={page.id} role="img" aria-label={page.label} className="grid min-h-40 place-items-center rounded-surface border border-dashed border-border p-6 text-center type-body text-muted-foreground">{missing}</p>
+              <p
+                key={page.id}
+                role="img"
+                aria-label={page.label}
+                className="grid min-h-40 place-items-center rounded-surface border border-dashed border-border p-6 text-center type-body text-muted-foreground"
+              >
+                {missing}
+              </p>
             ) : (
               <ViewportFrame
                 key={`slot-${slot}`}
@@ -217,7 +306,11 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
                 viewport={viewport}
                 setViewport={setViewport}
                 maxHeight="calc(100svh - 14rem)"
-                pick={{ ...zones(slot), onPick: (zone) => goView(view + (zone.value === "prev" ? -1 : 1)), token: String(view) }}
+                pick={{
+                  ...zones(slot),
+                  onPick: (zone) => goView(view + (zone.value === "prev" ? -1 : 1)),
+                  token: String(view),
+                }}
               >
                 <img
                   src={page.src}
@@ -241,8 +334,18 @@ export function BookViewer({ label, pages, index, onIndexChange, missing, layout
           </aside>
         )}
       </div>
-      {strip && pages.length > 1 && <ThumbnailStrip items={items} at={at} onPick={onIndexChange} badge={badge ? (it) => badge(pages.find((p) => p.id === it.id)!) : undefined} label={`${word}s in this book`} />}
-      <div role="status" aria-live="polite" className="sr-only">{position}</div>
+      {strip && pages.length > 1 && (
+        <ThumbnailStrip
+          items={items}
+          at={at}
+          onPick={onIndexChange}
+          badge={badge ? (it) => badge(pages.find((p) => p.id === it.id)!) : undefined}
+          label={`${word}s in this book`}
+        />
+      )}
+      <div role="status" aria-live="polite" className="sr-only">
+        {position}
+      </div>
     </div>
   );
 }

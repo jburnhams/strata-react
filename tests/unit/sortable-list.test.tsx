@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RowAction, SortableList, type DropTarget } from "../../src";
@@ -60,7 +60,10 @@ function Tracks({ onChange }: { onChange?: (ids: string[], target: DropTarget) =
   );
 }
 
-const names = () => within(screen.getByRole("grid", { name: "Tracks" })).getAllByRole("row").map((r) => r.textContent?.replace("Remove", "").trim());
+const names = () =>
+  within(screen.getByRole("grid", { name: "Tracks" }))
+    .getAllByRole("row")
+    .map((r) => r.textContent?.replace("Remove", "").trim());
 
 describe("SortableList", () => {
   it("is a grid named by its label, with a named grip per row and the row's own actions", () => {
@@ -79,7 +82,11 @@ describe("SortableList", () => {
     await user.keyboard("{Enter}");
     await waitFor(() => expect(announced()).toMatch(/Started dragging/));
     // Focus lands on the first drop position; the arrows walk the others. Stop after "Main run".
-    for (let i = 0; i < 6 && document.activeElement?.getAttribute("aria-label") !== "Insert between Main run and Outro"; i++) {
+    for (
+      let i = 0;
+      i < 6 && document.activeElement?.getAttribute("aria-label") !== "Insert between Main run and Outro";
+      i++
+    ) {
       await user.keyboard("{ArrowDown}");
     }
     expect(document.activeElement).toHaveAccessibleName("Insert between Main run and Outro");
@@ -115,7 +122,9 @@ describe("SortableList", () => {
           onReorder={() => {}}
           selectionMode="single"
           onSelectionChange={(k) => picked.push([...k])}
-          renderActions={(r) => <RowAction label="Remove" subject={r.name} onClick={() => picked.push(["remove", r.id])} />}
+          renderActions={(r) => (
+            <RowAction label="Remove" subject={r.name} onClick={() => picked.push(["remove", r.id])} />
+          )}
         >
           {(r) => <span>{r.name}</span>}
         </SortableList>
@@ -139,7 +148,15 @@ function TwoLists({ inserted }: { inserted: { ids: string[]; target: DropTarget 
   const [tracks, setTracks] = React.useState<Asset[]>([]);
   return (
     <div>
-      <SortableList label="Library" items={assets} getKey={(a) => a.id} getLabel={(a) => a.name} getKind={(a) => a.kind} empty={<p>No assets</p>} onReorder={() => {}}>
+      <SortableList
+        label="Library"
+        items={assets}
+        getKey={(a) => a.id}
+        getLabel={(a) => a.name}
+        getKind={(a) => a.kind}
+        empty={<p>No assets</p>}
+        onReorder={() => {}}
+      >
         {(a) => <span>{a.name}</span>}
       </SortableList>
       <SortableList
@@ -180,7 +197,11 @@ describe("moving between lists", () => {
     await user.keyboard("{Enter}");
     await waitFor(() => expect(inserted.length).toBe(1));
     expect(inserted[0].ids).toEqual(["v1"]);
-    expect(await within(screen.getByRole("grid", { name: "Timeline" })).findByRole("row", { name: "run-02.mp4" })).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole("grid", { name: "Timeline" })).findByRole("row", {
+        name: "run-02.mp4",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("does not offer the timeline as a place to drop a text item, so nothing is inserted", async () => {
@@ -201,11 +222,28 @@ describe("moving between lists", () => {
       const vids: Asset[] = [{ id: "v9", name: "other.mp4", kind: "video" }];
       return (
         <div>
-          <SortableList label="Library" items={assets} getKey={(a) => a.id} getLabel={(a) => a.name} getKind={(a) => a.kind} empty={<p>none</p>} onReorder={() => {}}>
+          <SortableList
+            label="Library"
+            items={assets}
+            getKey={(a) => a.id}
+            getLabel={(a) => a.name}
+            getKind={(a) => a.kind}
+            empty={<p>none</p>}
+            onReorder={() => {}}
+          >
             {(a) => <span>{a.name}</span>}
           </SortableList>
           {/* Holds a video already, but takes nothing from other lists. */}
-          <SortableList label="Closed" items={vids} getKey={(a) => a.id} getLabel={(a) => a.name} getKind={(a) => a.kind} empty={<p>none</p>} onReorder={() => {}} onInsert={(...a) => inserted.push(a)}>
+          <SortableList
+            label="Closed"
+            items={vids}
+            getKey={(a) => a.id}
+            getLabel={(a) => a.name}
+            getKind={(a) => a.kind}
+            empty={<p>none</p>}
+            onReorder={() => {}}
+            onInsert={(...a) => inserted.push(a)}
+          >
             {(a) => <span>{a.name}</span>}
           </SortableList>
         </div>
@@ -224,10 +262,18 @@ describe("moving between lists", () => {
     renderWithStrata(<TwoLists inserted={[]} />);
     const timeline = screen.getByRole("grid", { name: "Timeline" });
     const types = ["strata-kind/text", "strata-item/id"];
-    const dataTransfer = { types, items: types.map((type) => ({ kind: "string", type })), dropEffect: "none", effectAllowed: "all", getData: () => "" };
+    const dataTransfer = {
+      types,
+      items: types.map((type) => ({ kind: "string", type })),
+      dropEffect: "none",
+      effectAllowed: "all",
+      getData: () => "",
+    };
     fireEvent.dragEnter(timeline, { dataTransfer });
     fireEvent.dragOver(timeline, { dataTransfer, clientX: 5, clientY: 5 });
-    expect(screen.getByRole("status")).toHaveTextContent("The timeline takes video, not text. Add text from the Titles tab.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The timeline takes video, not text. Add text from the Titles tab.",
+    );
     fireEvent.dragLeave(timeline, { dataTransfer });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });

@@ -7,11 +7,29 @@ import { PHOTO_SIZE, groupPhoto, photoFaces } from "./fixtures/faces";
 // other faces in the photo boxed and listed beside it. Choosing one in the list or the picture zooms
 // to it. The crops in the list are `Thumbnail region`, cut by the browser from the same photo.
 
-function FaceInPhoto({ chosen = "f2", zoom = true, src = groupPhoto }: { chosen?: string | null; zoom?: boolean; src?: string | null }) {
+function FaceInPhoto({
+  chosen = "f2",
+  zoom = true,
+  src = groupPhoto,
+}: {
+  chosen?: string | null;
+  zoom?: boolean;
+  src?: string | null;
+}) {
   const state = useBoxes(chosen);
   return (
     <div className="grid max-w-4xl grid-cols-[minmax(0,1fr)_14rem] items-start gap-4">
-      <BoxedPicture label="Photo from the kiln opening" src={src} alt="" missing="Photo not kept" of={PHOTO_SIZE} boxes={photoFaces} state={state} boxesLabel="Faces in this photo" zoom={zoom} />
+      <BoxedPicture
+        label="Photo from the kiln opening"
+        src={src}
+        alt=""
+        missing="Photo not kept"
+        of={PHOTO_SIZE}
+        boxes={photoFaces}
+        state={state}
+        boxesLabel="Faces in this photo"
+        zoom={zoom}
+      />
       <BoxList
         label="Faces in this photo"
         boxes={photoFaces}
@@ -35,7 +53,12 @@ function FaceInPhoto({ chosen = "f2", zoom = true, src = groupPhoto }: { chosen?
   );
 }
 
-const meta = { title: "Data/BoxedPicture", component: FaceInPhoto, parameters: { layout: "padded" }, tags: ["visual-wide"] } satisfies Meta<typeof FaceInPhoto>;
+const meta = {
+  title: "Data/BoxedPicture",
+  component: FaceInPhoto,
+  parameters: { layout: "padded" },
+  tags: ["visual-wide"],
+} satisfies Meta<typeof FaceInPhoto>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

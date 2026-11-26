@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CursorScope, geo, useSharedCursor, type LatLng } from "../../src";
@@ -13,8 +13,14 @@ let restore: () => void;
 beforeEach(() => {
   const w = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
   const h = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
-  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 640 });
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 360 });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 640,
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => 360,
+  });
   restore = () => {
     if (w) Object.defineProperty(HTMLElement.prototype, "clientWidth", w);
     if (h) Object.defineProperty(HTMLElement.prototype, "clientHeight", h);
@@ -22,7 +28,10 @@ beforeEach(() => {
 });
 afterEach(() => restore());
 
-const light = { url: "https://tiles.example.test/light/{z}/{x}/{y}.png", attribution: "© Example tiles" };
+const light = {
+  url: "https://tiles.example.test/light/{z}/{x}/{y}.png",
+  attribution: "© Example tiles",
+};
 const run: MapRoute = {
   id: "run",
   label: "Wednesday run",
@@ -45,8 +54,14 @@ const loop: MapRoute = {
 };
 const routes = [run, loop];
 const paths = (c: HTMLElement) => [...c.querySelectorAll<SVGPathElement>(".leaflet-overlay-pane path")];
-const props = (over: Partial<RouteMapProps> = {}): RouteMapProps => ({ label: "Route map", routes: [run], tiles: { light }, ...over });
-const tileZoom = (c: HTMLElement) => Number(c.querySelector<HTMLImageElement>("img.leaflet-tile")!.src.match(/light\/(\d+)\//)![1]);
+const props = (over: Partial<RouteMapProps> = {}): RouteMapProps => ({
+  label: "Route map",
+  routes: [run],
+  tiles: { light },
+  ...over,
+});
+const tileZoom = (c: HTMLElement) =>
+  Number(c.querySelector<HTMLImageElement>("img.leaflet-tile")!.src.match(/light\/(\d+)\//)![1]);
 const wait = (ms: number) => act(() => new Promise((r) => setTimeout(r, ms)));
 
 describe("markers", () => {
@@ -55,7 +70,8 @@ describe("markers", () => {
     { id: "b", label: "Clip 2", at: { routeId: "run", from: 200, to: 900 }, selected: true },
     { id: "c", label: "Clip 3", at: [51.515, -0.095], highlighted: true },
   ];
-  const withMarkers = (over: Partial<RouteMapProps> = {}) => props({ routes, markers: items, view: { center: [51.507, -0.105], zoom: 13 }, ...over });
+  const withMarkers = (over: Partial<RouteMapProps> = {}) =>
+    props({ routes, markers: items, view: { center: [51.507, -0.105], zoom: 13 }, ...over });
 
   it("are named controls, selected one pressed, the same count the text alternative gives", () => {
     const { container } = renderWithStrata(<RouteMap {...withMarkers()} />);
@@ -115,7 +131,10 @@ describe("markers", () => {
     const iconOf = (name: string) => screen.getByRole("button", { name }).closest<HTMLElement>(".leaflet-marker-icon")!;
     const at = (name: string) => {
       const m = /translate(?:3d)?\(([-\d.]+)px,\s*([-\d.]+)px/.exec(iconOf(name).getAttribute("style") ?? "") ?? [];
-      return [Number(m[1] ?? iconOf(name).style.left.replace("px", "")), Number(m[2] ?? iconOf(name).style.top.replace("px", ""))];
+      return [
+        Number(m[1] ?? iconOf(name).style.left.replace("px", "")),
+        Number(m[2] ?? iconOf(name).style.top.replace("px", "")),
+      ];
     };
     expect(at("Pile 1")).not.toEqual(at("Pile 2"));
   });
@@ -132,13 +151,23 @@ describe("markers", () => {
   });
 
   it("draw only the markers near the view", () => {
-    const many: MapMarker[] = Array.from({ length: 300 }, (_, i) => ({ id: `m${i}`, label: `Item ${i}`, at: [48 + (i % 20) * 0.5, 2 + Math.floor(i / 20) * 0.5] as LatLng }));
+    const many: MapMarker[] = Array.from({ length: 300 }, (_, i) => ({
+      id: `m${i}`,
+      label: `Item ${i}`,
+      at: [48 + (i % 20) * 0.5, 2 + Math.floor(i / 20) * 0.5] as LatLng,
+    }));
     renderWithStrata(<RouteMap {...withMarkers({ markers: [...many, items[0]] })} />);
     expect(screen.getAllByRole("button", { name: /^(Item|Clip)/ })).toHaveLength(1); // Clip 1 only: the rest are far away
   });
 
   it("have a key naming the states that are on the map, or none", () => {
-    const { rerender } = renderWithStrata(<RouteMap {...withMarkers({ markerKey: { marker: "Clip", selected: "Open clip", highlighted: "Newest draft" } })} />);
+    const { rerender } = renderWithStrata(
+      <RouteMap
+        {...withMarkers({
+          markerKey: { marker: "Clip", selected: "Open clip", highlighted: "Newest draft" },
+        })}
+      />,
+    );
     const key = screen.getByText("Open clip").closest("ul")!;
     expect(within(key).getByText("Clip")).toBeInTheDocument();
     expect(within(key).getByText("Newest draft")).toBeInTheDocument();
@@ -184,21 +213,53 @@ describe("the view", () => {
 
   it("does not report moves the app makes through props, unless asked", async () => {
     const seen: MapView[] = [];
-    const { rerender } = renderWithStrata(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20, zoom: 12 })} />);
+    const { rerender } = renderWithStrata(
+      <RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20, zoom: 12 })} />,
+    );
     rerender(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20, zoom: 14 })} />);
-    rerender(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20, zoom: 14, view: { center: [51.51, -0.1], zoom: 15 } })} />);
-    rerender(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20, zoom: 14, follow: "centre", position: [51.505, -0.11] })} />);
+    rerender(
+      <RouteMap
+        {...props({
+          onViewChange: (v) => seen.push(v),
+          settle: 20,
+          zoom: 14,
+          view: { center: [51.51, -0.1], zoom: 15 },
+        })}
+      />,
+    );
+    rerender(
+      <RouteMap
+        {...props({
+          onViewChange: (v) => seen.push(v),
+          settle: 20,
+          zoom: 14,
+          follow: "centre",
+          position: [51.505, -0.11],
+        })}
+      />,
+    );
     await wait(80);
     expect(seen).toHaveLength(0);
     const loud: MapView[] = [];
-    const again = renderWithStrata(<RouteMap {...props({ onViewChange: (v) => loud.push(v), reportAppMoves: true, settle: 20, zoom: 12 })} />);
+    const again = renderWithStrata(
+      <RouteMap
+        {...props({
+          onViewChange: (v) => loud.push(v),
+          reportAppMoves: true,
+          settle: 20,
+          zoom: 12,
+        })}
+      />,
+    );
     await wait(80);
     expect(loud.length).toBeGreaterThan(0);
     again.unmount();
   });
 
   it("shows a given view, and goes to a new one when the app sets it", () => {
-    const { container, rerender } = renderWithStrata(<RouteMap {...props({ view: { center: [51.5, -0.12], zoom: 15 } })} />);
+    const { container, rerender } = renderWithStrata(
+      <RouteMap {...props({ view: { center: [51.5, -0.12], zoom: 15 } })} />,
+    );
     expect(tileZoom(container)).toBe(15);
     rerender(<RouteMap {...props({ view: { center: [51.5, -0.12], zoom: 11 } })} />);
     expect(tileZoom(container)).toBe(11);
@@ -239,7 +300,9 @@ describe("picking a place", () => {
 
   it("picks by pointer with the nearest route, and announces it", () => {
     const onPick = vi.fn();
-    const { container } = renderWithStrata(<RouteMap {...props({ routes, picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />);
+    const { container } = renderWithStrata(
+      <RouteMap {...props({ routes, picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />,
+    );
     // The view is centred on a vertex of both routes, so the centre of the map is on them.
     fireEvent.click(at(container), { clientX: 320, clientY: 180 });
     expect(onPick).toHaveBeenCalledTimes(1);
@@ -248,12 +311,22 @@ describe("picking a place", () => {
     expect(latlng[1]).toBeCloseTo(-0.11, 3);
     expect(info.nearest.distanceM).toBeLessThan(15);
     expect(["run", "loop"]).toContain(info.nearest.routeId);
-    expect(container.querySelector("p[role=status]")).toHaveTextContent(/Picked 51\.50\d+, -0\.1\d+\. Nearest: (Wednesday run|Park loop), [\d.]+\s[mk]m? along, [\d.]+\sm from the route\./);
+    expect(container.querySelector("p[role=status]")).toHaveTextContent(
+      /Picked 51\.50\d+, -0\.1\d+\. Nearest: (Wednesday run|Park loop), [\d.]+\s[mk]m? along, [\d.]+\sm from the route\./,
+    );
   });
 
   it("has a visible mode: a crosshair cursor, the banner, and Escape asks to cancel", () => {
     const onPickCancel = vi.fn();
-    const { container } = renderWithStrata(<RouteMap {...props({ picking: true, onPickCancel, pickBanner: <p>Click the map to set the point</p> })} />);
+    const { container } = renderWithStrata(
+      <RouteMap
+        {...props({
+          picking: true,
+          onPickCancel,
+          pickBanner: <p>Click the map to set the point</p>,
+        })}
+      />,
+    );
     expect(container.querySelector(".strata-map-picking")).not.toBeNull();
     expect(screen.getByText("Click the map to set the point")).toBeInTheDocument();
     fireEvent.keyDown(at(container), { key: "Escape" });
@@ -262,7 +335,9 @@ describe("picking a place", () => {
 
   it("picks by keyboard: arrows move a crosshair, Enter chooses where it is", () => {
     const onPick = vi.fn();
-    const { container } = renderWithStrata(<RouteMap {...props({ picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />);
+    const { container } = renderWithStrata(
+      <RouteMap {...props({ picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />,
+    );
     const map = at(container);
     fireEvent.keyDown(map, { key: "Enter" });
     const [centre] = onPick.mock.calls[0];
@@ -320,7 +395,9 @@ describe("the shared cursor on the map", () => {
         <Writer at={total / 2} />
       </CursorScope>,
     );
-    const rings = paths(container).filter((p) => p.getAttribute("fill") === "none" || p.getAttribute("fill-opacity") === "0");
+    const rings = paths(container).filter(
+      (p) => p.getAttribute("fill") === "none" || p.getAttribute("fill-opacity") === "0",
+    );
     expect(rings.length).toBeGreaterThan(0);
   });
 
@@ -356,7 +433,13 @@ describe("the shared cursor on the map", () => {
     const reads: (number | null)[] = [];
     const { container } = renderWithStrata(
       <CursorScope>
-        <RouteMap {...props({ routes: [run], cursor: true, view: { center: run.points[1] as LatLng, zoom: 15 } })} />
+        <RouteMap
+          {...props({
+            routes: [run],
+            cursor: true,
+            view: { center: run.points[1] as LatLng, zoom: 15 },
+          })}
+        />
         <Reader onRead={(a) => reads.push(a)} />
       </CursorScope>,
     );
@@ -376,11 +459,20 @@ describe("the shared cursor on the map", () => {
     const reads: (number | null)[] = [];
     const lone = renderWithStrata(
       <CursorScope>
-        <RouteMap {...props({ routes: [run], cursor: true, view: { center: run.points[1] as LatLng, zoom: 15 } })} />
+        <RouteMap
+          {...props({
+            routes: [run],
+            cursor: true,
+            view: { center: run.points[1] as LatLng, zoom: 15 },
+          })}
+        />
       </CursorScope>,
     );
     const before = paths(lone.container).length;
-    fireEvent.mouseMove(lone.container.querySelector<HTMLElement>(".leaflet-container")!, { clientX: 320, clientY: 180 });
+    fireEvent.mouseMove(lone.container.querySelector<HTMLElement>(".leaflet-container")!, {
+      clientX: 320,
+      clientY: 180,
+    });
     expect(paths(lone.container)).toHaveLength(before); // the map's own pointer is not drawn back at it
     void reads;
   });

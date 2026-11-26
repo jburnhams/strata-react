@@ -26,7 +26,10 @@ export type SearchParam<T extends string> = readonly [T, (next: T | null) => voi
  * One value held in a URL search parameter (React Router): `const [mode, setMode] = useSearchParam("mode", { default: "all", parse: isMode })`.
  * Reads and validates it, drops the param when set to the default or `null`, keeps the others, and replaces the history entry by default.
  */
-export function useSearchParam<T extends string = string>(key: string, { default: fallback, parse, replace = true }: SearchParamOptions<T>): SearchParam<T> {
+export function useSearchParam<T extends string = string>(
+  key: string,
+  { default: fallback, parse, replace = true }: SearchParamOptions<T>,
+): SearchParam<T> {
   const [params, setParams] = useSearchParams();
   const raw = params.get(key);
   let value = fallback;

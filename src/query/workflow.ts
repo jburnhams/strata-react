@@ -17,12 +17,18 @@ export function isWorkflowRunning(run: WorkflowRunLike, finished: ReadonlySet<st
 }
 
 /** Options for `useWorkflowRun`: `useJob`'s, with `finished` in place of `isRunning`. */
-export type WorkflowRunOptions<T extends WorkflowRunLike, K extends QueryKey = QueryKey> = Omit<JobOptions<T, K>, "isRunning"> & {
+export type WorkflowRunOptions<T extends WorkflowRunLike, K extends QueryKey = QueryKey> = Omit<
+  JobOptions<T, K>,
+  "isRunning"
+> & {
   /** The task states that mean finished: the generated `FINISHED`. */
   finished: ReadonlySet<string> | readonly string[];
 };
 
 /** A subject's `WorkflowRun`: polled while its job runs, its `invalidates` read again once when it ends. */
-export function useWorkflowRun<T extends WorkflowRunLike, K extends QueryKey = QueryKey>({ finished, ...options }: WorkflowRunOptions<T, K>): Job<T> {
+export function useWorkflowRun<T extends WorkflowRunLike, K extends QueryKey = QueryKey>({
+  finished,
+  ...options
+}: WorkflowRunOptions<T, K>): Job<T> {
   return useJob<T, K>({ ...options, isRunning: (run) => isWorkflowRunning(run, finished) } as JobOptions<T, K>);
 }

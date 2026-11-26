@@ -36,9 +36,12 @@ export class MicrophoneError extends Error {}
 export function explainMicrophoneError(e: unknown): MicrophoneError {
   const name = e instanceof DOMException ? e.name : "";
   if (name === "NotAllowedError")
-    return new MicrophoneError("The browser was not allowed to use the microphone. Allow it from the address bar, then try again.");
+    return new MicrophoneError(
+      "The browser was not allowed to use the microphone. Allow it from the address bar, then try again.",
+    );
   if (name === "NotFoundError") return new MicrophoneError("No microphone was found. Plug one in, then try again.");
-  if (name === "NotReadableError") return new MicrophoneError("The microphone is in use by another program. Close it, then try again.");
+  if (name === "NotReadableError")
+    return new MicrophoneError("The microphone is in use by another program. Close it, then try again.");
   // DOMException is checked apart from Error: it is an Error in browsers but not in every runtime (jsdom).
   const said = e instanceof DOMException || e instanceof Error ? e.message : String(e);
   return new MicrophoneError(`The microphone could not be opened (${said}).`);

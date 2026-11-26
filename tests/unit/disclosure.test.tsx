@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "vite-plus/test";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
@@ -87,7 +87,11 @@ describe("Disclosure", () => {
   });
 
   it("keeps actions outside the summary's button", () => {
-    renderWithStrata(<Disclosure summary="Firing 412" actions={<RowAction label="Archive" subject="firing 412" />}>body</Disclosure>);
+    renderWithStrata(
+      <Disclosure summary="Firing 412" actions={<RowAction label="Archive" subject="firing 412" />}>
+        body
+      </Disclosure>,
+    );
     const toggle = screen.getByRole("button", { name: "Firing 412" });
     const action = screen.getByRole("button", { name: "Archive firing 412" });
     expect(toggle).not.toContainElement(action);
@@ -120,7 +124,12 @@ describe("useExpanded", () => {
     return (
       <>
         {["a", "b", "c"].map((k) => (
-          <Disclosure key={k} summary={`Item ${k}`} open={expanded.isOpen(k)} onOpenChange={(o) => expanded.setOpen(k, o)}>
+          <Disclosure
+            key={k}
+            summary={`Item ${k}`}
+            open={expanded.isOpen(k)}
+            onOpenChange={(o) => expanded.setOpen(k, o)}
+          >
             Body {k}
           </Disclosure>
         ))}
@@ -222,7 +231,10 @@ describe("DataTable expansion", () => {
 
   it("opens the rows the URL names", () => {
     renderWithStrata(<Table route="open" />, { route: "/?open=b-2041" });
-    expect(screen.getByRole("button", { name: "Details of Priya Natarajan's booking" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Details of Priya Natarajan's booking" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.getByText("Out Today, about 14:50")).toBeInTheDocument();
   });
 
@@ -236,7 +248,11 @@ describe("DataTable expansion", () => {
           columns={columns}
           rows={bookings}
           rowKey={(b) => b.id}
-          expansion={{ ...expanded, rowLabel: (b) => `Details of ${b.member}'s booking`, detail: (b) => <p>Detail {b.member}</p> }}
+          expansion={{
+            ...expanded,
+            rowLabel: (b) => `Details of ${b.member}'s booking`,
+            detail: (b) => <p>Detail {b.member}</p>,
+          }}
         />
       );
     }
@@ -267,7 +283,10 @@ describe("DataTable expansion", () => {
     await user.click(toggles()[0]);
     await user.click(toggles()[0]);
     // Every rendered line is a row again, each with its own toggle, and the count is back.
-    expect(screen.getByRole("grid", { name: "Work" })).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
+    expect(screen.getByRole("grid", { name: "Work" })).toHaveAttribute(
+      "aria-rowcount",
+      String(manyBookings.length + 1),
+    );
     expect(screen.queryByText(/^Out /)).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import * as React from "react";
 import { followAim, useSettledStatus, useViewPointers, useWheelZoom } from "../../src";
@@ -14,12 +14,17 @@ function Box({ log, threshold }: { log: string[]; threshold?: number }) {
     onTap: () => void log.push("tap"),
   });
   const ref = React.useRef<HTMLDivElement>(null);
-  useWheelZoom(ref, (factor) => void log.push(`zoom ${factor > 1 ? "out" : "in"}`), { when: (e) => e.ctrlKey });
+  useWheelZoom(ref, (factor) => void log.push(`zoom ${factor > 1 ? "out" : "in"}`), {
+    when: (e) => e.ctrlKey,
+  });
   return <div ref={ref} tabIndex={0} aria-label="box" {...pointers} />;
 }
-const down = (el: Element, id: number, x: number, y: number, extra = {}) => fireEvent.pointerDown(el, { pointerId: id, clientX: x, clientY: y, button: 0, ...extra });
-const move = (el: Element, id: number, x: number, y: number) => fireEvent.pointerMove(el, { pointerId: id, clientX: x, clientY: y });
-const up = (el: Element, id: number, x = 0, y = 0) => fireEvent.pointerUp(el, { pointerId: id, clientX: x, clientY: y });
+const down = (el: Element, id: number, x: number, y: number, extra = {}) =>
+  fireEvent.pointerDown(el, { pointerId: id, clientX: x, clientY: y, button: 0, ...extra });
+const move = (el: Element, id: number, x: number, y: number) =>
+  fireEvent.pointerMove(el, { pointerId: id, clientX: x, clientY: y });
+const up = (el: Element, id: number, x = 0, y = 0) =>
+  fireEvent.pointerUp(el, { pointerId: id, clientX: x, clientY: y });
 
 describe("useViewPointers", () => {
   it("is a tap when the press did not move past the threshold, and a drag when it did", () => {
@@ -93,7 +98,9 @@ describe("useWheelZoom", () => {
 describe("useSettledStatus", () => {
   it("says nothing on first render, then the words once they have been still", () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(({ words }) => useSettledStatus(words, 600), { initialProps: { words: "A" } });
+    const { result, rerender } = renderHook(({ words }) => useSettledStatus(words, 600), {
+      initialProps: { words: "A" },
+    });
     expect(result.current).toBe("");
     rerender({ words: "B" });
     act(() => void vi.advanceTimersByTime(300));
@@ -109,6 +116,9 @@ describe("useSettledStatus", () => {
 describe("followAim", () => {
   it("adds the person's look to the heading and keeps the result in range", () => {
     expect(followAim({ heading: 350, look: { yaw: 20 } })).toEqual({ yaw: 10, pitch: 0 });
-    expect(followAim({ heading: 0, pitch: 80, look: { pitch: 30 } })).toEqual({ yaw: 0, pitch: 89 });
+    expect(followAim({ heading: 0, pitch: 80, look: { pitch: 30 } })).toEqual({
+      yaw: 0,
+      pitch: 89,
+    });
   });
 });

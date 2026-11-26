@@ -1,16 +1,16 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.join(__dirname, '..');
+const projectRoot = path.join(__dirname, "..");
 
-const targets = ['dist', 'storybook-static', 'site', 'coverage', 'tests/visual/output', 'examples/kiln-app/dist'];
+const targets = ["dist", "storybook-static", "site", "coverage", "tests/visual/output", "examples/kiln-app/dist"];
 
 for (const target of targets) {
   const fullPath = path.join(projectRoot, target);
   fs.rmSync(fullPath, { recursive: true, force: true });
 }
 
-console.log('Cleaned build artifacts.');
+console.log("Cleaned build artifacts.");

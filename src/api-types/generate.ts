@@ -36,7 +36,8 @@ export async function loadSchema(source: string, fetcher: typeof fetch = fetch):
   } catch {
     throw new Error(`${source} is not JSON. Give the OpenAPI document (/api/openapi.json), not the docs page.`);
   }
-  if (!parsed || typeof parsed !== "object" || !("openapi" in parsed)) throw new Error(`${source} is JSON but not an OpenAPI document (no "openapi" field).`);
+  if (!parsed || typeof parsed !== "object" || !("openapi" in parsed))
+    throw new Error(`${source} is JSON but not an OpenAPI document (no "openapi" field).`);
   return parsed as OpenApiDocument;
 }
 
@@ -57,12 +58,17 @@ function baseOf(source: string): URL {
 }
 
 /** The message for a failed `import("openapi-typescript")`: absent, or present but unable to load (issue #293: a TypeScript 7 app was told to install what it had). */
-export function explainImportFailure(cause: unknown, typescriptMajor: number | undefined = installedTypescriptMajor()): string {
+export function explainImportFailure(
+  cause: unknown,
+  typescriptMajor: number | undefined = installedTypescriptMajor(),
+): string {
   const text = cause instanceof Error ? cause.message : String(cause);
   const code = (cause as { code?: string } | null)?.code;
-  const notFound = (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") && /Cannot find (package|module) 'openapi-typescript'/.test(text);
+  const notFound =
+    (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") &&
+    /Cannot find (package|module) 'openapi-typescript'/.test(text);
   if (notFound) {
-    return "strata-api-types needs openapi-typescript: npm install --save-dev openapi-typescript (see \"API types from the server\" in the README for the TypeScript it wants).";
+    return 'strata-api-types needs openapi-typescript: npm install --save-dev openapi-typescript (see "API types from the server" in the README for the TypeScript it wants).';
   }
   const hint =
     typescriptMajor !== undefined && typescriptMajor >= 7

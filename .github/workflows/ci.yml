@@ -30,6 +30,8 @@ jobs:
       # The integration suite runs strata-visual on a throwaway app, so it needs the browser too.
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
+      # Oxlint (warnings fail) and Oxfmt, both through Vite+ (`vp check`).
+      - run: npm run check
       - run: npm run coverage
       - run: npm run test:integration
 

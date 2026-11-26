@@ -13,7 +13,11 @@ export function useFolders(path: string | null) {
   });
 }
 
-export function FolderChooser({ start = null, onChoose, ...rest }: { start?: string | null; onChoose?: (path: string) => void } & Partial<FolderPickerProps>) {
+export function FolderChooser({
+  start = null,
+  onChoose,
+  ...rest
+}: { start?: string | null; onChoose?: (path: string) => void } & Partial<FolderPickerProps>) {
   const client = useQueryClient();
   const [value, setValue] = React.useState<string | null>(start);
   const expanded = useExpanded({ initial: start ? [start] : [] });
@@ -27,7 +31,11 @@ export function FolderChooser({ start = null, onChoose, ...rest }: { start?: str
       expanded={expanded}
       recent={["/home/ada/Projects/kiln-room", "/media/backup"]}
       onCreate={async (parent, name) => {
-        await fetchJson("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ parent, name }) });
+        await fetchJson("/api/folders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ parent, name }),
+        });
         await client.invalidateQueries({ queryKey: ["folders", parent] });
       }}
       {...rest}

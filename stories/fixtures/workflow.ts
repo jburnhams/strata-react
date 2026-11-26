@@ -14,7 +14,12 @@ export type Task = Schema<"Task">;
 export const workflowNow = new Date("2026-11-24T10:00:00Z");
 const at = (minutes: number) => new Date(workflowNow.getTime() - minutes * 60_000).toISOString();
 
-const event = (stage: string, status: string, minutes: number, extra: Partial<Schema<"StageEvent">> = {}): Schema<"StageEvent"> => ({
+const event = (
+  stage: string,
+  status: string,
+  minutes: number,
+  extra: Partial<Schema<"StageEvent">> = {},
+): Schema<"StageEvent"> => ({
   stage,
   status,
   at: at(minutes),
@@ -26,7 +31,13 @@ const event = (stage: string, status: string, minutes: number, extra: Partial<Sc
   ...extra,
 });
 
-const stage = (name: string, title: string, state: StageRun["state"], last: Schema<"StageEvent"> | null = null, gate = false): StageRun => ({
+const stage = (
+  name: string,
+  title: string,
+  state: StageRun["state"],
+  last: Schema<"StageEvent"> | null = null,
+  gate = false,
+): StageRun => ({
   name,
   title,
   gate,
@@ -98,7 +109,12 @@ export const firingRuns = {
       stage("load", "Load the kiln", "done", event("load", "done", 11, { elapsed_s: 42 })),
       stage("fire", "Fire to cone 6", "done", event("fire", "done", 9, { elapsed_s: 545 })),
       stage("inspect", "Inspect the pieces", "done", event("inspect", "done", 5, { by: "Mira" }), true),
-      stage("photograph", "Photograph the pieces", "failed", event("photograph", "failed", 1, { error: "OSError: the camera on shelf 2 did not answer" })),
+      stage(
+        "photograph",
+        "Photograph the pieces",
+        "failed",
+        event("photograph", "failed", 1, { error: "OSError: the camera on shelf 2 did not answer" }),
+      ),
     ],
     firingJob("failed", { error: "OSError: the camera on shelf 2 did not answer" }),
   ),
@@ -116,9 +132,21 @@ export const firingRuns = {
 
 /** The jobs page: one of each state, newest first. */
 export const studioJobs: Task[] = [
-  firingJob("running", { id: 45, kind: "glaze-test", domain: "glaze:celadon", created_at: at(1), progress: { done: 3, total: 12, text: "Tile 3 of 12", stage: null, at: at(0) } }),
+  firingJob("running", {
+    id: 45,
+    kind: "glaze-test",
+    domain: "glaze:celadon",
+    created_at: at(1),
+    progress: { done: 3, total: 12, text: "Tile 3 of 12", stage: null, at: at(0) },
+  }),
   firingJob("queued", { id: 44, kind: "photograph", domain: "firing:f-0413", created_at: at(3) }),
-  firingJob("failed", { id: 43, kind: "photograph", domain: "firing:f-0412", created_at: at(20), error: "OSError: the camera on shelf 2 did not answer" }),
+  firingJob("failed", {
+    id: 43,
+    kind: "photograph",
+    domain: "firing:f-0412",
+    created_at: at(20),
+    error: "OSError: the camera on shelf 2 did not answer",
+  }),
   firingJob("cancelled", { id: 42, kind: "glaze-test", domain: "glaze:tenmoku", created_at: at(65) }),
   firingJob("done", { id: 41, created_at: at(180) }),
 ];

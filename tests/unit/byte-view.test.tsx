@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ByteView } from "../../src";
@@ -101,7 +101,14 @@ describe("ByteView", () => {
   });
 
   it("names the highlight the cursor is in, in words", async () => {
-    renderWithStrata(<ByteView bytes={bytes(64)} label="file" highlight={[{ start: 4, end: 8, tone: "info", label: "version field" }]} defaultSelection={{ start: 5, end: 6 }} />);
+    renderWithStrata(
+      <ByteView
+        bytes={bytes(64)}
+        label="file"
+        highlight={[{ start: 4, end: 8, tone: "info", label: "version field" }]}
+        defaultSelection={{ start: 5, end: 6 }}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("in version field");
   });
 
@@ -113,7 +120,9 @@ describe("ByteView", () => {
 
 describe("ByteView edge cases", () => {
   it("survives a shorter buffer after a byte past its end was chosen", async () => {
-    const { rerender } = renderWithStrata(<ByteView bytes={bytes(512)} label="file" defaultSelection={{ start: 400, end: 401 }} />);
+    const { rerender } = renderWithStrata(
+      <ByteView bytes={bytes(512)} label="file" defaultSelection={{ start: 400, end: 401 }} />,
+    );
     rerender(<ByteView bytes={bytes(16)} label="file" />);
     expect(screen.getByRole("status")).toHaveTextContent("Byte 0xf of 16");
     rerender(<ByteView bytes={new Uint8Array()} label="file" />);
@@ -122,7 +131,9 @@ describe("ByteView edge cases", () => {
 
   it("reaches the last byte of a file too big for one element (Ctrl+End)", async () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(50 * 1024 * 1024)} label="big" height={200} onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView bytes={bytes(50 * 1024 * 1024)} label="big" height={200} onSelectionChange={onSelectionChange} />,
+    );
     await userEvent.tab();
     await userEvent.keyboard("{Control>}{End}{/Control}");
     const last = 50 * 1024 * 1024 - 1;

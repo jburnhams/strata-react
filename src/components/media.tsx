@@ -1,6 +1,18 @@
 import type { SpanTone } from "./line-chart";
 import * as React from "react";
-import { Check, ChevronDown, Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward, Volume2, VolumeX } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Square,
+  StepBack,
+  StepForward,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { controlHeight } from "../lib/control";
 import { format } from "../lib/format";
 import { overlaySurface } from "../lib/overlay";
@@ -12,7 +24,14 @@ import { Toolbar } from "./toolbar";
 import { Tooltip } from "./tooltip";
 import type { MediaMark } from "./media-skip";
 import { Slider } from "./value-controls";
-import { Button as AriaButton, ListBox, ListBoxItem, Popover as AriaPopover, Select as AriaSelect, SelectValue } from "react-aria-components";
+import {
+  Button as AriaButton,
+  ListBox,
+  ListBoxItem,
+  Popover as AriaPopover,
+  Select as AriaSelect,
+  SelectValue,
+} from "react-aria-components";
 import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
 import { useSliderState } from "react-stately";
 
@@ -52,17 +71,32 @@ type TimeProps = { precision?: Precision; fps?: number };
 const timecode = (t: number, { precision, fps }: TimeProps) => format.timecode(t, { precision, fps });
 
 /** The current and total time, in `tabular-nums`, as `<time>` elements. */
-export function TimeReadout({ time, duration, precision = "seconds", fps = 30, className }: { time: number; duration: number | null } & TimeProps & { className?: string }) {
+export function TimeReadout({
+  time,
+  duration,
+  precision = "seconds",
+  fps = 30,
+  className,
+}: { time: number; duration: number | null } & TimeProps & { className?: string }) {
   const total = duration === null ? null : timecode(duration, { precision, fps });
   return (
     <span className={cn("inline-flex items-baseline gap-1 type-body-sm tabular-nums", className)}>
-      <time dateTime={`PT${Math.floor(time)}S`} aria-label={`Position ${timecode(time, { precision, fps })}`} className="text-foreground" style={total ? { minWidth: `${total.length}ch` } : undefined}>
+      <time
+        dateTime={`PT${Math.floor(time)}S`}
+        aria-label={`Position ${timecode(time, { precision, fps })}`}
+        className="text-foreground"
+        style={total ? { minWidth: `${total.length}ch` } : undefined}
+      >
         {timecode(time, { precision, fps })}
       </time>
       <span aria-hidden className="text-muted-foreground">
         /
       </span>
-      <time dateTime={duration === null ? undefined : `PT${Math.floor(duration)}S`} aria-label={`Length ${total ?? format.missing}`} className="text-muted-foreground">
+      <time
+        dateTime={duration === null ? undefined : `PT${Math.floor(duration)}S`}
+        aria-label={`Length ${total ?? format.missing}`}
+        className="text-muted-foreground"
+      >
         {total ?? format.missing}
       </time>
     </span>
@@ -70,7 +104,13 @@ export function TimeReadout({ time, duration, precision = "seconds", fps = 30, c
 }
 
 // A stretch is coloured by a status role the product already sets (the same tones as a chart's spans), never a fixed colour.
-const SPAN_TONE: Record<SpanTone, string> = { info: "bg-info", success: "bg-success", warning: "bg-warning", danger: "bg-danger", neutral: "bg-neutral-8" };
+const SPAN_TONE: Record<SpanTone, string> = {
+  info: "bg-info",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  neutral: "bg-neutral-8",
+};
 
 /** A stretch of the bar, drawn as a range: an intro, a recap, an advert break. */
 export type SeekBarSpan = {
@@ -90,7 +130,12 @@ export type SeekBarSpan = {
 const COLOUR_NAME = /^--[\w-]+$/;
 
 /** One stretch drawn as a range of a bar of `duration` seconds, named with its times. Shared by the seek bar and the strip under the browser's own controls. */
-function SpanRange({ span, duration, thin, ...time }: { span: SeekBarSpan; duration: number; thin?: boolean } & TimeProps) {
+function SpanRange({
+  span,
+  duration,
+  thin,
+  ...time
+}: { span: SeekBarSpan; duration: number; thin?: boolean } & TimeProps) {
   const name = `${span.label}, ${timecode(span.start, time)} to ${timecode(span.end, time)}`;
   const colour = span.colour && COLOUR_NAME.test(span.colour) ? span.colour : null;
   return (
@@ -100,8 +145,16 @@ function SpanRange({ span, duration, thin, ...time }: { span: SeekBarSpan; durat
       title={name}
       data-span=""
       data-kind={span.kind}
-      className={cn("absolute min-w-1 rounded-pill opacity-70", thin ? "h-1" : "h-1.5", !colour && SPAN_TONE[span.tone ?? "info"])}
-      style={{ left: `${(span.start / duration) * 100}%`, width: `${((span.end - span.start) / duration) * 100}%`, ...(colour ? { backgroundColor: `var(${colour})` } : undefined) }}
+      className={cn(
+        "absolute min-w-1 rounded-pill opacity-70",
+        thin ? "h-1" : "h-1.5",
+        !colour && SPAN_TONE[span.tone ?? "info"],
+      )}
+      style={{
+        left: `${(span.start / duration) * 100}%`,
+        width: `${((span.end - span.start) / duration) * 100}%`,
+        ...(colour ? { backgroundColor: `var(${colour})` } : undefined),
+      }}
     />
   );
 }
@@ -110,13 +163,27 @@ function SpanRange({ span, duration, thin, ...time }: { span: SeekBarSpan; durat
  * The marked stretches as a thin strip, for under a picture played with the browser's own controls, whose seek bar cannot draw them
  * (strata-react issue #270): the same ranges, names and colours as `SeekBar spans`, not a control. Draws nothing until `duration` is known.
  */
-export function SpanStrip({ spans, duration, label = "Marked parts", precision = "seconds", fps = 30, className }: { spans: readonly SeekBarSpan[]; duration: number | null; label?: string; className?: string } & TimeProps) {
+export function SpanStrip({
+  spans,
+  duration,
+  label = "Marked parts",
+  precision = "seconds",
+  fps = 30,
+  className,
+}: { spans: readonly SeekBarSpan[]; duration: number | null; label?: string; className?: string } & TimeProps) {
   const drawn = duration ? drawableSpans(spans, duration) : [];
   if (!duration || !drawn.length) return null;
   return (
     <div role="group" aria-label={label} className={cn("relative h-1 w-full rounded-pill bg-muted", className)}>
       {drawn.map((s) => (
-        <SpanRange key={`${s.start}-${s.end}-${s.label}`} span={s} duration={duration} precision={precision} fps={fps} thin />
+        <SpanRange
+          key={`${s.start}-${s.end}-${s.label}`}
+          span={s}
+          duration={duration}
+          precision={precision}
+          fps={fps}
+          thin
+        />
       ))}
     </div>
   );
@@ -156,7 +223,23 @@ export type SeekBarProps = TimeProps & {
 };
 
 /** A seek bar: dragged, clicked and moved by keys (arrows `step`, Page keys `bigStep`, Home and End), with its time as the accessible value. */
-export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [], onMarkPress, buffered, step = 5, bigStep = 30, label = "Seek", precision = "seconds", fps = 30, disabled: off, cursor: cursorProp, className }: SeekBarProps) {
+export function SeekBar({
+  time,
+  duration: known,
+  onSeek,
+  marks = [],
+  spans = [],
+  onMarkPress,
+  buffered,
+  step = 5,
+  bigStep = 30,
+  label = "Seek",
+  precision = "seconds",
+  fps = 30,
+  disabled: off,
+  cursor: cursorProp,
+  className,
+}: SeekBarProps) {
   const duration = known && Number.isFinite(known) && known > 0 ? known : 0;
   const disabled = off || duration === 0;
   const track = React.useRef<HTMLDivElement>(null);
@@ -183,23 +266,48 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
     },
     [setPlayback, setPointer],
   );
-  const otherTime = joined && shared!.other !== null && duration > 0 ? (mapping?.fromCursor ?? ((c: number) => c))(shared!.other) : null;
+  const otherTime =
+    joined && shared!.other !== null && duration > 0
+      ? (mapping?.fromCursor ?? ((c: number) => c))(shared!.other)
+      : null;
   // React Aria's state with a formatter that says "1:23" (it only needs `format`, `formatRange` and
   // `resolvedOptions`, which is all `useSliderState` calls) and a fine step, so a drag lands on any
   // moment and not on every 5 s.
   const timeText = React.useMemo(() => {
     const say = (t: number) => timecode(t, { precision, fps });
-    return { format: say, formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`, resolvedOptions: () => ({ locale: "en-US" }) } as unknown as Intl.NumberFormat;
+    return {
+      format: say,
+      formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`,
+      resolvedOptions: () => ({ locale: "en-US" }),
+    } as unknown as Intl.NumberFormat;
   }, [precision, fps]);
   const fine = precision === "frames" ? 1 / fps : precision === "ms" ? 0.001 : 0.01;
-  const state = useSliderState({ minValue: 0, maxValue: Math.max(duration, fine), step: fine, value: [clamp(time, 0, duration)], onChange: ([t]) => seekTo(t), numberFormatter: timeText, isDisabled: disabled });
+  const state = useSliderState({
+    minValue: 0,
+    maxValue: Math.max(duration, fine),
+    step: fine,
+    value: [clamp(time, 0, duration)],
+    onChange: ([t]) => seekTo(t),
+    numberFormatter: timeText,
+    isDisabled: disabled,
+  });
   const { groupProps, trackProps } = useSlider({ "aria-label": label, isDisabled: disabled }, state, track);
-  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label, isDisabled: disabled }, state);
+  const { thumbProps, inputProps } = useSliderThumb(
+    { index: 0, trackRef: track, inputRef: input, "aria-label": label, isDisabled: disabled },
+    state,
+  );
   const { focusProps, isFocusVisible } = useFocusRing();
   // The keys are ours, because the hooks step by `state.step` and this one has to be fine for the
   // drag: arrows move `step` seconds, Page keys `bigStep`, Home and End the ends. Captured so the
   // hook's own arrow handling (one fine step) does not also run.
-  const keys: Record<string, number> = { ArrowLeft: -step, ArrowDown: -step, ArrowRight: step, ArrowUp: step, PageDown: -bigStep, PageUp: bigStep };
+  const keys: Record<string, number> = {
+    ArrowLeft: -step,
+    ArrowDown: -step,
+    ArrowRight: step,
+    ArrowUp: step,
+    PageDown: -bigStep,
+    PageUp: bigStep,
+  };
   const onKeyDownCapture = (e: React.KeyboardEvent) => {
     if (disabled) return;
     if (e.key in keys) seekTo(time + keys[e.key]);
@@ -210,7 +318,14 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
     e.stopPropagation();
   };
   return (
-    <div {...groupProps} className={cn("relative flex h-(--control-h) min-w-0 flex-1 items-center", disabled && "cursor-not-allowed opacity-50", className)}>
+    <div
+      {...groupProps}
+      className={cn(
+        "relative flex h-(--control-h) min-w-0 flex-1 items-center",
+        disabled && "cursor-not-allowed opacity-50",
+        className,
+      )}
+    >
       <div
         {...mergeProps(trackProps, {
           onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
@@ -221,40 +336,96 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
           onPointerLeave: () => shared?.setPointer(null),
         })}
         ref={track}
-        className={cn("relative flex h-full w-full cursor-pointer touch-none items-center", disabled && "cursor-not-allowed")}
+        className={cn(
+          "relative flex h-full w-full cursor-pointer touch-none items-center",
+          disabled && "cursor-not-allowed",
+        )}
       >
         <span aria-hidden className="absolute inset-x-0 h-1.5 rounded-pill bg-muted" />
-        {buffered !== undefined && duration > 0 && <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-neutral-4" style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }} />}
-        <span aria-hidden className="absolute left-0 h-1.5 rounded-pill bg-primary" style={{ width: `${frac * 100}%` }} />
+        {buffered !== undefined && duration > 0 && (
+          <span
+            aria-hidden
+            className="absolute left-0 h-1.5 rounded-pill bg-neutral-4"
+            style={{ width: `${clamp(buffered / duration, 0, 1) * 100}%` }}
+          />
+        )}
+        <span
+          aria-hidden
+          className="absolute left-0 h-1.5 rounded-pill bg-primary"
+          style={{ width: `${frac * 100}%` }}
+        />
         {duration > 0 &&
-          drawableSpans(spans, duration).map((s) => <SpanRange key={`${s.start}-${s.end}-${s.label}`} span={s} duration={duration} precision={precision} fps={fps} />)}
-        {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
+          drawableSpans(spans, duration).map((s) => (
+            <SpanRange
+              key={`${s.start}-${s.end}-${s.label}`}
+              span={s}
+              duration={duration}
+              precision={precision}
+              fps={fps}
+            />
+          ))}
+        {otherTime !== null && otherTime >= 0 && otherTime <= duration && (
+          <span
+            aria-hidden
+            data-cursor=""
+            className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60"
+            style={{ left: `${(otherTime / duration) * 100}%` }}
+          />
+        )}
         {duration > 0 &&
           // A mark past the end (a chapter list longer than the file that loaded) would sit thousands of widths to the right and widen the page.
-          marks.filter((m) => m.time >= 0 && m.time <= duration).map((m) => {
-            const at = timecode(m.time, { precision, fps });
-            const scene = m.kind === "scene";
-            // React Aria's press stops the pointer reaching the track, so pressing a mark does not also start a drag. Out of the tab
-            // order: the bar is one stop, and the player's skip buttons step through the marks from the keyboard.
-            return (
-              <Tooltip key={`${m.time}-${m.kind ?? "chapter"}-${m.label}`} label={m.label} hint={<span className="tabular-nums">{at}</span>} delay={150}>
-                <AriaButton
-                  excludeFromTabOrder
-                  isDisabled={disabled}
-                  aria-label={`${m.label}, ${at}`}
-                  data-kind={m.kind ?? "chapter"}
-                  onPress={() => (onMarkPress ? onMarkPress(m) : seekTo(m.time))}
-                  className={cn("group/mark absolute inset-y-0 flex -translate-x-1/2 cursor-pointer items-center justify-center", scene ? "w-2" : "z-10 w-3")}
-                  style={{ left: `${(m.time / duration) * 100}%` }}
+          marks
+            .filter((m) => m.time >= 0 && m.time <= duration)
+            .map((m) => {
+              const at = timecode(m.time, { precision, fps });
+              const scene = m.kind === "scene";
+              // React Aria's press stops the pointer reaching the track, so pressing a mark does not also start a drag. Out of the tab
+              // order: the bar is one stop, and the player's skip buttons step through the marks from the keyboard.
+              return (
+                <Tooltip
+                  key={`${m.time}-${m.kind ?? "chapter"}-${m.label}`}
+                  label={m.label}
+                  hint={<span className="tabular-nums">{at}</span>}
+                  delay={150}
                 >
-                  <span aria-hidden className={cn("rounded-pill transition-state group-hover/mark:bg-primary", scene ? "h-2 w-0.5 bg-foreground/50" : "h-3.5 w-1 bg-foreground")} />
-                </AriaButton>
-              </Tooltip>
-            );
-          })}
-        <div {...thumbProps} className={cn("absolute top-1/2 z-20 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: `${frac * 100}%` }}>
+                  <AriaButton
+                    excludeFromTabOrder
+                    isDisabled={disabled}
+                    aria-label={`${m.label}, ${at}`}
+                    data-kind={m.kind ?? "chapter"}
+                    onPress={() => (onMarkPress ? onMarkPress(m) : seekTo(m.time))}
+                    className={cn(
+                      "group/mark absolute inset-y-0 flex -translate-x-1/2 cursor-pointer items-center justify-center",
+                      scene ? "w-2" : "z-10 w-3",
+                    )}
+                    style={{ left: `${(m.time / duration) * 100}%` }}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "rounded-pill transition-state group-hover/mark:bg-primary",
+                        scene ? "h-2 w-0.5 bg-foreground/50" : "h-3.5 w-1 bg-foreground",
+                      )}
+                    />
+                  </AriaButton>
+                </Tooltip>
+              );
+            })}
+        <div
+          {...thumbProps}
+          className={cn(
+            "absolute top-1/2 z-20 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background",
+            isFocusVisible && "outline-2 outline-offset-2 outline-ring",
+          )}
+          style={{ left: `${frac * 100}%` }}
+        >
           <VisuallyHidden>
-            <input ref={input} {...mergeProps(inputProps, focusProps)} aria-labelledby={undefined} onKeyDownCapture={onKeyDownCapture} />
+            <input
+              ref={input}
+              {...mergeProps(inputProps, focusProps)}
+              aria-labelledby={undefined}
+              onKeyDownCapture={onKeyDownCapture}
+            />
           </VisuallyHidden>
         </div>
       </div>
@@ -278,14 +449,33 @@ export type TransportProps = {
 };
 
 /** The transport buttons for a player the app owns. Every control is a named icon button; the play button's name is "Play" or "Pause" from `playing`. Only the buttons whose handler is passed are drawn. */
-export function Transport({ playing, onPlayPause, onStop, onToStart, onToEnd, onStepBack, onStepForward, stepUnit = "frame", children, className }: TransportProps) {
+export function Transport({
+  playing,
+  onPlayPause,
+  onStop,
+  onToStart,
+  onToEnd,
+  onStepBack,
+  onStepForward,
+  stepUnit = "frame",
+  children,
+  className,
+}: TransportProps) {
   return (
     <Toolbar label="Playback" className={cn("gap-2", className)}>
       {onToStart && <IconButton icon={SkipBack} label="Go to start" hint="Home" onClick={onToStart} />}
       {onStepBack && <IconButton icon={StepBack} label={`Back one ${stepUnit}`} hint="←" onClick={onStepBack} />}
-      <IconButton icon={playing ? Pause : Play} label={playing ? "Pause" : "Play"} hint="Space" variant="outline" onClick={onPlayPause} />
+      <IconButton
+        icon={playing ? Pause : Play}
+        label={playing ? "Pause" : "Play"}
+        hint="Space"
+        variant="outline"
+        onClick={onPlayPause}
+      />
       {onStop && <IconButton icon={Square} label="Stop" onClick={onStop} />}
-      {onStepForward && <IconButton icon={StepForward} label={`Forward one ${stepUnit}`} hint="→" onClick={onStepForward} />}
+      {onStepForward && (
+        <IconButton icon={StepForward} label={`Forward one ${stepUnit}`} hint="→" onClick={onStepForward} />
+      )}
       {onToEnd && <IconButton icon={SkipForward} label="Go to end" hint="End" onClick={onToEnd} />}
       {children}
     </Toolbar>
@@ -311,8 +501,23 @@ export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, cla
     // `min-w-0` all the way down and a slider that shrinks, so a player a phone wide (320 px with a side rail) does not
     // run its "100%" past its edge (issue #213): the button and the readout keep their size, the track gives way.
     <div className={cn("flex min-w-0 items-center gap-2", className)}>
-      <IconButton icon={muted ? VolumeX : Volume2} label={muted ? "Unmute" : "Mute"} hint="M" disabled={disabled} onClick={() => onVolumeChange(muted ? last.current : 0)} />
-      <Slider aria-label="Volume" value={volume} onChange={onVolumeChange} min={0} max={max} unit="%" disabled={disabled} className="w-40 min-w-24 shrink" />
+      <IconButton
+        icon={muted ? VolumeX : Volume2}
+        label={muted ? "Unmute" : "Mute"}
+        hint="M"
+        disabled={disabled}
+        onClick={() => onVolumeChange(muted ? last.current : 0)}
+      />
+      <Slider
+        aria-label="Volume"
+        value={volume}
+        onChange={onVolumeChange}
+        min={0}
+        max={max}
+        unit="%"
+        disabled={disabled}
+        className="w-40 min-w-24 shrink"
+      />
     </div>
   );
 }
@@ -324,17 +529,46 @@ export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, cla
 // behaviour (a button named by its value, a listbox popover, arrows and type-ahead, a hidden native select for forms)
 // with a text box the theme lays out on whole pixels. Its trigger is a `button` with the select's name and value.
 /** A choice of playback speed ("0.5×", "1×", "1.5×"), named "Playback speed": React Aria's Select. */
-export function RateChoice({ rate, onRateChange, rates = [0.5, 1, 1.25, 1.5, 2], className }: { rate: number; onRateChange: (rate: number) => void; rates?: readonly number[]; className?: string }) {
+export function RateChoice({
+  rate,
+  onRateChange,
+  rates = [0.5, 1, 1.25, 1.5, 2],
+  className,
+}: {
+  rate: number;
+  onRateChange: (rate: number) => void;
+  rates?: readonly number[];
+  className?: string;
+}) {
   return (
-    <AriaSelect aria-label="Playback speed" selectedKey={String(rate)} onSelectionChange={(key) => key !== null && onRateChange(Number(key))} className={cn("w-auto", className)}>
-      <AriaButton className={cn("flex w-full items-center justify-between gap-2 rounded-control border border-input bg-background pr-2 pl-3 type-body text-foreground transition-state", controlHeight.default)}>
+    <AriaSelect
+      aria-label="Playback speed"
+      selectedKey={String(rate)}
+      onSelectionChange={(key) => key !== null && onRateChange(Number(key))}
+      className={cn("w-auto", className)}
+    >
+      <AriaButton
+        className={cn(
+          "flex w-full items-center justify-between gap-2 rounded-control border border-input bg-background pr-2 pl-3 type-body text-foreground transition-state",
+          controlHeight.default,
+        )}
+      >
         <SelectValue className="tabular-nums" />
         <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
       </AriaButton>
-      <AriaPopover placement="bottom start" offset={4} className={cn("layer-overlay min-w-(--trigger-width) p-1", overlaySurface)}>
+      <AriaPopover
+        placement="bottom start"
+        offset={4}
+        className={cn("layer-overlay min-w-(--trigger-width) p-1", overlaySurface)}
+      >
         <ListBox className="outline-none">
           {rates.map((r) => (
-            <ListBoxItem key={r} id={String(r)} textValue={`${r}×`} className="flex min-h-(--control-h-sm) cursor-pointer items-center justify-between gap-3 rounded-control px-2 type-body-sm tabular-nums outline-none focus:bg-muted selected:font-medium">
+            <ListBoxItem
+              key={r}
+              id={String(r)}
+              textValue={`${r}×`}
+              className="flex min-h-(--control-h-sm) cursor-pointer items-center justify-between gap-3 rounded-control px-2 type-body-sm tabular-nums outline-none focus:bg-muted selected:font-medium"
+            >
               {({ isSelected }) => (
                 <>
                   {`${r}×`}
@@ -354,7 +588,25 @@ export function RateChoice({ rate, onRateChange, rates = [0.5, 1, 1.25, 1.5, 2],
  * or pause, J and L go back or forward `jump` seconds, the arrows by `frame` seconds, Home and End
  * to the ends, M mutes. Pass the player's actions; the labels are the legend's words. `stageKeys` is for a transport beside a stage that uses the arrows (see `TimelinePlayer`).
  */
-export function transportShortcuts({ toggle, seek, time, duration, frame = 1 / 30, jump = 1, toggleMute, stageKeys }: { toggle: () => void; seek: (time: number) => void; time: number; duration: number; frame?: number; jump?: number; toggleMute?: () => void; stageKeys?: boolean }): Shortcut[] {
+export function transportShortcuts({
+  toggle,
+  seek,
+  time,
+  duration,
+  frame = 1 / 30,
+  jump = 1,
+  toggleMute,
+  stageKeys,
+}: {
+  toggle: () => void;
+  seek: (time: number) => void;
+  time: number;
+  duration: number;
+  frame?: number;
+  jump?: number;
+  toggleMute?: () => void;
+  stageKeys?: boolean;
+}): Shortcut[] {
   const to = (t: number) => () => seek(clamp(t, 0, duration));
   // A stage beside the transport takes the arrows (a 3D view turns with them), so with `stageKeys` the arrows count only with focus
   // inside `useHotkeys`' `within` region and every other key stays page-wide (issue #385).
@@ -372,10 +624,26 @@ export function transportShortcuts({ toggle, seek, time, duration, frame = 1 / 3
 }
 
 /** A frame that fits content of an aspect ratio into the pane, letterboxed on the sunken surface role (light and dark both), with room for the app's overlays. */
-export function MediaStage({ aspect, children, label, className }: { aspect: number | `${number}/${number}`; children: React.ReactNode; label: string; className?: string }) {
+export function MediaStage({
+  aspect,
+  children,
+  label,
+  className,
+}: {
+  aspect: number | `${number}/${number}`;
+  children: React.ReactNode;
+  label: string;
+  className?: string;
+}) {
   const outer = React.useRef<HTMLDivElement>(null);
   const [box, setBox] = React.useState<{ w: number; h: number } | null>(null);
-  const ratio = typeof aspect === "number" ? aspect : (() => { const [w, h] = aspect.split("/").map(Number); return w / h; })();
+  const ratio =
+    typeof aspect === "number"
+      ? aspect
+      : (() => {
+          const [w, h] = aspect.split("/").map(Number);
+          return w / h;
+        })();
   React.useEffect(() => {
     const el = outer.current;
     if (!el) return;
@@ -386,10 +654,23 @@ export function MediaStage({ aspect, children, label, className }: { aspect: num
     return () => ro.disconnect();
   }, []);
   // Contain-fit by arithmetic: CSS aspect-ratio with max-width breaks the ratio when the width is clamped.
-  const fit = box && box.w > 0 && box.h > 0 ? (box.w / box.h > ratio ? { w: box.h * ratio, h: box.h } : { w: box.w, h: box.w / ratio }) : null;
+  const fit =
+    box && box.w > 0 && box.h > 0
+      ? box.w / box.h > ratio
+        ? { w: box.h * ratio, h: box.h }
+        : { w: box.w, h: box.w / ratio }
+      : null;
   return (
-    <div ref={outer} role="group" aria-label={label} className={cn("grid min-h-0 min-w-0 place-items-center overflow-hidden bg-surface-sunken", className)}>
-      <div className="relative overflow-hidden bg-background" style={fit ? { width: fit.w, height: fit.h } : { width: "100%", aspectRatio: String(ratio) }}>
+    <div
+      ref={outer}
+      role="group"
+      aria-label={label}
+      className={cn("grid min-h-0 min-w-0 place-items-center overflow-hidden bg-surface-sunken", className)}
+    >
+      <div
+        className="relative overflow-hidden bg-background"
+        style={fit ? { width: fit.w, height: fit.h } : { width: "100%", aspectRatio: String(ratio) }}
+      >
         {children}
       </div>
     </div>
@@ -397,19 +678,44 @@ export function MediaStage({ aspect, children, label, className }: { aspect: num
 }
 
 /** Guides over a stage: action-safe and title-safe frames (90% and 80%), a centre cross and a rule-of-thirds grid. Drawn as two strokes (light over dark) so they read on any picture. */
-export function StageGuides({ safe, thirds, centre, className }: { safe?: boolean; thirds?: boolean; centre?: boolean; className?: string }) {
+export function StageGuides({
+  safe,
+  thirds,
+  centre,
+  className,
+}: {
+  safe?: boolean;
+  thirds?: boolean;
+  centre?: boolean;
+  className?: string;
+}) {
   const lines: [number, number, number, number][] = [];
-  if (thirds) lines.push([100 / 3, 0, 100 / 3, 100], [200 / 3, 0, 200 / 3, 100], [0, 100 / 3, 100, 100 / 3], [0, 200 / 3, 100, 200 / 3]);
+  if (thirds)
+    lines.push(
+      [100 / 3, 0, 100 / 3, 100],
+      [200 / 3, 0, 200 / 3, 100],
+      [0, 100 / 3, 100, 100 / 3],
+      [0, 200 / 3, 100, 200 / 3],
+    );
   if (centre) lines.push([50, 46, 50, 54], [46, 50, 54, 50]);
   const rects = safe ? [5, 10] : [];
   const draw = (cls: string, w: number) => (
     <g className={cls} strokeWidth={w} fill="none" vectorEffect="non-scaling-stroke">
-      {lines.map((l, i) => <line key={i} x1={l[0]} y1={l[1]} x2={l[2]} y2={l[3]} vectorEffect="non-scaling-stroke" />)}
-      {rects.map((m) => <rect key={m} x={m} y={m} width={100 - 2 * m} height={100 - 2 * m} vectorEffect="non-scaling-stroke" />)}
+      {lines.map((l, i) => (
+        <line key={i} x1={l[0]} y1={l[1]} x2={l[2]} y2={l[3]} vectorEffect="non-scaling-stroke" />
+      ))}
+      {rects.map((m) => (
+        <rect key={m} x={m} y={m} width={100 - 2 * m} height={100 - 2 * m} vectorEffect="non-scaling-stroke" />
+      ))}
     </g>
   );
   return (
-    <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" className={cn("pointer-events-none absolute inset-0 size-full", className)}>
+    <svg
+      aria-hidden
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className={cn("pointer-events-none absolute inset-0 size-full", className)}
+    >
       {draw("stroke-foreground", 3)}
       {draw("stroke-background", 1)}
     </svg>

@@ -32,12 +32,28 @@ export type PopoverProps = {
 const widths = { sm: "w-52", md: "w-72", lg: "w-96" } as const;
 
 /** A floating panel anchored to its trigger, for a small form or choice. Requires a `label`; closes on Escape and outside press, and returns focus. */
-export function Popover({ label, trigger, children, side = "bottom", align = "start", open, onOpenChange, size = "md", className }: PopoverProps) {
-  const placement = (align === "center" ? side : `${side} ${align}`) as React.ComponentProps<typeof AriaPopover>["placement"];
+export function Popover({
+  label,
+  trigger,
+  children,
+  side = "bottom",
+  align = "start",
+  open,
+  onOpenChange,
+  size = "md",
+  className,
+}: PopoverProps) {
+  const placement = (align === "center" ? side : `${side} ${align}`) as React.ComponentProps<
+    typeof AriaPopover
+  >["placement"];
   return (
     <DialogTrigger isOpen={open} onOpenChange={onOpenChange}>
       {trigger}
-      <AriaPopover placement={placement} offset={6} className={cn("layer-overlay p-3", widths[size], overlaySurface, className)}>
+      <AriaPopover
+        placement={placement}
+        offset={6}
+        className={cn("layer-overlay p-3", widths[size], overlaySurface, className)}
+      >
         <Dialog aria-label={label} className="outline-none">
           {children}
         </Dialog>

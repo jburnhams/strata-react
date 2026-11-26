@@ -8,13 +8,39 @@ import type { PictureBox } from "../../src";
 export const PHOTO_SIZE = { w: 1600, h: 1000 } as const;
 
 const people = [
-  { id: "f1", cx: 420, cy: 380, r: 95, skin: "#e0b48f", shirt: "#3d6b74", label: "Face 1: Ada Okafor, confirmed", tone: "success" as const },
+  {
+    id: "f1",
+    cx: 420,
+    cy: 380,
+    r: 95,
+    skin: "#e0b48f",
+    shirt: "#3d6b74",
+    label: "Face 1: Ada Okafor, confirmed",
+    tone: "success" as const,
+  },
   { id: "f2", cx: 820, cy: 330, r: 105, skin: "#8d5a3b", shirt: "#b5683a", label: "Face 2: not named yet" },
-  { id: "f3", cx: 1230, cy: 420, r: 85, skin: "#f1cdb0", shirt: "#55606e", label: "Face 3: suggested, Tom Ellery", tone: "warning" as const },
+  {
+    id: "f3",
+    cx: 1230,
+    cy: 420,
+    r: 85,
+    skin: "#f1cdb0",
+    shirt: "#55606e",
+    label: "Face 3: suggested, Tom Ellery",
+    tone: "warning" as const,
+  },
 ];
 
 /** The faces in the photo, as the face store finds them: a little wider than the head, taller than wide. */
-export const photoFaces: PictureBox[] = people.map((p) => ({ id: p.id, x: p.cx - p.r * 0.85, y: p.cy - p.r * 1.05, w: p.r * 1.7, h: p.r * 2.1, label: p.label, tone: p.tone }));
+export const photoFaces: PictureBox[] = people.map((p) => ({
+  id: p.id,
+  x: p.cx - p.r * 0.85,
+  y: p.cy - p.r * 1.05,
+  w: p.r * 1.7,
+  h: p.r * 2.1,
+  label: p.label,
+  tone: p.tone,
+}));
 
 function photoSvg(): string {
   const bodies = people

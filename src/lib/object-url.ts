@@ -20,7 +20,10 @@ export function useObjectUrl(data: Blob | BufferSource | null | undefined, type?
       setUrl(null);
       return;
     }
-    const blob = data instanceof Blob && (type === undefined || data.type === type) ? data : new Blob([data as BlobPart], type ? { type } : undefined);
+    const blob =
+      data instanceof Blob && (type === undefined || data.type === type)
+        ? data
+        : new Blob([data as BlobPart], type ? { type } : undefined);
     const made = URL.createObjectURL(blob);
     setUrl(made);
     return () => {

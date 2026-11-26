@@ -10,12 +10,17 @@ const START: LatLng = [51.5007, -0.1246];
 const run = (n: number, phase: number, scale: number): LatLng[] =>
   Array.from({ length: n }, (_, i) => {
     const t = i / (n - 1);
-    return [START[0] + t * 0.03 * scale + 0.004 * Math.sin(t * 9 + phase), START[1] + t * 0.05 * scale + 0.006 * Math.sin(t * 6 + phase * 2)] as LatLng;
+    return [
+      START[0] + t * 0.03 * scale + 0.004 * Math.sin(t * 9 + phase),
+      START[1] + t * 0.05 * scale + 0.006 * Math.sin(t * 6 + phase * 2),
+    ] as LatLng;
   });
 
 export const riverRun = run(240, 0, 1);
 /** Speed in km/h at each point of `riverRun`: a steady 12, down to 7 over the middle climb. */
-export const riverRunSpeed = riverRun.map((_, i) => Math.round((12 - 5 * Math.exp(-(((i / 239) - 0.5) ** 2) / 0.02) + Math.sin(i / 7)) * 10) / 10);
+export const riverRunSpeed = riverRun.map(
+  (_, i) => Math.round((12 - 5 * Math.exp(-((i / 239 - 0.5) ** 2) / 0.02) + Math.sin(i / 7)) * 10) / 10,
+);
 
 export const parkLoop: LatLng[] = Array.from({ length: 80 }, (_, i) => {
   const a = (i / 79) * 2 * Math.PI;
@@ -31,7 +36,8 @@ export const speedScale = [
 ];
 
 /** Where the runner is `share` of the way along the river run. */
-export const riverRunAt = (share: number): LatLng => riverRun[Math.min(riverRun.length - 1, Math.round(share * (riverRun.length - 1)))];
+export const riverRunAt = (share: number): LatLng =>
+  riverRun[Math.min(riverRun.length - 1, Math.round(share * (riverRun.length - 1)))];
 
 // The run as charts (issues #183 and #184): elevation and pace by distance, stops, and clips cut along it.
 import { geo } from "../../src";
@@ -39,7 +45,10 @@ import { geo } from "../../src";
 /** Metres along the river run at each of its points. */
 export const riverRunMetres = geo.cumulative(riverRun);
 /** Elevation in metres at each point, by distance. */
-export const riverElevation = riverRun.map((_, i) => ({ x: riverRunMetres[i], y: Math.round(18 + 22 * Math.sin(i / 38) + 7 * Math.sin(i / 9)) }));
+export const riverElevation = riverRun.map((_, i) => ({
+  x: riverRunMetres[i],
+  y: Math.round(18 + 22 * Math.sin(i / 38) + 7 * Math.sin(i / 9)),
+}));
 /** Pace in seconds per km at each point, by distance: 3600 over the speed, so slower is higher (a log axis, faster at the top). */
 export const riverPace = riverRun.map((_, i) => ({ x: riverRunMetres[i], y: Math.round(3600 / riverRunSpeed[i]) }));
 /** Stretches where the runner stopped. */
@@ -49,4 +58,7 @@ export const riverStops = [
 ];
 const total = riverRunMetres[riverRunMetres.length - 1];
 /** Twelve clips along the run: where each one is, as a distance. */
-export const riverClips = Array.from({ length: 12 }, (_, i) => ({ x: Math.round((total * (i + 0.5)) / 12), label: `Clip ${i + 1}` }));
+export const riverClips = Array.from({ length: 12 }, (_, i) => ({
+  x: Math.round((total * (i + 0.5)) / 12),
+  label: `Clip ${i + 1}`,
+}));

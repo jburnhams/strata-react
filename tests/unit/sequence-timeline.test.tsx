@@ -1,8 +1,18 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SequenceTimeline, clampToRoom, gridPoints, settleCut, snapToGrid, stepOnGrid, type CutRoom, type SequenceItem, type SequenceTimelineProps } from "../../src";
+import {
+  SequenceTimeline,
+  clampToRoom,
+  gridPoints,
+  settleCut,
+  snapToGrid,
+  stepOnGrid,
+  type CutRoom,
+  type SequenceItem,
+  type SequenceTimelineProps,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 describe("sequence grid maths", () => {
@@ -28,10 +38,21 @@ describe("sequence grid maths", () => {
     expect(gridPoints(undefined, 0, 5)).toEqual([]);
   });
   it("clamps to the room, saying which end held it and why", () => {
-    const room = { min: 10, max: 20, minReason: "Window 3 has no more media before 0:10.", maxReason: "Window 4 would be empty." };
+    const room = {
+      min: 10,
+      max: 20,
+      minReason: "Window 3 has no more media before 0:10.",
+      maxReason: "Window 4 would be empty.",
+    };
     expect(clampToRoom(15, room)).toEqual({ time: 15, limit: null });
-    expect(clampToRoom(5, room)).toEqual({ time: 10, limit: { side: "min", at: 10, reason: room.minReason } });
-    expect(clampToRoom(25, room)).toEqual({ time: 20, limit: { side: "max", at: 20, reason: room.maxReason } });
+    expect(clampToRoom(5, room)).toEqual({
+      time: 10,
+      limit: { side: "min", at: 10, reason: room.minReason },
+    });
+    expect(clampToRoom(25, room)).toEqual({
+      time: 20,
+      limit: { side: "max", at: 20, reason: room.maxReason },
+    });
   });
   it("snaps a drag to the grid but never to a point outside the room", () => {
     const room = { min: 10.2, max: 20 };
@@ -47,7 +68,17 @@ beforeEach(() => {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
     const wide = this.className?.toString().includes("relative") && this.getAttribute("style")?.includes("width");
     const w = wide ? 1000 : 0;
-    return { left: 0, top: 0, right: w, bottom: 0, width: w, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    return {
+      left: 0,
+      top: 0,
+      right: w,
+      bottom: 0,
+      width: w,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect;
   });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -68,7 +99,9 @@ function Strip(props: Partial<SequenceTimelineProps> & { onChange?: SequenceTime
       items={items}
       onCutChange={(i, time, change) => {
         props.onChange?.(i, time, change);
-        setItems((cur) => cur.map((w) => (w.id === change.before.id ? change.before : w.id === change.after.id ? change.after : w)));
+        setItems((cur) =>
+          cur.map((w) => (w.id === change.before.id ? change.before : w.id === change.after.id ? change.after : w)),
+        );
       }}
       {...props}
     />
@@ -95,17 +128,29 @@ describe("SequenceTimeline", () => {
     renderWithStrata(<Strip grid={0.5} onChange={onChange} />);
     cut(2).focus();
     await user.keyboard("{ArrowRight}");
-    expect(onChange).toHaveBeenLastCalledWith(1, 12.5, { before: { ...windows[1], end: 12.5 }, after: { ...windows[2], start: 12.5 } });
-    expect(screen.getByRole("status")).toHaveTextContent("Cut 2 moved to 0:12.5. Window 2 is 7.5 s, window 3 is 3.5 s.");
+    expect(onChange).toHaveBeenLastCalledWith(1, 12.5, {
+      before: { ...windows[1], end: 12.5 },
+      after: { ...windows[2], start: 12.5 },
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Cut 2 moved to 0:12.5. Window 2 is 7.5 s, window 3 is 3.5 s.",
+    );
     await user.keyboard("{Shift>}{ArrowLeft}{/Shift}");
     expect(onChange).toHaveBeenLastCalledWith(1, 11.5, expect.anything());
-    expect(screen.getByRole("status")).toHaveTextContent("Cut 2 moved to 0:11.5. Window 2 is 6.5 s, window 3 is 4.5 s.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Cut 2 moved to 0:11.5. Window 2 is 6.5 s, window 3 is 4.5 s.",
+    );
   });
 
   it("Home and End go to the ends of the room, and a refused step says why", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    const room: (i: number) => CutRoom = () => ({ min: 10, max: 14, minReason: "Window 2 has no media before 0:10.", maxReason: "Window 3 is only 0:14 long." });
+    const room: (i: number) => CutRoom = () => ({
+      min: 10,
+      max: 14,
+      minReason: "Window 2 has no media before 0:10.",
+      maxReason: "Window 3 is only 0:14 long.",
+    });
     renderWithStrata(<Strip room={room} onChange={onChange} />);
     cut(2).focus();
     await user.keyboard("{End}");
@@ -133,7 +178,9 @@ describe("SequenceTimeline", () => {
 
   it("stops a drag at the room and says why, in words, while it is held there", () => {
     const onChange = vi.fn();
-    renderWithStrata(<Strip onChange={onChange} room={() => ({ min: 8, max: 15, maxReason: "Window 3 would have no media left." })} />);
+    renderWithStrata(
+      <Strip onChange={onChange} room={() => ({ min: 8, max: 15, maxReason: "Window 3 would have no media left." })} />,
+    );
     const el = cut(2);
     fireEvent.pointerDown(el, { pointerId: 1, clientX: 600, button: 0 });
     fireEvent.pointerMove(el, { pointerId: 1, clientX: 900 });

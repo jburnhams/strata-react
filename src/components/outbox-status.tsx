@@ -58,7 +58,9 @@ export function OutboxStatus({ outbox, noun, className }: OutboxStatusProps) {
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <CircleAlert aria-hidden className="size-4 shrink-0" />
             <span>
-              {s.refused.length === 1 ? `The server refused 1 ${noun}; it will not be sent.` : `The server refused ${format.count(s.refused.length, noun)}; they will not be sent.`}
+              {s.refused.length === 1
+                ? `The server refused 1 ${noun}; it will not be sent.`
+                : `The server refused ${format.count(s.refused.length, noun)}; they will not be sent.`}
             </span>
             <Button size="sm" variant="ghost" onClick={() => outbox.dismiss()}>
               Dismiss

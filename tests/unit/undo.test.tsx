@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpError, UndoBar, fetchJson, useUndoable, type PendingRemoval, type Undoable } from "../../src";
@@ -8,7 +8,15 @@ import { api, withdrawServerError } from "../../stories/mocks/handlers";
 type Removal = Pick<PendingRemoval, "commit" | "onError">;
 
 // A row that the hook takes out of view, an Undo bar, and a handle on the hook for flush().
-function Harness({ removal, api: handle = {}, id = "a" }: { removal: Removal; api?: { current?: Undoable }; id?: string }) {
+function Harness({
+  removal,
+  api: handle = {},
+  id = "a",
+}: {
+  removal: Removal;
+  api?: { current?: Undoable };
+  id?: string;
+}) {
   const undoable = useUndoable(8000);
   handle.current = undoable;
   return (
@@ -16,7 +24,12 @@ function Harness({ removal, api: handle = {}, id = "a" }: { removal: Removal; ap
       {!undoable.isRemoved(id) && <p>Tom Ellery: 3 pieces in kiln 2.</p>}
       <button
         onClick={() =>
-          undoable.schedule({ id, message: "Withdrew 3 pieces.", failure: "Tom Ellery's booking is back.", ...removal })
+          undoable.schedule({
+            id,
+            message: "Withdrew 3 pieces.",
+            failure: "Tom Ellery's booking is back.",
+            ...removal,
+          })
         }
       >
         Withdraw
@@ -133,10 +146,13 @@ describe("useUndoable: flush", () => {
     let settled = false;
     let outcome!: Promise<unknown>;
     act(() => {
-      outcome = handle.current!.flush().then(
-        () => "resolved",
-        (e: unknown) => e,
-      ).finally(() => void (settled = true));
+      outcome = handle
+        .current!.flush()
+        .then(
+          () => "resolved",
+          (e: unknown) => e,
+        )
+        .finally(() => void (settled = true));
     });
     await Promise.resolve();
     expect(settled).toBe(false);
@@ -179,18 +195,27 @@ describe("useUndoable: a failed commit", () => {
     server.use(withdrawServerError);
     const onError = vi.fn();
     const handle: { current?: Undoable } = {};
-    render(<Harness removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }), onError }} api={handle} />);
+    render(
+      <Harness
+        removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }), onError }}
+        api={handle}
+      />,
+    );
     act(() => screen.getByText("Withdraw").click());
     await act(() => handle.current!.flush().catch(() => undefined));
     expect(row()).toBeInTheDocument();
-    expect(screen.getByText(/Tom Ellery's booking is back\. The server could not answer \(503\)\./)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Tom Ellery's booking is back\. The server could not answer \(503\)\./),
+    ).toBeInTheDocument();
     expect(onError).toHaveBeenCalledWith(expect.any(HttpError));
   });
 
   it("Try again removes the item and commits now; Dismiss leaves it back", async () => {
     const user = userEvent.setup();
     let fail = true;
-    const commit = vi.fn(() => (fail ? Promise.reject(new Error("The kiln controller is offline.")) : Promise.resolve()));
+    const commit = vi.fn(() =>
+      fail ? Promise.reject(new Error("The kiln controller is offline.")) : Promise.resolve(),
+    );
     const handle: { current?: Undoable } = {};
     render(<Harness removal={{ commit }} api={handle} />);
     await user.click(screen.getByText("Withdraw"));
@@ -212,7 +237,15 @@ describe("useUndoable: a failed commit", () => {
 
   it("a commit that throws when the window closes is handled the same way", async () => {
     vi.useFakeTimers();
-    render(<Harness removal={{ commit: () => { throw new Error("The kiln controller is offline."); } }} />);
+    render(
+      <Harness
+        removal={{
+          commit: () => {
+            throw new Error("The kiln controller is offline.");
+          },
+        }}
+      />,
+    );
     act(() => screen.getByText("Withdraw").click());
     await act(async () => vi.advanceTimersByTime(8000));
     expect(row()).toBeInTheDocument();
@@ -241,7 +274,16 @@ describe("useUndoable: a failed commit", () => {
       const u = useUndoable({ describeError: () => "The co-op's server is down for the night." });
       return (
         <>
-          <button onClick={() => u.schedule({ id: "a", message: "m", failure: "Back.", commit: () => Promise.reject(new Error("x")) })}>
+          <button
+            onClick={() =>
+              u.schedule({
+                id: "a",
+                message: "m",
+                failure: "Back.",
+                commit: () => Promise.reject(new Error("x")),
+              })
+            }
+          >
             Withdraw
           </button>
           <button onClick={() => void u.flush().catch(() => undefined)}>Rebuild</button>

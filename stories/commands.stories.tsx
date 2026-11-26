@@ -1,7 +1,17 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Copy, Scissors } from "lucide-react";
-import { Button, CommandLegend, CommandMenu, ContextMenu, Menu, Toolbar, useCommands, type Command, type MenuEntry } from "../src";
+import {
+  Button,
+  CommandLegend,
+  CommandMenu,
+  ContextMenu,
+  Menu,
+  Toolbar,
+  useCommands,
+  type Command,
+  type MenuEntry,
+} from "../src";
 
 // One list of commands drives every surface: a menu bar, a dropdown, a context menu, the command
 // menu, the key handler and the legend. Change a label or its keys here and they all change. The
@@ -21,7 +31,15 @@ const commands: Command[] = [
 ];
 const byId = (id: string) => commands.find((c) => c.id === id)!;
 
-const editMenu: MenuEntry[] = [byId("undo"), byId("redo"), "separator", byId("split"), byId("duplicate"), "separator", byId("delete")];
+const editMenu: MenuEntry[] = [
+  byId("undo"),
+  byId("redo"),
+  "separator",
+  byId("split"),
+  byId("duplicate"),
+  "separator",
+  byId("delete"),
+];
 
 const meta = {
   title: "Actions/Commands",
@@ -29,7 +47,13 @@ const meta = {
   parameters: { layout: "fullscreen" },
   tags: ["visual-phone"],
   args: { label: "Edit", trigger: <Button>Edit</Button>, items: editMenu, platform, open: true },
-  decorators: [(Story) => <div className="grid h-80 content-start p-4"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="grid h-80 content-start p-4">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof Menu>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -43,12 +67,21 @@ export const CheckableAndSubmenu: Story = {
     label: "View",
     trigger: <Button>View</Button>,
     items: [
-      { group: "Overlays", items: [
-        { id: "grid", label: "Show grid", checked: true, run: noop },
-        { id: "safe", label: "Show safe areas", checked: false, run: noop },
-      ] },
+      {
+        group: "Overlays",
+        items: [
+          { id: "grid", label: "Show grid", checked: true, run: noop },
+          { id: "safe", label: "Show safe areas", checked: false, run: noop },
+        ],
+      },
       "separator",
-      { submenu: "Zoom", items: [{ id: "fit", label: "Fit to window", run: noop }, { id: "100", label: "Actual size", keys: ["Mod+0"], run: noop }] },
+      {
+        submenu: "Zoom",
+        items: [
+          { id: "fit", label: "Fit to window", run: noop },
+          { id: "100", label: "Actual size", keys: ["Mod+0"], run: noop },
+        ],
+      },
     ],
   },
 };
@@ -78,8 +111,17 @@ export const CommandMenuOpen: Story = {
 export const ContextMenuLive: Story = {
   tags: ["no-visual"],
   render: () => (
-    <ContextMenu label="Clip actions" items={[byId("split"), byId("duplicate"), "separator", byId("delete")]} platform={platform}>
-      <div role="button" tabIndex={0} aria-label="Clip run.mp4" className="w-64 rounded-surface border border-border p-3 type-body">
+    <ContextMenu
+      label="Clip actions"
+      items={[byId("split"), byId("duplicate"), "separator", byId("delete")]}
+      platform={platform}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Clip run.mp4"
+        className="w-64 rounded-surface border border-border p-3 type-body"
+      >
         run.mp4 (right-click me)
       </div>
     </ContextMenu>

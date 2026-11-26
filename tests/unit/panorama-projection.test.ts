@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { clampView, degreesPerPixel, describeView, project, projectFlat, unproject, unprojectFlat, wrapYaw, yawDelta } from "../../src/panorama/projection";
+import { describe, expect, it } from "vite-plus/test";
+import {
+  clampView,
+  degreesPerPixel,
+  describeView,
+  project,
+  projectFlat,
+  unproject,
+  unprojectFlat,
+  wrapYaw,
+  yawDelta,
+} from "../../src/panorama/projection";
 
 // Issue #178: the geometry, with no GL.
 
@@ -59,8 +69,18 @@ describe("project", () => {
 
 describe("unproject", () => {
   it("is the inverse of project at many views and points, including near the poles and the seam", () => {
-    for (const v of [{ yaw: 0, pitch: 0, fov: 90 }, { yaw: 170, pitch: 20, fov: 60 }, { yaw: -135, pitch: -45, fov: 110 }, { yaw: 33, pitch: 85, fov: 40 }]) {
-      for (const [x, y] of [[400, 225], [10, 20], [790, 440], [123, 321]]) {
+    for (const v of [
+      { yaw: 0, pitch: 0, fov: 90 },
+      { yaw: 170, pitch: 20, fov: 60 },
+      { yaw: -135, pitch: -45, fov: 110 },
+      { yaw: 33, pitch: 85, fov: 40 },
+    ]) {
+      for (const [x, y] of [
+        [400, 225],
+        [10, 20],
+        [790, 440],
+        [123, 321],
+      ]) {
         const d = unproject(v, size, x, y);
         const back = project(v, size, d.yaw, d.pitch)!;
         expect(back.x).toBeCloseTo(x, 5);
@@ -80,7 +100,11 @@ describe("unproject", () => {
 
 describe("limits and words", () => {
   it("clamps pitch, field of view, and wraps the heading", () => {
-    expect(clampView({ yaw: 200, pitch: 100, fov: 5 }, { maxPitch: 80, minFov: 20, maxFov: 120 })).toEqual({ yaw: -160, pitch: 80, fov: 20 });
+    expect(clampView({ yaw: 200, pitch: 100, fov: 5 }, { maxPitch: 80, minFov: 20, maxFov: 120 })).toEqual({
+      yaw: -160,
+      pitch: 80,
+      fov: 20,
+    });
     expect(clampView({ yaw: 0, pitch: -100, fov: 300 })).toEqual({ yaw: 0, pitch: -85, fov: 120 });
   });
   it("says where it looks", () => {

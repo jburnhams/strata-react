@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,7 +13,15 @@ describe("findStockClasses", () => {
   it("finds stock colours, type sizes, radii, shadows and serif in class strings, whatever the quotes", () => {
     const tsx = `<div className="bg-stone-100 text-sm rounded-xl shadow-lg font-serif" />
       <p className={cn('text-emerald-600', \`border-red-200\`)} />`;
-    expect(names(tsx)).toEqual(["bg-stone-100", "text-sm", "rounded-xl", "shadow-lg", "font-serif", "text-emerald-600", "border-red-200"]);
+    expect(names(tsx)).toEqual([
+      "bg-stone-100",
+      "text-sm",
+      "rounded-xl",
+      "shadow-lg",
+      "font-serif",
+      "text-emerald-600",
+      "border-red-200",
+    ]);
   });
 
   it("reads through variants, important marks and opacity, and says which line", () => {
@@ -68,7 +76,11 @@ describe("strata-stock-classes", () => {
   };
 
   it("lists each use, counts them, and exits 0 unless --fail", async () => {
-    const dir = app({ "src/a.tsx": `<p className="text-sm bg-stone-100" />`, "src/b.css": `.x { @apply shadow-lg; }`, "node_modules/p/i.tsx": `text-xs` });
+    const dir = app({
+      "src/a.tsx": `<p className="text-sm bg-stone-100" />`,
+      "src/b.css": `.x { @apply shadow-lg; }`,
+      "node_modules/p/i.tsx": `text-xs`,
+    });
     try {
       const listed = await run([join(dir, "src")]);
       expect(listed.code).toBe(0);

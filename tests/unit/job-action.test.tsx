@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vite-plus/test";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
@@ -31,7 +31,14 @@ function Row({ status, start, poll }: { status: Status; start: () => Promise<{ i
   return (
     <>
       <p aria-label="Path">{useLocation().pathname}</p>
-      <AsyncButton size="sm" variant="ghost" phase={action.phase} labels={labels} error={action.error} onPress={() => void action.run()} />
+      <AsyncButton
+        size="sm"
+        variant="ghost"
+        phase={action.phase}
+        labels={labels}
+        error={action.error}
+        onPress={() => void action.run()}
+      />
     </>
   );
 }
@@ -92,7 +99,15 @@ describe("jobProgressText and JobStatus progress (#250)", () => {
     expect(jobProgressText({ done: 12, total: 9 })).toBe("9 of 9 done, 0 remaining");
   });
   it("draws the bar and the sentence from one object", () => {
-    renderWithStrata(<JobStatus label="Scan" running words={{ running: "Scanning", finished: "Finished", failed: "Failed" }} summary="Scanning the roll." progress={{ done: 3, total: 9, current: "Frame 4" }} />);
+    renderWithStrata(
+      <JobStatus
+        label="Scan"
+        running
+        words={{ running: "Scanning", finished: "Finished", failed: "Failed" }}
+        summary="Scanning the roll."
+        progress={{ done: 3, total: 9, current: "Frame 4" }}
+      />,
+    );
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
     expect(screen.getByText("3 of 9 done, 6 remaining · Frame 4")).toBeInTheDocument();
   });

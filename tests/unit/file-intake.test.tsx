@@ -1,7 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FileButton, FileDropZone, FileOutcomes, MissingFile, matchesAccept, useFileIntake, type FileIntakeOptions } from "../../src";
+import {
+  FileButton,
+  FileDropZone,
+  FileOutcomes,
+  MissingFile,
+  matchesAccept,
+  useFileIntake,
+  type FileIntakeOptions,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const accept = [".gpx", "video/*", "audio/*"];
@@ -26,7 +34,13 @@ function Library(props: Partial<FileIntakeOptions>) {
 const zoneOf = () => screen.getByRole("button", { name: "Drag files here" }).closest<HTMLElement>("[data-rac]")!;
 
 function drop(target: HTMLElement, files: File[]) {
-  const items = files.map((f) => ({ kind: "file", type: f.type, getAsFile: () => f, getAsString: () => {}, webkitGetAsEntry: () => ({ isFile: true, isDirectory: false, name: f.name }) }));
+  const items = files.map((f) => ({
+    kind: "file",
+    type: f.type,
+    getAsFile: () => f,
+    getAsString: () => {},
+    webkitGetAsEntry: () => ({ isFile: true, isDirectory: false, name: f.name }),
+  }));
   const dataTransfer = { types: ["Files"], items, files, dropEffect: "copy", effectAllowed: "all" };
   fireEvent.dragEnter(target, { dataTransfer });
   fireEvent.dragOver(target, { dataTransfer });
@@ -83,9 +97,18 @@ describe("file intake", () => {
   it("runs the app's own check and shows its reason in the product's words", async () => {
     const user = userEvent.setup();
     const { container } = renderWithStrata(
-      <Library check={(f) => (f.name.endsWith(".avi") ? `${f.name} is not a video this browser can play. Convert it to MP4 and add it again.` : null)} />,
+      <Library
+        check={(f) =>
+          f.name.endsWith(".avi")
+            ? `${f.name} is not a video this browser can play. Convert it to MP4 and add it again.`
+            : null
+        }
+      />,
     );
-    await user.upload(container.querySelector('input[type="file"]')!, [file("old.avi", "video/x-msvideo"), file("new.mp4", "video/mp4")]);
+    await user.upload(container.querySelector('input[type="file"]')!, [
+      file("old.avi", "video/x-msvideo"),
+      file("new.mp4", "video/mp4"),
+    ]);
     expect(await screen.findByText(/old.avi is not a video this browser can play/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Added")).toBeInTheDocument());
   });
@@ -132,7 +155,9 @@ describe("file intake", () => {
     const { container, unmount } = renderWithStrata(
       <Library
         process={(_f, { signal }) =>
-          new Promise<void>((_res, rej) => signal.addEventListener("abort", () => ((aborted = true), rej(new Error("stopped")))))
+          new Promise<void>((_res, rej) =>
+            signal.addEventListener("abort", () => ((aborted = true), rej(new Error("stopped")))),
+          )
         }
       />,
     );
@@ -171,7 +196,11 @@ describe("a check that fails to run", () => {
         }}
       />,
     );
-    await user.upload(container.querySelector('input[type="file"]')!, [file("bad.mp4", "video/mp4"), file("later.mp4", "video/mp4"), file("ok.mp4", "video/mp4")]);
+    await user.upload(container.querySelector('input[type="file"]')!, [
+      file("bad.mp4", "video/mp4"),
+      file("later.mp4", "video/mp4"),
+      file("ok.mp4", "video/mp4"),
+    ]);
     expect(await screen.findAllByText("Failed")).toHaveLength(2);
     expect(screen.getByText("Added")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Try again bad.mp4" }));
@@ -182,7 +211,9 @@ describe("a check that fails to run", () => {
     const user = userEvent.setup();
     let release!: (v: null) => void;
     let processed = 0;
-    const { container, unmount } = renderWithStrata(<Library check={() => new Promise<null>((r) => (release = r))} process={() => void processed++} />);
+    const { container, unmount } = renderWithStrata(
+      <Library check={() => new Promise<null>((r) => (release = r))} process={() => void processed++} />,
+    );
     await user.upload(container.querySelector('input[type="file"]')!, file("a.mp4", "video/mp4"));
     unmount();
     release(null);
@@ -196,7 +227,12 @@ describe("FileDropZone", () => {
     renderWithStrata(<Library />);
     const zone = zoneOf();
     expect(within(zone).getByRole("button", { name: "Add files" })).toBeInTheDocument();
-    const dataTransfer = { types: ["Files"], items: [{ kind: "file", type: "video/mp4", getAsFile: () => file("a.mp4") }], dropEffect: "copy", effectAllowed: "all" };
+    const dataTransfer = {
+      types: ["Files"],
+      items: [{ kind: "file", type: "video/mp4", getAsFile: () => file("a.mp4") }],
+      dropEffect: "copy",
+      effectAllowed: "all",
+    };
     fireEvent.dragEnter(zone, { dataTransfer });
     fireEvent.dragOver(zone, { dataTransfer });
     expect(screen.getByText(`Drop to add ${acceptLabel}`)).toBeInTheDocument();

@@ -8,7 +8,15 @@ import { cn } from "../lib/utils";
 // gets its own chart.
 
 /** Headline figures as one description list split by hairlines. Holds `Metric`s. */
-export function MetricStrip({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+export function MetricStrip({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <dl
       aria-label={label}

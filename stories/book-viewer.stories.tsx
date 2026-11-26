@@ -25,19 +25,33 @@ function Book({ start = 0, layout }: { start?: number; layout?: "spread" | "sing
             {shown.map((p) => (
               <section key={p.id} aria-label={pageName(p)}>
                 <h3 className="type-label">{pageName(p)}</h3>
-                <p className="text-muted-foreground">THE PLAY OF PUNCH AND JUDY. Enter Punch with his stick, and a dog. A scene in one act.</p>
+                <p className="text-muted-foreground">
+                  THE PLAY OF PUNCH AND JUDY. Enter Punch with his stick, and a dog. A scene in one act.
+                </p>
               </section>
             ))}
           </div>
         )}
         sideLabel="Transcript"
-        overlay={(p) => <BoxOverlay label={`Lines on ${pageName(p)}`} of={{ w: PAGE_SIZE[0], h: PAGE_SIZE[1] }} boxes={pageLines(Number(p.scan))} state={state} />}
+        overlay={(p) => (
+          <BoxOverlay
+            label={`Lines on ${pageName(p)}`}
+            of={{ w: PAGE_SIZE[0], h: PAGE_SIZE[1] }}
+            boxes={pageLines(Number(p.scan))}
+            state={state}
+          />
+        )}
       />
     </div>
   );
 }
 
-const meta = { title: "Data/BookViewer", component: Book, parameters: { layout: "padded" }, tags: ["visual-wide"] } satisfies Meta<typeof Book>;
+const meta = {
+  title: "Data/BookViewer",
+  component: Book,
+  parameters: { layout: "padded" },
+  tags: ["visual-wide"],
+} satisfies Meta<typeof Book>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

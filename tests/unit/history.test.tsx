@@ -1,8 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Menu, Button, SaveStatus, useAutoSave, useCommands, useHistoryState, useLeaveGuard, type SaveState } from "../../src";
+import {
+  Menu,
+  Button,
+  SaveStatus,
+  useAutoSave,
+  useCommands,
+  useHistoryState,
+  useLeaveGuard,
+  type SaveState,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 function Editor({ limit }: { limit?: number }) {
@@ -25,7 +34,9 @@ function Editor({ limit }: { limit?: number }) {
       >
         Drag
       </button>
-      <button onClick={() => set((v) => ({ ...v, volume: v.volume + 1 }), "change volume", { key: "volume" })}>Louder</button>
+      <button onClick={() => set((v) => ({ ...v, volume: v.volume + 1 }), "change volume", { key: "volume" })}>
+        Louder
+      </button>
       <Menu label="Edit" trigger={<Button>Edit</Button>} items={[undo, redo]} />
     </>
   );
@@ -147,7 +158,9 @@ describe("useAutoSave and SaveStatus", () => {
     const { container } = render(<Doc save={save} />);
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     await vi.waitFor(() => expect(sign(container)).toBe("failed"));
-    expect(screen.getByRole("status")).toHaveTextContent("Not saved: The connection dropped. Your changes are still here.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not saved: The connection dropped. Your changes are still here.",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     await vi.waitFor(() => expect(sign(container)).toBe("saved"));
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
@@ -233,8 +246,19 @@ describe("useAutoSave and SaveStatus", () => {
   });
 
   it("shows each state's word", () => {
-    const states: SaveState[] = [{ status: "saved", at: new Date("2026-11-12T10:42:00Z") }, { status: "saving" }, { status: "dirty" }, { status: "failed", reason: "Disk is full." }];
-    render(<>{states.map((s) => <SaveStatus key={s.status} state={s} onRetry={() => undefined} />)}</>);
+    const states: SaveState[] = [
+      { status: "saved", at: new Date("2026-11-12T10:42:00Z") },
+      { status: "saving" },
+      { status: "dirty" },
+      { status: "failed", reason: "Disk is full." },
+    ];
+    render(
+      <>
+        {states.map((s) => (
+          <SaveStatus key={s.status} state={s} onRetry={() => undefined} />
+        ))}
+      </>,
+    );
     const saved = document.querySelector('[data-status="saved"]') as HTMLElement;
     expect(saved).toHaveTextContent(/Saved \d\d:\d\d/);
     expect(screen.getByText("Not saved: Disk is full.")).toBeInTheDocument();

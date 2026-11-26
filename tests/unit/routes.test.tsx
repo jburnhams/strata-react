@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -68,7 +68,6 @@ const routes: RouteObject[] = [
   },
 ];
 
-
 describe("renderRoutes", () => {
   it("renders the layout route around the index route", async () => {
     renderRoutes(routes);
@@ -81,11 +80,17 @@ describe("renderRoutes", () => {
     renderRoutes(routes, { route: "/members" });
     expect(await screen.findByRole("heading", { name: "Members" })).toBeInTheDocument();
     const main = screen.getByRole("main");
-    expect(within(main).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Tom Ellery", "Asha Patel"]);
+    expect(
+      within(main)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Tom Ellery", "Asha Patel"]);
   });
 
   it("shows the route's error element when the loader fails", async () => {
-    server.use(http.get("/api/members", () => HttpResponse.json({}, { status: 503, statusText: "Service Unavailable" })));
+    server.use(
+      http.get("/api/members", () => HttpResponse.json({}, { status: 503, statusText: "Service Unavailable" })),
+    );
     renderRoutes(routes, { route: "/members" });
     expect(await screen.findByRole("alert")).toHaveTextContent("The members list did not load");
   });

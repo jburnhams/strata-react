@@ -1,5 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AsyncButton, DataView, JobStatus, Skeleton, fetchJson, format, useAsyncAction, useJob, type JobStatusProps } from "../src";
+import {
+  AsyncButton,
+  DataView,
+  JobStatus,
+  Skeleton,
+  fetchJson,
+  format,
+  useAsyncAction,
+  useJob,
+  type JobStatusProps,
+} from "../src";
 import { api, logSyncAt, logSyncs, type LogSync } from "./mocks/handlers";
 
 // The kiln log sync: the server reads each kiln controller's log in turn, which takes a minute or
@@ -11,7 +21,8 @@ const words = { running: "Reading logs", finished: "Finished", failed: "Finished
 
 /** The app's sentence for a status, written once and used by every story. */
 function summary(s: LogSync) {
-  if (s.running) return `Reading ${s.kiln} (${s.current} of ${s.total}). ${format.count(s.newReadings, "new reading")} so far.`;
+  if (s.running)
+    return `Reading ${s.kiln} (${s.current} of ${s.total}). ${format.count(s.newReadings, "new reading")} so far.`;
   if (s.error) return `${s.error} Read ${s.current - 1} of ${s.total} kilns before it stopped.`;
   return `Read ${s.total - s.failures.length} of ${s.total} kilns: ${format.count(s.newReadings, "new reading")}.`;
 }
@@ -45,7 +56,9 @@ function SyncPanel({ sync }: { sync: LogSync }) {
         />
       </div>
       {idle ? (
-        <p className="type-body-sm text-muted-foreground">The logs have not been read since the server started. Reading them takes a minute or two.</p>
+        <p className="type-body-sm text-muted-foreground">
+          The logs have not been read since the server started. Reading them takes a minute or two.
+        </p>
       ) : (
         <JobStatus {...statusOf(sync)} />
       )}
@@ -53,7 +66,11 @@ function SyncPanel({ sync }: { sync: LogSync }) {
   );
 }
 
-const meta = { title: "Status and figures/JobStatus", component: SyncPanel, args: { sync: logSyncs.running } } satisfies Meta<typeof SyncPanel>;
+const meta = {
+  title: "Status and figures/JobStatus",
+  component: SyncPanel,
+  args: { sync: logSyncs.running },
+} satisfies Meta<typeof SyncPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -85,7 +102,11 @@ function FromApi() {
   );
 }
 
-export const FromApiRunning: Story = { name: "From the API: running", beforeEach: ({ msw }) => msw.use(logSyncAt("running")), render: () => <FromApi /> };
+export const FromApiRunning: Story = {
+  name: "From the API: running",
+  beforeEach: ({ msw }) => msw.use(logSyncAt("running")),
+  render: () => <FromApi />,
+};
 export const FromApiSomeFailed: Story = {
   name: "From the API: finished with failures",
   beforeEach: ({ msw }) => msw.use(logSyncAt("someFailed")),

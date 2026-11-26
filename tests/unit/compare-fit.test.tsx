@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Compare, type CompareMode } from "../../src";
@@ -27,7 +27,18 @@ describe("fitFrames and frameCap", () => {
   });
 });
 
-const box = (top: number, height: number) => ({ top, bottom: top + height, height, left: 0, right: 100, width: 100, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+const box = (top: number, height: number) =>
+  ({
+    top,
+    bottom: top + height,
+    height,
+    left: 0,
+    right: 100,
+    width: 100,
+    x: 0,
+    y: top,
+    toJSON: () => ({}),
+  }) as DOMRect;
 let restore: () => void;
 let sectionBottom = 800;
 
@@ -40,11 +51,15 @@ beforeEach(() => {
     if (this.hasAttribute("data-viewport-frame")) return box(200, 300);
     if (this.tagName === "SECTION") return box(100, 700);
     if (this.tagName === "FOOTER") return box(800, 60);
-    if (this.parentElement?.tagName === "SECTION" && this === this.parentElement.lastElementChild) return box(sectionBottom - 60, 60);
+    if (this.parentElement?.tagName === "SECTION" && this === this.parentElement.lastElementChild)
+      return box(sectionBottom - 60, 60);
     return original.call(this);
   };
   const height = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight");
-  Object.defineProperty(document.documentElement, "clientHeight", { configurable: true, get: () => 900 });
+  Object.defineProperty(document.documentElement, "clientHeight", {
+    configurable: true,
+    get: () => 900,
+  });
   restore = () => {
     Element.prototype.getBoundingClientRect = original;
     delete (document.documentElement as unknown as Record<string, unknown>).clientHeight;
@@ -66,8 +81,16 @@ function Page({ maxHeight = "fit", reserve }: { maxHeight?: string; reserve?: nu
           onModeChange={setMode}
           maxHeight={maxHeight}
           reserve={reserve}
-          a={{ id: "a", label: "A", media: { kind: "image", src: "/a.png", alt: "Bowl A", size: [1600, 1200] } }}
-          b={{ id: "b", label: "B", media: { kind: "image", src: "/b.png", alt: "Bowl B", size: [1600, 1200] } }}
+          a={{
+            id: "a",
+            label: "A",
+            media: { kind: "image", src: "/a.png", alt: "Bowl A", size: [1600, 1200] },
+          }}
+          b={{
+            id: "b",
+            label: "B",
+            media: { kind: "image", src: "/b.png", alt: "Bowl B", size: [1600, 1200] },
+          }}
         />
       </main>
       <footer>The page's own footer</footer>
@@ -109,7 +132,11 @@ describe("Compare maxHeight=fit", () => {
     sectionBottom = 900; // fade adds a slider row: 100 px more besides the frames
     await userEvent.click(screen.getByRole("radio", { name: "Fade" }));
     // Fade is one frame (named "A over B"), so find it by its handle.
-    await vi.waitFor(() => expect(frameHeightCap((document.querySelector("[data-viewport-frame]") as HTMLElement).style.maxWidth)).toBeCloseTo(240));
+    await vi.waitFor(() =>
+      expect(
+        frameHeightCap((document.querySelector("[data-viewport-frame]") as HTMLElement).style.maxWidth),
+      ).toBeCloseTo(240),
+    );
   });
 
   it("in full screen fills what the controls leave, whatever the caller passed", async () => {

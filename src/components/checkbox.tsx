@@ -22,7 +22,10 @@ import { cn } from "../lib/utils";
 // on the press that leads to it: a mouse press anywhere on the target, or Space on the box.
 
 /** A checkbox with its label as one target. `label` is required; `checked="mixed"` is indeterminate. */
-export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checked" | "onChange" | "aria-label" | "children" | "style"> & {
+export type CheckboxProps = Omit<
+  React.ComponentProps<"input">,
+  "type" | "checked" | "onChange" | "aria-label" | "children" | "style"
+> & {
   /** Names the checkbox. Shown beside it unless `hideLabel`. */
   label: string;
   /** Keep the label as the accessible name only, for a cell or toolbar where the context shows what it is. */
@@ -38,13 +41,27 @@ export type CheckboxProps = Omit<React.ComponentProps<"input">, "type" | "checke
 export type CheckboxGesture = { shiftKey: boolean };
 
 /** A checkbox and its label as one target. `label` is required; `hideLabel` keeps it as the accessible name only. */
-export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedChange, className, disabled, required, ...props }: CheckboxProps) {
+export function Checkbox({
+  label,
+  hideLabel = false,
+  detail,
+  checked,
+  onCheckedChange,
+  className,
+  disabled,
+  required,
+  ...props
+}: CheckboxProps) {
   const shift = useShiftNote();
   const id = React.useId();
   // Shift is noted in the capture phase on a wrapper, because React Aria's press handling stops the
   // events it uses before they bubble. `contents` keeps the wrapper out of layout.
   return (
-    <span className="contents" onMouseDownCapture={shift.handlers.onMouseDown} onKeyDownCapture={shift.handlers.onKeyDown}>
+    <span
+      className="contents"
+      onMouseDownCapture={shift.handlers.onMouseDown}
+      onKeyDownCapture={shift.handlers.onKeyDown}
+    >
       <AriaCheckbox
         isSelected={checked === true}
         isIndeterminate={checked === "mixed"}
@@ -67,8 +84,14 @@ export function Checkbox({ label, hideLabel = false, detail, checked, onCheckedC
             <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel={hideLabel} />
             {!hideLabel && (
               <span className="grid">
-                <span id={`${id}-label`} className="type-body">{label}</span>
-                {detail && <span id={`${id}-detail`} className="type-body-sm text-muted-foreground">{detail}</span>}
+                <span id={`${id}-label`} className="type-body">
+                  {label}
+                </span>
+                {detail && (
+                  <span id={`${id}-detail`} className="type-body-sm text-muted-foreground">
+                    {detail}
+                  </span>
+                )}
               </span>
             )}
           </>
@@ -98,7 +121,15 @@ export function useShiftNote() {
 }
 
 // The drawn box, shared by `Checkbox` and the table's selection checkbox.
-function CheckboxBox({ selected, indeterminate, hideLabel }: { selected: boolean; indeterminate: boolean; hideLabel: boolean }) {
+function CheckboxBox({
+  selected,
+  indeterminate,
+  hideLabel,
+}: {
+  selected: boolean;
+  indeterminate: boolean;
+  hideLabel: boolean;
+}) {
   return (
     <span
       aria-hidden
@@ -109,7 +140,11 @@ function CheckboxBox({ selected, indeterminate, hideLabel }: { selected: boolean
         !hideLabel && "mt-0.5",
       )}
     >
-      {indeterminate ? <Minus className="size-3.5" strokeWidth={3} /> : selected ? <Check className="size-3.5" strokeWidth={3} /> : null}
+      {indeterminate ? (
+        <Minus className="size-3.5" strokeWidth={3} />
+      ) : selected ? (
+        <Check className="size-3.5" strokeWidth={3} />
+      ) : null}
     </span>
   );
 }
@@ -120,7 +155,17 @@ function CheckboxBox({ selected, indeterminate, hideLabel }: { selected: boolean
  * fight the table's own selection state. Not exported from the package: `DataTable` uses it.
  * @internal
  */
-export function TableSelectionCheckbox({ label, className, disabled, mixed }: { label: string; className?: string; disabled?: boolean; /** Drawn mixed (a tree branch with some of its rows chosen); the surface decides, as React Aria has no parent-child rule. */ mixed?: boolean }) {
+export function TableSelectionCheckbox({
+  label,
+  className,
+  disabled,
+  mixed,
+}: {
+  label: string;
+  className?: string;
+  disabled?: boolean;
+  /** Drawn mixed (a tree branch with some of its rows chosen); the surface decides, as React Aria has no parent-child rule. */ mixed?: boolean;
+}) {
   // The table names a row's checkbox from its own label and the row header's text; ours is named
   // by the caller's `rowLabel` alone ("Select Tom Ellery"), so it labels itself.
   const id = React.useId();
@@ -133,10 +178,16 @@ export function TableSelectionCheckbox({ label, className, disabled, mixed }: { 
       aria-labelledby={id}
       aria-label={label}
       className={({ isDisabled }) =>
-        cn("group inline-flex min-h-6 min-w-6 items-center justify-center", isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer", className)
+        cn(
+          "group inline-flex min-h-6 min-w-6 items-center justify-center",
+          isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+          className,
+        )
       }
     >
-      {({ isSelected, isIndeterminate }) => <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel />}
+      {({ isSelected, isIndeterminate }) => (
+        <CheckboxBox selected={isSelected} indeterminate={isIndeterminate} hideLabel />
+      )}
     </AriaCheckbox>
   );
 }

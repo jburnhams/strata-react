@@ -1,11 +1,34 @@
-import { describe, expect, it } from "vitest";
-import { basis, cameraFromView, clampCamera, followCamera, viewFromCamera, describeCamera, dolly, frameFor, multiply, pan, perspective, turn, walk, type OrbitCamera } from "../../src/scene";
+import { describe, expect, it } from "vite-plus/test";
+import {
+  basis,
+  cameraFromView,
+  clampCamera,
+  followCamera,
+  viewFromCamera,
+  describeCamera,
+  dolly,
+  frameFor,
+  multiply,
+  pan,
+  perspective,
+  turn,
+  walk,
+  type OrbitCamera,
+} from "../../src/scene";
 
 // Issue #370: the camera maths behind SceneViewport, with no GL and no component.
 
-const cam = (over: Partial<OrbitCamera> = {}): OrbitCamera => ({ target: [0, 0, 0], distance: 10, yaw: 0, pitch: 0, ...over });
-const near = (a: ArrayLike<number>, b: number[], digits = 5) => b.forEach((v, i) => expect(a[i]).toBeCloseTo(v, digits));
-const apply = (m: Float32Array, p: number[]) => [0, 1, 2, 3].map((r) => m[r]! * p[0]! + m[4 + r]! * p[1]! + m[8 + r]! * p[2]! + m[12 + r]! * (p[3] ?? 1));
+const cam = (over: Partial<OrbitCamera> = {}): OrbitCamera => ({
+  target: [0, 0, 0],
+  distance: 10,
+  yaw: 0,
+  pitch: 0,
+  ...over,
+});
+const near = (a: ArrayLike<number>, b: number[], digits = 5) =>
+  b.forEach((v, i) => expect(a[i]).toBeCloseTo(v, digits));
+const apply = (m: Float32Array, p: number[]) =>
+  [0, 1, 2, 3].map((r) => m[r]! * p[0]! + m[4 + r]! * p[1]! + m[8 + r]! * p[2]! + m[12 + r]! * (p[3] ?? 1));
 
 describe("basis", () => {
   it("looks along +z with +x to the left of it at yaw 0, a right-handed world with y up", () => {
@@ -84,7 +107,10 @@ describe("moving", () => {
 
 describe("clampCamera and describeCamera", () => {
   it("keeps pitch off the poles, distance in range and yaw in a half turn each way", () => {
-    const c = clampCamera(cam({ pitch: 120, distance: 0.01, yaw: 270 }), { minDistance: 1, maxDistance: 50 });
+    const c = clampCamera(cam({ pitch: 120, distance: 0.01, yaw: 270 }), {
+      minDistance: 1,
+      maxDistance: 50,
+    });
     expect(c.pitch).toBe(89);
     expect(c.distance).toBe(1);
     expect(c.yaw).toBe(-90);
@@ -94,7 +120,9 @@ describe("clampCamera and describeCamera", () => {
     expect(clampCamera(cam({ distance: 0 })).distance).toBe(0);
   });
   it("says where it looks, in words", () => {
-    expect(describeCamera(cam({ yaw: 45, pitch: -30, target: [0, 2, 0] }))).toBe("Looking at 0, 2, 0 from 10 away, turned 45° right, looking 30° down");
+    expect(describeCamera(cam({ yaw: 45, pitch: -30, target: [0, 2, 0] }))).toBe(
+      "Looking at 0, 2, 0 from 10 away, turned 45° right, looking 30° down",
+    );
     expect(describeCamera(cam({ distance: 0, target: [1, 2, 3] }))).toBe("At 1, 2, 3, looking straight ahead");
   });
 });
@@ -108,7 +136,16 @@ describe("one view model with the panorama (#386)", () => {
   });
 
   it("follows a heading with the person's own look on top, wrapped and held short of the poles", () => {
-    expect(followCamera({ eye: [0, 1, 0], heading: 170, look: { yaw: 30, pitch: 100 } })).toEqual({ target: [0, 1, 0], distance: 0, yaw: -160, pitch: 89 });
-    expect(followCamera({ eye: [5, 0, 0], heading: 90, behind: 4 })).toMatchObject({ distance: 4, yaw: 90, pitch: 0 });
+    expect(followCamera({ eye: [0, 1, 0], heading: 170, look: { yaw: 30, pitch: 100 } })).toEqual({
+      target: [0, 1, 0],
+      distance: 0,
+      yaw: -160,
+      pitch: 89,
+    });
+    expect(followCamera({ eye: [5, 0, 0], heading: 90, behind: 4 })).toMatchObject({
+      distance: 4,
+      yaw: 90,
+      pitch: 0,
+    });
   });
 });

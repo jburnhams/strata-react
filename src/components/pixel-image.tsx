@@ -27,7 +27,9 @@ import { format } from "../lib/format";
 // `rgbaToBlob` is the download path: the same pixels as a PNG `Blob`, which `useObjectUrl` turns into a
 // link. React Aria has no picture part; the canvas is a native element, as `Waveform` and `PanoramaViewer` are.
 
-type PixelSource = { width: number; height: number; rgba: Uint8Array | Uint8ClampedArray; image?: never } | { image: ImageData; width?: never; height?: never; rgba?: never };
+type PixelSource =
+  | { width: number; height: number; rgba: Uint8Array | Uint8ClampedArray; image?: never }
+  | { image: ImageData; width?: never; height?: never; rgba?: never };
 
 /** What `PixelImage` takes: a width, height and RGBA bytes, or an `ImageData`, and how to show it. */
 export type PixelImageProps = PixelSource & {
@@ -40,7 +42,10 @@ export type PixelImageProps = PixelSource & {
   className?: string;
 };
 
-const sizeOf = (p: PixelSource) => (p.image ? { width: p.image.width, height: p.image.height, data: p.image.data } : { width: p.width, height: p.height, data: p.rgba });
+const sizeOf = (p: PixelSource) =>
+  p.image
+    ? { width: p.image.width, height: p.image.height, data: p.image.data }
+    : { width: p.width, height: p.height, data: p.rgba };
 
 /** The zoom a picture is drawn at: a whole number, at least 1. */
 export function pixelZoom(width: number, height: number, zoom: number | "fit" = "fit", maxSize = 512): number {
@@ -73,7 +78,14 @@ export function PixelImage({ label, zoom = "fit", maxSize = 512, className, ...s
   if (!complete) {
     // Never half a picture: a box of the size it should have been, saying so in words.
     return (
-      <span role="img" aria-label={`${label}, no picture data`} className={cn("inline-grid min-h-16 min-w-40 place-items-center rounded-control border border-dashed border-border bg-surface-sunken px-3 type-body-sm text-muted-foreground", className)}>
+      <span
+        role="img"
+        aria-label={`${label}, no picture data`}
+        className={cn(
+          "inline-grid min-h-16 min-w-40 place-items-center rounded-control border border-dashed border-border bg-surface-sunken px-3 type-body-sm text-muted-foreground",
+          className,
+        )}
+      >
         <span aria-hidden>No picture data</span>
       </span>
     );
@@ -88,7 +100,15 @@ export function PixelImage({ label, zoom = "fit", maxSize = 512, className, ...s
         backgroundSize: "16px 16px",
       }}
     >
-      <canvas ref={canvas} role="img" aria-label={name} width={width} height={height} className="image-pixelated block" style={{ width: width * scale, height: height * scale }} />
+      <canvas
+        ref={canvas}
+        role="img"
+        aria-label={name}
+        width={width}
+        height={height}
+        className="image-pixelated block"
+        style={{ width: width * scale, height: height * scale }}
+      />
     </span>
   );
 }

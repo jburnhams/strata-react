@@ -49,7 +49,9 @@ function Live() {
   const withdrawn = undoable.isRemoved("b-2042");
   return (
     <div className="grid justify-items-start gap-4">
-      <p className="type-body">{withdrawn ? "Tom Ellery's booking is withdrawn." : "Tom Ellery: 3 pieces in kiln 2."}</p>
+      <p className="type-body">
+        {withdrawn ? "Tom Ellery's booking is withdrawn." : "Tom Ellery: 3 pieces in kiln 2."}
+      </p>
       <div className="flex gap-2">
         <Button
           size="sm"

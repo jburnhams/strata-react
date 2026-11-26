@@ -62,7 +62,11 @@ export function clampCamera(c: OrbitCamera, limits: Partial<CameraLimits> = {}):
 }
 
 type Vec3 = [number, number, number];
-const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const cross = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /** The unit vectors a camera looks along, and to its right and up. */
@@ -92,9 +96,18 @@ export function perspective(fov: number, aspect: number, near: number, far: numb
 /** The view matrix of an eye looking along `forward`. */
 export function lookAlong(eye: Vec3, forward: Vec3, right: Vec3, up: Vec3): Float32Array {
   const m = new Float32Array(16);
-  m[0] = right[0]; m[4] = right[1]; m[8] = right[2]; m[12] = -dot(right, eye);
-  m[1] = up[0]; m[5] = up[1]; m[9] = up[2]; m[13] = -dot(up, eye);
-  m[2] = -forward[0]; m[6] = -forward[1]; m[10] = -forward[2]; m[14] = dot(forward, eye);
+  m[0] = right[0];
+  m[4] = right[1];
+  m[8] = right[2];
+  m[12] = -dot(right, eye);
+  m[1] = up[0];
+  m[5] = up[1];
+  m[9] = up[2];
+  m[13] = -dot(up, eye);
+  m[2] = -forward[0];
+  m[6] = -forward[1];
+  m[10] = -forward[2];
+  m[14] = dot(forward, eye);
   m[15] = 1;
   return m;
 }
@@ -112,16 +125,50 @@ export function multiply(a: Float32Array, b: Float32Array): Float32Array {
 }
 
 /** The frame for a camera in a drawing buffer of `width` by `height`. */
-export function frameFor(camera: OrbitCamera, width: number, height: number, { fov = 60, near = 0.1, far = 10_000, context = 0, time = 0 }: { fov?: number; near?: number; far?: number; context?: number; time?: number } = {}): SceneFrame {
+export function frameFor(
+  camera: OrbitCamera,
+  width: number,
+  height: number,
+  {
+    fov = 60,
+    near = 0.1,
+    far = 10_000,
+    context = 0,
+    time = 0,
+  }: { fov?: number; near?: number; far?: number; context?: number; time?: number } = {},
+): SceneFrame {
   const { forward, right, up } = basis(camera);
-  const eye: Vec3 = [camera.target[0] - forward[0] * camera.distance, camera.target[1] - forward[1] * camera.distance, camera.target[2] - forward[2] * camera.distance];
+  const eye: Vec3 = [
+    camera.target[0] - forward[0] * camera.distance,
+    camera.target[1] - forward[1] * camera.distance,
+    camera.target[2] - forward[2] * camera.distance,
+  ];
   const view = lookAlong(eye, forward, right, up);
   const projection = perspective(fov, width / Math.max(1, height), near, far);
-  return { camera, eye, forward, right, up, view, projection, viewProjection: multiply(projection, view), width, height, context, time };
+  return {
+    camera,
+    eye,
+    forward,
+    right,
+    up,
+    view,
+    projection,
+    viewProjection: multiply(projection, view),
+    width,
+    height,
+    context,
+    time,
+  };
 }
 
 /** Turns the camera as dragging does: orbit moves the eye round the target; look (fly) turns the head. Pixels in, degrees out at `degreesPerPixel`. */
-export function turn(c: OrbitCamera, dx: number, dy: number, mode: "orbit" | "fly", degreesPerPixel = 0.35): OrbitCamera {
+export function turn(
+  c: OrbitCamera,
+  dx: number,
+  dy: number,
+  mode: "orbit" | "fly",
+  degreesPerPixel = 0.35,
+): OrbitCamera {
   // Orbit: the model follows the pointer, so the eye goes the other way. Fly: the picture follows the pointer.
   const sign = mode === "orbit" ? 1 : -1;
   return { ...c, yaw: c.yaw + sign * dx * degreesPerPixel, pitch: c.pitch - sign * dy * degreesPerPixel };
@@ -147,7 +194,8 @@ export function dolly(c: OrbitCamera, factor: number): OrbitCamera {
   return { ...c, distance: c.distance * factor };
 }
 
-const turnWords = (deg: number, positive: string, negative: string) => (Math.abs(deg) < 1 ? "" : `${Math.round(Math.abs(deg))}° ${deg > 0 ? positive : negative}`);
+const turnWords = (deg: number, positive: string, negative: string) =>
+  Math.abs(deg) < 1 ? "" : `${Math.round(Math.abs(deg))}° ${deg > 0 ? positive : negative}`;
 
 /** The camera in words, for the viewport's name and its status: "Looking at 0, 2, 0 from 5 away, turned 45° right, 30° above the horizon". */
 export function describeCamera(c: OrbitCamera): string {
@@ -156,14 +204,19 @@ export function describeCamera(c: OrbitCamera): string {
   const tilted = turnWords(c.pitch, "up", "down");
   const at = `${n(c.target[0])}, ${n(c.target[1])}, ${n(c.target[2])}`;
   const parts = [turned && `turned ${turned}`, tilted && `looking ${tilted}`].filter(Boolean).join(", ");
-  return c.distance === 0 ? `At ${at}${parts ? `, ${parts}` : ", looking straight ahead"}` : `Looking at ${at} from ${n(c.distance)} away${parts ? `, ${parts}` : ""}`;
+  return c.distance === 0
+    ? `At ${at}${parts ? `, ${parts}` : ", looking straight ahead"}`
+    : `Looking at ${at} from ${n(c.distance)} away${parts ? `, ${parts}` : ""}`;
 }
 
 /** A view from inside a sphere as `PanoramaViewer` holds it: the same degrees, positive yaw to the right and positive pitch up. */
 export type LookView = { yaw: number; pitch: number; fov: number };
 
 /** The fly camera that sees what a `PanoramaViewer` view sees from `eye`: one view model for looking from a point, in a picture or a scene (issue #386). */
-export function cameraFromView(view: Pick<LookView, "yaw" | "pitch">, eye: readonly [number, number, number] = [0, 0, 0]): OrbitCamera {
+export function cameraFromView(
+  view: Pick<LookView, "yaw" | "pitch">,
+  eye: readonly [number, number, number] = [0, 0, 0],
+): OrbitCamera {
   return { target: eye, distance: 0, yaw: view.yaw, pitch: view.pitch };
 }
 
@@ -176,6 +229,20 @@ export function viewFromCamera(camera: Pick<OrbitCamera, "yaw" | "pitch">, fov: 
  * A camera that follows a moving point (issue #386, "through the player's eyes" in a replay): the eye is at `eye` and looks along the
  * heading the app supplies, plus the person's own `look` on top. With `behind` it is a chase camera instead, that far back along the look.
  */
-export function followCamera({ eye, heading, pitch = 0, look, behind = 0, maxPitch = 89 }: { eye: readonly [number, number, number]; heading: number; pitch?: number; look?: { yaw?: number; pitch?: number }; behind?: number; maxPitch?: number }): OrbitCamera {
+export function followCamera({
+  eye,
+  heading,
+  pitch = 0,
+  look,
+  behind = 0,
+  maxPitch = 89,
+}: {
+  eye: readonly [number, number, number];
+  heading: number;
+  pitch?: number;
+  look?: { yaw?: number; pitch?: number };
+  behind?: number;
+  maxPitch?: number;
+}): OrbitCamera {
   return { target: eye, distance: Math.max(0, behind), ...followAim({ heading, pitch, look, maxPitch }) };
 }

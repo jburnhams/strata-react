@@ -1,15 +1,40 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, EmptyState, IconButton, Input, Inspector, InspectorSection, NativeSelect, NumberField, PropertyList, PropertyRow, Slider, Status } from "../src";
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  Input,
+  Inspector,
+  InspectorSection,
+  NativeSelect,
+  NumberField,
+  PropertyList,
+  PropertyRow,
+  Slider,
+  Status,
+} from "../src";
 
 // An inspector for what is selected on a kiln-room screen: a piece, or a firing. Same pieces as a
 // video editor's clip panel (issue #74): a panel, collapsible sections, editable rows, and a
 // read-only list of facts. The sample data is invented, like the rest of the fixtures.
 
-const emptyState = <EmptyState title="Nothing selected">Select a piece on the shelf to see its glaze, size and firing history.</EmptyState>;
+const emptyState = (
+  <EmptyState title="Nothing selected">
+    Select a piece on the shelf to see its glaze, size and firing history.
+  </EmptyState>
+);
 
-function Piece({ name = "Moonbeam bowl", compact, storageKey }: { name?: string; compact?: boolean; storageKey?: string }) {
+function Piece({
+  name = "Moonbeam bowl",
+  compact,
+  storageKey,
+}: {
+  name?: string;
+  compact?: boolean;
+  storageKey?: string;
+}) {
   const [glaze, setGlaze] = React.useState("Celadon");
   const [coats, setCoats] = React.useState<number | null>(2);
   const [shrink, setShrink] = React.useState(12);
@@ -32,7 +57,12 @@ function Piece({ name = "Moonbeam bowl", compact, storageKey }: { name?: string;
               <option>Shino</option>
             </NativeSelect>
           </PropertyRow>
-          <PropertyRow label="Coats" hint="Two is usual for a cone 6 glaze." modified={coats !== 2} onReset={() => setCoats(2)}>
+          <PropertyRow
+            label="Coats"
+            hint="Two is usual for a cone 6 glaze."
+            modified={coats !== 2}
+            onReset={() => setCoats(2)}
+          >
             <NumberField value={coats} onChange={setCoats} min={1} max={5} />
           </PropertyRow>
         </InspectorSection>
@@ -103,7 +133,11 @@ export const ManySections: Story = {};
 export const LongFileName: Story = {
   render: () => (
     <div className="w-80">
-      <Inspector title="moonbeam-bowl-front-view-with-the-celadon-glaze-final-edit-v3.jpg" kind="Photo" empty={emptyState}>
+      <Inspector
+        title="moonbeam-bowl-front-view-with-the-celadon-glaze-final-edit-v3.jpg"
+        kind="Photo"
+        empty={emptyState}
+      >
         <InspectorSection id="file" title="File">
           <PropertyList
             items={[
@@ -164,4 +198,11 @@ export const NarrowPanel: Story = {
 export const Compact: Story = { args: { compact: true } };
 
 /** At phone width the panel is the whole screen and its rows stack. */
-export const Phone: Story = { tags: ["visual-phone"], render: () => <div className="w-full"><Piece /></div> };
+export const Phone: Story = {
+  tags: ["visual-phone"],
+  render: () => (
+    <div className="w-full">
+      <Piece />
+    </div>
+  ),
+};

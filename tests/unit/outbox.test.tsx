@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -20,7 +20,14 @@ function serve(answer: (body: { id: string }) => Response | Promise<Response> = 
   return seen;
 }
 
-const answer = (id: string, after?: string) => ({ method: "POST" as const, path: "/api/answers", json: { id }, id, after, label: `Answer ${id}` });
+const answer = (id: string, after?: string) => ({
+  method: "POST" as const,
+  path: "/api/answers",
+  json: { id },
+  id,
+  after,
+  label: `Answer ${id}`,
+});
 
 afterEach(() => window.localStorage.clear());
 
@@ -33,8 +40,16 @@ describe("createOutbox", () => {
     expect(await a.delivered).toBe("sent");
     expect(await b.delivered).toBe("sent");
     expect(seen.map((s) => s.id)).toEqual(["a", "b"]);
-    expect(box.snapshot()).toMatchObject({ waiting: 0, refused: [], problem: null, persisted: true });
-    expect(JSON.parse(window.localStorage.getItem("strata:outbox:t1") ?? "{}")).toEqual({ items: [], refused: [] });
+    expect(box.snapshot()).toMatchObject({
+      waiting: 0,
+      refused: [],
+      problem: null,
+      persisted: true,
+    });
+    expect(JSON.parse(window.localStorage.getItem("strata:outbox:t1") ?? "{}")).toEqual({
+      items: [],
+      refused: [],
+    });
   });
 
   it("keeps a write the server could not take, says why, and sends it once the server is back", async () => {
@@ -49,7 +64,9 @@ describe("createOutbox", () => {
     expect(s).toMatchObject({ waiting: 2, problem: "The server could not be reached." });
     expect(s.retryAt).toBeInstanceOf(Date);
     // Kept in storage: a reload finds them.
-    const kept = JSON.parse(window.localStorage.getItem("strata:outbox:t2") ?? "{}") as { items: OutboxItem[] };
+    const kept = JSON.parse(window.localStorage.getItem("strata:outbox:t2") ?? "{}") as {
+      items: OutboxItem[];
+    };
     expect(kept.items.map((x) => x.id)).toEqual(["a", "b"]);
     up = true;
     await box.flush();
@@ -70,11 +87,19 @@ describe("createOutbox", () => {
     expect(box.snapshot().problem).toBe("Restarting");
     status = 401;
     await box.flush();
-    expect(box.snapshot()).toMatchObject({ waiting: 1, refused: [], problem: "Sign in again to send them." });
+    expect(box.snapshot()).toMatchObject({
+      waiting: 1,
+      refused: [],
+      problem: "Sign in again to send them.",
+    });
   });
 
   it("lists a refused write with the server's reason, refuses what follows it, and goes on to the rest", async () => {
-    const seen = serve(({ id }) => (id === "a" ? HttpResponse.json({ detail: "That round is no longer kept." }, { status: 400 }) : HttpResponse.json({ ok: true })));
+    const seen = serve(({ id }) =>
+      id === "a"
+        ? HttpResponse.json({ detail: "That round is no longer kept." }, { status: 400 })
+        : HttpResponse.json({ ok: true }),
+    );
     const box = createOutbox({ name: "t4" });
     const a = box.add(answer("a"));
     const rating = box.add(answer("r", "a"));
@@ -156,9 +181,14 @@ describe("createOutbox", () => {
     const a = box.add(answer("a"));
     const b = box.add(answer("b"));
     const c = box.add(answer("c"));
-    const kept = JSON.parse(window.localStorage.getItem("strata:outbox:t9") as string) as { items: OutboxItem[] };
+    const kept = JSON.parse(window.localStorage.getItem("strata:outbox:t9") as string) as {
+      items: OutboxItem[];
+    };
     const refused = [{ id: "c", reason: "No.", at: new Date().toISOString() }];
-    window.localStorage.setItem("strata:outbox:t9", JSON.stringify({ items: kept.items.filter((x) => x.id === "a"), refused }));
+    window.localStorage.setItem(
+      "strata:outbox:t9",
+      JSON.stringify({ items: kept.items.filter((x) => x.id === "a"), refused }),
+    );
     release();
     expect(await Promise.all([a.delivered, b.delivered, c.delivered])).toEqual(["sent", "sent", "refused"]);
     expect(sent).toEqual(["a"]);
@@ -167,7 +197,13 @@ describe("createOutbox", () => {
   it("starts and stops with the component that holds it", async () => {
     const seen = serve();
     const box = createOutbox({ name: "t10" });
-    window.localStorage.setItem("strata:outbox:t10", JSON.stringify({ items: [{ ...answer("a"), queuedAt: "2026-11-23T10:00:00Z" }], refused: [] }));
+    window.localStorage.setItem(
+      "strata:outbox:t10",
+      JSON.stringify({
+        items: [{ ...answer("a"), queuedAt: "2026-11-23T10:00:00Z" }],
+        refused: [],
+      }),
+    );
     function Shell() {
       useOutboxStarted(box);
       return null;
@@ -234,7 +270,9 @@ describe("createOutbox, the edges", () => {
     const names: string[] = [];
     Object.defineProperty(navigator, "locks", {
       configurable: true,
-      value: { request: (name: string, run: () => unknown) => (names.push(name), Promise.resolve(run())) },
+      value: {
+        request: (name: string, run: () => unknown) => (names.push(name), Promise.resolve(run())),
+      },
     });
     try {
       expect(await createOutbox({ name: "e6" }).add(answer("a")).delivered).toBe("sent");
@@ -338,7 +376,9 @@ describe("OutboxStatus", () => {
     await box.add(answer("a")).delivered;
     await box.add(answer("b")).delivered;
     render(<OutboxStatus outbox={box} noun="answer" />);
-    expect(screen.getByRole("status").textContent).toBe(`${format.count(2, "answer")} kept on this device. The server could not be reached. Trying again at ${format.clock(box.snapshot().retryAt as Date)}.Send now`);
+    expect(screen.getByRole("status").textContent).toBe(
+      `${format.count(2, "answer")} kept on this device. The server could not be reached. Trying again at ${format.clock(box.snapshot().retryAt as Date)}.Send now`,
+    );
     up = true;
     await userEvent.click(screen.getByRole("button", { name: "Send now" }));
     await act(() => box.flush());

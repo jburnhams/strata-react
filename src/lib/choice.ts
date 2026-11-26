@@ -75,8 +75,16 @@ export function applyChange(explicit: ReadonlySet<string>, next: ReadonlySet<str
 /** The sentence a screen reader hears for a change, or "" when nothing worth saying happened. */
 export function noteFor({ added, dropped, refused }: Pick<ChoiceChange, "added" | "dropped" | "refused">): string {
   const parts: string[] = [];
-  if (added > 0) parts.push(added === 1 ? "1 more chosen because it depends on it" : `${added} more chosen because they depend on it`);
+  if (added > 0)
+    parts.push(
+      added === 1 ? "1 more chosen because it depends on it" : `${added} more chosen because they depend on it`,
+    );
   if (dropped > 0 && added === 0) parts.push(dropped === 1 ? "1 fewer chosen" : `${dropped} fewer chosen`);
-  if (refused > 0) parts.push(refused === 1 ? "1 stays chosen because something chosen depends on it" : `${refused} stay chosen because something chosen depends on them`);
+  if (refused > 0)
+    parts.push(
+      refused === 1
+        ? "1 stays chosen because something chosen depends on it"
+        : `${refused} stay chosen because something chosen depends on them`,
+    );
   return parts.join(". ");
 }

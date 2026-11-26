@@ -3,7 +3,17 @@ import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } f
 import { useSliderState } from "react-stately";
 import { format } from "../lib/format";
 import { useClientWork } from "../lib/client-work";
-import { clampView, peakGain, peaksBetween, peaksFromAudio, timeAt, toPeakPair, type DecodedAudio, type PeakPair, type WaveformPeaks } from "../lib/waveform";
+import {
+  clampView,
+  peakGain,
+  peaksBetween,
+  peaksFromAudio,
+  timeAt,
+  toPeakPair,
+  type DecodedAudio,
+  type PeakPair,
+  type WaveformPeaks,
+} from "../lib/waveform";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { JobStatus } from "./job-status";
@@ -51,7 +61,12 @@ import { JobStatus } from "./job-status";
 export type WaveformMarkKind = "beat" | "bar" | "downbeat" | "chapter";
 
 /** A moment on the waveform: a beat, a bar line, the first downbeat, a chapter. */
-export type WaveformMark = { time: number; label?: string; kind?: WaveformMarkKind; /** In the list for screen readers. Default: yes, except beats. */ listed?: boolean };
+export type WaveformMark = {
+  time: number;
+  label?: string;
+  kind?: WaveformMarkKind;
+  /** In the list for screen readers. Default: yes, except beats. */ listed?: boolean;
+};
 
 /** Shading tones for spans. */
 export type WaveformTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -109,12 +124,16 @@ type Common = {
 };
 
 /** `peaks` or a `source` to decode: one of them, so a waveform with nothing to draw cannot be written. */
-export type WaveformProps = Common & ({ peaks: WaveformPeaks; source?: never } | { source: string | Blob; peaks?: never });
+export type WaveformProps = Common &
+  ({ peaks: WaveformPeaks; source?: never } | { source: string | Blob; peaks?: never });
 
 const WORDS = { running: "Reading the waveform", finished: "Waveform ready", failed: "Could not read the waveform" };
 
 async function defaultDecode(data: ArrayBuffer): Promise<DecodedAudio> {
-  const Context: typeof AudioContext | undefined = typeof AudioContext !== "undefined" ? AudioContext : (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Context: typeof AudioContext | undefined =
+    typeof AudioContext !== "undefined"
+      ? AudioContext
+      : (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Context) throw new Error("This browser cannot decode audio.");
   const ctx = new Context();
   try {
@@ -128,10 +147,34 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), h
 const clock = (t: number) => format.runningTime(t);
 
 /** An audio waveform with marks, spans and a playhead: one slider you click, drag or key to seek, zoom, and a range to select. */
-export function Waveform({ label, peaks, source, duration: given, time, onSeek, marks = [], spans = [], underlay, range: controlledRange, onRangeChange, step = 5, bigStep = 30, defaultView, buckets = 2000, normalise = false, decode = defaultDecode, words = WORDS, disabled, className }: WaveformProps) {
+export function Waveform({
+  label,
+  peaks,
+  source,
+  duration: given,
+  time,
+  onSeek,
+  marks = [],
+  spans = [],
+  underlay,
+  range: controlledRange,
+  onRangeChange,
+  step = 5,
+  bigStep = 30,
+  defaultView,
+  buckets = 2000,
+  normalise = false,
+  decode = defaultDecode,
+  words = WORDS,
+  disabled,
+  className,
+}: WaveformProps) {
   // Peaks: given, or read from the file.
   const work = useClientWork<{ pair: PeakPair; duration: number }>(async ({ signal, progress }) => {
-    const data = typeof source === "string" ? await (await fetch(source, { signal })).arrayBuffer() : await (source as Blob).arrayBuffer();
+    const data =
+      typeof source === "string"
+        ? await (await fetch(source, { signal })).arrayBuffer()
+        : await (source as Blob).arrayBuffer();
     progress(0, buckets + 2);
     const audio = await decode(data);
     if (signal.aborted) throw new DOMException("The waveform was cancelled.", "AbortError");
@@ -153,10 +196,15 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const ready = pair !== null && duration > 0;
   const percentile = typeof normalise === "object" ? normalise.percentile : undefined;
   const maxGain = typeof normalise === "object" ? normalise.maxGain : undefined;
-  const gain = React.useMemo(() => (normalise && pair ? peakGain(pair, { percentile, maxGain }) : 1), [normalise, pair, percentile, maxGain]);
+  const gain = React.useMemo(
+    () => (normalise && pair ? peakGain(pair, { percentile, maxGain }) : 1),
+    [normalise, pair, percentile, maxGain],
+  );
 
   // The view: the part of the file in the plot.
-  const [view, setView] = React.useState<[number, number] | null>(defaultView ? [defaultView[0], defaultView[1]] : null);
+  const [view, setView] = React.useState<[number, number] | null>(
+    defaultView ? [defaultView[0], defaultView[1]] : null,
+  );
   const [v0, v1] = view ? clampView(view[0], view[1] - view[0], duration || 1) : [0, duration];
   const zoomed = ready && v1 - v0 < duration - 1e-6;
   const span = Math.max(v1 - v0, 1e-6);
@@ -169,7 +217,7 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const lastPan = React.useRef(0);
   React.useEffect(() => {
     // Follow the playhead out of the view (not for a few seconds after the person moved the view).
-    if (!zoomed || time >= v0 && time <= v1 || Date.now() - lastPan.current < 3000) return;
+    if (!zoomed || (time >= v0 && time <= v1) || Date.now() - lastPan.current < 3000) return;
     setView(clampView(time - span * 0.2, span, duration));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [time]);
@@ -225,16 +273,42 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   const track = React.useRef<HTMLDivElement>(null);
   const input = React.useRef<HTMLInputElement>(null);
   const off = disabled || !ready;
-  const timeText = React.useMemo(() => ({ format: clock, formatRange: (a: number, b: number) => `${clock(a)} to ${clock(b)}`, resolvedOptions: () => ({ locale: "en-US" }) }) as unknown as Intl.NumberFormat, []);
-  const state = useSliderState({ minValue: v0, maxValue: Math.max(v1, v0 + 0.01), step: 0.01, value: [clamp(time, v0, Math.max(v1, v0 + 0.01))], onChange: ([t]) => onSeek(clamp(t, 0, duration)), numberFormatter: timeText, isDisabled: off });
+  const timeText = React.useMemo(
+    () =>
+      ({
+        format: clock,
+        formatRange: (a: number, b: number) => `${clock(a)} to ${clock(b)}`,
+        resolvedOptions: () => ({ locale: "en-US" }),
+      }) as unknown as Intl.NumberFormat,
+    [],
+  );
+  const state = useSliderState({
+    minValue: v0,
+    maxValue: Math.max(v1, v0 + 0.01),
+    step: 0.01,
+    value: [clamp(time, v0, Math.max(v1, v0 + 0.01))],
+    onChange: ([t]) => onSeek(clamp(t, 0, duration)),
+    numberFormatter: timeText,
+    isDisabled: off,
+  });
   const { groupProps, trackProps } = useSlider({ "aria-label": label, isDisabled: off }, state, track);
-  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label, isDisabled: off }, state);
+  const { thumbProps, inputProps } = useSliderThumb(
+    { index: 0, trackRef: track, inputRef: input, "aria-label": label, isDisabled: off },
+    state,
+  );
   const { focusProps, isFocusVisible } = useFocusRing();
   const seekTo = (t: number) => onSeek(clamp(t, 0, duration));
   const onKeyDownCapture = (e: React.KeyboardEvent) => {
     if (off) return;
     const big = e.shiftKey ? bigStep : step;
-    const moves: Record<string, number> = { ArrowLeft: -big, ArrowDown: -big, ArrowRight: big, ArrowUp: big, PageDown: -bigStep, PageUp: bigStep };
+    const moves: Record<string, number> = {
+      ArrowLeft: -big,
+      ArrowDown: -big,
+      ArrowRight: big,
+      ArrowUp: big,
+      PageDown: -bigStep,
+      PageUp: bigStep,
+    };
     if (e.key in moves) seekTo(time + moves[e.key]);
     else if (e.key === "Home") seekTo(0);
     else if (e.key === "End") seekTo(duration);
@@ -298,7 +372,11 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
     if (!pair || width === 0 || duration <= 0) return "";
     let d = "";
     for (let x = 0; x < width; x += column) {
-      const [lo, hi] = peaksBetween(pair, (v0 + (x / width) * (v1 - v0)) / duration, (v0 + ((x + column) / width) * (v1 - v0)) / duration);
+      const [lo, hi] = peaksBetween(
+        pair,
+        (v0 + (x / width) * (v1 - v0)) / duration,
+        (v0 + ((x + column) / width) * (v1 - v0)) / duration,
+      );
       if (!Number.isFinite(lo)) continue;
       const top = 50 - clamp(hi * gain, -1, 1) * 48;
       const bottom = 50 - clamp(lo * gain, -1, 1) * 48;
@@ -312,11 +390,21 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
   // Past one line per eight pixels, beats are noise: draw the bars and the rest.
   const thin = visibleMarks.length > width / 8;
   const listedMarks = marks.filter((m) => m.label && (m.listed ?? m.kind !== "beat"));
-  const counts = marks.reduce<Record<string, number>>((c, m) => ((c[m.kind ?? "mark"] = (c[m.kind ?? "mark"] ?? 0) + 1), c), {});
+  const counts = marks.reduce<Record<string, number>>(
+    (c, m) => ((c[m.kind ?? "mark"] = (c[m.kind ?? "mark"] ?? 0) + 1), c),
+    {},
+  );
   // Under 1.1× the drawing is as good as to scale, and saying so would be noise.
-  const louder = gain >= 1.1 ? `Shown ${gain < 10 ? gain.toFixed(1).replace(/\.0$/, "") : Math.round(gain)}× louder` : null;
+  const louder =
+    gain >= 1.1 ? `Shown ${gain < 10 ? gain.toFixed(1).replace(/\.0$/, "") : Math.round(gain)}× louder` : null;
   const summary = ready
-    ? `${clock(duration)} long${Object.keys(counts).length ? `, ${Object.entries(counts).map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", ")}` : ""}${spans.length ? `, ${spans.length} span${spans.length === 1 ? "" : "s"}` : ""}${zoomed ? `, showing ${clock(v0)} to ${clock(v1)}` : ""}${range ? `, range ${clock(range[0])} to ${clock(range[1])}` : ""}${louder ? `, ${louder.toLowerCase()}` : ""}`
+    ? `${clock(duration)} long${
+        Object.keys(counts).length
+          ? `, ${Object.entries(counts)
+              .map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`)
+              .join(", ")}`
+          : ""
+      }${spans.length ? `, ${spans.length} span${spans.length === 1 ? "" : "s"}` : ""}${zoomed ? `, showing ${clock(v0)} to ${clock(v1)}` : ""}${range ? `, range ${clock(range[0])} to ${clock(range[1])}` : ""}${louder ? `, ${louder.toLowerCase()}` : ""}`
     : "";
   const summaryId = React.useId();
 
@@ -327,7 +415,15 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
           label={`${label}: reading`}
           running={work.phase === "running"}
           words={words}
-          summary={work.phase === "failed" ? (work.error instanceof Error ? work.error.message : "The file could not be read.") : work.phase === "cancelled" ? "Stopped." : "Reducing the sound to a picture."}
+          summary={
+            work.phase === "failed"
+              ? work.error instanceof Error
+                ? work.error.message
+                : "The file could not be read."
+              : work.phase === "cancelled"
+                ? "Stopped."
+                : "Reducing the sound to a picture."
+          }
           current={work.current}
           total={work.total}
           failed={work.phase === "failed"}
@@ -342,14 +438,32 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
           </Button>
         </div>
       )}
-      <div ref={box} className={cn("relative w-full overflow-hidden rounded-surface border border-border bg-surface-sunken", off && "opacity-60")} style={{ height: "calc(var(--control-h) * 2.5)" }} onPointerDownCapture={startRange} onMouseDownCapture={(e) => e.shiftKey && e.stopPropagation()}>
+      <div
+        ref={box}
+        className={cn(
+          "relative w-full overflow-hidden rounded-surface border border-border bg-surface-sunken",
+          off && "opacity-60",
+        )}
+        style={{ height: "calc(var(--control-h) * 2.5)" }}
+        onPointerDownCapture={startRange}
+        onMouseDownCapture={(e) => e.shiftKey && e.stopPropagation()}
+      >
         {underlay && ready && (
-          <div aria-hidden className="absolute inset-y-0 [&>*]:size-full [&>img]:object-fill" style={{ left: `${(-v0 / span) * 100}%`, width: `${(duration / span) * 100}%` }}>
+          <div
+            aria-hidden
+            className="absolute inset-y-0 [&>*]:size-full [&>img]:object-fill"
+            style={{ left: `${(-v0 / span) * 100}%`, width: `${(duration / span) * 100}%` }}
+          >
             {underlay}
           </div>
         )}
         {ready && width > 0 && (
-          <svg aria-hidden className="absolute inset-0 size-full" viewBox={`0 0 ${width} 100`} preserveAspectRatio="none">
+          <svg
+            aria-hidden
+            className="absolute inset-0 size-full"
+            viewBox={`0 0 ${width} 100`}
+            preserveAspectRatio="none"
+          >
             <defs>
               <clipPath id={clipId}>
                 <rect x={0} y={0} width={Math.max(0, Math.min(px(time), width))} height={100} />
@@ -366,29 +480,107 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
                 </g>
               ) : null;
             })}
-            {shown && <rect x={clamp(px(shown[0]), 0, width)} y={0} width={Math.max(clamp(px(shown[1]), 0, width) - clamp(px(shown[0]), 0, width), 1)} height={100} fill="var(--primary-5)" opacity={0.45} />}
-            <path d={bars} stroke="var(--muted-foreground)" strokeWidth={column - 0.5} vectorEffect="non-scaling-stroke" fill="none" />
-            <path d={bars} stroke="var(--primary)" strokeWidth={column - 0.5} vectorEffect="non-scaling-stroke" fill="none" clipPath={`url(#${clipId})`} />
+            {shown && (
+              <rect
+                x={clamp(px(shown[0]), 0, width)}
+                y={0}
+                width={Math.max(clamp(px(shown[1]), 0, width) - clamp(px(shown[0]), 0, width), 1)}
+                height={100}
+                fill="var(--primary-5)"
+                opacity={0.45}
+              />
+            )}
+            <path
+              d={bars}
+              stroke="var(--muted-foreground)"
+              strokeWidth={column - 0.5}
+              vectorEffect="non-scaling-stroke"
+              fill="none"
+            />
+            <path
+              d={bars}
+              stroke="var(--primary)"
+              strokeWidth={column - 0.5}
+              vectorEffect="non-scaling-stroke"
+              fill="none"
+              clipPath={`url(#${clipId})`}
+            />
             {visibleMarks.map((m) => {
               const kind = m.kind ?? "bar";
               if (thin && kind === "beat") return null;
               const line = MARK_LINE[kind];
-              return <line key={`${m.time}-${kind}`} x1={px(m.time)} x2={px(m.time)} y1={0} y2={100} stroke="var(--foreground)" strokeWidth={line.width} strokeDasharray={line.dash} opacity={line.opacity} vectorEffect="non-scaling-stroke" />;
+              return (
+                <line
+                  key={`${m.time}-${kind}`}
+                  x1={px(m.time)}
+                  x2={px(m.time)}
+                  y1={0}
+                  y2={100}
+                  stroke="var(--foreground)"
+                  strokeWidth={line.width}
+                  strokeDasharray={line.dash}
+                  opacity={line.opacity}
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
             })}
             {shown && (
               <>
-                <line x1={px(shown[0])} x2={px(shown[0])} y1={0} y2={100} stroke="var(--primary)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-                <line x1={px(shown[1])} x2={px(shown[1])} y1={0} y2={100} stroke="var(--primary)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                <line
+                  x1={px(shown[0])}
+                  x2={px(shown[0])}
+                  y1={0}
+                  y2={100}
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <line
+                  x1={px(shown[1])}
+                  x2={px(shown[1])}
+                  y1={0}
+                  y2={100}
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
               </>
             )}
-            {time >= v0 && time <= v1 && <line x1={px(time)} x2={px(time)} y1={0} y2={100} stroke="var(--primary)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+            {time >= v0 && time <= v1 && (
+              <line
+                x1={px(time)}
+                x2={px(time)}
+                y1={0}
+                y2={100}
+                stroke="var(--primary)"
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
           </svg>
         )}
         <div {...groupProps} className="absolute inset-0">
-          <div {...trackProps} ref={track} className={cn("relative size-full touch-none", off ? "cursor-not-allowed" : "cursor-pointer", isFocusVisible && "outline-2 -outline-offset-2 outline-ring")}>
-            <div {...thumbProps} className="absolute inset-y-0 w-0" style={{ left: `${clamp((time - v0) / span, 0, 1) * 100}%` }}>
+          <div
+            {...trackProps}
+            ref={track}
+            className={cn(
+              "relative size-full touch-none",
+              off ? "cursor-not-allowed" : "cursor-pointer",
+              isFocusVisible && "outline-2 -outline-offset-2 outline-ring",
+            )}
+          >
+            <div
+              {...thumbProps}
+              className="absolute inset-y-0 w-0"
+              style={{ left: `${clamp((time - v0) / span, 0, 1) * 100}%` }}
+            >
               <VisuallyHidden>
-                <input ref={input} {...mergeProps(inputProps, focusProps, { "aria-describedby": summaryId })} aria-labelledby={undefined} onKeyDownCapture={onKeyDownCapture} />
+                <input
+                  ref={input}
+                  {...mergeProps(inputProps, focusProps, { "aria-describedby": summaryId })}
+                  aria-labelledby={undefined}
+                  onKeyDownCapture={onKeyDownCapture}
+                />
               </VisuallyHidden>
             </div>
           </div>
@@ -425,7 +617,14 @@ export function Waveform({ label, peaks, source, duration: given, time, onSeek, 
         <ul aria-hidden className="flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground">
           {[...new Map(spans.map((s) => [`${s.tone ?? "neutral"}:${s.label}`, s])).values()].map((s) => (
             <li key={`${s.tone}${s.label}`} className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-3.5 rounded-sm border border-border" style={{ background: TONE[s.tone ?? "neutral"].fill, borderTopColor: TONE[s.tone ?? "neutral"].edge, borderTopWidth: 3 }} />
+              <span
+                className="h-2 w-3.5 rounded-sm border border-border"
+                style={{
+                  background: TONE[s.tone ?? "neutral"].fill,
+                  borderTopColor: TONE[s.tone ?? "neutral"].edge,
+                  borderTopWidth: 3,
+                }}
+              />
               {s.label}
             </li>
           ))}

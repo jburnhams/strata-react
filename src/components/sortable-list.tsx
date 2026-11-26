@@ -104,13 +104,20 @@ export function SortableList<T>({
   }, [refused]);
 
   const toTarget = (t: { type: string; key?: unknown; dropPosition?: string }): DropTarget =>
-    t.type === "root" ? { key: null, position: "root" } : { key: String(t.key), position: t.dropPosition as "before" | "after" | "on" };
+    t.type === "root"
+      ? { key: null, position: "root" }
+      : { key: String(t.key), position: t.dropPosition as "before" | "after" | "on" };
 
   const { dragAndDropHooks } = useDragAndDrop<T>({
     getItems: (keys) =>
       [...keys].map((k) => {
         const item = byKey.get(String(k));
-        return { [`${KIND}${item ? getKind(item) : "item"}`]: "", [`${LIST}${listId}`]: "", [ID]: String(k), "text/plain": item ? getLabel(item) : String(k) };
+        return {
+          [`${KIND}${item ? getKind(item) : "item"}`]: "",
+          [`${LIST}${listId}`]: "",
+          [ID]: String(k),
+          "text/plain": item ? getLabel(item) : String(k),
+        };
       }),
     // React Aria filters on this before `getDropOperation`: a refused kind must still reach it, to be explained.
     acceptedDragTypes: "all",
@@ -128,11 +135,15 @@ export function SortableList<T>({
     },
     onReorder: (e) => onReorder([...e.keys].map(String), toTarget(e.target)),
     onInsert: async (e) => {
-      const ids = (await Promise.all(e.items.filter((i) => i.kind === "text").map((i) => i.getText(ID)))).filter(Boolean);
+      const ids = (await Promise.all(e.items.filter((i) => i.kind === "text").map((i) => i.getText(ID)))).filter(
+        Boolean,
+      );
       onInsert?.(ids, toTarget(e.target));
     },
     onRootDrop: async (e) => {
-      const ids = (await Promise.all(e.items.filter((i) => i.kind === "text").map((i) => i.getText(ID)))).filter(Boolean);
+      const ids = (await Promise.all(e.items.filter((i) => i.kind === "text").map((i) => i.getText(ID)))).filter(
+        Boolean,
+      );
       onInsert?.(ids, { key: null, position: "root" });
     },
     renderDropIndicator: (target) => (
@@ -140,28 +151,46 @@ export function SortableList<T>({
         target={target}
         // A line with ends, so a position is a shape and not only a tint; zero height so rows do not shift.
         className={({ isDropTarget }) =>
-          cn("relative h-0 data-[drop-target]:after:absolute data-[drop-target]:after:inset-x-0 data-[drop-target]:after:-top-px data-[drop-target]:after:h-0.5 data-[drop-target]:after:rounded-pill data-[drop-target]:after:bg-primary", isDropTarget && "z-10")
+          cn(
+            "relative h-0 data-[drop-target]:after:absolute data-[drop-target]:after:inset-x-0 data-[drop-target]:after:-top-px data-[drop-target]:after:h-0.5 data-[drop-target]:after:rounded-pill data-[drop-target]:after:bg-primary",
+            isDropTarget && "z-10",
+          )
         }
       />
     ),
   });
 
   return (
-    <div ref={root} className={cn("min-w-0", className)} // Capture phase: React Aria's drop handlers stop dragleave from bubbling.
-    onDragLeaveCapture={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setRefused(null)}>
+    <div
+      ref={root}
+      className={cn("min-w-0", className)} // Capture phase: React Aria's drop handlers stop dragleave from bubbling.
+      onDragLeaveCapture={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setRefused(null)}
+    >
       <GridList
         aria-label={label}
         items={items.map((item) => ({ item, id: getKey(item) }))}
         dragAndDropHooks={dragAndDropHooks}
         selectionMode={selectionMode}
         selectedKeys={selectedKeys}
-        onSelectionChange={(keys) => onSelectionChange?.(keys === "all" ? new Set(items.map(getKey)) : new Set([...keys].map(String)))}
+        onSelectionChange={(keys) =>
+          onSelectionChange?.(keys === "all" ? new Set(items.map(getKey)) : new Set([...keys].map(String)))
+        }
         renderEmptyState={({ isDropTarget }) => (
-          <div className={cn("rounded-surface border border-dashed py-6 text-center", isDropTarget ? "border-solid border-primary bg-muted" : "border-input")}>
+          <div
+            className={cn(
+              "rounded-surface border border-dashed py-6 text-center",
+              isDropTarget ? "border-solid border-primary bg-muted" : "border-input",
+            )}
+          >
             {isDropTarget ? <p className="type-body">Drop here</p> : empty}
           </div>
         )}
-        className={({ isDropTarget }) => cn("grid divide-y divide-border border-y border-border", isDropTarget && "outline-2 outline-offset-2 outline-primary")}
+        className={({ isDropTarget }) =>
+          cn(
+            "grid divide-y divide-border border-y border-border",
+            isDropTarget && "outline-2 outline-offset-2 outline-primary",
+          )
+        }
       >
         {({ item }) => (
           <GridListItem
@@ -169,7 +198,10 @@ export function SortableList<T>({
             textValue={getLabel(item)}
             className="group relative flex min-h-(--control-h) cursor-default items-center gap-2 py-1 pr-1 pl-1 outline-none data-[focus-visible]:outline-2 data-[focus-visible]:-outline-offset-2 data-[focus-visible]:outline-ring data-[selected]:bg-muted data-[selected]:before:absolute data-[selected]:before:inset-y-1 data-[selected]:before:left-0 data-[selected]:before:w-0.5 data-[selected]:before:rounded-pill data-[selected]:before:bg-primary data-[dragging]:opacity-50"
           >
-            <AriaButton slot="drag" className="grid size-(--control-h-sm) shrink-0 cursor-grab place-items-center rounded-control text-muted-foreground hover:bg-muted data-[focus-visible]:outline-2 data-[focus-visible]:outline-ring">
+            <AriaButton
+              slot="drag"
+              className="grid size-(--control-h-sm) shrink-0 cursor-grab place-items-center rounded-control text-muted-foreground hover:bg-muted data-[focus-visible]:outline-2 data-[focus-visible]:outline-ring"
+            >
               <GripVertical aria-hidden className="size-4" />
             </AriaButton>
             <div className="min-w-0 flex-1">{children(item)}</div>

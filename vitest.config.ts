@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 import react from "@vitejs/plugin-react";
 
 // Two projects. `unit`: components in jsdom with Testing Library, the network served by MSW

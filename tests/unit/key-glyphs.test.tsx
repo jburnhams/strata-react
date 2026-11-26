@@ -1,11 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { renderWithStrata } from "../../src/testing";
 import { CommandLegend, KeysLegend, type Command } from "../../src";
 
 // Issue #136: arrows and macOS modifiers are drawn as icons (the bundled fonts do not have them), and still read as words.
 describe("keys drawn as icons", () => {
   it("draws arrows in the legend as icons and names them for a screen reader", () => {
-    const { container } = renderWithStrata(<KeysLegend shortcuts={[{ keys: ["ArrowLeft", "ArrowRight"], label: "Step" }, { keys: ["Escape"], label: "Close" }]} />);
+    const { container } = renderWithStrata(
+      <KeysLegend
+        shortcuts={[
+          { keys: ["ArrowLeft", "ArrowRight"], label: "Step" },
+          { keys: ["Escape"], label: "Close" },
+        ]}
+      />,
+    );
     expect(container.textContent).not.toMatch(/[←→]/);
     expect(container.querySelectorAll("svg[aria-hidden='true']")).toHaveLength(2);
     expect(container.textContent).toContain("left arrow");

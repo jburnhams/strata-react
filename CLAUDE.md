@@ -47,7 +47,8 @@ is his decision; do not change it on your own. Same rule in ux-research's `CLAUD
 |---|---|---|
 | Runtime for tooling | Node 26 (LTS) | `.nvmrc`, `engines`, every workflow; TypeScript targets ES2024. Apps need it too (`engines` is published): it is the floor, and apps upgrade rather than Strata carrying an older Node |
 | UI | React 19, TypeScript 7 strict | Function components; `React.useId` for ids. `npm run typecheck` runs TypeScript 7's `tsc` (devDependency `typescript7`); `typescript` is `@typescript/typescript6`, the TypeScript 6 API that TypeDoc, Storybook's docgen, MSW and the `.d.ts` build still need (TS 7 ships no JS API) |
-| Build | Vite 8 | Library build in `vite.config.ts` (ESM only, all deps external); Storybook has its own `.storybook/vite.config.ts` |
+| Toolchain | Vite+ (`vite-plus`, `vp`) | Jonathan, 2026-11-26: one toolchain for build, test, lint and format, so every app is run the same way. `vp pack` (tsdown) builds the library, `vp test` is Vitest, `vp lint` is Oxlint, `vp fmt` is Oxfmt, `vp check` is both with warnings denied; Vite 8 (Rolldown) is the bundler for Storybook and the example app. Config is one `vite.config.ts` (`pack`, `lint`, `fmt` blocks). Test files import from `vite-plus/test`. `vite` and `vitest` are npm `overrides` pointing at Vite+'s builds, as `vp migrate` writes them; `vite-plus` is overridden to itself so Storybook's optional `vite-plus ^0.x` peer does not hold it back |
+| Build | `vp pack` (tsdown) | Library build in the `pack` block of `vite.config.ts` (ESM only, bundled `.d.ts`, all deps external, one flat `dist/`); Storybook has its own `.storybook/vite.config.ts` |
 | Styles | Tailwind v4 | `src/styles/strata.bare.css` (the contract) and `theme.css` (the look) are Tailwind source, joined into `strata.css` by `scripts/copy-css.mjs`; an app compiles them with its own overrides; `type-*` utilities for type steps; `cn()` (clsx + tailwind-merge taught about `type-*`) |
 | Variants | class-variance-authority | shadcn's variant names (`default`, `outline`, `ghost`…) so agents' knowledge transfers; `outline` is the default Button |
 | Primitives | React Aria Components | Jonathan's choice (2026-11-12): behaviour and accessibility of every interactive control come from `react-aria-components` (press, focus, keyboard models, overlays, menus, number and colour fields, drag and drop), styled with our tokens through its `data-*` state attributes, written as the `tailwindcss-react-aria-components` variants (`selected:`, `focus-visible:`, `hover:`, `disabled:`, `pressed:`, `open:`; loaded by `strata.css`, so an app does nothing). A state is written once where it is used, never copied into a CVA variant map: CVA holds the real variants (`variant`, `size`). Not Radix; `@radix-ui/react-slot` and `asChild` are gone. Native elements stay where the platform does it better (`Input`, `Textarea`, `NativeSelect`); `DataTable` is React Aria's Table with TanStack Table for the data model. When a component needs behaviour, follow "React Aria first" below |
@@ -269,7 +270,7 @@ update a baseline**, and say in the PR which baselines changed and why.
 
 ## Before finishing any change
 
-1. `npm run build`, `npm test`, `npm run test:integration`, `npm run test:visual` all pass.
+1. `npm run build`, `npm test` (typecheck, `vp check`, unit tests), `npm run test:integration`, `npm run test:visual` all pass.
    Report the commands and results.
 2. [`CHANGELOG.md`](./CHANGELOG.md) has an entry in the same commit or PR (format below).
 3. If the change follows from or contradicts the research, say so in the ux-research changelog

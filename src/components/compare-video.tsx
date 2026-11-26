@@ -4,7 +4,18 @@ import { cn } from "../lib/utils";
 import { FullscreenFrame } from "./fullscreen-frame";
 import { KeysLegend, useHotkeys, type Shortcut } from "./hotkeys";
 import { Skeleton } from "./data-view";
-import { Caption, FullscreenButton, ZoomControls, frameCap, makePicker, useFitHeight, useWidth, useZoom, zoomShortcuts, type PickWords } from "./compare-parts";
+import {
+  Caption,
+  FullscreenButton,
+  ZoomControls,
+  frameCap,
+  makePicker,
+  useFitHeight,
+  useWidth,
+  useZoom,
+  zoomShortcuts,
+  type PickWords,
+} from "./compare-parts";
 import type { Candidate, CompareMode, VideoMedia } from "./compare";
 import { SLOW_RATES, VideoControls, useVideoClock, type VideoLoop } from "./video-clock";
 import { Toolbar, ToolbarSeparator } from "./toolbar";
@@ -130,8 +141,42 @@ export type CompareVideoProps = {
 };
 
 /** Two videos to judge by eye on one clock: side by side, swipe, fade or blink, zoomed together, with matched sound and full screen. */
-export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, rates = SLOW_RATES, regions, moments = [], loop: loopProp, onLoopChange, audio = "a", onPick, pick = true, pickWords, autoPlay = false, loopWhole = false, pixelated = "zoomed", maxHeight, reserve, keys = true, extraShortcuts = [], footer, className }: CompareVideoProps) {
-  const clock = useVideoClock({ fps: a.media.fps ?? 30, loop: loopProp, onLoopChange, audio: audio === "none" ? null : audio === "a" ? 0 : 1, autoPlay, loopWhole, pairKey: `${a.media.src}|${b.media.src}` });
+export function CompareVideo({
+  label,
+  a,
+  b,
+  blind,
+  missing,
+  mode,
+  onModeChange,
+  rates = SLOW_RATES,
+  regions,
+  moments = [],
+  loop: loopProp,
+  onLoopChange,
+  audio = "a",
+  onPick,
+  pick = true,
+  pickWords,
+  autoPlay = false,
+  loopWhole = false,
+  pixelated = "zoomed",
+  maxHeight,
+  reserve,
+  keys = true,
+  extraShortcuts = [],
+  footer,
+  className,
+}: CompareVideoProps) {
+  const clock = useVideoClock({
+    fps: a.media.fps ?? 30,
+    loop: loopProp,
+    onLoopChange,
+    audio: audio === "none" ? null : audio === "a" ? 0 : 1,
+    autoPlay,
+    loopWhole,
+    pairKey: `${a.media.src}|${b.media.src}`,
+  });
   const picker = pick && onPick ? makePicker(a, b, onPick, pickWords) : null;
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
@@ -174,7 +219,14 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
   );
   const loading = !failed && !clock.loaded;
   const skeleton = loading && <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none" />;
-  const frameProps = { viewport, setViewport: rg.setViewport, onBox: wanted ? undefined : rg.add, outline: rg.peek, aspect, maxHeight: frameCap(maxHeight, fit, full) };
+  const frameProps = {
+    viewport,
+    setViewport: rg.setViewport,
+    onBox: wanted ? undefined : rg.add,
+    outline: rg.peek,
+    aspect,
+    maxHeight: frameCap(maxHeight, fit, full),
+  };
 
   const shortcuts: Shortcut[] = [
     ...extraShortcuts,
@@ -193,7 +245,12 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
         {([a, b] as const).map((c, i) => (
           <figure key={i} className="grid gap-1.5">
             <Caption c={c} blind={blind} />
-            <ViewportFrame {...frameProps} label={`Frame ${c.label}`} ref={i === 0 ? frameRef : undefined} pick={picker?.one(i === 0 ? "a" : "b")}>
+            <ViewportFrame
+              {...frameProps}
+              label={`Frame ${c.label}`}
+              ref={i === 0 ? frameRef : undefined}
+              pick={picker?.one(i === 0 ? "a" : "b")}
+            >
               {i === 0 && skeleton}
               {video(c, i)}
             </ViewportFrame>
@@ -217,11 +274,28 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
           label={mode === "blink" ? `Frame ${(showing === "a" ? a : b).label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
-              <AriaSlider aria-label={`Divider between ${a.label} and ${b.label}`} value={divider} onChange={(v) => setDivider(v as number)} minValue={0} maxValue={100} step={1} className="absolute inset-0">
+              <AriaSlider
+                aria-label={`Divider between ${a.label} and ${b.label}`}
+                value={divider}
+                onChange={(v) => setDivider(v as number)}
+                minValue={0}
+                maxValue={100}
+                step={1}
+                className="absolute inset-0"
+              >
                 <SliderTrack className="pointer-events-none h-full w-full">
-                  <SliderThumb className="pointer-events-auto grid h-full w-8 cursor-ew-resize place-items-center focus-visible:outline-2 focus-visible:outline-ring" style={{ top: "50%" }}>
-                    <span aria-hidden className="col-start-1 row-start-1 h-full w-1 border-x border-background bg-foreground" />
-                    <span aria-hidden className="col-start-1 row-start-1 size-6 rounded-pill border-2 border-foreground bg-background" />
+                  <SliderThumb
+                    className="pointer-events-auto grid h-full w-8 cursor-ew-resize place-items-center focus-visible:outline-2 focus-visible:outline-ring"
+                    style={{ top: "50%" }}
+                  >
+                    <span
+                      aria-hidden
+                      className="col-start-1 row-start-1 h-full w-1 border-x border-background bg-foreground"
+                    />
+                    <span
+                      aria-hidden
+                      className="col-start-1 row-start-1 size-6 rounded-pill border-2 border-foreground bg-background"
+                    />
                   </SliderThumb>
                 </SliderTrack>
               </AriaSlider>
@@ -230,7 +304,20 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
         >
           {skeleton}
           {video(b, 1)}
-          {mode !== "swipe" && <div className="absolute inset-0" style={mode === "fade" ? { opacity: 1 - blend / 100 } : mode === "blink" ? { opacity: showing === "a" ? 1 : 0 } : undefined}>{video(a, 0)}</div>}
+          {mode !== "swipe" && (
+            <div
+              className="absolute inset-0"
+              style={
+                mode === "fade"
+                  ? { opacity: 1 - blend / 100 }
+                  : mode === "blink"
+                    ? { opacity: showing === "a" ? 1 : 0 }
+                    : undefined
+              }
+            >
+              {video(a, 0)}
+            </div>
+          )}
         </ViewportFrame>
       </figure>
     );
@@ -238,24 +325,57 @@ export function CompareVideo({ label, a, b, blind, missing, mode, onModeChange, 
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} className={className}>
-      <section ref={sectionRef} aria-label={label} className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}>
+      <section
+        ref={sectionRef}
+        aria-label={label}
+        className={cn("grid gap-3", full && "min-h-0 flex-1 content-start overflow-auto")}
+      >
         <Toolbar label="Comparison view" className="items-center gap-2">
-          <ToggleGroup label="View" options={MODES.map((m) => ({ value: m, label: MODE_LABEL[m] }))} value={mode} onChange={(v) => onModeChange(v as VideoMode)} size="sm" />
+          <ToggleGroup
+            label="View"
+            options={MODES.map((m) => ({ value: m, label: MODE_LABEL[m] }))}
+            value={mode}
+            onChange={(v) => onModeChange(v as VideoMode)}
+            size="sm"
+          />
           <ToolbarSeparator />
           <ZoomControls viewport={viewport} zoom={zoom} natural={natural} />
           <ToolbarSeparator />
           <FullscreenButton full={full} setFull={setFull} />
         </Toolbar>
         <RegionChips state={rg} />
-        {picker && mode === "fade" && <p className="type-caption text-muted-foreground">{picker.unavailable(MODE_LABEL.fade)}</p>}
+        {picker && mode === "fade" && (
+          <p className="type-caption text-muted-foreground">{picker.unavailable(MODE_LABEL.fade)}</p>
+        )}
         {mode === "fade" && (
           <div className="flex items-center gap-3">
             <span className="type-caption text-muted-foreground">{a.label}</span>
-            <Slider aria-label={`Blend from ${a.label} to ${b.label}`} value={blend} onChange={setBlend} min={0} max={100} unit="%" hideValue className="flex-1" />
+            <Slider
+              aria-label={`Blend from ${a.label} to ${b.label}`}
+              value={blend}
+              onChange={setBlend}
+              min={0}
+              max={100}
+              unit="%"
+              hideValue
+              className="flex-1"
+            />
             <span className="type-caption text-muted-foreground">{b.label}</span>
           </div>
         )}
-        {mode === "blink" && <ToggleGroup label="Showing" options={[{ value: "a", label: a.label }, { value: "b", label: b.label }]} value={showing} onChange={(v) => setShowing(v as "a" | "b")} size="sm" className="justify-self-start" />}
+        {mode === "blink" && (
+          <ToggleGroup
+            label="Showing"
+            options={[
+              { value: "a", label: a.label },
+              { value: "b", label: b.label },
+            ]}
+            value={showing}
+            onChange={(v) => setShowing(v as "a" | "b")}
+            size="sm"
+            className="justify-self-start"
+          />
+        )}
         {failed && (
           <p role="alert" className="type-body-sm text-danger">
             {missing}

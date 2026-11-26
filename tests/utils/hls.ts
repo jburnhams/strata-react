@@ -9,7 +9,11 @@ export function fakeHlsEngine() {
   const log = { created: [] as FakeHls[], destroyed: 0 };
   class FakeHls {
     static Events = { ERROR: "hlsError", FRAG_LOADED: "hlsFragLoaded" } as const;
-    static ErrorTypes = { NETWORK_ERROR: "networkError", MEDIA_ERROR: "mediaError", OTHER_ERROR: "otherError" } as const;
+    static ErrorTypes = {
+      NETWORK_ERROR: "networkError",
+      MEDIA_ERROR: "mediaError",
+      OTHER_ERROR: "otherError",
+    } as const;
     static supported = true;
     static isSupported() {
       return FakeHls.supported;

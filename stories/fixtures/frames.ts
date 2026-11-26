@@ -17,4 +17,5 @@ const svg = (t: number) => {
 export const frameAt = (t: number) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg(t))}`;
 
 /** Frames every `step` seconds from `start`, as `FilmStrip` takes them. */
-export const framesFrom = (start: number, count: number, step = 10) => Array.from({ length: count }, (_, i) => ({ time: start + i * step, src: frameAt(start + i * step) }));
+export const framesFrom = (start: number, count: number, step = 10) =>
+  Array.from({ length: count }, (_, i) => ({ time: start + i * step, src: frameAt(start + i * step) }));

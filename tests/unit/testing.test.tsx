@@ -1,9 +1,15 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrataToastRegion, format, toast, withBase } from "../../src";
-import { installFakeIntersectionObserver, installLayoutShims, renderRoutes, renderWithStrata, type FakeIntersectionObserverControls } from "../../src/testing";
+import {
+  installFakeIntersectionObserver,
+  installLayoutShims,
+  renderRoutes,
+  renderWithStrata,
+  type FakeIntersectionObserverControls,
+} from "../../src/testing";
 
 // The helpers strata-react/testing gives an app's suite, tested the way an app would use them.
 
@@ -98,7 +104,12 @@ describe("installLayoutShims", () => {
   it("gives every element the box asked for, and restores the one before", () => {
     const el = document.createElement("div");
     const restore = installLayoutShims({ width: 390, height: 844 });
-    expect(el.getBoundingClientRect()).toMatchObject({ width: 390, height: 844, right: 390, bottom: 844 });
+    expect(el.getBoundingClientRect()).toMatchObject({
+      width: 390,
+      height: 844,
+      right: 390,
+      bottom: 844,
+    });
     expect(el.clientWidth).toBe(390);
     restore();
     expect(el.getBoundingClientRect().width).toBe(640);
@@ -127,7 +138,20 @@ describe("toasts in renderWithStrata and renderRoutes", () => {
   });
 
   it("leaves the region to an app whose tree already has one, so a toast is not seen twice", async () => {
-    renderRoutes([{ path: "/", element: <><Show /><StrataToastRegion /></> }], { toasts: false });
+    renderRoutes(
+      [
+        {
+          path: "/",
+          element: (
+            <>
+              <Show />
+              <StrataToastRegion />
+            </>
+          ),
+        },
+      ],
+      { toasts: false },
+    );
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
   });
@@ -136,7 +160,17 @@ describe("toasts in renderWithStrata and renderRoutes", () => {
   it("shows a toast once when the tree draws a region and the helper does too, and says what to do", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      renderRoutes([{ path: "/", element: <><Show /><StrataToastRegion /></> }]);
+      renderRoutes([
+        {
+          path: "/",
+          element: (
+            <>
+              <Show />
+              <StrataToastRegion />
+            </>
+          ),
+        },
+      ]);
       await userEvent.click(screen.getByRole("button", { name: "Undo" }));
       expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
       expect(screen.getAllByRole("region", { name: "Notifications" })).toHaveLength(1);

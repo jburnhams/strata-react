@@ -28,7 +28,9 @@ function ShowUrl() {
   return <p className="mt-3 type-caption text-muted-foreground">URL search: {search || "(none)"}</p>;
 }
 
-const meta = { title: "Data/DataTable", component: BookingTable, args: { rows: bookings } } satisfies Meta<typeof BookingTable>;
+const meta = { title: "Data/DataTable", component: BookingTable, args: { rows: bookings } } satisfies Meta<
+  typeof BookingTable
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -97,13 +99,19 @@ const withdrawColumn = (onWithdraw: (b: Booking) => void): Column<Booking> => ({
   key: "action",
   header: "Actions",
   hideHeader: true,
-  cell: (b) => (canWithdraw(b) ? <RowAction label="Withdraw" subject={b.member} onClick={() => onWithdraw(b)} /> : null),
+  cell: (b) =>
+    canWithdraw(b) ? <RowAction label="Withdraw" subject={b.member} onClick={() => onWithdraw(b)} /> : null,
 });
 
 /** One action per row, only where it applies. Each is named for its row ("Withdraw Dev Raman"); the column's header is for screen readers only. */
 export const RowActions: Story = {
   render: (args) => (
-    <DataTable caption="Work in the kilns" rowKey={(b) => b.id} {...args} columns={[...bookingColumns, withdrawColumn(() => undefined)]} />
+    <DataTable
+      caption="Work in the kilns"
+      rowKey={(b) => b.id}
+      {...args}
+      columns={[...bookingColumns, withdrawColumn(() => undefined)]}
+    />
   ),
 };
 
@@ -170,7 +178,9 @@ const bookingExpansion = (expanded: Iterable<string>) => ({
 
 /** A toggle per row opens a detail row under it, with no rule between the two. Here Tom Ellery's is open. Ready work has nothing more to show, so it has no toggle. */
 export const Expansion: Story = {
-  render: (args) => <BookingTable {...args} expansion={{ ...bookingExpansion(["b-2042"]), isExpandable: (b) => b.state !== "ready" }} />,
+  render: (args) => (
+    <BookingTable {...args} expansion={{ ...bookingExpansion(["b-2042"]), isExpandable: (b) => b.state !== "ready" }} />
+  ),
 };
 
 /** Expansion with selection: the detail starts under the first data column, and a chosen row's detail shares its fill. */
@@ -179,7 +189,12 @@ export const ExpansionWithSelection: Story = {
     <BookingTable
       {...args}
       expansion={bookingExpansion(["b-2051"])}
-      selection={{ selected: new Set(["b-2051"]), onChange: () => undefined, rowLabel: (b) => b.member, isSelectable: canWithdraw }}
+      selection={{
+        selected: new Set(["b-2051"]),
+        onChange: () => undefined,
+        rowLabel: (b) => b.member,
+        isSelectable: canWithdraw,
+      }}
     />
   ),
 };
@@ -194,7 +209,14 @@ function ExpandInUrl(args: Omit<DataTableProps<Booking>, "columns" | "rowKey" | 
   const expanded = useExpanded({ param: "open" });
   return (
     <>
-      <BookingTable {...args} expansion={{ ...expanded, rowLabel: (b) => `Details of ${b.member}'s booking`, detail: (b) => <BookingDetail b={b} /> }} />
+      <BookingTable
+        {...args}
+        expansion={{
+          ...expanded,
+          rowLabel: (b) => `Details of ${b.member}'s booking`,
+          detail: (b) => <BookingDetail b={b} />,
+        }}
+      />
       <ShowUrl />
     </>
   );
@@ -218,13 +240,25 @@ const kilnService: KilnService[] = [
 ];
 const serviceColumns: Column<KilnService>[] = [
   { key: "name", header: "Kiln", value: (k) => k.name },
-  { key: "hours", header: "Element hours", numeric: true, value: (k) => k.elementHours, cell: (k) => format.count(k.elementHours, "hour") },
+  {
+    key: "hours",
+    header: "Element hours",
+    numeric: true,
+    value: (k) => k.elementHours,
+    cell: (k) => format.count(k.elementHours, "hour"),
+  },
   { key: "serviced", header: "Last serviced", value: (k) => k.serviced && new Date(k.serviced), missing: "Never" },
 ];
 
 /** Missing values: a muted placeholder, and sorted last whichever way the column runs (here, most element hours first). */
 export const MissingValues: Story = {
   render: () => (
-    <DataTable caption="Kiln servicing" columns={serviceColumns} rows={kilnService} rowKey={(k) => k.id} initialSort={{ key: "hours", dir: "descending" }} />
+    <DataTable
+      caption="Kiln servicing"
+      columns={serviceColumns}
+      rows={kilnService}
+      rowKey={(k) => k.id}
+      initialSort={{ key: "hours", dir: "descending" }}
+    />
   ),
 };

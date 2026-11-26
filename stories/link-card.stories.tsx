@@ -13,7 +13,13 @@ export const Route: Story = {
     description: "Members book shelves in the next bisque and glaze firings.",
     marks: <Status tone="success">Running</Status>,
   },
-  decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xs">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** Another app behind the same reverse proxy is an `href` but does not leave the site, so it has no arrow. */
@@ -24,7 +30,13 @@ export const SameSite: Story = {
     description: "Firing notes and glaze test results, kept by the co-op.",
     marks: <Status tone="success">Running</Status>,
   },
-  decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xs">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** An `href` on another origin leaves the site, so the card says so with an arrow before it is pressed. */
@@ -35,13 +47,25 @@ export const Elsewhere: Story = {
     description: "Recipes and test tiles for the co-op's 42 glazes, with photos.",
     marks: <Status tone="info">Updating</Status>,
   },
-  decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xs">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** Only a title: a description and marks are optional. */
 export const TitleOnly: Story = {
   args: { to: "/members", title: "Members" },
-  decorators: [(Story) => <div className="max-w-xs"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xs">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** In a `LinkCardList`: one column on a phone, two, then three. */
@@ -50,10 +74,30 @@ export const List: Story = {
   tags: ["visual-wide"],
   render: () => (
     <LinkCardList label="Apps on this server">
-      <LinkCard to="/bookings" title="Kiln bookings" description="Members book shelves in the next bisque and glaze firings." marks={<Status tone="success">Running</Status>} />
-      <LinkCard to="/log" title="Firing log" description="Every firing's schedule, readings and notes since 2019." marks={<Status tone="success">Running</Status>} />
-      <LinkCard href="https://glazes.kilnroom.example" title="Glaze library" description="Recipes and test tiles for the co-op's 42 glazes." marks={<Status tone="info">Updating</Status>} />
-      <LinkCard to="/members" title="Members" description="Who has a key, who has paid this term, and who teaches." marks={<Status tone="danger">Stopped</Status>} />
+      <LinkCard
+        to="/bookings"
+        title="Kiln bookings"
+        description="Members book shelves in the next bisque and glaze firings."
+        marks={<Status tone="success">Running</Status>}
+      />
+      <LinkCard
+        to="/log"
+        title="Firing log"
+        description="Every firing's schedule, readings and notes since 2019."
+        marks={<Status tone="success">Running</Status>}
+      />
+      <LinkCard
+        href="https://glazes.kilnroom.example"
+        title="Glaze library"
+        description="Recipes and test tiles for the co-op's 42 glazes."
+        marks={<Status tone="info">Updating</Status>}
+      />
+      <LinkCard
+        to="/members"
+        title="Members"
+        description="Who has a key, who has paid this term, and who teaches."
+        marks={<Status tone="danger">Stopped</Status>}
+      />
     </LinkCardList>
   ),
 };

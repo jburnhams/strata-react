@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BoxList, BoxedPicture, Thumbnail, regionStyle, useBoxes, type PictureBox } from "../../src";
@@ -16,7 +16,12 @@ const of = { w: 800, h: 600 };
 describe("regionStyle", () => {
   it("puts the picture so the padded box fills a square frame, centred and never squashed", () => {
     // 80 tall × 1.6 = 128; widened to a square: 128 × 128 about the centre (130, 120), so the crop starts at (66, 56).
-    expect(regionStyle({ of, box: faces[0]! }, 1)).toEqual({ left: "-51.5625%", top: "-43.75%", width: "625%", height: "468.75%" });
+    expect(regionStyle({ of, box: faces[0]! }, 1)).toEqual({
+      left: "-51.5625%",
+      top: "-43.75%",
+      width: "625%",
+      height: "468.75%",
+    });
   });
 
   it("widens to the frame's shape and takes pad", () => {
@@ -27,7 +32,9 @@ describe("regionStyle", () => {
 
 describe("Thumbnail region", () => {
   it("places the whole picture so the box fills the thumbnail, instead of fitting it", () => {
-    const { container } = renderWithStrata(<Thumbnail src="/p.jpg" alt="Ada" missing="Photo not kept" region={{ of, box: faces[0]! }} eager />);
+    const { container } = renderWithStrata(
+      <Thumbnail src="/p.jpg" alt="Ada" missing="Photo not kept" region={{ of, box: faces[0]! }} eager />,
+    );
     const img = container.querySelector("img")!;
     expect(img.style.left).toBe("-51.5625%");
     expect(img.style.width).toBe("625%");
@@ -40,7 +47,17 @@ function Photo({ zoom, chosen = "f1" }: { zoom?: boolean; chosen?: string | null
   const state = useBoxes(chosen);
   return (
     <div>
-      <BoxedPicture label="Photo 12" src="/p.jpg" alt="" missing="Photo not kept" of={of} boxes={faces} state={state} boxesLabel="Faces in this photo" zoom={zoom} />
+      <BoxedPicture
+        label="Photo 12"
+        src="/p.jpg"
+        alt=""
+        missing="Photo not kept"
+        of={of}
+        boxes={faces}
+        state={state}
+        boxesLabel="Faces in this photo"
+        zoom={zoom}
+      />
       <BoxList label="Faces" boxes={faces} state={state} />
     </div>
   );
@@ -53,7 +70,10 @@ describe("BoxedPicture", () => {
     renderWithStrata(<Photo />);
     const frame = screen.getByRole("group", { name: "Photo 12" });
     expect(within(frame).getByRole("group", { name: "Faces in this photo" })).toBeInTheDocument();
-    expect(within(frame).getByRole("button", { name: "Face 1: Ada, confirmed" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(frame).getByRole("button", { name: "Face 1: Ada, confirmed" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(transformOf(frame)).toMatch(/scale\((?!1\))/);
     expect(within(frame).getByRole("button", { name: "Face 1: Ada, confirmed" })).toHaveAttribute("fill", "none"); // an outline, not a veil over the face
   });
@@ -93,7 +113,17 @@ describe("BoxedPicture", () => {
       renderWithStrata(<Photo />);
       const frame = screen.getByRole("group", { name: "Photo 12" });
       const before = transformOf(frame);
-      Element.prototype.getBoundingClientRect = () => ({ x: 0, y: 0, top: 0, left: 0, right: 320, bottom: 140, width: 320, height: 140, toJSON: () => ({}) });
+      Element.prototype.getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 320,
+        bottom: 140,
+        width: 320,
+        height: 140,
+        toJSON: () => ({}),
+      });
       act(() => fire());
       expect(transformOf(frame)).not.toBe(before);
     } finally {
@@ -105,7 +135,18 @@ describe("BoxedPicture", () => {
   it("says in the product's words when the photo is not there, and still shows the faces", () => {
     function NoPhoto() {
       const state = useBoxes();
-      return <BoxedPicture label="Photo 12" src={null} alt="Photo 12" missing="Photo not kept" of={of} boxes={faces} state={state} boxesLabel="Faces in this photo" />;
+      return (
+        <BoxedPicture
+          label="Photo 12"
+          src={null}
+          alt="Photo 12"
+          missing="Photo not kept"
+          of={of}
+          boxes={faces}
+          state={state}
+          boxesLabel="Faces in this photo"
+        />
+      );
     }
     renderWithStrata(<NoPhoto />);
     expect(screen.getByRole("img", { name: "Photo 12: Photo not kept" })).toBeInTheDocument();

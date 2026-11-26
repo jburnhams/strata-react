@@ -71,7 +71,8 @@ export function encode({ width, height, data }: Image): Buffer {
 
 /** Box-blurs an RGBA image with the given radius (separable, edges averaged over what exists). */
 export function boxBlur({ width: w, height: h, data }: Image, radius: number): Uint8Array {
-  if (!Number.isInteger(radius) || radius < 0) throw new Error(`blur must be a whole number of pixels, 0 or more (got ${radius})`);
+  if (!Number.isInteger(radius) || radius < 0)
+    throw new Error(`blur must be a whole number of pixels, 0 or more (got ${radius})`);
   if (radius === 0) return data;
   const pass = (src: ArrayLike<number>, horizontal: boolean) => {
     const out = new Float32Array(src.length);
@@ -100,7 +101,13 @@ export function boxBlur({ width: w, height: h, data }: Image, radius: number): U
 }
 
 function sameBytes(a: Uint8Array, b: Uint8Array) {
-  return a.length === b.length && Buffer.compare(Buffer.from(a.buffer, a.byteOffset, a.byteLength), Buffer.from(b.buffer, b.byteOffset, b.byteLength)) === 0;
+  return (
+    a.length === b.length &&
+    Buffer.compare(
+      Buffer.from(a.buffer, a.byteOffset, a.byteLength),
+      Buffer.from(b.buffer, b.byteOffset, b.byteLength),
+    ) === 0
+  );
 }
 
 /** Compares two decoded PNGs with pixelmatch after a small blur. A size change is always a change. */
@@ -116,14 +123,16 @@ export function compare(expected: Image, actual: Image, options: CompareOptions 
     };
   }
   const { width, height } = expected;
-  if (sameBytes(expected.data, actual.data)) return { same: true, identical: true, diffPixels: 0, unblurredDiffPixels: 0, reason: "identical" };
+  if (sameBytes(expected.data, actual.data))
+    return { same: true, identical: true, diffPixels: 0, unblurredDiffPixels: 0, reason: "identical" };
   const mask = new Uint8Array(width * height * 4);
   const diffPixels = pixelmatch(boxBlur(expected, blur), boxBlur(actual, blur), mask, width, height, {
     threshold,
     includeAA,
     diffMask: true,
   });
-  const unblurredDiffPixels = blur > 0 ? pixelmatch(expected.data, actual.data, null, width, height, { threshold, includeAA }) : diffPixels;
+  const unblurredDiffPixels =
+    blur > 0 ? pixelmatch(expected.data, actual.data, null, width, height, { threshold, includeAA }) : diffPixels;
   const same = diffPixels <= maxDiffPixels;
   return {
     same,

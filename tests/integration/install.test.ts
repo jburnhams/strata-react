@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -26,11 +26,19 @@ beforeAll(() => {
   for (const f of [...pkg.files, "package.json"]) cpSync(join(root, f), join(target, f), { recursive: true });
   symlinkSync(join(root, "node_modules/tailwindcss"), join(app, "node_modules/tailwindcss"), "dir");
   // strata.css loads this plugin with @plugin; npm installs a dependency of strata-react beside it.
-  symlinkSync(join(root, "node_modules/tailwindcss-react-aria-components"), join(app, "node_modules/tailwindcss-react-aria-components"), "dir");
+  symlinkSync(
+    join(root, "node_modules/tailwindcss-react-aria-components"),
+    join(app, "node_modules/tailwindcss-react-aria-components"),
+    "dir",
+  );
   // The default faces are dependencies too: their @font-face rules are inlined by Tailwind from beside strata-react.
   mkdirSync(join(app, "node_modules/@fontsource-variable"), { recursive: true });
   for (const face of ["instrument-sans", "jetbrains-mono"]) {
-    symlinkSync(join(root, "node_modules/@fontsource-variable", face), join(app, "node_modules/@fontsource-variable", face), "dir");
+    symlinkSync(
+      join(root, "node_modules/@fontsource-variable", face),
+      join(app, "node_modules/@fontsource-variable", face),
+      "dir",
+    );
   }
   execFileSync("git", ["init", "-q"], { cwd: app });
   writeFileSync(join(app, ".gitignore"), "node_modules\n");
@@ -45,7 +53,9 @@ afterAll(() => rmSync(app, { recursive: true, force: true }));
 async function compileApp() {
   const input = `@import "tailwindcss";\n@import "strata-react/strata.css";\n`;
   const compiler = await compile(input, { base: app, onDependency: () => undefined });
-  const scanner = new Scanner({ sources: [{ base: app, pattern: "**/*", negated: false }, ...compiler.sources] });
+  const scanner = new Scanner({
+    sources: [{ base: app, pattern: "**/*", negated: false }, ...compiler.sources],
+  });
   return compiler.build(scanner.scan());
 }
 

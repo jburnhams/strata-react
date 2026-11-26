@@ -9,7 +9,14 @@ import {
 } from "@tanstack/react-query";
 import type { Load, Stale } from "../components/data-view";
 import { usePollBinding, type Poll } from "./poll";
-import { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody } from "../lib/errors";
+import {
+  HttpError,
+  describeHttpError,
+  errorPayload,
+  readErrorBody,
+  type DescribeError,
+  type ErrorBody,
+} from "../lib/errors";
 
 export { HttpError, describeHttpError, errorPayload, readErrorBody, type DescribeError, type ErrorBody };
 
@@ -47,8 +54,10 @@ export function toLoad<T>(query: UseQueryResult<T>, describe: DescribeError = de
   if (query.status === "success") return { status: "ready", data: query.data };
   // TanStack keeps the last good data when a refetch fails and sets status "error" (isRefetchError).
   // That is old data, not no data: keep it on screen and say how old it is.
-  if (query.status === "error" && query.data !== undefined) return { status: "ready", data: query.data, stale: staleOf(query, describe) };
-  if (query.status === "error") return { status: "error", message: describe(query.error), retry: () => void query.refetch() };
+  if (query.status === "error" && query.data !== undefined)
+    return { status: "ready", data: query.data, stale: staleOf(query, describe) };
+  if (query.status === "error")
+    return { status: "error", message: describe(query.error), retry: () => void query.refetch() };
   return { status: "loading" };
 }
 
@@ -57,7 +66,12 @@ export function staleOf(
   query: { error: unknown; dataUpdatedAt: number; isFetching: boolean; refetch: () => unknown },
   describe: DescribeError = describeHttpError,
 ): Stale {
-  return { message: describe(query.error), readAt: new Date(query.dataUpdatedAt), retry: () => void query.refetch(), retrying: query.isFetching };
+  return {
+    message: describe(query.error),
+    readAt: new Date(query.dataUpdatedAt),
+    retry: () => void query.refetch(),
+    retrying: query.isFetching,
+  };
 }
 
 /** `useQuery`, returned as a `Load<T>` for `DataView`. With `poll` (from `usePoll`) it reads again every `poll.every` ms until the person pauses it. */
@@ -93,7 +107,11 @@ export type FetchJsonOptions = {
  * fetch() that throws an HttpError on a non-2xx response and parses JSON: the queryFn default, and the usual commit for a write.
  * `init.json` sends a JSON body without building the headers. A 204 or empty body resolves to undefined. An error response's body is read onto the HttpError (`body`, `reason`, `fieldErrors`).
  */
-export async function fetchJson<T>(input: string | URL, init?: FetchJsonInit, { readError = readErrorBody }: FetchJsonOptions = {}): Promise<T> {
+export async function fetchJson<T>(
+  input: string | URL,
+  init?: FetchJsonInit,
+  { readError = readErrorBody }: FetchJsonOptions = {},
+): Promise<T> {
   const { json, ...rest } = init ?? {};
   // Headers, tuple arrays and plain objects are all valid HeadersInit; normalise before adding the
   // default so a caller's Authorization (or their own Accept) is never dropped.
@@ -126,6 +144,13 @@ export async function fetchJson<T>(input: string | URL, init?: FetchJsonInit, { 
 export { usePoll, type Poll } from "./poll";
 export { createApi, type Api, type ApiOptions } from "./api";
 export { createTypedApi, type TypedApi } from "./typed-api";
-export { useInfiniteLoad, apiPage, type ApiPage, type InfiniteLoad, type InfiniteLoadOptions, type More } from "./infinite";
+export {
+  useInfiniteLoad,
+  apiPage,
+  type ApiPage,
+  type InfiniteLoad,
+  type InfiniteLoadOptions,
+  type More,
+} from "./infinite";
 export { useJob, isTaskRunning, type Job, type JobOptions } from "./job";
 export { useWorkflowRun, isWorkflowRunning, type WorkflowRunLike, type WorkflowRunOptions } from "./workflow";

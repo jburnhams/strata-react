@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { installLayoutShims, setupStrataTests } from "../../src/testing";
 
 // Issue #363: a setup file shared by jsdom tests and node-environment tests must not throw where there

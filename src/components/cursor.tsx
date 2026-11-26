@@ -95,8 +95,20 @@ export function CursorScope({ children, format, announceEvery = 1000 }: CursorSc
 }
 
 /** The live region: the latest pointer position, at most once per `every` ms (a throttle, so a pointer that never rests is still announced). */
-function CursorAnnouncer({ store, format, every }: { store: CursorStore; format: (at: number) => string; every: number }) {
-  const snap = React.useSyncExternalStore(store.subscribe, () => store.snapshot, () => EMPTY);
+function CursorAnnouncer({
+  store,
+  format,
+  every,
+}: {
+  store: CursorStore;
+  format: (at: number) => string;
+  every: number;
+}) {
+  const snap = React.useSyncExternalStore(
+    store.subscribe,
+    () => store.snapshot,
+    () => EMPTY,
+  );
   const [text, setText] = React.useState("");
   const latest = React.useRef({ snap, format });
   latest.current = { snap, format };
@@ -145,11 +157,24 @@ export function useSharedCursor(source?: string): SharedCursor | null {
   const own = React.useId();
   const id = source ?? own;
   const subscribe = React.useCallback((fn: () => void) => (store ? store.subscribe(fn) : () => {}), [store]);
-  const snap = React.useSyncExternalStore(subscribe, () => store?.snapshot ?? EMPTY, () => EMPTY);
+  const snap = React.useSyncExternalStore(
+    subscribe,
+    () => store?.snapshot ?? EMPTY,
+    () => EMPTY,
+  );
   const setPointer = React.useCallback((at: number | null) => store?.setPointer(at, id), [store, id]);
   const setPlayback = React.useCallback((at: number | null) => store?.setPlayback(at, id), [store, id]);
   return React.useMemo(
-    () => (store ? { ...snap, source: id, other: snap.at !== null && snap.source !== id ? snap.at : null, setPointer, setPlayback } : null),
+    () =>
+      store
+        ? {
+            ...snap,
+            source: id,
+            other: snap.at !== null && snap.source !== id ? snap.at : null,
+            setPointer,
+            setPlayback,
+          }
+        : null,
     [store, snap, id, setPointer, setPlayback],
   );
 }

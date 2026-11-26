@@ -21,12 +21,60 @@ void main() { outColour = vec4(vColour, 1.0); }`;
 // A unit cube from 12 triangles (a colour per face), then the grid lines of a floor at y = -1.
 function geometry() {
   const faces: [number[][], number[]][] = [
-    [[[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], [0.78, 0.28, 0.2]],
-    [[[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]], [0.2, 0.42, 0.72]],
-    [[[-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]], [0.9, 0.7, 0.2]],
-    [[[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]], [0.35, 0.35, 0.4]],
-    [[[1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]], [0.25, 0.6, 0.4]],
-    [[[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]], [0.55, 0.3, 0.6]],
+    [
+      [
+        [-1, -1, 1],
+        [1, -1, 1],
+        [1, 1, 1],
+        [-1, 1, 1],
+      ],
+      [0.78, 0.28, 0.2],
+    ],
+    [
+      [
+        [1, -1, -1],
+        [-1, -1, -1],
+        [-1, 1, -1],
+        [1, 1, -1],
+      ],
+      [0.2, 0.42, 0.72],
+    ],
+    [
+      [
+        [-1, 1, 1],
+        [1, 1, 1],
+        [1, 1, -1],
+        [-1, 1, -1],
+      ],
+      [0.9, 0.7, 0.2],
+    ],
+    [
+      [
+        [-1, -1, -1],
+        [1, -1, -1],
+        [1, -1, 1],
+        [-1, -1, 1],
+      ],
+      [0.35, 0.35, 0.4],
+    ],
+    [
+      [
+        [1, -1, 1],
+        [1, -1, -1],
+        [1, 1, -1],
+        [1, 1, 1],
+      ],
+      [0.25, 0.6, 0.4],
+    ],
+    [
+      [
+        [-1, -1, -1],
+        [-1, -1, 1],
+        [-1, 1, 1],
+        [-1, 1, -1],
+      ],
+      [0.55, 0.3, 0.6],
+    ],
   ];
   const tri: number[] = [];
   for (const [q, c] of faces) for (const i of [0, 1, 2, 0, 2, 3]) tri.push(...q[i]!, ...c);
@@ -39,13 +87,21 @@ function geometry() {
 }
 
 function useScene() {
-  const resources = React.useRef<{ context: number; program: WebGLProgram; vaos: [WebGLVertexArrayObject, number][]; uVP: WebGLUniformLocation | null } | null>(null);
+  const resources = React.useRef<{
+    context: number;
+    program: WebGLProgram;
+    vaos: [WebGLVertexArrayObject, number][];
+    uVP: WebGLUniformLocation | null;
+  } | null>(null);
   const data = React.useMemo(geometry, []);
   return React.useCallback(
     (gl: WebGL2RenderingContext, frame: SceneFrame) => {
       if (!resources.current || resources.current.context !== frame.context) {
         const program = gl.createProgram()!;
-        for (const [type, source] of [[gl.VERTEX_SHADER, VERT], [gl.FRAGMENT_SHADER, FRAG]] as const) {
+        for (const [type, source] of [
+          [gl.VERTEX_SHADER, VERT],
+          [gl.FRAGMENT_SHADER, FRAG],
+        ] as const) {
           const shader = gl.createShader(type)!;
           gl.shaderSource(shader, source);
           gl.compileShader(shader);
@@ -57,14 +113,22 @@ function useScene() {
           gl.bindVertexArray(vao);
           gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
           gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
-          for (const [name, offset] of [["aPos", 0], ["aColour", 12]] as const) {
+          for (const [name, offset] of [
+            ["aPos", 0],
+            ["aColour", 12],
+          ] as const) {
             const at = gl.getAttribLocation(program, name);
             gl.enableVertexAttribArray(at);
             gl.vertexAttribPointer(at, 3, gl.FLOAT, false, 24, offset);
           }
           return [vao, array.length / 6];
         };
-        resources.current = { context: frame.context, program, vaos: [make(data.tri), make(data.lines)], uVP: gl.getUniformLocation(program, "uVP") };
+        resources.current = {
+          context: frame.context,
+          program,
+          vaos: [make(data.tri), make(data.lines)],
+          uVP: gl.getUniformLocation(program, "uVP"),
+        };
       }
       const r = resources.current;
       gl.clearColor(0.12, 0.13, 0.16, 1);
@@ -81,10 +145,36 @@ function useScene() {
   );
 }
 
-function Scene({ mode, yaw = 35, pitch = 25, distance = 7, fly }: { mode?: "orbit" | "fly"; yaw?: number; pitch?: number; distance?: number; fly?: boolean }) {
-  const { camera, setCamera, home } = useOrbitCamera(fly ? { target: [0, 0.5, -6], distance: 0, yaw: 180, pitch: 0 } : { distance, yaw, pitch }, { minDistance: 1.5, maxDistance: 30 });
+function Scene({
+  mode,
+  yaw = 35,
+  pitch = 25,
+  distance = 7,
+  fly,
+}: {
+  mode?: "orbit" | "fly";
+  yaw?: number;
+  pitch?: number;
+  distance?: number;
+  fly?: boolean;
+}) {
+  const { camera, setCamera, home } = useOrbitCamera(
+    fly ? { target: [0, 0.5, -6], distance: 0, yaw: 180, pitch: 0 } : { distance, yaw, pitch },
+    { minDistance: 1.5, maxDistance: 30 },
+  );
   const render = useScene();
-  return <SceneViewport label="Cube and floor" className="max-w-3xl" camera={camera} onCameraChange={setCamera} home={home} mode={mode} limits={fly ? { minDistance: 0 } : { minDistance: 1.5, maxDistance: 30 }} render={render} />;
+  return (
+    <SceneViewport
+      label="Cube and floor"
+      className="max-w-3xl"
+      camera={camera}
+      onCameraChange={setCamera}
+      home={home}
+      mode={mode}
+      limits={fly ? { minDistance: 0 } : { minDistance: 1.5, maxDistance: 30 }}
+      render={render}
+    />
+  );
 }
 
 /** Orbiting a cube from the front, a quarter up. Drag to orbit, right drag or Shift to pan, Ctrl/Cmd and the wheel (or a pinch) to zoom; arrows, `+` `-` and `0` from the keyboard; a plain wheel scrolls the page. The canvas is named by where it looks. */

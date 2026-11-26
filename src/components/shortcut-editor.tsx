@@ -61,7 +61,11 @@ export type Rebinding = {
 /** Holds a person's rebound keys over a default `Shortcut[]`, remembered under `storageKey` and handed to `onChange`. The result's `shortcuts` is what `useHotkeys` and `KeysLegend` take. */
 export function useRebindableShortcuts(
   defaults: readonly Shortcut[],
-  { storageKey, initial, onChange }: { storageKey?: string; initial?: ShortcutOverrides; onChange?: (overrides: ShortcutOverrides) => void } = {},
+  {
+    storageKey,
+    initial,
+    onChange,
+  }: { storageKey?: string; initial?: ShortcutOverrides; onChange?: (overrides: ShortcutOverrides) => void } = {},
 ): Rebinding {
   const [overrides, setOverrides] = React.useState<ShortcutOverrides>(() => {
     if (initial) return initial;
@@ -70,7 +74,9 @@ export function useRebindableShortcuts(
       const parsed: unknown = JSON.parse(window.localStorage.getItem(storageKey) ?? "{}");
       if (!parsed || typeof parsed !== "object") return {};
       const out: ShortcutOverrides = {};
-      for (const [id, keys] of Object.entries(parsed)) if (Array.isArray(keys) && keys.every((k) => typeof k === "string") && keys.length > 0) out[id] = keys as string[];
+      for (const [id, keys] of Object.entries(parsed))
+        if (Array.isArray(keys) && keys.every((k) => typeof k === "string") && keys.length > 0)
+          out[id] = keys as string[];
       return out;
     } catch {
       return {}; // storage throws in private windows and when blocked: the defaults apply
@@ -112,13 +118,33 @@ export function useRebindableShortcuts(
 }
 
 /** What a pressed key means for one action: take it, refuse it with a reason, or ask about the action that already has it. */
-export type KeyCheck = { ok: true; key: string } | { ok: false; reason: string } | { ok: "conflict"; key: string; other: Shortcut };
+export type KeyCheck =
+  | { ok: true; key: string }
+  | { ok: false; reason: string }
+  | { ok: "conflict"; key: string; other: Shortcut };
 
 /** Judges a key pressed while recording for the shortcut `id`, against the current list. */
-export function checkKey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">, id: string, shortcuts: readonly Shortcut[]): KeyCheck {
+export function checkKey(
+  e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">,
+  id: string,
+  shortcuts: readonly Shortcut[],
+): KeyCheck {
   if (e.ctrlKey || e.metaKey || e.altKey) {
-    const chord = [e.ctrlKey && "Ctrl", e.metaKey && "Meta", e.altKey && "Alt", e.shiftKey && "Shift", e.key.length === 1 ? e.key.toUpperCase() : e.key].filter(Boolean).join("+");
-    return { ok: false, reason: isReservedChord(chord) ? `${formatChord(chord)} belongs to the browser.` : `${formatChord(chord)} is a chord, and shortcuts here are single keys: Ctrl, Cmd and Alt belong to the browser and the system.` };
+    const chord = [
+      e.ctrlKey && "Ctrl",
+      e.metaKey && "Meta",
+      e.altKey && "Alt",
+      e.shiftKey && "Shift",
+      e.key.length === 1 ? e.key.toUpperCase() : e.key,
+    ]
+      .filter(Boolean)
+      .join("+");
+    return {
+      ok: false,
+      reason: isReservedChord(chord)
+        ? `${formatChord(chord)} belongs to the browser.`
+        : `${formatChord(chord)} is a chord, and shortcuts here are single keys: Ctrl, Cmd and Alt belong to the browser and the system.`,
+    };
   }
   if (e.key === "Tab") return { ok: false, reason: "Tab moves between controls, so it cannot be a shortcut." };
   const other = shortcuts.find((s) => idOf(s) !== id && !s.disabled && s.keys.includes(e.key));
@@ -126,7 +152,15 @@ export function checkKey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | 
 }
 
 /** Each shortcut with its keys and a "Change" that records the next key pressed; refuses keys that cannot be bound, names a conflict and offers a swap, and resets one or all. Edits the list a `useRebindableShortcuts` holds. */
-export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", className }: { rebinding: Rebinding; label?: string; className?: string }) {
+export function ShortcutEditor({
+  rebinding,
+  label = "Keyboard shortcuts",
+  className,
+}: {
+  rebinding: Rebinding;
+  label?: string;
+  className?: string;
+}) {
   const { shortcuts, defaults, setKeys, isChanged, resetAll, overrides } = rebinding;
   const [recording, setRecording] = React.useState<string | null>(null);
   const [conflict, setConflict] = React.useState<{ id: string; key: string; other: Shortcut } | null>(null);
@@ -149,7 +183,13 @@ export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", classN
     if (e.key === "Tab") {
       // Tab cannot be bound and must still leave: end the recording and let focus move.
       setRecording(null);
-      setSaid("Tab moves between controls, so it cannot be a shortcut. Kept " + keyName(shortcut.keys[0] ?? "") + " for " + shortcut.label + ".");
+      setSaid(
+        "Tab moves between controls, so it cannot be a shortcut. Kept " +
+          keyName(shortcut.keys[0] ?? "") +
+          " for " +
+          shortcut.label +
+          ".",
+      );
       return;
     }
     e.stopPropagation(); // the page's own `useHotkeys` must not hear the key being chosen
@@ -185,7 +225,13 @@ export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", classN
           const mine = conflict?.id === id ? conflict : null;
           const isRecording = recording === id;
           return (
-            <li key={id} className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2", shortcut.disabled && "opacity-50")}>
+            <li
+              key={id}
+              className={cn(
+                "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2",
+                shortcut.disabled && "opacity-50",
+              )}
+            >
               <span className="min-w-0 flex-1 type-body-sm">{shortcut.label}</span>
               <span className="flex items-center gap-1">
                 {shortcut.keys.map((k, i) => (
@@ -239,21 +285,28 @@ export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", classN
               )}
               {mine && (
                 <p className="flex basis-full flex-wrap items-center gap-2 type-body-sm text-warning">
-                  <span>
-                    Already “{mine.other.label}”: swap?
-                  </span>
+                  <span>Already “{mine.other.label}”: swap?</span>
                   <Button
                     size="sm"
                     onPress={() => {
                       const given = keysOf(id)[0] ?? "";
                       apply(id, mine.key, mine.other);
                       setConflict(null);
-                      setSaid(`${shortcut.label} is now ${keyName(mine.key)}, and ${mine.other.label} has ${keyName(given)}.`);
+                      setSaid(
+                        `${shortcut.label} is now ${keyName(mine.key)}, and ${mine.other.label} has ${keyName(given)}.`,
+                      );
                     }}
                   >
                     Swap
                   </Button>
-                  <Button size="sm" variant="ghost" onPress={() => { setConflict(null); setSaid("Nothing changed."); }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => {
+                      setConflict(null);
+                      setSaid("Nothing changed.");
+                    }}
+                  >
                     Keep as it was
                   </Button>
                 </p>
@@ -263,7 +316,18 @@ export function ShortcutEditor({ rebinding, label = "Keyboard shortcuts", classN
         })}
       </ul>
       <div className="flex items-center gap-3">
-        {anyChanged && <Button size="sm" onPress={() => { resetAll(); setConflict(null); setSaid("Every shortcut is back to its default."); }}>Reset all</Button>}
+        {anyChanged && (
+          <Button
+            size="sm"
+            onPress={() => {
+              resetAll();
+              setConflict(null);
+              setSaid("Every shortcut is back to its default.");
+            }}
+          >
+            Reset all
+          </Button>
+        )}
         <p role="status" className="min-w-0 flex-1 type-body-sm text-muted-foreground">
           {said}
         </p>

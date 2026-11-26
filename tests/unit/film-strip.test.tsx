@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FilmStrip, frameAt, pickEvenly } from "../../src";
@@ -7,7 +7,10 @@ import { renderWithStrata } from "../../src/testing";
 // A row of frames from a stretch of video (strata-reels' scene browser). jsdom's box is 640 px wide
 // (installLayoutShims), so six 96 px frames fit with their gaps.
 
-const frames = Array.from({ length: 20 }, (_, i) => ({ time: 600 + i * 10, src: `/api/frames/${i}.jpg` }));
+const frames = Array.from({ length: 20 }, (_, i) => ({
+  time: 600 + i * 10,
+  src: `/api/frames/${i}.jpg`,
+}));
 
 describe("pickEvenly and frameAt", () => {
   it("picks from the first to the last, all of them when there are few, the middle one alone", () => {
@@ -18,7 +21,11 @@ describe("pickEvenly and frameAt", () => {
   });
 
   it("finds the last frame at or before the time, and none outside the span", () => {
-    const f = [{ time: 0, src: null }, { time: 10, src: null }, { time: 20, src: null }];
+    const f = [
+      { time: 0, src: null },
+      { time: 10, src: null },
+      { time: 20, src: null },
+    ];
     expect(frameAt(f, 15, [0, 30])).toBe(1);
     expect(frameAt(f, 25, [0, 30])).toBe(2);
     expect(frameAt(f, 30, [0, 30])).toBe(-1);
@@ -73,7 +80,9 @@ describe("FilmStrip", () => {
   });
 
   it("marks the frame being watched only while the time is inside the span", () => {
-    const { rerender } = renderWithStrata(<FilmStrip label="Scene" frames={frames.slice(0, 3)} span={[600, 630]} time={615} onSeek={() => {}} />);
+    const { rerender } = renderWithStrata(
+      <FilmStrip label="Scene" frames={frames.slice(0, 3)} span={[600, 630]} time={615} onSeek={() => {}} />,
+    );
     expect(screen.getByRole("button", { name: "Play from 10:10" })).toHaveAttribute("aria-current", "time");
     expect(screen.getByRole("button", { name: "Play from 10:00" })).not.toHaveAttribute("aria-current");
     rerender(<FilmStrip label="Scene" frames={frames.slice(0, 3)} span={[600, 630]} time={640} onSeek={() => {}} />);

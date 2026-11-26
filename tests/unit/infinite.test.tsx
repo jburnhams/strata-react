@@ -1,11 +1,29 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { Button, EmptyState, InfiniteList, VirtualList, Skeleton, UndoBar, fetchJson, useInfiniteLoad, useUndoable, type InfiniteLoad } from "../../src";
+import {
+  Button,
+  EmptyState,
+  InfiniteList,
+  VirtualList,
+  Skeleton,
+  UndoBar,
+  fetchJson,
+  useInfiniteLoad,
+  useUndoable,
+  type InfiniteLoad,
+} from "../../src";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
-import { api, firingPage, firingsEmpty, firingsLaterPageError, firingsServerError, type FiringPage } from "../../stories/mocks/handlers";
+import {
+  api,
+  firingPage,
+  firingsEmpty,
+  firingsLaterPageError,
+  firingsServerError,
+  type FiringPage,
+} from "../../stories/mocks/handlers";
 import { firings, type Firing } from "../../stories/fixtures/kiln";
 
 let io: ReturnType<typeof installFakeIntersectionObserver>;
@@ -16,11 +34,21 @@ afterEach(() => io.uninstall());
 
 let exposed: InfiniteLoad<Firing> | undefined;
 
-function FiringLog({ limit = 20, keepAtLeast, filter = "all" }: { limit?: number; keepAtLeast?: number; filter?: string }) {
+function FiringLog({
+  limit = 20,
+  keepAtLeast,
+  filter = "all",
+}: {
+  limit?: number;
+  keepAtLeast?: number;
+  filter?: string;
+}) {
   const load = useInfiniteLoad({
     queryKey: ["firings", limit, filter],
     queryFn: ({ cursor, signal }) =>
-      fetchJson<FiringPage>(`${api.firings}?limit=${limit}${cursor ? `&after=${cursor}` : ""}`, { signal }),
+      fetchJson<FiringPage>(`${api.firings}?limit=${limit}${cursor ? `&after=${cursor}` : ""}`, {
+        signal,
+      }),
     items: (page) => page.firings,
     itemKey: (f) => f.id,
     hasMore: (page) => page.hasMore,
@@ -65,7 +93,9 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
     expect(await screen.findByText(/Showing data from/)).toBeInTheDocument();
     expect(rows()).toHaveLength(20);
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(exposed?.status === "ready" && exposed.stale?.message).toBe("The server could not answer (503). Nothing was changed.");
+    expect(exposed?.status === "ready" && exposed.stale?.message).toBe(
+      "The server could not answer (503). Nothing was changed.",
+    );
     expect(exposed?.more.error).toBeUndefined();
   });
 
@@ -208,7 +238,10 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
       const undoable = useUndoable();
       const load = useInfiniteLoad({
         queryKey: ["firings", "archive"],
-        queryFn: ({ cursor, signal }) => fetchJson<FiringPage>(`${api.firings}?limit=20${cursor ? `&after=${cursor}` : ""}`, { signal }),
+        queryFn: ({ cursor, signal }) =>
+          fetchJson<FiringPage>(`${api.firings}?limit=20${cursor ? `&after=${cursor}` : ""}`, {
+            signal,
+          }),
         items: (page) => page.firings,
         itemKey: (f) => f.id,
         hasMore: (page) => page.hasMore,
@@ -216,9 +249,24 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
       });
       return (
         <>
-          <InfiniteList state={load} label="Firing log" moreLabel="Show older firings" skeleton={<Skeleton className="h-10" />} empty={<EmptyState title="No firings yet" />}>
+          <InfiniteList
+            state={load}
+            label="Firing log"
+            moreLabel="Show older firings"
+            skeleton={<Skeleton className="h-10" />}
+            empty={<EmptyState title="No firings yet" />}
+          >
             {(f) => (
-              <Button onClick={() => undoable.schedule({ id: f.id, message: `Archived ${f.id}.`, failure: `${f.id} is back.`, commit: () => undefined })}>
+              <Button
+                onClick={() =>
+                  undoable.schedule({
+                    id: f.id,
+                    message: `Archived ${f.id}.`,
+                    failure: `${f.id} is back.`,
+                    commit: () => undefined,
+                  })
+                }
+              >
                 Archive {f.id}
               </Button>
             )}

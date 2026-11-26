@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ActiveList, KeysLegend, useActiveItem, useHotkeys, type Shortcut } from "../../src";
@@ -88,12 +88,19 @@ describe("KeysLegend", () => {
     expect(legend.tagName).toBe("DL");
     const terms = within(legend).getAllByRole("term");
     expect(terms[0]).toHaveTextContent("j or down arrow");
-    expect(within(legend).getAllByRole("definition").map((d) => d.textContent)).toEqual(["Next booking", "Approve"]);
+    expect(
+      within(legend)
+        .getAllByRole("definition")
+        .map((d) => d.textContent),
+    ).toEqual(["Next booking", "Approve"]);
   });
 });
 
 type Item = { id: string; name: string };
-const five: Item[] = ["Priya", "Tom", "Aoife", "Sam", "Marta"].map((name, i) => ({ id: String(i), name }));
+const five: Item[] = ["Priya", "Tom", "Aoife", "Sam", "Marta"].map((name, i) => ({
+  id: String(i),
+  name,
+}));
 
 function Queue({ initial }: { initial?: string }) {
   const [items, setItems] = React.useState(five);
@@ -107,7 +114,11 @@ function Queue({ initial }: { initial?: string }) {
   useHotkeys([
     ...active.shortcuts,
     { keys: ["a"], label: "Answer", run: () => remove(active.activeItem) },
-    { keys: ["z"], label: "Undo", run: () => removed && setItems(five.filter((x) => items.includes(x) || x === removed)) },
+    {
+      keys: ["z"],
+      label: "Undo",
+      run: () => removed && setItems(five.filter((x) => items.includes(x) || x === removed)),
+    },
   ]);
   return (
     <>
@@ -194,7 +205,13 @@ describe("useActiveItem and ActiveList", () => {
     expect(current()).toHaveTextContent("Sam");
     await user.keyboard("z");
     // Moving on after the answer chose Sam, so Sam stays active; Tom is back in place.
-    expect(screen.getAllByRole("listitem").map((li) => li.textContent?.split(" ")[0])).toEqual(["Priya", "Tom", "Aoife", "Sam", "Marta"]);
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent?.split(" ")[0])).toEqual([
+      "Priya",
+      "Tom",
+      "Aoife",
+      "Sam",
+      "Marta",
+    ]);
     expect(current()).toHaveTextContent("Sam");
   });
 
@@ -240,13 +257,11 @@ describe("Bookings to check (the whole pattern)", () => {
     renderWithStrata(<ReviewBookingsScreen />);
     expect(await screen.findByRole("list", { name: "Bookings to check" })).toBeInTheDocument();
     const legend = screen.getByLabelText("Keyboard shortcuts");
-    expect(within(legend).getAllByRole("definition").map((d) => d.textContent)).toEqual([
-      "Next booking",
-      "Previous booking",
-      "Approve",
-      "Return to member",
-      "Undo",
-    ]);
+    expect(
+      within(legend)
+        .getAllByRole("definition")
+        .map((d) => d.textContent),
+    ).toEqual(["Next booking", "Previous booking", "Approve", "Return to member", "Undo"]);
     await user.keyboard("a");
     expect(screen.getByText(/^Approved Priya Natarajan's 6\spieces\.$/)).toBeInTheDocument();
     expect(current()).toHaveTextContent("Tom Ellery");

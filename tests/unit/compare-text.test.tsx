@@ -1,11 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
 import { CompareText, PairJudge, diffWords, type Candidate, type TextMedia } from "../../src";
 import { MAX_CELLS } from "../../src/lib/text-diff";
 
-const text = (id: string, label: string, t: string, note?: string): Candidate<TextMedia> => ({ id, label, note, media: { kind: "text", text: t } });
+const text = (id: string, label: string, t: string, note?: string): Candidate<TextMedia> => ({
+  id,
+  label,
+  note,
+  media: { kind: "text", text: t },
+});
 
 describe("diffWords", () => {
   it("marks the words that are in one text and not the other, keeping the spaces as written", () => {
@@ -48,23 +53,46 @@ describe("CompareText", () => {
     renderWithStrata(<CompareText label="Transcripts" a={a} b={b} blind />);
     expect(screen.queryAllByRole("mark")).toHaveLength(0);
     await userEvent.click(screen.getByRole("switch", { name: "Mark the words that differ" }));
-    const marks = (name: string) => within(screen.getByRole("region", { name })).getAllByText(/./, { selector: "mark" }).map((m) => m.textContent);
+    const marks = (name: string) =>
+      within(screen.getByRole("region", { name }))
+        .getAllByText(/./, { selector: "mark" })
+        .map((m) => m.textContent);
     expect(marks("Text A")).toEqual(["sat", "the"]);
     expect(marks("Text B")).toEqual(["sits", "a"]);
     expect(screen.getByRole("status")).toHaveTextContent("A: 2 words differ. B: 2 words differ.");
   });
 
   it("says so when the texts are the same, and when they are too long to compare", async () => {
-    const { rerender } = renderWithStrata(<CompareText label="T" a={a} b={{ ...b, media: a.media }} blind defaultDiff />);
+    const { rerender } = renderWithStrata(
+      <CompareText label="T" a={a} b={{ ...b, media: a.media }} blind defaultDiff />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("The texts are the same word for word.");
     const long = Array.from({ length: 2000 }, (_, i) => `w${i}`).join(" ");
-    rerender(<CompareText label="T" a={text("x", "A", long)} b={text("y", "B", long)} blind defaultDiff tooLong="Too long to compare." />);
+    rerender(
+      <CompareText
+        label="T"
+        a={text("x", "A", long)}
+        b={text("y", "B", long)}
+        blind
+        defaultDiff
+        tooLong="Too long to compare."
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("Too long to compare.");
     expect(screen.getByRole("region", { name: "Text A" })).toHaveTextContent("w1999");
   });
 
   it("diffs against a reference when there is one", async () => {
-    renderWithStrata(<CompareText label="T" a={a} b={b} blind defaultDiff reference={{ label: "What was said", text: "The cat sat on the mat." }} />);
+    renderWithStrata(
+      <CompareText
+        label="T"
+        a={a}
+        b={b}
+        blind
+        defaultDiff
+        reference={{ label: "What was said", text: "The cat sat on the mat." }}
+      />,
+    );
     expect(screen.getByRole("radio", { name: "What was said" })).toBeChecked();
     expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 0 missing. B: 2 words differ, 2 missing.");
     await userEvent.click(screen.getByRole("radio", { name: "The other text" }));
@@ -73,7 +101,16 @@ describe("CompareText", () => {
   });
 
   it("counts the reference's words a candidate leaves out, so a model that drops content is not a match", () => {
-    renderWithStrata(<CompareText label="T" a={text("x", "A", "the cat")} b={text("y", "B", "")} blind defaultDiff reference={{ label: "What was said", text: "the cat sat" }} />);
+    renderWithStrata(
+      <CompareText
+        label="T"
+        a={text("x", "A", "the cat")}
+        b={text("y", "B", "")}
+        blind
+        defaultDiff
+        reference={{ label: "What was said", text: "the cat sat" }}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 1 missing. B: 0 words differ, 3 missing.");
     expect(screen.getByRole("status")).not.toHaveTextContent("word for word");
   });
@@ -106,8 +143,14 @@ describe("CompareText", () => {
 
   it("scrolls the two panes together, to the same share of their length", () => {
     renderWithStrata(<CompareText label="T" a={a} b={b} blind />);
-    const [boxA, boxB] = [screen.getByRole("region", { name: "Text A" }), screen.getByRole("region", { name: "Text B" })];
-    for (const [box, height] of [[boxA, 1000], [boxB, 2000]] as const) {
+    const [boxA, boxB] = [
+      screen.getByRole("region", { name: "Text A" }),
+      screen.getByRole("region", { name: "Text B" }),
+    ];
+    for (const [box, height] of [
+      [boxA, 1000],
+      [boxB, 2000],
+    ] as const) {
       Object.defineProperty(box, "scrollHeight", { configurable: true, value: height });
       Object.defineProperty(box, "clientHeight", { configurable: true, value: 100 });
     }

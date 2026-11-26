@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fireEvent, screen } from "@testing-library/react";
 import { SelectableGrid, SelectableGridSkeleton, DataView, useSelection } from "../../src";
 import { LayoutInfo, Rect } from "react-stately";
@@ -23,14 +23,29 @@ describe("justifyRows", () => {
   });
 
   it("allows for each tile's own padding", () => {
-    const { placed } = justifyRows([{ key: "a", aspect: 1 }, { key: "b", aspect: 1 }, { key: "c", aspect: 1 }], 320, 100, 10, 14);
+    const { placed } = justifyRows(
+      [
+        { key: "a", aspect: 1 },
+        { key: "b", aspect: 1 },
+        { key: "c", aspect: 1 },
+      ],
+      320,
+      100,
+      10,
+      14,
+    );
     const row = placed.filter((p) => p.row === 0);
     expect(row.at(-1)!.x + row.at(-1)!.width).toBeCloseTo(320, 5);
   });
 });
 
 type P = { id: string; name: string; w: number; h: number };
-const photos: P[] = Array.from({ length: 12 }, (_, i) => ({ id: `p${i}`, name: `Photo ${i}`, w: i % 3 === 0 ? 300 : 200, h: 200 }));
+const photos: P[] = Array.from({ length: 12 }, (_, i) => ({
+  id: `p${i}`,
+  name: `Photo ${i}`,
+  w: i % 3 === 0 ? 300 : 200,
+  h: 200,
+}));
 
 function Grid(props: { size?: number; onSize?: (n: number) => void; selectionMode?: "multiple" | "none" }) {
   const selection = useSelection(photos, (p) => p.id);
@@ -46,7 +61,10 @@ function Grid(props: { size?: number; onSize?: (n: number) => void; selectionMod
         naturalAspect={(p) => p.w / p.h}
         selection={{ ...selection, rowLabel: (p) => p.name }}
         tileSize={size}
-        onTileSizeChange={(n) => { setSize(n); props.onSize?.(n); }}
+        onTileSizeChange={(n) => {
+          setSize(n);
+          props.onSize?.(n);
+        }}
         selectionMode={props.selectionMode}
       />
       <p data-testid="count">{selection.count}</p>
@@ -75,7 +93,17 @@ describe("marquee and pinch", () => {
     };
     return () => void (HTMLElement.prototype.getBoundingClientRect = original);
   };
-  const box = (l: number, t: number): DOMRect => ({ left: l, top: t, right: l + 50, bottom: t + 50, width: 50, height: 50, x: l, y: t, toJSON: () => ({}) });
+  const box = (l: number, t: number): DOMRect => ({
+    left: l,
+    top: t,
+    right: l + 50,
+    bottom: t + 50,
+    width: 50,
+    height: 50,
+    x: l,
+    y: t,
+    toJSON: () => ({}),
+  });
 
   it("a drag from between tiles chooses the tiles it touches; a drag from a tile does not", () => {
     // p0..p3 laid out in a row, 60px apart.
@@ -104,7 +132,10 @@ describe("marquee and pinch", () => {
     const sizes: number[] = [];
     renderWithStrata(<Grid size={100} onSize={(n) => sizes.push(n)} />);
     const grid = screen.getByRole("grid", { name: "Photos" });
-    const t = (x1: number, x2: number) => [{ clientX: x1, clientY: 0, identifier: 1 }, { clientX: x2, clientY: 0, identifier: 2 }];
+    const t = (x1: number, x2: number) => [
+      { clientX: x1, clientY: 0, identifier: 1 },
+      { clientX: x2, clientY: 0, identifier: 2 },
+    ];
     fireEvent.touchStart(grid, { touches: t(0, 100) });
     fireEvent.touchMove(grid, { touches: t(0, 200) });
     expect(sizes.at(-1)).toBe(200);
@@ -153,7 +184,12 @@ describe("tile slots, fit, ratio and loading (#246)", () => {
 
   it("has a loading shape for DataView, in rows at their own shapes when given them", () => {
     const { container } = renderWithStrata(
-      <DataView state={{ status: "loading" }} isEmpty={(r: P[]) => r.length === 0} skeleton={<SelectableGridSkeleton count={5} shapes={[1.5, 0.66]} tileSize={100} />} empty={<p>No pictures</p>}>
+      <DataView
+        state={{ status: "loading" }}
+        isEmpty={(r: P[]) => r.length === 0}
+        skeleton={<SelectableGridSkeleton count={5} shapes={[1.5, 0.66]} tileSize={100} />}
+        empty={<p>No pictures</p>}
+      >
         {() => <span />}
       </DataView>,
     );

@@ -6,7 +6,18 @@ import bSrc from "./fixtures/video/b.webm?url";
 // The same two fixture clips (360×270 soft, 720×540 sharp) reused for several cells under different
 // ids (and addresses, since a browser shares one load between elements with the same address), standing in for the candidates of a video eval. Fixtures: fixtures/video, VP9, 80 KB together.
 
-const clip = (id: string, label: string, src: string, size: [number, number], note?: string): Candidate<VideoMedia> => ({ id, label, note, media: { kind: "video", src, width: size[0], height: size[1], fps: 25 } });
+const clip = (
+  id: string,
+  label: string,
+  src: string,
+  size: [number, number],
+  note?: string,
+): Candidate<VideoMedia> => ({
+  id,
+  label,
+  note,
+  media: { kind: "video", src, width: size[0], height: size[1], fps: 25 },
+});
 const source = clip("source", "Source", aSrc, [360, 270], "Original, 360×270");
 const items = [
   clip("lanczos", "A", aSrc, [360, 270], "Lanczos"),
@@ -36,7 +47,13 @@ export const WithReference: Story = { args: { blind: false, reference: source } 
 
 /** With a screen's own action under each candidate. */
 export const WithActions: Story = {
-  args: { actions: (c) => <button type="button" className="type-caption underline">Compare {c.label} with the source</button> },
+  args: {
+    actions: (c) => (
+      <button type="button" className="type-caption underline">
+        Compare {c.label} with the source
+      </button>
+    ),
+  },
 };
 
 /** Regions: the same part of every candidate, enlarged, while the videos keep playing. */

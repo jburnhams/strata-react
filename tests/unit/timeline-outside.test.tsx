@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Timeline, noOverlap, type TimelineDrop, type TimelineItem } from "../../src";
 import userEvent from "@testing-library/user-event";
@@ -35,7 +35,14 @@ const lane = (name: string) => screen.getByRole("group", { name });
 function drag(target: HTMLElement, clientX: number, type = "application/x-clip") {
   const dataTransfer = {
     types: [type],
-    items: [{ kind: "string", type, getAsString: (cb: (s: string) => void) => cb("clip-9"), getAsFile: () => null }],
+    items: [
+      {
+        kind: "string",
+        type,
+        getAsString: (cb: (s: string) => void) => cb("clip-9"),
+        getAsFile: () => null,
+      },
+    ],
     getData: () => "clip-9",
     dropEffect: "copy",
     effectAllowed: "all",
@@ -125,15 +132,24 @@ describe("Timeline: drops from outside", () => {
 
 describe("Timeline: lane height, kind colours, header", () => {
   it("makes lanes and their headers laneRows control heights tall", () => {
-    const { container } = renderWithStrata(<Timeline label="Edit" lanes={lanes} items={items} to={120} zoom={10} laneRows={3} />);
-    expect(container.querySelector<HTMLElement>("[role=group]")!.style.getPropertyValue("--lane-h")).toBe("calc(var(--control-h) * 3)");
+    const { container } = renderWithStrata(
+      <Timeline label="Edit" lanes={lanes} items={items} to={120} zoom={10} laneRows={3} />,
+    );
+    expect(container.querySelector<HTMLElement>("[role=group]")!.style.getPropertyValue("--lane-h")).toBe(
+      "calc(var(--control-h) * 3)",
+    );
     expect(lane("Track 1").className).toContain("h-(--lane-h)");
   });
 
   it("colours a kind as the app says, and keeps the stripe when the set of kinds changes", () => {
-    const more: TimelineItem[] = [{ id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" }, ...items];
+    const more: TimelineItem[] = [
+      { id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" },
+      ...items,
+    ];
     const stripe = (list: TimelineItem[], kinds?: Record<string, string>) => {
-      const { unmount } = renderWithStrata(<Timeline label="Edit" lanes={lanes} items={list} to={120} zoom={10} kindColours={kinds} />);
+      const { unmount } = renderWithStrata(
+        <Timeline label="Edit" lanes={lanes} items={list} to={120} zoom={10} kindColours={kinds} />,
+      );
       const colour = screen.getByRole("button", { name: /^run-02/ }).style.borderTopColor;
       unmount();
       return colour;
@@ -143,11 +159,19 @@ describe("Timeline: lane height, kind colours, header", () => {
     expect(stripe(more, kinds)).toBe("var(--info)");
     // Without the map, the palette follows the order kinds appear in.
     expect(stripe(items)).toBe("var(--chart-1)");
-    expect(stripe([{ id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" }, ...items])).toBe("var(--chart-2)");
+    expect(stripe([{ id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" }, ...items])).toBe(
+      "var(--chart-2)",
+    );
   });
 
   it("sizes the header column to its content with a cap, and names a truncated lane", () => {
-    const long = [{ id: "t1", label: "Footage from the north ridge, take two", header: <button type="button">Mute</button> }];
+    const long = [
+      {
+        id: "t1",
+        label: "Footage from the north ridge, take two",
+        header: <button type="button">Mute</button>,
+      },
+    ];
     renderWithStrata(<Timeline label="Edit" lanes={long} items={[]} to={120} zoom={10} />);
     const name = screen.getByTitle("Footage from the north ridge, take two");
     expect(name).toHaveTextContent("Footage from the north ridge, take two");
@@ -156,7 +180,10 @@ describe("Timeline: lane height, kind colours, header", () => {
 });
 
 function Source() {
-  const { dragProps } = useDrag({ getItems: () => [{ "application/x-clip": "clip-9" }], getAllowedDropOperations: () => ["copy"] });
+  const { dragProps } = useDrag({
+    getItems: () => [{ "application/x-clip": "clip-9" }],
+    getAllowedDropOperations: () => ["copy"],
+  });
   return (
     <div {...dragProps} role="button" tabIndex={0} aria-label="Drag clip-9">
       clip-9

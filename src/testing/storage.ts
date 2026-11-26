@@ -38,7 +38,9 @@ export function installStorageShim(): () => void {
   for (const name of ["localStorage", "sessionStorage"] as const) {
     if (usable(name)) continue;
     const storage = memoryStorage();
-    const targets = [globalThis, typeof window !== "undefined" ? window : undefined].filter((t): t is typeof globalThis => t !== undefined);
+    const targets = [globalThis, typeof window !== "undefined" ? window : undefined].filter(
+      (t): t is typeof globalThis => t !== undefined,
+    );
     for (const target of new Set(targets)) {
       const before = Object.getOwnPropertyDescriptor(target, name);
       Object.defineProperty(target, name, { configurable: true, value: storage });

@@ -1,10 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { hydrateRoot } from "react-dom/client";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import { COLOR_SCHEME_STORAGE_KEY, ColorSchemeChoice, ThemeProvider, colorSchemeScript, useColorScheme } from "../../src";
+import {
+  COLOR_SCHEME_STORAGE_KEY,
+  ColorSchemeChoice,
+  ThemeProvider,
+  colorSchemeScript,
+  useColorScheme,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // jsdom has no matchMedia. This stands in for the operating system's setting the way the layout

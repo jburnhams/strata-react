@@ -38,7 +38,8 @@ const xml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 /** Writes the fontconfig that pins `font` and returns what a launch needs. Throws when a file is missing. */
 export function pinSystemFont(font: PinnedSystemFont, cwd: string): PinnedFonts {
-  if (!font.pin || !font.files.length) throw new Error("systemFonts.pin needs the family name and at least one font file");
+  if (!font.pin || !font.files.length)
+    throw new Error("systemFonts.pin needs the family name and at least one font file");
   const dir = mkdtempSync(join(tmpdir(), "strata-visual-fonts-"));
   try {
     const fonts = join(dir, "fonts");
@@ -61,7 +62,11 @@ export function pinSystemFont(font: PinnedSystemFont, cwd: string): PinnedFonts 
 </fontconfig>
 `,
     );
-    return { env: { FONTCONFIG_FILE: join(dir, "fonts.conf") }, family: font.pin, dispose: () => rmSync(dir, { recursive: true, force: true }) };
+    return {
+      env: { FONTCONFIG_FILE: join(dir, "fonts.conf") },
+      family: font.pin,
+      dispose: () => rmSync(dir, { recursive: true, force: true }),
+    };
   } catch (e) {
     rmSync(dir, { recursive: true, force: true });
     throw e;

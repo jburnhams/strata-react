@@ -105,7 +105,10 @@ export type LightboxUrl = Pick<LightboxProps, "open" | "index" | "onIndexChange"
 };
 
 /** Keeps the open picture in the URL (`?view=<id>`): a link or a reload opens it, Back closes it, and stepping between pictures replaces the entry. */
-export function useLightboxUrl(items: readonly LightboxItem[], { param = "view" }: { param?: string } = {}): LightboxUrl {
+export function useLightboxUrl(
+  items: readonly LightboxItem[],
+  { param = "view" }: { param?: string } = {},
+): LightboxUrl {
   const [params, setParams] = useSearchParams();
   const id = params.get(param);
   const found = id === null ? -1 : items.findIndex((i) => i.id === id);
@@ -148,7 +151,23 @@ export function useNarrow(): boolean {
 }
 
 /** A picture from a set in a full-size dialog: previous/next and arrow keys, "3 of 40", zoom and pan, details beside it, neighbours preloaded, a `missing` sentence for one that fails, and a Compare ticked hand-off. Focus returns to the tile that opened it. */
-export function Lightbox({ title, items, index, onIndexChange, open, onOpenChange, missing, details, detailsLabel = "Details", ticked, onCompare, aspect = 3 / 2, overlay, actions, strip }: LightboxProps) {
+export function Lightbox({
+  title,
+  items,
+  index,
+  onIndexChange,
+  open,
+  onOpenChange,
+  missing,
+  details,
+  detailsLabel = "Details",
+  ticked,
+  onCompare,
+  aspect = 3 / 2,
+  overlay,
+  actions,
+  strip,
+}: LightboxProps) {
   const last = items.length - 1;
   const at = Math.min(Math.max(index, 0), Math.max(last, 0));
   const item = items[at];
@@ -174,12 +193,21 @@ export function Lightbox({ title, items, index, onIndexChange, open, onOpenChang
   const go = (to: number) => onIndexChange(Math.min(Math.max(to, 0), last));
   // On the window, not the content: React Aria puts focus on the dialog itself when it opens, which
   // is outside the content, and the page behind is inert so nothing else can be the target.
-  const keys = React.useRef((_: KeyboardEvent) => {});
+  const keys = React.useRef((() => {}) as (e: KeyboardEvent) => void);
   keys.current = (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     const el = e.target as HTMLElement;
     if (el.closest?.('[role="toolbar"], [role="listbox"], input, textarea, select, [contenteditable="true"]')) return;
-    const to = e.key === "ArrowLeft" ? at - 1 : e.key === "ArrowRight" ? at + 1 : e.key === "Home" ? 0 : e.key === "End" ? last : null;
+    const to =
+      e.key === "ArrowLeft"
+        ? at - 1
+        : e.key === "ArrowRight"
+          ? at + 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? last
+              : null;
     if (to === null) return;
     e.preventDefault();
     go(to);
@@ -205,7 +233,7 @@ export function Lightbox({ title, items, index, onIndexChange, open, onOpenChang
               {item.position ?? at + 1} of {items.length}
             </span>
             <Toolbar label="Zoom" className="ml-2 flex items-center gap-1">
-            <ZoomControls viewport={viewport} zoom={zoom} natural={natural ?? item.natural ?? null} />
+              <ZoomControls viewport={viewport} zoom={zoom} natural={natural ?? item.natural ?? null} />
             </Toolbar>
             {actions && <div className="ml-2 flex flex-wrap items-center gap-2">{actions(item)}</div>}
             {onCompare && ticked && (
@@ -217,11 +245,22 @@ export function Lightbox({ title, items, index, onIndexChange, open, onOpenChang
           <div className={cn("flex min-h-0 flex-1 gap-4", narrow ? "flex-col" : "flex-row")}>
             <div className="min-h-0 min-w-0 flex-1">
               {failed.has(item.id) ? (
-                <p role="img" aria-label={item.label} className="grid h-full min-h-40 place-items-center rounded-surface border border-dashed border-border p-6 text-center type-body text-muted-foreground">
+                <p
+                  role="img"
+                  aria-label={item.label}
+                  className="grid h-full min-h-40 place-items-center rounded-surface border border-dashed border-border p-6 text-center type-body text-muted-foreground"
+                >
                   {missing}
                 </p>
               ) : (
-                <ViewportFrame ref={frame} label={item.label} aspect={aspect} viewport={viewport} setViewport={setViewport} maxHeight={narrow ? "50svh" : "calc(100svh - 12rem)"}>
+                <ViewportFrame
+                  ref={frame}
+                  label={item.label}
+                  aspect={aspect}
+                  viewport={viewport}
+                  setViewport={setViewport}
+                  maxHeight={narrow ? "50svh" : "calc(100svh - 12rem)"}
+                >
                   <img
                     key={item.id}
                     src={item.src}
@@ -237,9 +276,13 @@ export function Lightbox({ title, items, index, onIndexChange, open, onOpenChang
             </div>
             {body &&
               (narrow ? (
-                <Disclosure summary={detailsLabel} className="shrink-0">{body}</Disclosure>
+                <Disclosure summary={detailsLabel} className="shrink-0">
+                  {body}
+                </Disclosure>
               ) : (
-                <aside aria-label={detailsLabel} className="min-h-0 w-72 shrink-0 overflow-y-auto">{body}</aside>
+                <aside aria-label={detailsLabel} className="min-h-0 w-72 shrink-0 overflow-y-auto">
+                  {body}
+                </aside>
               ))}
           </div>
           {strip && items.length > 1 && <ThumbnailStrip items={items} at={at} onPick={go} />}
@@ -251,11 +294,25 @@ export function Lightbox({ title, items, index, onIndexChange, open, onOpenChang
 
 // The strip: React Aria's horizontal ListBox (selection follows the picture, arrows move, one tab
 // stop), each item a lazy `Thumbnail`. The current one is kept in view as the set is stepped.
-export function ThumbnailStrip({ items, at, onPick, badge, label = "Pictures in this set" }: { items: readonly LightboxItem[]; at: number; onPick: (i: number) => void; badge?: (item: LightboxItem) => React.ReactNode; label?: string }) {
+export function ThumbnailStrip({
+  items,
+  at,
+  onPick,
+  badge,
+  label = "Pictures in this set",
+}: {
+  items: readonly LightboxItem[];
+  at: number;
+  onPick: (i: number) => void;
+  badge?: (item: LightboxItem) => React.ReactNode;
+  label?: string;
+}) {
   const ref = React.useRef<HTMLDivElement>(null);
   const current = items[at]?.id;
   React.useEffect(() => {
-    ref.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(current ?? "")}"]`)?.scrollIntoView?.({ inline: "center", block: "nearest" });
+    ref.current
+      ?.querySelector<HTMLElement>(`[data-key="${CSS.escape(current ?? "")}"]`)
+      ?.scrollIntoView?.({ inline: "center", block: "nearest" });
   }, [current]);
   return (
     <ListBox
@@ -280,7 +337,13 @@ export function ThumbnailStrip({ items, at, onPick, badge, label = "Pictures in 
           aria-label={it.position ? `${it.position}, ${it.label}` : it.label}
           className="w-16 shrink-0 cursor-pointer rounded-control border-2 border-transparent outline-offset-2 transition-state selected:border-primary"
         >
-          <Thumbnail src={it.thumb ?? it.src} alt="" aspect={1} fallback={<span aria-hidden />} eager={Math.abs(i - at) < 6}>
+          <Thumbnail
+            src={it.thumb ?? it.src}
+            alt=""
+            aspect={1}
+            fallback={<span aria-hidden />}
+            eager={Math.abs(i - at) < 6}
+          >
             {badge?.(it)}
           </Thumbnail>
         </ListBoxItem>

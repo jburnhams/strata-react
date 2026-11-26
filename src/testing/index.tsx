@@ -108,13 +108,27 @@ function StrataProviders({
 /** Testing Library's `render` inside `StrataQueryProvider` and a `MemoryRouter` at `route`. */
 export function renderWithStrata(
   ui: React.ReactElement,
-  { route = "/", client = createTestQueryClient(), colorScheme = "light", toasts = true, microphone, base, ...options }: StrataRenderOptions = {},
+  {
+    route = "/",
+    client = createTestQueryClient(),
+    colorScheme = "light",
+    toasts = true,
+    microphone,
+    base,
+    ...options
+  }: StrataRenderOptions = {},
 ) {
   toast.clear(); // module state: a toast from the last test must not show in this one
   forgetLoadedThumbnails(); // likewise the pictures a Thumbnail has loaded: each test starts from skeletons
   const baseElement = installBase(base);
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone} base={baseElement}>
+    <StrataProviders
+      client={client}
+      colorScheme={colorScheme}
+      toasts={toasts}
+      microphone={microphone}
+      base={baseElement}
+    >
       <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
     </StrataProviders>
   );
@@ -155,7 +169,13 @@ export function renderRoutes(
   const baseElement = installBase(base);
   const router = createMemoryRouter(routes, { initialEntries: [route ?? basename ?? "/"], basename });
   const result = render(
-    <StrataProviders client={client} colorScheme={colorScheme} toasts={toasts} microphone={microphone} base={baseElement}>
+    <StrataProviders
+      client={client}
+      colorScheme={colorScheme}
+      toasts={toasts}
+      microphone={microphone}
+      base={baseElement}
+    >
       <RouterProvider router={router} />
     </StrataProviders>,
     options,

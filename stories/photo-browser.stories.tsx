@@ -1,6 +1,19 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar, Button, SelectableGrid, SelectableGridSkeleton, Tree, ViewOptions, format, useChoices, useExpanded, useSelection, useViewOptions, type Load } from "../src";
+import {
+  BulkBar,
+  Button,
+  SelectableGrid,
+  SelectableGridSkeleton,
+  Tree,
+  ViewOptions,
+  format,
+  useChoices,
+  useExpanded,
+  useSelection,
+  useViewOptions,
+  type Load,
+} from "../src";
 import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
@@ -20,12 +33,26 @@ const taken = (p: ShelfPhoto) => {
 };
 const hourOf = (p: ShelfPhoto) => `${String(taken(p).getUTCHours()).padStart(2, "0")}:00`;
 
-function Browser({ count, grouped = false, selectionBehavior }: { count: number; grouped?: boolean; selectionBehavior?: "toggle" | "replace" }) {
+function Browser({
+  count,
+  grouped = false,
+  selectionBehavior,
+}: {
+  count: number;
+  grouped?: boolean;
+  selectionBehavior?: "toggle" | "replace";
+}) {
   const all = React.useMemo(() => shelfPhotos(count), [count]);
   const view = useViewOptions<ShelfPhoto>({
     id: `story-browser-${count}`,
     sorts: [
-      { key: "taken", label: "Date taken", value: taken, directions: ["Oldest first", "Newest first"], defaultDescending: true },
+      {
+        key: "taken",
+        label: "Date taken",
+        value: taken,
+        directions: ["Oldest first", "Newest first"],
+        defaultDescending: true,
+      },
       { key: "name", label: "Name", value: (p) => p.piece },
       { key: "glaze", label: "Glaze", value: (p) => glazeNames[p.glaze] },
     ],
@@ -72,7 +99,10 @@ export const TwoThousandGrouped: Story = { render: () => <Browser count={2000} g
 export const Grouped: Story = { render: () => <Browser count={120} grouped />, tags: ["visual-wide"] };
 
 /** Finder rules: a click chooses one picture, Ctrl or Cmd adds, Shift extends, Ctrl/Cmd+A chooses all and Escape clears. */
-export const ReplaceBehavior: Story = { render: () => <Browser count={40} selectionBehavior="replace" />, tags: ["no-visual"] };
+export const ReplaceBehavior: Story = {
+  render: () => <Browser count={40} selectionBehavior="replace" />,
+  tags: ["no-visual"],
+};
 
 type Folder = { id: string; name: string; pictures: number; inProject?: boolean };
 // Pictures of their own shapes in rows of equal height (`aspect="natural"`, issue #246): panoramas, portraits and landscapes.
@@ -101,14 +131,23 @@ function Natural({ grouped = false }: { grouped?: boolean }) {
 }
 export const NaturalAspect: Story = { render: () => <Natural />, tags: ["visual-wide"] };
 // While the pictures load: the same rows at the same shapes, so nothing moves when they arrive.
-export const NaturalAspectLoading: Story = { render: () => <SelectableGridSkeleton count={24} shapes={shapes} tileSize={140} />, tags: ["visual-wide"] };
+export const NaturalAspectLoading: Story = {
+  render: () => <SelectableGridSkeleton count={24} shapes={shapes} tileSize={140} />,
+  tags: ["visual-wide"],
+};
 export const NaturalAspectGrouped: Story = { render: () => <Natural grouped />, tags: ["visual-wide"] };
 
 const years: Folder[] = [
   { id: "2025", name: "2025", pictures: 412 },
   { id: "2026", name: "2026", pictures: 1180, inProject: true },
 ];
-const datesOf = (year: string): Folder[] => [3, 2, 1].map((d) => ({ id: `${year}/${year}-03-0${d}`, name: `${year}-03-0${d}`, pictures: d * 70, inProject: year === "2026" && d === 2 }));
+const datesOf = (year: string): Folder[] =>
+  [3, 2, 1].map((d) => ({
+    id: `${year}/${year}-03-0${d}`,
+    name: `${year}-03-0${d}`,
+    pictures: d * 70,
+    inProject: year === "2026" && d === 2,
+  }));
 const ready = (data: Folder[]) => ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly Folder[]>;
 
 function Archive() {
@@ -136,7 +175,9 @@ function Archive() {
         coverNoun={["folder", "folders"]}
         height="16rem"
       />
-      <p className="type-body-sm text-muted-foreground">Looking at {current ?? "nothing"}. {choices.count} ticked.</p>
+      <p className="type-body-sm text-muted-foreground">
+        Looking at {current ?? "nothing"}. {choices.count} ticked.
+      </p>
     </div>
   );
 }

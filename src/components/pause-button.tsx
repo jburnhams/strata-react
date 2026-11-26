@@ -18,7 +18,15 @@ import { Toggle } from "./toggle";
 //   one filled button (patterns.md §2).
 
 /** The pause control of a polled screen: a "Pause updates" toggle and when the readings were last taken ("Updated 12:00"). Takes the `Poll` from `usePoll`. */
-export function PauseButton({ poll, hideUpdated = false, className }: { poll: Poll; hideUpdated?: boolean; className?: string }) {
+export function PauseButton({
+  poll,
+  hideUpdated = false,
+  className,
+}: {
+  poll: Poll;
+  hideUpdated?: boolean;
+  className?: string;
+}) {
   const when = poll.updatedAt ? format.clock(poll.updatedAt) : null;
   return (
     <div className={cn("inline-flex flex-wrap items-center gap-x-3 gap-y-1", className)}>

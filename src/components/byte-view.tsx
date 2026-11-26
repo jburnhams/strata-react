@@ -75,7 +75,16 @@ const tintOf = (h: ByteHighlight | undefined) => (h ? tints[h.tone ?? "neutral"]
 const printable = (b: number) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : "·");
 
 /** A virtualised hex dump: offsets, sixteen bytes a row and the printable characters, byte and range keyboard, and the selected range reported as `{ start, end }`. */
-export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection, onSelectionChange, height = 320, className }: ByteViewProps) {
+export function ByteView({
+  bytes,
+  label,
+  offset = 0,
+  highlight,
+  defaultSelection,
+  onSelectionChange,
+  height = 320,
+  className,
+}: ByteViewProps) {
   const total = bytes.length;
   const rows = Math.ceil(total / PER_ROW);
   const visibleRows = Math.max(1, Math.floor(height / ROW_PX));
@@ -96,12 +105,15 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
 
   // The range is an anchor and a cursor: moving without Shift puts both on one byte.
   const [rawAnchor, setAnchor] = React.useState<number | null>(defaultSelection ? defaultSelection.start : null);
-  const [rawCursor, setCursor] = React.useState<number | null>(defaultSelection ? Math.max(defaultSelection.start, defaultSelection.end - 1) : null);
+  const [rawCursor, setCursor] = React.useState<number | null>(
+    defaultSelection ? Math.max(defaultSelection.start, defaultSelection.end - 1) : null,
+  );
   // A shorter buffer (another file chosen) must not leave the cursor past its end.
   const clampTo = (n: number | null) => (n === null || total === 0 ? null : Math.min(n, total - 1));
   const anchor = clampTo(rawAnchor);
   const cursor = clampTo(rawCursor);
-  const range: ByteRange | null = anchor === null || cursor === null ? null : { start: Math.min(anchor, cursor), end: Math.max(anchor, cursor) + 1 };
+  const range: ByteRange | null =
+    anchor === null || cursor === null ? null : { start: Math.min(anchor, cursor), end: Math.max(anchor, cursor) + 1 };
   const notify = React.useRef(onSelectionChange);
   notify.current = onSelectionChange;
   const select = (nextAnchor: number, nextCursor: number) => {
@@ -133,14 +145,30 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
     const extend = e.shiftKey;
     const rowStart = Math.floor(at / PER_ROW) * PER_ROW;
     switch (e.key) {
-      case "ArrowLeft": move(cursor === null ? 0 : at - 1, extend); break;
-      case "ArrowRight": move(cursor === null ? 0 : at + 1, extend); break;
-      case "ArrowUp": move(cursor === null ? 0 : at - PER_ROW, extend); break;
-      case "ArrowDown": move(cursor === null ? 0 : at + PER_ROW, extend); break;
-      case "PageUp": move(at - visibleRows * PER_ROW, extend); break;
-      case "PageDown": move(at + visibleRows * PER_ROW, extend); break;
-      case "Home": move(e.ctrlKey || e.metaKey ? 0 : rowStart, extend); break;
-      case "End": move(e.ctrlKey || e.metaKey ? total - 1 : rowStart + PER_ROW - 1, extend); break;
+      case "ArrowLeft":
+        move(cursor === null ? 0 : at - 1, extend);
+        break;
+      case "ArrowRight":
+        move(cursor === null ? 0 : at + 1, extend);
+        break;
+      case "ArrowUp":
+        move(cursor === null ? 0 : at - PER_ROW, extend);
+        break;
+      case "ArrowDown":
+        move(cursor === null ? 0 : at + PER_ROW, extend);
+        break;
+      case "PageUp":
+        move(at - visibleRows * PER_ROW, extend);
+        break;
+      case "PageDown":
+        move(at + visibleRows * PER_ROW, extend);
+        break;
+      case "Home":
+        move(e.ctrlKey || e.metaKey ? 0 : rowStart, extend);
+        break;
+      case "End":
+        move(e.ctrlKey || e.metaKey ? total - 1 : rowStart + PER_ROW - 1, extend);
+        break;
       case "Escape":
         if (cursor === null || anchor === cursor) return;
         select(cursor, cursor);
@@ -180,7 +208,10 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
     const inside = marked(cursor)?.label;
     const count = range.end - range.start;
     const where = `Byte 0x${hex(offset + cursor, 1)} of ${format.integer(total)}: ${hex(b)}, ${b}`;
-    const picked = count > 1 ? `; ${format.integer(count)} bytes selected, 0x${hex(offset + range.start, 1)} to 0x${hex(offset + range.end - 1, 1)}` : "";
+    const picked =
+      count > 1
+        ? `; ${format.integer(count)} bytes selected, 0x${hex(offset + range.start, 1)} to 0x${hex(offset + range.end - 1, 1)}`
+        : "";
     return `${where}${picked}${inside ? `; in ${inside}` : ""}`;
   })();
 
@@ -207,12 +238,19 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
             <span style={{ width: `${hexWidth}ch` }}>Offset</span>
             <span className="flex" style={{ columnGap: "1ch" }}>
               {Array.from({ length: PER_ROW }, (_, i) => (
-                <span key={i} className="text-center" style={cellStyle(i)}>{hex(i)}</span>
+                <span key={i} className="text-center" style={cellStyle(i)}>
+                  {hex(i)}
+                </span>
               ))}
             </span>
             <span>Text</span>
           </div>
-          <div ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} className="overflow-y-auto" style={{ height }}>
+          <div
+            ref={scroller}
+            onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+            className="overflow-y-auto"
+            style={{ height }}
+          >
             <div style={{ height: spacer }} className="relative">
               <div className="sticky top-0 overflow-hidden" style={{ height }}>
                 <div style={{ transform: `translateY(${-fraction * ROW_PX}px)` }}>
@@ -220,8 +258,15 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
                     const base = r * PER_ROW;
                     const count = Math.min(PER_ROW, total - base);
                     return (
-                      <div key={r} data-row={r} className="flex items-center gap-3 px-3" style={{ height: ROW_PX, position: "absolute", top: (r - first) * ROW_PX, left: 0, right: 0 }}>
-                        <span className="text-muted-foreground" style={{ width: `${hexWidth}ch` }}>{hex(offset + base, hexWidth)}</span>
+                      <div
+                        key={r}
+                        data-row={r}
+                        className="flex items-center gap-3 px-3"
+                        style={{ height: ROW_PX, position: "absolute", top: (r - first) * ROW_PX, left: 0, right: 0 }}
+                      >
+                        <span className="text-muted-foreground" style={{ width: `${hexWidth}ch` }}>
+                          {hex(offset + base, hexWidth)}
+                        </span>
                         <span className="flex" style={{ columnGap: "1ch" }}>
                           {Array.from({ length: PER_ROW }, (_, k) => {
                             const i = base + k;
@@ -234,7 +279,11 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
                                 data-selected={inRange || undefined}
                                 data-cursor={i === cursor || undefined}
                                 style={cellStyle(k)}
-                                className={cn("rounded-control text-center", inRange ? "bg-primary text-primary-foreground" : tintOf(marked(i)), i === cursor && "outline-2 outline-ring")}
+                                className={cn(
+                                  "rounded-control text-center",
+                                  inRange ? "bg-primary text-primary-foreground" : tintOf(marked(i)),
+                                  i === cursor && "outline-2 outline-ring",
+                                )}
                               >
                                 {hex(bytes[i]!)}
                               </span>
@@ -246,7 +295,15 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
                             const i = base + k;
                             const inRange = range !== null && i >= range.start && i < range.end;
                             return (
-                              <span key={k} data-i={i} style={{ width: "1ch" }} className={cn("text-center", inRange ? "bg-primary text-primary-foreground" : tintOf(marked(i)))}>
+                              <span
+                                key={k}
+                                data-i={i}
+                                style={{ width: "1ch" }}
+                                className={cn(
+                                  "text-center",
+                                  inRange ? "bg-primary text-primary-foreground" : tintOf(marked(i)),
+                                )}
+                              >
                                 {printable(bytes[i]!)}
                               </span>
                             );
@@ -261,7 +318,9 @@ export function ByteView({ bytes, label, offset = 0, highlight, defaultSelection
           </div>
         </div>
       </div>
-      <p role="status" className="type-caption text-muted-foreground tabular-nums">{total === 0 ? "No bytes." : said}</p>
+      <p role="status" className="type-caption text-muted-foreground tabular-nums">
+        {total === 0 ? "No bytes." : said}
+      </p>
     </div>
   );
 }

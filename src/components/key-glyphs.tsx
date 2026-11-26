@@ -1,5 +1,15 @@
 import * as React from "react";
-import { ArrowBigUp, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronUp, Command, Option, type LucideIcon } from "lucide-react";
+import {
+  ArrowBigUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ChevronUp,
+  Command,
+  Option,
+  type LucideIcon,
+} from "lucide-react";
 
 // Keys drawn as icons where a font cannot be trusted to have them (strata-react issue #136, from
 // strata-vid). The arrows (← → ↑ ↓) and the macOS modifiers (⌘ ⌃ ⌥ ⇧) are outside the latin subset of

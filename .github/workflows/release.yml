@@ -1,4 +1,4 @@
-name: 'Bump Version and Release'
+name: "Bump Version and Release"
 
 # After every green CI run on main, bump the version through a pull request
 # (main only accepts pull requests), merge it, then tag and release that commit.

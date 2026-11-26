@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { screen } from "@testing-library/react";
 import { PixelImage, pixelZoom } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -34,15 +34,23 @@ describe("PixelImage", () => {
 
   it("fits a small picture inside maxSize by default and says no zoom at 1×", () => {
     renderWithStrata(<PixelImage label="Palette" width={16} height={16} rgba={rgba(16, 16)} maxSize={64} />);
-    expect(screen.getByRole("img", { name: "Palette, 16 by 16 pixels, shown at 4×" })).toHaveStyle({ width: "64px" });
+    expect(screen.getByRole("img", { name: "Palette, 16 by 16 pixels, shown at 4×" })).toHaveStyle({
+      width: "64px",
+    });
     renderWithStrata(<PixelImage label="Big" width={1024} height={512} rgba={rgba(1024, 512)} />);
     expect(screen.getByRole("img", { name: "Big, 1,024 by 512 pixels" })).toBeInTheDocument();
   });
 
   it("takes an ImageData", () => {
-    const image = { width: 2, height: 2, data: new Uint8ClampedArray(2 * 2 * 4).fill(7) } as ImageData;
+    const image = {
+      width: 2,
+      height: 2,
+      data: new Uint8ClampedArray(2 * 2 * 4).fill(7),
+    } as ImageData;
     renderWithStrata(<PixelImage label="Swatch" image={image} zoom={8} />);
-    expect(screen.getByRole("img", { name: /Swatch, 2 by 2 pixels, shown at 8×/ })).toHaveStyle({ width: "16px" });
+    expect(screen.getByRole("img", { name: /Swatch, 2 by 2 pixels, shown at 8×/ })).toHaveStyle({
+      width: "16px",
+    });
     expect(gl.puts.at(-1)?.data[0]).toBe(7);
   });
 

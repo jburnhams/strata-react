@@ -40,7 +40,14 @@ export function usePoll({ every, paused: initiallyPaused = false }: { every: num
   const toggle = React.useCallback(() => setPaused((p) => !p), []);
   const note = React.useCallback((dataUpdatedAt: number) => setAt((previous) => Math.max(previous, dataUpdatedAt)), []);
   return React.useMemo(() => {
-    const poll: Poll = { every, paused, toggle, updatedAt: at ? new Date(at) : null, note, with: (override) => ({ ...poll, every: override.every, with: (again) => poll.with(again) }) };
+    const poll: Poll = {
+      every,
+      paused,
+      toggle,
+      updatedAt: at ? new Date(at) : null,
+      note,
+      with: (override) => ({ ...poll, every: override.every, with: (again) => poll.with(again) }),
+    };
     return poll;
   }, [every, paused, toggle, at, note]);
 }

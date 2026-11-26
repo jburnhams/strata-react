@@ -31,7 +31,9 @@ function FromApi() {
   return <Bookings load={load} />;
 }
 
-const meta = { title: "Data/DataView", component: Bookings, args: { load: { status: "loading" } } } satisfies Meta<typeof Bookings>;
+const meta = { title: "Data/DataView", component: Bookings, args: { load: { status: "loading" } } } satisfies Meta<
+  typeof Bookings
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

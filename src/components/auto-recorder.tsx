@@ -72,7 +72,13 @@ export type AutoRecorder = {
 const RECENT_CHUNKS = 5;
 
 /** Listens all the time and hands over each stretch of speech as its own lossless take. */
-export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone, ...tuning }: UseAutoRecorderOptions): AutoRecorder {
+export function useAutoRecorder({
+  maxSeconds,
+  onTake,
+  paused = false,
+  microphone,
+  ...tuning
+}: UseAutoRecorderOptions): AutoRecorder {
   const fromContext = useMicrophone();
   const device = microphone ?? fromContext;
   const [state, setState] = React.useState<AutoRecorderState>({ phase: "idle" });
@@ -136,7 +142,10 @@ export function useAutoRecorder({ maxSeconds, onTake, paused = false, microphone
       });
     } catch (e) {
       opening.current = false;
-      setState({ phase: "failed", reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).` });
+      setState({
+        phase: "failed",
+        reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).`,
+      });
       return false;
     }
     opening.current = false;

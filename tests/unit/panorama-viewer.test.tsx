@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { PanoramaViewer, type PanoramaView, type PanoramaViewerProps } from "../../src/panorama";
 import { project } from "../../src/panorama/projection";
@@ -15,7 +15,10 @@ beforeEach(() => {
   gl = installFakeGl();
   restoreImages = installFakeImages();
   // A frame is a microtask later, so a test can look at what was drawn.
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number);
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number,
+  );
   vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
 });
 afterEach(() => {
@@ -32,7 +35,9 @@ const group = () => screen.getByRole("group", { name: "360 view of the room" });
 const deg = (rad: number) => (rad * 180) / Math.PI;
 
 function Host(props: Partial<PanoramaViewerProps> & { onView?: (v: PanoramaView) => void }) {
-  return <PanoramaViewer label="360 view of the room" image="/room.jpg" onViewChange={props.onView} {...(props as object)} />;
+  return (
+    <PanoramaViewer label="360 view of the room" image="/room.jpg" onViewChange={props.onView} {...(props as object)} />
+  );
 }
 
 describe("drawing", () => {
@@ -59,7 +64,11 @@ describe("drawing", () => {
 
   it("names the picture by its label and where it looks, always current", () => {
     renderWithStrata(<Host view={{ yaw: 40, pitch: 5, fov: 90 }} />);
-    expect(screen.getByRole("img", { name: "360 view of the room. Looking 40° right, 5° up, field of view 90°" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "360 view of the room. Looking 40° right, 5° up, field of view 90°",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("draws nothing while it is off screen, and catches up when it comes back", async () => {
@@ -255,7 +264,9 @@ describe("overlay", () => {
   });
   it("gives nothing for a direction behind the camera", () => {
     let behind: unknown = "unset";
-    renderWithStrata(<Host view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={({ project: p }) => ((behind = p(180, 0)), null)} />);
+    renderWithStrata(
+      <Host view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={({ project: p }) => ((behind = p(180, 0)), null)} />,
+    );
     expect(behind).toBeNull();
   });
 });
@@ -280,7 +291,13 @@ describe("with no WebGL2", () => {
     let flat: ReturnType<NonNullable<PanoramaViewerProps["overlay"]>> | boolean = false;
     let at: { x: number; y: number } | null = null;
     const onView = vi.fn();
-    renderWithStrata(<Host onView={onView} view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={({ flat: f, project: p }) => ((flat = f), (at = p(45, 0)), null)} />);
+    renderWithStrata(
+      <Host
+        onView={onView}
+        view={{ yaw: 0, pitch: 0, fov: 90 }}
+        overlay={({ flat: f, project: p }) => ((flat = f), (at = p(45, 0)), null)}
+      />,
+    );
     await frames();
     expect(screen.getByText(/cannot draw the 360 view/)).toBeInTheDocument();
     expect(gl.drawImages.length).toBeGreaterThan(0);

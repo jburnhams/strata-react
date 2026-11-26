@@ -82,7 +82,14 @@ export function rmsDb(frame: Float32Array): number {
 /** A segmenter for a stream at `sampleRate`. */
 export function createSegmenter(
   sampleRate: number,
-  { onsetDb = 12, floorDb = -55, silenceSeconds = 1, padSeconds = 0.3, minSpeechSeconds = 0.3, maxSeconds }: SegmenterOptions = {},
+  {
+    onsetDb = 12,
+    floorDb = -55,
+    silenceSeconds = 1,
+    padSeconds = 0.3,
+    minSpeechSeconds = 0.3,
+    maxSeconds,
+  }: SegmenterOptions = {},
 ): Segmenter {
   const frameLength = Math.max(1, Math.round(sampleRate * FRAME_SECONDS));
   const frames = (seconds: number) => Math.max(0, Math.round(seconds / FRAME_SECONDS));

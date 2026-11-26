@@ -19,7 +19,13 @@ export const systemInfo: SystemInfoLike = {
   ],
   services: [
     { name: "Glaze library", ok: true, version: "0.9.4", detail: null, url: "http://glazes.local/api/health" },
-    { name: "Photo store", ok: false, version: null, detail: "Connection refused after 3 s", url: "http://photos.local/api/health" },
+    {
+      name: "Photo store",
+      ok: false,
+      version: null,
+      detail: "Connection refused after 3 s",
+      url: "http://photos.local/api/health",
+    },
   ],
 };
 
@@ -32,7 +38,13 @@ export const systemInfoPlain: SystemInfoLike = {
 
 export const schedule: ScheduleRow[] = [
   { label: "Nightly backup", result: "ok", last: "2026-11-24T02:00:00Z", next: "2026-11-25T02:00:00Z" },
-  { label: "Photo thumbnails", result: "ok", running: true, last: "2026-11-24T09:30:00Z", next: "2026-11-24T10:30:00Z" },
+  {
+    label: "Photo thumbnails",
+    result: "ok",
+    running: true,
+    last: "2026-11-24T09:30:00Z",
+    next: "2026-11-24T10:30:00Z",
+  },
   { label: "Glaze stock count", result: "failed", last: "2026-11-24T06:00:00Z", next: "2026-11-24T18:00:00Z" },
   { label: "Weekly firing report", result: null, last: null, next: "2026-11-30T08:00:00Z" },
   { label: "Archive sweep", result: "skipped", last: "2026-11-17T03:00:00Z", next: null },

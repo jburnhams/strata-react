@@ -75,7 +75,10 @@ export type HotkeysOptions = {
  * or Alt, IME composition and (unless `repeat`) held keys. Pass the same list to `KeysLegend`: better, pass it `live`, which is what answers a key
  * right now (nothing while `enabled` is off; with `within`, only the `anywhere` keys until focus is inside the region).
  */
-export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, { enabled = true, within }: HotkeysOptions = {}): { live: Shortcut[] } {
+export function useHotkeys(
+  shortcuts: Shortcut[] | Record<string, () => void>,
+  { enabled = true, within }: HotkeysOptions = {},
+): { live: Shortcut[] } {
   // The listener is bound once; it reads the latest list, so handlers can close over fresh state.
   const latest = React.useRef<Shortcut[]>([]);
   const list = toShortcuts(shortcuts);
@@ -158,7 +161,13 @@ export function KeysLegend({
   className?: string;
 }) {
   return (
-    <dl aria-label={label} className={cn("flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground pointer-coarse:hidden", className)}>
+    <dl
+      aria-label={label}
+      className={cn(
+        "flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground pointer-coarse:hidden",
+        className,
+      )}
+    >
       {shortcuts.map((s) => (
         <div key={s.keys.join(" ")} className={cn("flex items-center gap-1.5", s.disabled && "opacity-50")}>
           <dt className="flex items-center gap-1">

@@ -26,7 +26,12 @@ export function clampViewport(v: Viewport, frame: { width: number; height: numbe
 }
 
 /** A new scale with the point under `at` (pixels from the frame's centre) staying under it. */
-export function zoomAt(v: Viewport, nextScale: number, at: { x: number; y: number }, frame: { width: number; height: number }): Viewport {
+export function zoomAt(
+  v: Viewport,
+  nextScale: number,
+  at: { x: number; y: number },
+  frame: { width: number; height: number },
+): Viewport {
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
   const k = scale / v.scale;
   return clampViewport({ scale, x: at.x - k * (at.x - v.x), y: at.y - k * (at.y - v.y) }, frame);
@@ -47,7 +52,12 @@ export function viewportTransform(v: Viewport): string {
 export type ShareBox = readonly [number, number, number, number];
 
 /** A named box in the source's coordinates: `of` is the reference size in pixels, and without it the box is already shares. */
-export type Region = { id: string; label: string; box: readonly [number, number, number, number]; of?: readonly [number, number] };
+export type Region = {
+  id: string;
+  label: string;
+  box: readonly [number, number, number, number];
+  of?: readonly [number, number];
+};
 
 /** A region as shares of the frame, so it lands on the same part of every candidate whatever its pixel size. */
 export function regionShares(region: Region): ShareBox {
@@ -61,12 +71,20 @@ export function regionShares(region: Region): ShareBox {
 export function boxViewport(box: ShareBox, frame: { width: number; height: number }): Viewport {
   const [x, y, w, h] = box;
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(1 / Math.max(w, 1e-6), 1 / Math.max(h, 1e-6))));
-  return clampViewport({ scale, x: -scale * (x + w / 2 - 0.5) * frame.width, y: -scale * (y + h / 2 - 0.5) * frame.height }, frame);
+  return clampViewport(
+    { scale, x: -scale * (x + w / 2 - 0.5) * frame.width, y: -scale * (y + h / 2 - 0.5) * frame.height },
+    frame,
+  );
 }
 
 /** A rectangle drawn on the frame (pixels from its top left) as shares of the picture under the viewport now. */
-export function frameBoxToShares(rect: { x0: number; y0: number; x1: number; y1: number }, v: Viewport, frame: { width: number; height: number }): ShareBox {
-  const toShare = (p: number, offset: number, size: number) => (size ? (p - size / 2 - offset) / v.scale / size + 0.5 : 0);
+export function frameBoxToShares(
+  rect: { x0: number; y0: number; x1: number; y1: number },
+  v: Viewport,
+  frame: { width: number; height: number },
+): ShareBox {
+  const toShare = (p: number, offset: number, size: number) =>
+    size ? (p - size / 2 - offset) / v.scale / size + 0.5 : 0;
   const clamp = (n: number) => Math.min(1, Math.max(0, n));
   const xa = clamp(toShare(Math.min(rect.x0, rect.x1), v.x, frame.width));
   const xb = clamp(toShare(Math.max(rect.x0, rect.x1), v.x, frame.width));

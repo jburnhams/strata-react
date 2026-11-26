@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
@@ -13,7 +13,17 @@ beforeEach(() => void (media = installFakeMedia()));
 afterEach(() => media.uninstall());
 const audio = (c: HTMLElement, i = 0) => c.querySelectorAll("audio")[i] as HTMLAudioElement;
 
-function Probe({ window: w, loop, onEnd, onFrame }: { window?: MediaWindow | null; loop?: boolean; onEnd?: () => void; onFrame?: (t: number) => void }) {
+function Probe({
+  window: w,
+  loop,
+  onEnd,
+  onFrame,
+}: {
+  window?: MediaWindow | null;
+  loop?: boolean;
+  onEnd?: () => void;
+  onFrame?: (t: number) => void;
+}) {
   const ref = React.useRef<HTMLAudioElement>(null);
   const m = useMediaElement(ref, { window: w, loop, onWindowEnd: onEnd, onTimeUpdate: onFrame });
   return (
@@ -164,7 +174,12 @@ describe("groups", () => {
     expect(a.paused).toBe(false); // b is gone from the group
   });
   it("players in no group play together as before", async () => {
-    const { container } = render(<><MediaPlayer label="One" src="/1.mp3" controls="strata" /><MediaPlayer label="Two" src="/2.mp3" controls="strata" /></>);
+    const { container } = render(
+      <>
+        <MediaPlayer label="One" src="/1.mp3" controls="strata" />
+        <MediaPlayer label="Two" src="/2.mp3" controls="strata" />
+      </>,
+    );
     await act(async () => void audio(container, 0).play());
     await act(async () => void audio(container, 1).play());
     expect(audio(container, 0).paused).toBe(false);

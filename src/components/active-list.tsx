@@ -85,7 +85,9 @@ export function useActiveItem<T>(
     const focused = document.activeElement;
     const lost = focusWithin.current && (focused === null || focused === document.body);
     const elsewhereInList =
-      focused !== null && !el?.contains(focused) && [...elements.current.values()].some((item) => item.contains(focused));
+      focused !== null &&
+      !el?.contains(focused) &&
+      [...elements.current.values()].some((item) => item.contains(focused));
     if (el && (navigated.current || lost || elsewhereInList)) {
       el.focus({ preventScroll: true });
       el.scrollIntoView?.({ block: "nearest" });
@@ -140,7 +142,8 @@ export function useActiveItem<T>(
       // Focus going nowhere (null) is what removal looks like, so only a move to a real element
       // outside the list counts as leaving it.
       const to = e.relatedTarget;
-      if (to instanceof Node && ![...elements.current.values()].some((el) => el.contains(to))) focusWithin.current = false;
+      if (to instanceof Node && ![...elements.current.values()].some((el) => el.contains(to)))
+        focusWithin.current = false;
     },
   });
 
@@ -185,11 +188,15 @@ export function ActiveList<T>({
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
     const move =
-      e.key === "ArrowDown" ? active.next
-      : e.key === "ArrowUp" ? active.prev
-      : e.key === "Home" ? active.first
-      : e.key === "End" ? active.last
-      : undefined;
+      e.key === "ArrowDown"
+        ? active.next
+        : e.key === "ArrowUp"
+          ? active.prev
+          : e.key === "Home"
+            ? active.first
+            : e.key === "End"
+              ? active.last
+              : undefined;
     if (!move) return;
     e.preventDefault();
     move();

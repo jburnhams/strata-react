@@ -24,7 +24,13 @@ const withFrame: Decorator = (Story, context) => {
   const [client] = React.useState(() => createQueryClient({ defaultOptions: { queries: { retry: false } } }));
   const route = (context.parameters.route as string | undefined) ?? "/";
   return (
-    <ThemeProvider key={`${theme}-${palette}`} defaultPreference={(theme as ColorSchemePreference | undefined) ?? "light"} storageKey={null} defaultPalette={palette ?? "petrol"} paletteStorageKey={null}>
+    <ThemeProvider
+      key={`${theme}-${palette}`}
+      defaultPreference={(theme as ColorSchemePreference | undefined) ?? "light"}
+      storageKey={null}
+      defaultPalette={palette ?? "petrol"}
+      paletteStorageKey={null}
+    >
       <StrataQueryProvider client={client}>
         <MemoryRouter initialEntries={[route]}>
           <Story />
@@ -51,7 +57,12 @@ const preview: Preview = {
     },
     palette: {
       description: "Palette (a theme beside light and dark)",
-      toolbar: { title: "Palette", icon: "paintbrush", items: ["petrol", "pine", "cobalt", "steel", "clay"], dynamicTitle: true },
+      toolbar: {
+        title: "Palette",
+        icon: "paintbrush",
+        items: ["petrol", "pine", "cobalt", "steel", "clay"],
+        dynamicTitle: true,
+      },
     },
     density: {
       description: "Control density",

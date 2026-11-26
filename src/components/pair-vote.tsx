@@ -90,10 +90,23 @@ export type PairJudgeProps<M> = {
 };
 
 /** Props for `PairVote`: the pair judgment, drawn with `Compare`. */
-export type PairVoteProps = Omit<PairJudgeProps<ImageMedia>, "view"> & Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer" | "onPick">;
+export type PairVoteProps = Omit<PairJudgeProps<ImageMedia>, "view"> &
+  Omit<CompareProps, "label" | "a" | "b" | "extraShortcuts" | "footer" | "onPick">;
 
 /** A blind pairwise judgment of two pictures: `Compare`, answer keys in its legend, and a vote bar that never leans on either side. */
-export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words, ...compare }: PairVoteProps) {
+export function PairVote({
+  pair,
+  skeleton,
+  empty,
+  onAnswer,
+  pending,
+  progress,
+  flagReasons,
+  preload,
+  last,
+  words,
+  ...compare
+}: PairVoteProps) {
   return (
     <PairJudge
       {...{ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words }}
@@ -103,17 +116,48 @@ export function PairVote({ pair, skeleton, empty, onAnswer, pending, progress, f
 }
 
 /** A blind pairwise judgment of anything: the answer keys, vote bar, pending, flag menu, progress, preload and Undo around a `view` that draws the pair (`CompareAudio`, `CompareText`, your own). */
-export function PairJudge<M>({ pair, skeleton, empty, onAnswer, pending, progress, flagReasons, preload, last, words = {}, view }: PairJudgeProps<M>) {
+export function PairJudge<M>({
+  pair,
+  skeleton,
+  empty,
+  onAnswer,
+  pending,
+  progress,
+  flagReasons,
+  preload,
+  last,
+  words = {},
+  view,
+}: PairJudgeProps<M>) {
   React.useEffect(() => {
     // Warm the cache only; the elements are dropped at once.
     for (const src of preload ?? []) new Image().src = src;
   }, [preload]);
-  const w = { tie: "About the same", skip: "Can't tell", pending: "Saving your answer…", flag: "Flag this pair", prefer: (l: string) => `Prefer ${l}`, ...words };
+  const w = {
+    tie: "About the same",
+    skip: "Can't tell",
+    pending: "Saving your answer…",
+    flag: "Flag this pair",
+    prefer: (l: string) => `Prefer ${l}`,
+    ...words,
+  };
   return (
     <div className="grid gap-3">
       {progress && <p className="type-body-sm text-muted-foreground">{progress}</p>}
       <DataView state={pair} isEmpty={(p) => p === null} skeleton={skeleton} empty={empty}>
-        {(p) => p && <Judged pair={p} onAnswer={onAnswer} pending={pending} flagReasons={flagReasons} words={w} last={last} view={view} />}
+        {(p) =>
+          p && (
+            <Judged
+              pair={p}
+              onAnswer={onAnswer}
+              pending={pending}
+              flagReasons={flagReasons}
+              words={w}
+              last={last}
+              view={view}
+            />
+          )
+        }
       </DataView>
       {/* With no pair on screen (the queue just ran out) the last answer can still be taken back. */}
       {last && !(pair.status === "ready" && pair.data) && <LastAnswer last={last} />}
@@ -133,7 +177,23 @@ function LastAnswer({ last }: { last: NonNullable<PairJudgeProps<unknown>["last"
   );
 }
 
-function Judged<M>({ pair, onAnswer, pending, flagReasons, words, last, view }: { pair: Pair<M>; last?: PairJudgeProps<M>["last"]; onAnswer: (a: PairAnswer) => void; pending: boolean; flagReasons?: readonly string[]; words: Required<PairVoteWords>; view: PairJudgeProps<M>["view"] }) {
+function Judged<M>({
+  pair,
+  onAnswer,
+  pending,
+  flagReasons,
+  words,
+  last,
+  view,
+}: {
+  pair: Pair<M>;
+  last?: PairJudgeProps<M>["last"];
+  onAnswer: (a: PairAnswer) => void;
+  pending: boolean;
+  flagReasons?: readonly string[];
+  words: Required<PairVoteWords>;
+  view: PairJudgeProps<M>["view"];
+}) {
   const { a, b } = pair;
   const answer = (x: PairAnswer) => !pending && onAnswer(x);
   const shortcuts: Shortcut[] = [
@@ -145,10 +205,18 @@ function Judged<M>({ pair, onAnswer, pending, flagReasons, words, last, view }: 
   const footer = (
     <div className={cn("grid gap-2")} aria-busy={pending || undefined}>
       <div role="group" aria-label="Your answer" className="flex flex-wrap items-center gap-2">
-        <Button disabled={pending} onPress={() => answer({ answer: "a" })}>{words.prefer(a.label)}</Button>
-        <Button disabled={pending} onPress={() => answer({ answer: "tie" })}>{words.tie}</Button>
-        <Button disabled={pending} onPress={() => answer({ answer: "b" })}>{words.prefer(b.label)}</Button>
-        <Button variant="ghost" disabled={pending} onPress={() => answer({ answer: "skip" })}>{words.skip}</Button>
+        <Button disabled={pending} onPress={() => answer({ answer: "a" })}>
+          {words.prefer(a.label)}
+        </Button>
+        <Button disabled={pending} onPress={() => answer({ answer: "tie" })}>
+          {words.tie}
+        </Button>
+        <Button disabled={pending} onPress={() => answer({ answer: "b" })}>
+          {words.prefer(b.label)}
+        </Button>
+        <Button variant="ghost" disabled={pending} onPress={() => answer({ answer: "skip" })}>
+          {words.skip}
+        </Button>
         {flagReasons && flagReasons.length > 0 && (
           <Menu
             label={words.flag}
@@ -158,13 +226,28 @@ function Judged<M>({ pair, onAnswer, pending, flagReasons, words, last, view }: 
                 {words.flag}
               </Button>
             }
-            items={flagReasons.map((reason) => ({ id: reason, label: reason, run: () => answer({ answer: "flag", reason }) }))}
+            items={flagReasons.map((reason) => ({
+              id: reason,
+              label: reason,
+              run: () => answer({ answer: "flag", reason }),
+            }))}
           />
         )}
       </div>
-      {pending && <p role="status" className="type-body-sm text-muted-foreground">{words.pending}</p>}
+      {pending && (
+        <p role="status" className="type-body-sm text-muted-foreground">
+          {words.pending}
+        </p>
+      )}
       {last && <LastAnswer last={last} />}
     </div>
   );
-  return <>{view({ extraShortcuts: shortcuts, footer, onPick: pending ? undefined : (side) => answer({ answer: side }) }, pair)}</>;
+  return (
+    <>
+      {view(
+        { extraShortcuts: shortcuts, footer, onPick: pending ? undefined : (side) => answer({ answer: side }) },
+        pair,
+      )}
+    </>
+  );
 }

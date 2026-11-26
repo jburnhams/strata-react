@@ -10,7 +10,8 @@ const projects = new Set(["/home/ada/Projects/kiln-room", "/home/ada/Projects/fi
 const cameraFiles: Record<string, number> = { "/home/ada/Projects/film-2026/rushes": 3 };
 
 /** The sentence about the folder itself that a listing may carry. */
-export const noteFor = (path: string): string | undefined => (cameraFiles[path] ? `${cameraFiles[path]} camera files here.` : undefined);
+export const noteFor = (path: string): string | undefined =>
+  cameraFiles[path] ? `${cameraFiles[path]} camera files here.` : undefined;
 
 const base: Record<string, string[]> = {
   "/": ["archive", "home", "media", "srv"],
@@ -43,14 +44,22 @@ const kids = (path: string): string[] | undefined => {
 export function listDisk(path: string): DiskFolder[] {
   return [...(kids(path) ?? [])]
     .sort((x, y) => x.localeCompare(y))
-    .map((name) => ({ path: join(path, name), name, count: kids(join(path, name))?.length ?? 0, ...(projects.has(join(path, name)) ? { badge: "project", tone: "success" as const } : {}) }));
+    .map((name) => ({
+      path: join(path, name),
+      name,
+      count: kids(join(path, name))?.length ?? 0,
+      ...(projects.has(join(path, name)) ? { badge: "project", tone: "success" as const } : {}),
+    }));
 }
 
 /** Makes a folder; returns the reason when it cannot be made. */
 export function makeFolder(parent: string, name: string): { ok: true } | { ok: false; status: number; reason: string } {
-  if (!name.trim() || /[\\/:*?"<>|]/.test(name)) return { ok: false, status: 422, reason: `A folder name cannot contain \\ / : * ? " < > |.` };
-  if ((kids(parent) ?? []).some((n) => n.toLowerCase() === name.toLowerCase())) return { ok: false, status: 409, reason: `A folder named ${name} already exists in ${parent}.` };
-  if (parent.endsWith("/locked")) return { ok: false, status: 403, reason: `You do not have permission to make folders in ${parent}.` };
+  if (!name.trim() || /[\\/:*?"<>|]/.test(name))
+    return { ok: false, status: 422, reason: `A folder name cannot contain \\ / : * ? " < > |.` };
+  if ((kids(parent) ?? []).some((n) => n.toLowerCase() === name.toLowerCase()))
+    return { ok: false, status: 409, reason: `A folder named ${name} already exists in ${parent}.` };
+  if (parent.endsWith("/locked"))
+    return { ok: false, status: 403, reason: `You do not have permission to make folders in ${parent}.` };
   added[parent] = [...(added[parent] ?? []), name];
   return { ok: true };
 }

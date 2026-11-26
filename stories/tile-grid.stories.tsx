@@ -27,7 +27,9 @@ function Pages({ items = bookPages }: { items?: Tile[] }) {
   );
 }
 
-const meta = { title: "Data/TileGrid", component: Pages, parameters: { layout: "padded" } } satisfies Meta<typeof Pages>;
+const meta = { title: "Data/TileGrid", component: Pages, parameters: { layout: "padded" } } satisfies Meta<
+  typeof Pages
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -44,7 +46,12 @@ export const Empty: Story = {
   render: () => {
     const state: Load<Tile[]> = { status: "ready", data: [] };
     return (
-      <DataView state={state} isEmpty={(r) => r.length === 0} skeleton={<TileGridSkeleton aspect="portrait" />} empty={<EmptyState title="No pages yet">Scan the book and its pages appear here.</EmptyState>}>
+      <DataView
+        state={state}
+        isEmpty={(r) => r.length === 0}
+        skeleton={<TileGridSkeleton aspect="portrait" />}
+        empty={<EmptyState title="No pages yet">Scan the book and its pages appear here.</EmptyState>}
+      >
         {(rows) => <Pages items={rows} />}
       </DataView>
     );

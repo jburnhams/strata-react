@@ -1,19 +1,39 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useLocation } from "react-router";
 import userEvent from "@testing-library/user-event";
 import { Button, Lightbox, PropertyList, useLightboxUrl, type LightboxItem } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
-const items: LightboxItem[] = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, src: `/pic/${i}.jpg`, label: `Bowl ${i + 1}`, natural: [3000, 2000] as const }));
+const items: LightboxItem[] = Array.from({ length: 5 }, (_, i) => ({
+  id: `p${i}`,
+  src: `/pic/${i}.jpg`,
+  label: `Bowl ${i + 1}`,
+  natural: [3000, 2000] as const,
+}));
 
-function Harness({ onCompare, ticked = [], start = 0 }: { onCompare?: (ids: readonly string[]) => void; ticked?: string[]; start?: number }) {
+function Harness({
+  onCompare,
+  ticked = [],
+  start = 0,
+}: {
+  onCompare?: (ids: readonly string[]) => void;
+  ticked?: string[];
+  start?: number;
+}) {
   const [open, setOpen] = React.useState(false);
   const [index, setIndex] = React.useState(start);
   return (
     <>
-      <button onClick={() => { setIndex(start); setOpen(true); }}>Open Bowl 1</button>
+      <button
+        onClick={() => {
+          setIndex(start);
+          setOpen(true);
+        }}
+      >
+        Open Bowl 1
+      </button>
       <Lightbox
         title="Photos of firing f-0412"
         items={items}
@@ -35,9 +55,18 @@ const realSrc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src
 beforeEach(() => {
   loaded.length = 0;
   // jsdom never loads a picture; this records which addresses are given to an image, so the test sees what is requested ahead.
-  Object.defineProperty(HTMLImageElement.prototype, "src", { configurable: true, get: realSrc.get, set(v: string) { loaded.push(v); realSrc.set!.call(this, v); } });
+  Object.defineProperty(HTMLImageElement.prototype, "src", {
+    configurable: true,
+    get: realSrc.get,
+    set(v: string) {
+      loaded.push(v);
+      realSrc.set!.call(this, v);
+    },
+  });
 });
-afterEach(() => { Object.defineProperty(HTMLImageElement.prototype, "src", realSrc); });
+afterEach(() => {
+  Object.defineProperty(HTMLImageElement.prototype, "src", realSrc);
+});
 
 describe("Lightbox", () => {
   it("opens as a titled dialog on the first picture, and says where it is", async () => {
@@ -131,7 +160,10 @@ describe("Lightbox", () => {
 });
 
 describe("Lightbox for a book (issue #239)", () => {
-  const book: LightboxItem[] = items.map((it, i) => ({ ...it, position: `Page ${i + 20} (${i + 10})` }));
+  const book: LightboxItem[] = items.map((it, i) => ({
+    ...it,
+    position: `Page ${i + 20} (${i + 10})`,
+  }));
   function Url() {
     const url = useLightboxUrl(book);
     const location = useLocation();
@@ -187,6 +219,9 @@ describe("Lightbox for a book (issue #239)", () => {
     expect(strip.querySelectorAll("[role=option]")).toHaveLength(5);
     await user.click(within(strip).getByRole("option", { name: "Page 23 (13), Bowl 4" }));
     expect(screen.getByLabelText("Search")).toHaveTextContent("?view=p3");
-    expect(within(strip).getByRole("option", { name: "Page 23 (13), Bowl 4" })).toHaveAttribute("aria-selected", "true");
+    expect(within(strip).getByRole("option", { name: "Page 23 (13), Bowl 4" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

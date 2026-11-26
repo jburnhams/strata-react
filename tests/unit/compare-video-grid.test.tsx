@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
@@ -20,7 +20,12 @@ afterEach(() => {
   io.uninstall();
 });
 
-const clip = (id: string, label: string, note?: string): Candidate<VideoMedia> => ({ id, label, note, media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 } });
+const clip = (id: string, label: string, note?: string): Candidate<VideoMedia> => ({
+  id,
+  label,
+  note,
+  media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 },
+});
 const source = clip("source", "Source", "Original, 360×270");
 const items = [clip("model-x", "A", "secret-note"), clip("model-y", "B"), clip("model-z", "C")];
 const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
@@ -32,7 +37,9 @@ const load = (labels: string[]) => {
 };
 
 function Harness(props: Partial<React.ComponentProps<typeof CompareVideoGrid>>) {
-  return <CompareVideoGrid label="Three upscales of this clip" items={items} blind missing="Video not found" {...props} />;
+  return (
+    <CompareVideoGrid label="Three upscales of this clip" items={items} blind missing="Video not found" {...props} />
+  );
 }
 
 describe("CompareVideoGrid", () => {
@@ -114,7 +121,8 @@ describe("CompareVideoGrid", () => {
 
   it("never writes the id or the note of a blind cell, and shows them when it is not blind", () => {
     const { container, rerender } = renderWithStrata(<Harness />);
-    for (const secret of ["model-x", "model-y", "model-z", "secret-note"]) expect(container.innerHTML).not.toContain(secret);
+    for (const secret of ["model-x", "model-y", "model-z", "secret-note"])
+      expect(container.innerHTML).not.toContain(secret);
     rerender(<Harness blind={false} />);
     expect(screen.getByText(/secret-note/)).toBeInTheDocument();
   });
@@ -149,7 +157,12 @@ describe("CompareVideoGrid", () => {
 
   it("takes extra shortcuts into the one legend, and a footer", async () => {
     let pressed = 0;
-    renderWithStrata(<Harness extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => void pressed++ }]} footer={<p>Vote bar</p>} />);
+    renderWithStrata(
+      <Harness
+        extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => void pressed++ }]}
+        footer={<p>Vote bar</p>}
+      />,
+    );
     await userEvent.keyboard("a");
     expect(pressed).toBe(1);
     expect(screen.getByText("Prefer A")).toBeInTheDocument();

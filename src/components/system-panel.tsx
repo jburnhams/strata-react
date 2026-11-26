@@ -67,7 +67,10 @@ export const diskThresholds: MeterThreshold[] = [
 ];
 
 /** Reads `GET /api/system` (or another path) as a `Load` for `SystemPanel`, polled when given a `Poll`. Behind a reverse proxy the path is put under the app's base. */
-export function useSystemInfo<T extends SystemInfoLike = SystemInfoLike>({ path = "/api/system", poll }: { path?: string; poll?: Poll } = {}): Load<T> {
+export function useSystemInfo<T extends SystemInfoLike = SystemInfoLike>({
+  path = "/api/system",
+  poll,
+}: { path?: string; poll?: Poll } = {}): Load<T> {
   return useLoad({ queryKey: ["strata", "system", path], queryFn: () => fetchJson<T>(withBase(path)), poll });
 }
 
@@ -147,7 +150,13 @@ function FolderRow({ folder, thresholds }: { folder: SystemFolder; thresholds: M
   }
   return (
     <div className="grid gap-1.5">
-      <Meter label={`${name} folder disk space used`} value={total - free} max={total} thresholds={thresholds} detail={ofSize(total - free, total)} />
+      <Meter
+        label={`${name} folder disk space used`}
+        value={total - free}
+        max={total}
+        thresholds={thresholds}
+        detail={ofSize(total - free, total)}
+      />
       {where}
     </div>
   );
@@ -166,14 +175,23 @@ function ServiceRow({ service }: { service: SystemService }) {
           Down
         </Status>
       )}
-      {service.version && <span className="type-body-sm text-muted-foreground tabular-nums">version {service.version}</span>}
+      {service.version && (
+        <span className="type-body-sm text-muted-foreground tabular-nums">version {service.version}</span>
+      )}
       {!service.ok && service.detail && <span className="type-body-sm text-danger">{service.detail}</span>}
     </li>
   );
 }
 
 /** About this server, from `GET /api/system`: version and commit, when it started, each folder's disk as a meter with its state in words, and each service as Up or Down. Loaded through `DataView`, with a skeleton and the stale notice. */
-export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now, headingLevel = 2, className }: SystemPanelProps) {
+export function SystemPanel({
+  load,
+  thresholds = diskThresholds,
+  facts = [],
+  now,
+  headingLevel = 2,
+  className,
+}: SystemPanelProps) {
   const headings = { folders: React.useId(), services: React.useId(), server: React.useId() };
   return (
     <DataView
@@ -187,7 +205,9 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
       {(s) => (
         <div className="grid max-w-xl gap-8">
           <section aria-labelledby={headings.server} className="grid gap-3">
-            <PanelHeading id={headings.server} level={headingLevel}>Server</PanelHeading>
+            <PanelHeading id={headings.server} level={headingLevel}>
+              Server
+            </PanelHeading>
             <dl className="grid gap-2 type-body-sm">
               <Fact term="Version">
                 <span className="tabular-nums">{s.version}</span>
@@ -203,7 +223,12 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
               </Fact>
               <Fact term="Started">
                 {format.dateTime(s.started_at)}
-                <span className="ml-2 text-muted-foreground tabular-nums">up {format.duration(((now ?? new Date()).getTime() - new Date(s.started_at).getTime()) / 1000, { style: "parts" })}</span>
+                <span className="ml-2 text-muted-foreground tabular-nums">
+                  up{" "}
+                  {format.duration(((now ?? new Date()).getTime() - new Date(s.started_at).getTime()) / 1000, {
+                    style: "parts",
+                  })}
+                </span>
               </Fact>
               <Fact term="Python">
                 <span className="tabular-nums">{s.python}</span>
@@ -218,7 +243,9 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
           </section>
           {s.folders.length > 0 && (
             <section aria-labelledby={headings.folders} className="grid gap-3">
-              <PanelHeading id={headings.folders} level={headingLevel}>Folders</PanelHeading>
+              <PanelHeading id={headings.folders} level={headingLevel}>
+                Folders
+              </PanelHeading>
               {s.folders.map((f) => (
                 <FolderRow key={f.name} folder={f} thresholds={thresholds} />
               ))}
@@ -226,7 +253,9 @@ export function SystemPanel({ load, thresholds = diskThresholds, facts = [], now
           )}
           {s.services.length > 0 && (
             <section aria-labelledby={headings.services} className="grid gap-3">
-              <PanelHeading id={headings.services} level={headingLevel}>Services</PanelHeading>
+              <PanelHeading id={headings.services} level={headingLevel}>
+                Services
+              </PanelHeading>
               <ul className="grid gap-2">
                 {s.services.map((svc) => (
                   <ServiceRow key={svc.name} service={svc} />

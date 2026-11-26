@@ -11,15 +11,44 @@ type Story = StoryObj<typeof meta>;
 
 const ids = ["f-0412", "f-0412-b", "k-2"];
 const at = "2026-11-12T09:30:00Z";
-const question: ConversationTurn = { id: "q1", role: "person", time: at, text: "Which firing ran hottest this week, and was it kiln 2?" };
+const question: ConversationTurn = {
+  id: "q1",
+  role: "person",
+  time: at,
+  text: "Which firing ran hottest this week, and was it kiln 2?",
+};
 
-function Frame({ turns, answering = false, notReady }: { turns: ConversationTurn[]; answering?: boolean; notReady?: string }) {
+function Frame({
+  turns,
+  answering = false,
+  notReady,
+}: {
+  turns: ConversationTurn[];
+  answering?: boolean;
+  notReady?: string;
+}) {
   const [opened, setOpened] = React.useState<string | null>(null);
   return (
     <div className="flex h-[30rem] max-w-2xl flex-col gap-3">
-      <Conversation label="Questions about the kiln" answerName="Assistant" turns={turns} entities={ids} onOpen={setOpened} onRetry={() => {}} empty={<p className="type-body-sm text-muted-foreground">Ask about a firing or a kiln.</p>} />
+      <Conversation
+        label="Questions about the kiln"
+        answerName="Assistant"
+        turns={turns}
+        entities={ids}
+        onOpen={setOpened}
+        onRetry={() => {}}
+        empty={<p className="type-body-sm text-muted-foreground">Ask about a firing or a kiln.</p>}
+      />
       {opened && <p className="type-caption text-muted-foreground">Opened {opened}</p>}
-      <Composer label="Ask about the kiln" onSend={() => {}} onStop={() => {}} answering={answering} answeringReason="Waiting for the answer. Stop it to ask something else." disabled={notReady} suggestions={["Which firing ran hot?", "What is booked next week?"]} />
+      <Composer
+        label="Ask about the kiln"
+        onSend={() => {}}
+        onStop={() => {}}
+        answering={answering}
+        answeringReason="Waiting for the answer. Stop it to ask something else."
+        disabled={notReady}
+        suggestions={["Which firing ran hot?", "What is booked next week?"]}
+      />
     </div>
   );
 }
@@ -29,32 +58,79 @@ export const WithEntityLinks: Story = {
     <Frame
       turns={[
         question,
-        { id: "a1", role: "answer", time: at, state: "done", text: "The hottest was **firing f-0412-b** at 1,243 °C, in kiln `k-2`.\n\n- f-0412 reached 1,198 °C\n- f-0412-b held the peak for 40 minutes\n\nRead [the schedule](https://example.com/schedule) for what follows.", lookedUp: <p className="type-body-sm">Read 3 firings and the kiln 2 log.</p> },
+        {
+          id: "a1",
+          role: "answer",
+          time: at,
+          state: "done",
+          text: "The hottest was **firing f-0412-b** at 1,243 °C, in kiln `k-2`.\n\n- f-0412 reached 1,198 °C\n- f-0412-b held the peak for 40 minutes\n\nRead [the schedule](https://example.com/schedule) for what follows.",
+          lookedUp: <p className="type-body-sm">Read 3 firings and the kiln 2 log.</p>,
+        },
       ]}
     />
   ),
 };
 
 // Pictures that are the answer (issue #257): drawn under the text, not inside "What it looked up".
-const frame = (hue: number, w = 640, h = 360) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="hsl(${hue} 30% 55%)"/><circle cx="${w / 2}" cy="${h / 2}" r="${h / 4}" fill="hsl(${hue} 40% 80%)"/></svg>`)}`;
+const frame = (hue: number, w = 640, h = 360) =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="hsl(${hue} 30% 55%)"/><circle cx="${w / 2}" cy="${h / 2}" r="${h / 4}" fill="hsl(${hue} 40% 80%)"/></svg>`)}`;
 
 export const WithPictures: Story = {
   render: () => (
     <Frame
       turns={[
         { id: "q2", role: "person", time: at, text: "Show me the longest clip, looking behind the runner." },
-        { id: "a2", role: "answer", time: at, state: "done", text: "The longest clip is **clip 14**, 6 minutes 12 seconds. These two frames look behind the runner.", images: [{ src: frame(30), label: "Clip 14 at 2:41", href: frame(30) }, { src: frame(200), label: "Clip 14 at 5:03" }], lookedUp: <p className="type-body-sm">Read 31 clips.</p> },
+        {
+          id: "a2",
+          role: "answer",
+          time: at,
+          state: "done",
+          text: "The longest clip is **clip 14**, 6 minutes 12 seconds. These two frames look behind the runner.",
+          images: [
+            { src: frame(30), label: "Clip 14 at 2:41", href: frame(30) },
+            { src: frame(200), label: "Clip 14 at 5:03" },
+          ],
+          lookedUp: <p className="type-body-sm">Read 31 clips.</p>,
+        },
       ]}
     />
   ),
 };
 
 export const Streaming: Story = {
-  render: () => <Frame answering turns={[question, { id: "a1", role: "answer", time: at, state: "streaming", text: "The hottest was **firing f-0412-b** at 1,243 °C, in" }]} />,
+  render: () => (
+    <Frame
+      answering
+      turns={[
+        question,
+        {
+          id: "a1",
+          role: "answer",
+          time: at,
+          state: "streaming",
+          text: "The hottest was **firing f-0412-b** at 1,243 °C, in",
+        },
+      ]}
+    />
+  ),
 };
 
 export const Failed: Story = {
-  render: () => <Frame turns={[question, { id: "a1", role: "answer", time: at, state: "failed", text: "", error: "The firing log did not answer in time, so nothing was looked up." }]} />,
+  render: () => (
+    <Frame
+      turns={[
+        question,
+        {
+          id: "a1",
+          role: "answer",
+          time: at,
+          state: "failed",
+          text: "",
+          error: "The firing log did not answer in time, so nothing was looked up.",
+        },
+      ]}
+    />
+  ),
 };
 
 /** Not ready, and why: the box, Send and the suggestions are off, with the app's reason under the box (issue #243). */
@@ -73,6 +149,20 @@ export const Live: Story = {
       const timer = setTimeout(() => setN(n + 1), 250);
       return () => clearTimeout(timer);
     }, [n, words.length]);
-    return <Frame answering={n < words.length} turns={[question, { id: "a1", role: "answer", time: at, state: n < words.length ? "streaming" : "done", text: words.slice(0, n).join(" ") }]} />;
+    return (
+      <Frame
+        answering={n < words.length}
+        turns={[
+          question,
+          {
+            id: "a1",
+            role: "answer",
+            time: at,
+            state: n < words.length ? "streaming" : "done",
+            text: words.slice(0, n).join(" "),
+          },
+        ]}
+      />
+    );
   },
 };

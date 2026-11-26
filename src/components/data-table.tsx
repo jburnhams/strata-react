@@ -233,7 +233,9 @@ function LocalSortedTable<T>(props: DataTableProps<T>) {
 }
 
 function UrlSortedTable<T>(props: DataTableProps<T> & { sortParam: string }) {
-  return <Table {...(props as unknown as DataTableProps<Rec>)} sortState={useUrlSort(props.sortParam, props.initialSort)} />;
+  return (
+    <Table {...(props as unknown as DataTableProps<Rec>)} sortState={useUrlSort(props.sortParam, props.initialSort)} />
+  );
 }
 
 // The one TanStack feature in use for now: sorting, on the client. TanStack Table 9 is tree-shaken by feature, so
@@ -262,7 +264,8 @@ function Table<T extends Rec>({
   const willVirtualize = rows.length >= virtualizeFrom;
   const narrower = useNarrowerThan(willVirtualize && allColumns.some((c) => c.hideBelow));
   const columns = React.useMemo(
-    () => (willVirtualize ? allColumns.filter((c, i) => i === 0 || !c.hideBelow || !narrower.has(c.hideBelow)) : allColumns),
+    () =>
+      willVirtualize ? allColumns.filter((c, i) => i === 0 || !c.hideBelow || !narrower.has(c.hideBelow)) : allColumns,
     [allColumns, willVirtualize, narrower],
   );
   const hiddenBelow = (c: Column<T>, i: number) => (i > 0 && c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
@@ -298,7 +301,8 @@ function Table<T extends Rec>({
           sortUndefined: "last",
           sortFn: sort
             ? (a, b) => sort(a.original, b.original)
-            : (a, b) => compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
+            : (a, b) =>
+                compareValues(a.getValue<number | string | Date>(c.key), b.getValue<number | string | Date>(c.key)),
         };
       }),
     [allColumns],
@@ -306,9 +310,10 @@ function Table<T extends Rec>({
 
   const sortable = (c: Column<T>) => (c.value ? c.sort !== false : Boolean(c.sort));
   // The data model keeps every column, shown or not, so a sort on a column hidden by a narrow screen still orders the rows.
-  const sorting: SortingState = sort && allColumns.some((c) => c.key === sort.key && sortable(c))
-    ? [{ id: sort.key, desc: sort.dir === "descending" }]
-    : [];
+  const sorting: SortingState =
+    sort && allColumns.some((c) => c.key === sort.key && sortable(c))
+      ? [{ id: sort.key, desc: sort.dir === "descending" }]
+      : [];
 
   const table = useTable({
     features,
@@ -349,7 +354,8 @@ function Table<T extends Rec>({
   const shift = useShiftNote();
   // The row last pressed (React Aria marks each row with `data-key`), to anchor a range it extended itself.
   const pressed = React.useRef<string | null>(null);
-  const notePress = (e: React.SyntheticEvent) => void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
+  const notePress = (e: React.SyntheticEvent) =>
+    void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
   const sortedRows = React.useMemo(() => modelRows.map((r) => r.original), [modelRows]);
   const select = useSelectRows(sortedRows, rowKey, selection);
   const changeSelection = (next: Selection) => {
@@ -370,7 +376,11 @@ function Table<T extends Rec>({
     // what is shown here (Gmail's rule, kept from before), so "all" over a part-chosen set clears.
     const chosen = selectableKeys.filter((k) => selection.selected.has(k)).length;
     const picked =
-      next === "all" ? (chosen > 0 && chosen < selectableKeys.length ? [] : selectableKeys) : [...next].map(String).filter((k) => shownKeys.has(k));
+      next === "all"
+        ? chosen > 0 && chosen < selectableKeys.length
+          ? []
+          : selectableKeys
+        : [...next].map(String).filter((k) => shownKeys.has(k));
     selection.onChange(new Set([...outside, ...picked]));
   };
 
@@ -382,14 +392,23 @@ function Table<T extends Rec>({
       selectedKeys={selection ? new Set([...selection.selected].filter((k) => shownKeys.has(k))) : undefined}
       onSelectionChange={changeSelection}
       disabledKeys={disabledKeys}
-      sortDescriptor={sort && columns.some((c) => c.key === sort.key && sortable(c)) ? { column: sort.key, direction: sort.dir } : undefined}
+      sortDescriptor={
+        sort && columns.some((c) => c.key === sort.key && sortable(c))
+          ? { column: sort.key, direction: sort.dir }
+          : undefined
+      }
       onSortChange={(d) => setSort({ key: String(d.column), dir: d.direction })}
       className={cn("w-full border-collapse type-body-sm outline-none", virtual && "overflow-auto")}
       style={virtual ? { maxHeight } : undefined}
     >
       <TableHeader className={cn(virtual && "bg-background")}>
         {selection && (
-          <AriaColumn id={SELECT} textValue="Select all shown" width={32} className="w-8 py-2 pr-2 text-left align-bottom outline-offset-[-2px]">
+          <AriaColumn
+            id={SELECT}
+            textValue="Select all shown"
+            width={32}
+            className="w-8 py-2 pr-2 text-left align-bottom outline-offset-[-2px]"
+          >
             <TableSelectionCheckbox label="Select all shown" className="-my-1" disabled={selectableKeys.length === 0} />
           </AriaColumn>
         )}
@@ -418,7 +437,8 @@ function Table<T extends Rec>({
             )}
           >
             {({ allowsSorting, sortDirection }) => {
-              const Icon = sortDirection === "ascending" ? ArrowUp : sortDirection === "descending" ? ArrowDown : ArrowUpDown;
+              const Icon =
+                sortDirection === "ascending" ? ArrowUp : sortDirection === "descending" ? ArrowDown : ArrowUpDown;
               const label = c.hideHeader ? <span className="sr-only">{c.header}</span> : c.header;
               return allowsSorting ? (
                 <span
@@ -450,7 +470,10 @@ function Table<T extends Rec>({
               // A row's own press does nothing: only its checkbox, or Space, chooses it, so a click on
               // a cell never changes the selection (React Aria's "toggle" would otherwise make every row a switch).
               onAction={selection ? noop : undefined}
-              className={cn("border-t border-border outline-offset-[-2px] selected:bg-surface-sunken", open && "selected:bg-surface-sunken")}
+              className={cn(
+                "border-t border-border outline-offset-[-2px] selected:bg-surface-sunken",
+                open && "selected:bg-surface-sunken",
+              )}
             >
               {selection && (
                 <AriaCell className="w-8 py-2.5 pr-2 align-middle">
@@ -498,7 +521,12 @@ function Table<T extends Rec>({
           ];
           if (open && expansion)
             items.push(
-              <AriaRow key={detailKey(row.id)} id={detailKey(row.id)} textValue={expansion.rowLabel(row.original)} className="outline-offset-[-2px]">
+              <AriaRow
+                key={detailKey(row.id)}
+                id={detailKey(row.id)}
+                textValue={expansion.rowLabel(row.original)}
+                className="outline-offset-[-2px]"
+              >
                 {lead > 0 && <AriaCell colSpan={lead} />}
                 <AriaCell colSpan={columns.length} className="pt-0.5 pb-4 align-top">
                   {expansion.detail(row.original)}
@@ -524,7 +552,12 @@ function Table<T extends Rec>({
       }}
     >
       {virtual ? (
-        <Virtualizer layout={TableLayout} layoutOptions={expansion ? { estimatedRowHeight: 41, headingHeight: 36 } : { rowHeight: 41, headingHeight: 36 }}>
+        <Virtualizer
+          layout={TableLayout}
+          layoutOptions={
+            expansion ? { estimatedRowHeight: 41, headingHeight: 36 } : { rowHeight: 41, headingHeight: 36 }
+          }
+        >
           {grid}
         </Virtualizer>
       ) : (

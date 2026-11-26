@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { cleanup, screen, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -23,7 +23,13 @@ import {
   useSearchParam,
   withBase,
 } from "../../src";
-import { expectOneFilledButton, installFakeSpeech, installStorageShim, memoryStorage, renderWithStrata } from "../../src/testing";
+import {
+  expectOneFilledButton,
+  installFakeSpeech,
+  installStorageShim,
+  memoryStorage,
+  renderWithStrata,
+} from "../../src/testing";
 import { explainImportFailure } from "../../src/api-types/generate";
 
 // Issues #293-#299: the plumbing every app on Strata wrote by hand (base path, JSON writes, a URL
@@ -39,13 +45,26 @@ describe("fetchJson json (#296) and createApi (#295)", () => {
     let seen: { method: string; type: string | null; auth: string | null; body: unknown } | undefined;
     server.use(
       http.post("http://localhost/api/learners", async ({ request }) => {
-        seen = { method: request.method, type: request.headers.get("content-type"), auth: request.headers.get("authorization"), body: await request.json() };
+        seen = {
+          method: request.method,
+          type: request.headers.get("content-type"),
+          auth: request.headers.get("authorization"),
+          body: await request.json(),
+        };
         return HttpResponse.json({ id: 7 });
       }),
     );
-    const out = await fetchJson<{ id: number }>("http://localhost/api/learners", { json: { nickname: "Fox" }, headers: { Authorization: "Bearer t" } });
+    const out = await fetchJson<{ id: number }>("http://localhost/api/learners", {
+      json: { nickname: "Fox" },
+      headers: { Authorization: "Bearer t" },
+    });
     expect(out).toEqual({ id: 7 });
-    expect(seen).toEqual({ method: "POST", type: "application/json", auth: "Bearer t", body: { nickname: "Fox" } });
+    expect(seen).toEqual({
+      method: "POST",
+      type: "application/json",
+      auth: "Bearer t",
+      body: { nickname: "Fox" },
+    });
   });
 
   it("puts the base in front of root-relative paths only, and createApi applies it to every verb", async () => {
@@ -54,14 +73,25 @@ describe("fetchJson json (#296) and createApi (#295)", () => {
     expect(withBase("https://other.test/x", "/proxy")).toBe("https://other.test/x");
     expect(withBase("//cdn.test/x", "/proxy")).toBe("//cdn.test/x");
     const seen: string[] = [];
-    server.use(http.all("*/proxy/api/*", ({ request }) => { seen.push(`${request.method} ${new URL(request.url).pathname}`); return new HttpResponse(null, { status: 204 }); }));
+    server.use(
+      http.all("*/proxy/api/*", ({ request }) => {
+        seen.push(`${request.method} ${new URL(request.url).pathname}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
     const api = createApi({ base: "/proxy" });
     await api.get("/api/a");
     await api.post("/api/b", { n: 1 });
     await api.put("/api/c", { n: 2 });
     await api.patch("/api/d", { n: 3 });
     await api.delete("/api/e");
-    expect(seen).toEqual(["GET /proxy/api/a", "POST /proxy/api/b", "PUT /proxy/api/c", "PATCH /proxy/api/d", "DELETE /proxy/api/e"]);
+    expect(seen).toEqual([
+      "GET /proxy/api/a",
+      "POST /proxy/api/b",
+      "PUT /proxy/api/c",
+      "PATCH /proxy/api/d",
+      "DELETE /proxy/api/e",
+    ]);
     expect(api.url("/files/1.png")).toBe("/proxy/files/1.png");
   });
 
@@ -117,8 +147,23 @@ describe("useSearchParam (#297)", () => {
           <option value="all">All</option>
           <option value="due">Due</option>
         </NativeSelect>
-        <ChoiceGroup legend="Who" name="who" param="who" choices={[{ value: "fox", label: "Fox" }, { value: "owl", label: "Owl" }]} />
-        <ToggleGroup label="Size" param="size" options={[{ value: "s", label: "Small" }, { value: "l", label: "Large" }]} />
+        <ChoiceGroup
+          legend="Who"
+          name="who"
+          param="who"
+          choices={[
+            { value: "fox", label: "Fox" },
+            { value: "owl", label: "Owl" },
+          ]}
+        />
+        <ToggleGroup
+          label="Size"
+          param="size"
+          options={[
+            { value: "s", label: "Small" },
+            { value: "l", label: "Large" },
+          ]}
+        />
         <Search />
       </>,
       { route: "/?size=l" },
@@ -139,7 +184,9 @@ describe("review fixes", () => {
     renderWithStrata(
       <NativeSelect aria-label="Round" param="round" paramDefault="all">
         <option value="all">All</option>
-        <optgroup label="Later"><option value="due">Due</option></optgroup>
+        <optgroup label="Later">
+          <option value="due">Due</option>
+        </optgroup>
       </NativeSelect>,
       { route: "/?round=due" },
     );
@@ -151,10 +198,12 @@ describe("review fixes", () => {
     try {
       const { rerender } = render(<SayAgain text="Hej" />);
       void userEvent.click(screen.getByRole("button", { name: "Say: Hej" }));
-      return waitFor(() => expect(speech.said).toHaveLength(1)).then(() => {
-        rerender(<SayAgain text="Hej" muted />);
-        expect(speech.said[0]!.cancelled).toBe(true);
-      }).finally(() => speech.uninstall());
+      return waitFor(() => expect(speech.said).toHaveLength(1))
+        .then(() => {
+          rerender(<SayAgain text="Hej" muted />);
+          expect(speech.said[0]!.cancelled).toBe(true);
+        })
+        .finally(() => speech.uninstall());
     } catch (e) {
       speech.uninstall();
       throw e;
@@ -166,8 +215,12 @@ describe("ButtonLink and TextLink (#294)", () => {
   it("navigates client-side under the router, counts as the one filled button, and opens downloads as plain links", async () => {
     renderWithStrata(
       <>
-        <ButtonLink to="/learners/7" variant="default">Play as Fox</ButtonLink>
-        <ButtonLink href="/export.csv" download>Export</ButtonLink>
+        <ButtonLink to="/learners/7" variant="default">
+          Play as Fox
+        </ButtonLink>
+        <ButtonLink href="/export.csv" download>
+          Export
+        </ButtonLink>
         <TextLink to="/log">Open the log</TextLink>
         <Search />
       </>,
@@ -188,7 +241,9 @@ describe("ButtonLink and TextLink (#294)", () => {
     }
     renderWithStrata(
       <>
-        <TextLink to="/log" state={{ from: "watch" }}>Open the log</TextLink>
+        <TextLink to="/log" state={{ from: "watch" }}>
+          Open the log
+        </TextLink>
         <ButtonLink to="/plain">No state</ButtonLink>
         <Arrived />
       </>,
@@ -202,7 +257,10 @@ describe("ButtonLink and TextLink (#294)", () => {
 
 describe("speech (#299)", () => {
   it("says the sentence, cancels the one before it, picks the voice by language, and names the button by it", async () => {
-    const speech = installFakeSpeech([{ name: "Daniel", lang: "en-GB" }, { name: "Alva", lang: "sv-SE" }]);
+    const speech = installFakeSpeech([
+      { name: "Daniel", lang: "en-GB" },
+      { name: "Alva", lang: "sv-SE" },
+    ]);
     try {
       expect(pickVoice([{ name: "Alva", lang: "sv-SE" } as SpeechSynthesisVoice], "sv")?.name).toBe("Alva");
       render(<SayAgain text="Which one is the cat?" lang="en-GB" />);
@@ -211,7 +269,13 @@ describe("speech (#299)", () => {
       await userEvent.click(button);
       expect(speech.said).toHaveLength(2);
       expect(speech.said[0]!.cancelled).toBe(true);
-      expect(speech.said[1]).toMatchObject({ text: "Which one is the cat?", lang: "en-GB", voice: "Daniel", rate: 0.9, cancelled: false });
+      expect(speech.said[1]).toMatchObject({
+        text: "Which one is the cat?",
+        lang: "en-GB",
+        voice: "Daniel",
+        rate: 0.9,
+        cancelled: false,
+      });
       speech.finish();
     } finally {
       speech.uninstall();
@@ -248,7 +312,11 @@ describe("recorded speech (#310)", () => {
       expect(speech.clips()).toEqual(["voice/listen.wav"]);
       speech.finish();
       expect(speech.clips()).toEqual(["voice/listen.wav", "voice/sh.wav"]);
-      expect(speech.said[1]).toMatchObject({ text: "sh, as in ship.", clip: "voice/sh.wav", cancelled: false });
+      expect(speech.said[1]).toMatchObject({
+        text: "sh, as in ship.",
+        clip: "voice/sh.wav",
+        cancelled: false,
+      });
       expect(ended).not.toHaveBeenCalled();
       speech.finish();
       expect(ended).toHaveBeenCalledTimes(1);
@@ -263,7 +331,13 @@ describe("recorded speech (#310)", () => {
   it("says the words with the browser's voice when a part has no recording: never two voices in one prompt", () => {
     const speech = installFakeSpeech();
     try {
-      speak([{ text: "Find the" , clip: "voice/find.wav" }, { text: "cow.", clip: null }], { lang: "en-GB" });
+      speak(
+        [
+          { text: "Find the", clip: "voice/find.wav" },
+          { text: "cow.", clip: null },
+        ],
+        { lang: "en-GB" },
+      );
       expect(speech.clips()).toEqual([]);
       expect(speech.texts()).toEqual(["Find the cow."]);
       expect(textOf([{ text: " Find the " }, { text: "cow." }])).toBe("Find the cow.");
@@ -339,7 +413,9 @@ describe("storage shim (#298)", () => {
 
 describe("strata-api-types import failures (#293)", () => {
   it("asks for an install only when the package is missing, and names TypeScript 7 otherwise", () => {
-    const missing = Object.assign(new Error("Cannot find package 'openapi-typescript' imported from /app/x.js"), { code: "ERR_MODULE_NOT_FOUND" });
+    const missing = Object.assign(new Error("Cannot find package 'openapi-typescript' imported from /app/x.js"), {
+      code: "ERR_MODULE_NOT_FOUND",
+    });
     expect(explainImportFailure(missing, 6)).toMatch(/npm install --save-dev openapi-typescript/);
     const broken = new TypeError("Cannot read properties of undefined (reading 'ScriptTarget')");
     const seven = explainImportFailure(broken, 7);
@@ -354,26 +430,56 @@ describe("createTypedApi (#296)", () => {
   // The shape openapi-typescript writes for `paths`.
   type paths = {
     "/api/learners": {
-      get: { parameters: { query?: { archived?: boolean; tag?: string[] }; path?: never }; responses: { 200: { content: { "application/json": { id: number; nickname: string }[] } } } };
-      post: { requestBody: { content: { "application/json": { nickname: string } } }; responses: { 201: { content: { "application/json": { id: number; nickname: string } } } } };
+      get: {
+        parameters: { query?: { archived?: boolean; tag?: string[] }; path?: never };
+        responses: { 200: { content: { "application/json": { id: number; nickname: string }[] } } };
+      };
+      post: {
+        requestBody: { content: { "application/json": { nickname: string } } };
+        responses: { 201: { content: { "application/json": { id: number; nickname: string } } } };
+      };
     };
     "/api/learners/{id}": {
-      delete: { parameters: { path: { id: number }; query?: never }; responses: { 204: { content?: never } } };
-      get: { parameters: { path: { id: number }; query?: never }; responses: { 200: { content: { "application/json": { id: number } } } } };
+      delete: {
+        parameters: { path: { id: number }; query?: never };
+        responses: { 204: { content?: never } };
+      };
+      get: {
+        parameters: { path: { id: number }; query?: never };
+        responses: { 200: { content: { "application/json": { id: number } } } };
+      };
     };
     // How openapi-typescript writes an operation with no request body (#305).
     "/api/learners/{id}/withdraw": {
-      post: { parameters: { path: { id: number }; query?: never }; requestBody?: never; responses: { 204: { content?: never } } };
-      put: { parameters: { path: { id: number }; query?: never }; requestBody?: never; responses: { 204: { content?: never } } };
+      post: {
+        parameters: { path: { id: number }; query?: never };
+        requestBody?: never;
+        responses: { 204: { content?: never } };
+      };
+      put: {
+        parameters: { path: { id: number }; query?: never };
+        requestBody?: never;
+        responses: { 204: { content?: never } };
+      };
     };
   };
 
   it("fills and escapes path params, writes the query, sends the typed body and returns the typed answer", async () => {
     const seen: string[] = [];
     server.use(
-      http.get("*/proxy/api/learners", ({ request }) => { seen.push(new URL(request.url).search); return HttpResponse.json([{ id: 1, nickname: "Fox" }]); }),
-      http.post("*/proxy/api/learners", async ({ request }) => HttpResponse.json({ id: 2, ...((await request.json()) as object) } as never, { status: 201 })),
-      http.delete("*/proxy/api/learners/:id", ({ params }) => { seen.push(`delete ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
+      http.get("*/proxy/api/learners", ({ request }) => {
+        seen.push(new URL(request.url).search);
+        return HttpResponse.json([{ id: 1, nickname: "Fox" }]);
+      }),
+      http.post("*/proxy/api/learners", async ({ request }) =>
+        HttpResponse.json({ id: 2, ...((await request.json()) as object) } as never, {
+          status: 201,
+        }),
+      ),
+      http.delete("*/proxy/api/learners/:id", ({ params }) => {
+        seen.push(`delete ${String(params.id)}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
     );
     const api = createTypedApi<paths>({ base: "/proxy" });
     const list = await api.get("/api/learners", { query: { archived: false, tag: ["a", "b"] } });
@@ -385,8 +491,14 @@ describe("createTypedApi (#296)", () => {
     expect(seen[1]).toBe("delete 7");
     // A POST and a PUT with no request body take no `json` (#305).
     server.use(
-      http.post("*/proxy/api/learners/:id/withdraw", ({ params }) => { seen.push(`withdraw ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
-      http.put("*/proxy/api/learners/:id/withdraw", ({ params }) => { seen.push(`restore ${String(params.id)}`); return new HttpResponse(null, { status: 204 }); }),
+      http.post("*/proxy/api/learners/:id/withdraw", ({ params }) => {
+        seen.push(`withdraw ${String(params.id)}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.put("*/proxy/api/learners/:id/withdraw", ({ params }) => {
+        seen.push(`restore ${String(params.id)}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
     );
     await api.post("/api/learners/{id}/withdraw", { path: { id: 3 } });
     await api.put("/api/learners/{id}/withdraw", { path: { id: 4 } });
@@ -411,7 +523,11 @@ describe("createTypedApi (#296)", () => {
 describe("a body that is bytes (#318)", () => {
   type paths = {
     "/api/clips/{id}": {
-      put: { parameters: { path: { id: string }; query?: never }; requestBody: { content: { "audio/wav": string } }; responses: { 204: { content?: never } } };
+      put: {
+        parameters: { path: { id: string }; query?: never };
+        requestBody: { content: { "audio/wav": string } };
+        responses: { 204: { content?: never } };
+      };
     };
   };
 
@@ -419,14 +535,23 @@ describe("a body that is bytes (#318)", () => {
     const seen: { type: string | null; size: number }[] = [];
     server.use(
       http.put("*/proxy/api/clips/:id", async ({ request }) => {
-        seen.push({ type: request.headers.get("content-type"), size: (await request.arrayBuffer()).byteLength });
+        seen.push({
+          type: request.headers.get("content-type"),
+          size: (await request.arrayBuffer()).byteLength,
+        });
         return new HttpResponse(null, { status: 204 });
       }),
     );
     const wav = new Blob([new Uint8Array(44)], { type: "audio/wav" });
     await createApi({ base: "/proxy" }).put("/api/clips/a", wav);
-    await createTypedApi<paths>({ base: "/proxy" }).put("/api/clips/{id}", { path: { id: "b" }, body: wav });
-    expect(seen).toEqual([{ type: "audio/wav", size: 44 }, { type: "audio/wav", size: 44 }]);
+    await createTypedApi<paths>({ base: "/proxy" }).put("/api/clips/{id}", {
+      path: { id: "b" },
+      body: wav,
+    });
+    expect(seen).toEqual([
+      { type: "audio/wav", size: 44 },
+      { type: "audio/wav", size: 44 },
+    ]);
     // @ts-expect-error a body in another media type takes `body`, and it is required
     void (() => createTypedApi<paths>().put("/api/clips/{id}", { path: { id: "b" } }));
     // @ts-expect-error not `json`: the operation does not take JSON

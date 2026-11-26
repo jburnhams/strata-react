@@ -77,9 +77,17 @@ export const SecondLook: Story = {
       </div>
     );
     const second = {
-      "--control-h": "2.25rem", "--control-h-sm": "1.75rem", "--control-px": "1.5rem", "--control-px-sm": "1rem", "--control-icon": "1.5rem",
-      "--type-heading-size": "1.5rem", "--type-heading-leading": "1.75rem", "--type-heading-weight": "700",
-      "--type-body-size": "0.875rem", "--type-body-leading": "1.25rem", "--type-caption-size": "0.6875rem",
+      "--control-h": "2.25rem",
+      "--control-h-sm": "1.75rem",
+      "--control-px": "1.5rem",
+      "--control-px-sm": "1rem",
+      "--control-icon": "1.5rem",
+      "--type-heading-size": "1.5rem",
+      "--type-heading-leading": "1.75rem",
+      "--type-heading-weight": "700",
+      "--type-body-size": "0.875rem",
+      "--type-body-leading": "1.25rem",
+      "--type-caption-size": "0.6875rem",
     } as React.CSSProperties;
     return (
       <div className="grid gap-8 sm:grid-cols-2">
@@ -89,4 +97,3 @@ export const SecondLook: Story = {
     );
   },
 };
-
