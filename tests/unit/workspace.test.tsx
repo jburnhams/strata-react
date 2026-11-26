@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button, Pane, Split, Workspace, useWorkspaceState } from "../../src";
@@ -19,7 +19,13 @@ function Editor({ persist, narrowBelow = 0 }: { persist?: string; narrowBelow?: 
             <Pane id="stage" name="Preview" grow>
               <p>Frame</p>
             </Pane>
-            <Pane id="inspector" name="Inspector" size={280} min={200} actions={<Button size="sm">Reset</Button>}>
+            <Pane
+              id="inspector"
+              name="Inspector"
+              size={280}
+              min={200}
+              actions={<Button size="sm">Reset</Button>}
+            >
               <p>Properties</p>
             </Pane>
           </Split>
@@ -40,8 +46,13 @@ describe("Workspace", () => {
   it("is a named group of regions, each named by its own header", () => {
     renderWithStrata(<Editor />);
     const ws = screen.getByRole("group", { name: "Editor" });
-    for (const name of ["Library", "Preview", "Inspector", "Timeline"]) expect(within(ws).getByRole("region", { name })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Inspector" })).getByRole("button", { name: "Reset" })).toBeInTheDocument();
+    for (const name of ["Library", "Preview", "Inspector", "Timeline"])
+      expect(within(ws).getByRole("region", { name })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Inspector" })).getByRole("button", {
+        name: "Reset",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("gives each separator its role, value and limits, and puts it in the tab order", () => {
@@ -104,7 +115,10 @@ describe("Workspace", () => {
     await user.click(screen.getByRole("button", { name: "Show Library" }));
     expect(screen.getByText("Clips")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "View library" }));
-    expect(screen.getByRole("button", { name: "Show Library" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Show Library" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     await user.click(screen.getByRole("button", { name: "View library" }));
     expect(screen.getByText("Clips")).toBeVisible();
   });
@@ -143,7 +157,9 @@ describe("Workspace", () => {
     const original = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = function (this: Element) {
       const rect = original.call(this);
-      return this.getAttribute("data-pane") === "library" ? { ...rect, width: 220, height: 220 } : rect;
+      return this.getAttribute("data-pane") === "library"
+        ? { ...rect, width: 220, height: 220 }
+        : rect;
     };
     try {
       renderWithStrata(<Editor />);

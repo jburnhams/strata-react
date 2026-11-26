@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as React from "react";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,12 +9,14 @@ import { renderWithStrata } from "../../src/testing";
 // ticking a branch without reading it.
 
 type N = { id: string; name: string; n: number };
-const ready = <T,>(data: T[]) => ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
+const ready = <T,>(data: T[]) =>
+  ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
 const years: N[] = [
   { id: "2019", name: "2019", n: 3 },
   { id: "2020", name: "2020", n: 2 },
 ];
-const kids = (id: string): N[] => [1, 2, 3].map((d) => ({ id: `${id}/${id}-0${d}`, name: `${id}-0${d}`, n: d * 10 }));
+const kids = (id: string): N[] =>
+  [1, 2, 3].map((d) => ({ id: `${id}/${id}-0${d}`, name: `${id}-0${d}`, n: d * 10 }));
 
 const SORT = (a: N, b: N) => b.name.localeCompare(a.name);
 function Host({ reveal, resolve }: { reveal?: string[]; resolve?: boolean }) {
@@ -73,7 +75,9 @@ describe("Tree current + choices", () => {
     await waitFor(() => expect(screen.getByText("2019-02")).toBeInTheDocument());
     // newest first
     const names = screen.getAllByRole("row").map((r) => r.textContent ?? "");
-    expect(names.findIndex((t) => t.includes("2019-03"))).toBeLessThan(names.findIndex((t) => t.includes("2019-01")));
+    expect(names.findIndex((t) => t.includes("2019-03"))).toBeLessThan(
+      names.findIndex((t) => t.includes("2019-01")),
+    );
   });
 
   it("ticking a branch with resolveBranch says what it covers and does not open it", async () => {

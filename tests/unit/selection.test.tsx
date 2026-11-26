@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -25,7 +25,13 @@ const columns: Column<Booking>[] = [
 const booked = (b: Booking) => b.state === "booked";
 const bookable = bookings.filter(booked);
 
-function Harness({ rows = bookings, onWithdraw }: { rows?: Booking[]; onWithdraw?: (ids: string[]) => void }) {
+function Harness({
+  rows = bookings,
+  onWithdraw,
+}: {
+  rows?: Booking[];
+  onWithdraw?: (ids: string[]) => void;
+}) {
   const [shown, setShown] = React.useState(rows);
   const selection = useSelection(shown, (b) => b.id);
   return (
@@ -70,7 +76,14 @@ describe("Checkbox", () => {
   });
 
   it("shows the mixed state as indeterminate", () => {
-    render(<Checkbox label="Select all shown" hideLabel checked="mixed" onCheckedChange={() => undefined} />);
+    render(
+      <Checkbox
+        label="Select all shown"
+        hideLabel
+        checked="mixed"
+        onCheckedChange={() => undefined}
+      />,
+    );
     const box = screen.getByRole("checkbox", { name: "Select all shown" }) as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
     expect(box).toBePartiallyChecked();
@@ -79,7 +92,9 @@ describe("Checkbox", () => {
 
 describe("DataTable selection", () => {
   it("adds no checkboxes without a selection", () => {
-    renderWithStrata(<DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
+    renderWithStrata(
+      <DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />,
+    );
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
@@ -98,7 +113,8 @@ describe("DataTable selection", () => {
     expect(screen.getByRole("checkbox", { name: "Select Dev Raman" })).not.toBeChecked();
     await userEvent.click(selectAll());
     expect(selectAll()).toBeChecked();
-    for (const b of bookable) expect(screen.getByRole("checkbox", { name: `Select ${b.member}` })).toBeChecked();
+    for (const b of bookable)
+      expect(screen.getByRole("checkbox", { name: `Select ${b.member}` })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Select Tom Ellery" })).not.toBeChecked();
     expect(screen.getByText(`${bookable.length} bookings selected`)).toBeInTheDocument();
   });
@@ -142,7 +158,13 @@ describe("DataTable selection", () => {
         <>
           <button onClick={() => setAll((a) => !a)}>Toggle filter</button>
           <output data-testid="count">{selection.count}</output>
-          <DataTable caption="Work" columns={columns} rows={rows} rowKey={(b) => b.id} selection={{ ...selection, rowLabel: (b) => b.member }} />
+          <DataTable
+            caption="Work"
+            columns={columns}
+            rows={rows}
+            rowKey={(b) => b.id}
+            selection={{ ...selection, rowLabel: (b) => b.member }}
+          />
         </>
       );
     }
@@ -174,7 +196,13 @@ describe("Bulk removal through useUndoable", () => {
         <>
           <button
             onClick={() =>
-              undoable.schedule({ id: "bulk", ids: bookable.map((b) => b.id), message: "Withdrew 2 bookings.", failure: "They are back.", commit })
+              undoable.schedule({
+                id: "bulk",
+                ids: bookable.map((b) => b.id),
+                message: "Withdrew 2 bookings.",
+                failure: "They are back.",
+                commit,
+              })
             }
           >
             Withdraw all
@@ -207,7 +235,9 @@ describe("Row actions", () => {
         <IconButton icon={Trash2} label="Remove Moonbeam" />
       </>,
     );
-    expect(screen.getByRole("button", { name: "Withdraw Dev Raman" })).toHaveTextContent("Withdraw");
+    expect(screen.getByRole("button", { name: "Withdraw Dev Raman" })).toHaveTextContent(
+      "Withdraw",
+    );
     expect(screen.getByRole("button", { name: "Withdraw Hannah Lowe" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove Moonbeam" })).toBeInTheDocument();
   });
@@ -216,7 +246,15 @@ describe("Row actions", () => {
     renderWithStrata(
       <DataTable
         caption="Work"
-        columns={[...columns, { key: "action", header: "Actions", hideHeader: true, cell: (b) => <RowAction label="Withdraw" subject={b.member} /> }]}
+        columns={[
+          ...columns,
+          {
+            key: "action",
+            header: "Actions",
+            hideHeader: true,
+            cell: (b) => <RowAction label="Withdraw" subject={b.member} />,
+          },
+        ]}
         rows={bookings.slice(0, 2)}
         rowKey={(b) => b.id}
       />,

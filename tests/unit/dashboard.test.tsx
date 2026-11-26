@@ -1,8 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { ColorSchemeChoice, CompositionBar, LinkCard, LinkCardList, Meter, Status, crossedThreshold, format, useColorScheme } from "../../src";
+import {
+  ColorSchemeChoice,
+  CompositionBar,
+  LinkCard,
+  LinkCardList,
+  Meter,
+  Status,
+  crossedThreshold,
+  format,
+  useColorScheme,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 import { http, HttpResponse } from "msw";
@@ -21,7 +31,15 @@ describe("Meter", () => {
   });
 
   it("says a crossed threshold as a status word and describes the meter with it", () => {
-    renderWithStrata(<Meter label="/srv/photos" value={431} max={466} thresholds={diskThresholds} detail="431 GB of 466 GB" />);
+    renderWithStrata(
+      <Meter
+        label="/srv/photos"
+        value={431}
+        max={466}
+        thresholds={diskThresholds}
+        detail="431 GB of 466 GB"
+      />,
+    );
     const meter = screen.getByRole("meter", { name: "/srv/photos" });
     expect(meter).toHaveAccessibleDescription("Nearly full 431 GB of 466 GB");
     expect(screen.getByText("Nearly full")).toHaveClass("text-danger");
@@ -34,8 +52,13 @@ describe("Meter", () => {
   });
 
   it("keeps the label as the accessible name with hideLabel, and uses the caller's value text", () => {
-    renderWithStrata(<Meter label="Shelves booked" hideLabel value={0.625} valueText="10 of 16 booked" />);
-    expect(screen.getByRole("meter", { name: "Shelves booked" })).toHaveAttribute("aria-valuetext", "10 of 16 booked");
+    renderWithStrata(
+      <Meter label="Shelves booked" hideLabel value={0.625} valueText="10 of 16 booked" />,
+    );
+    expect(screen.getByRole("meter", { name: "Shelves booked" })).toHaveAttribute(
+      "aria-valuetext",
+      "10 of 16 booked",
+    );
     expect(screen.queryByText("Shelves booked")).toBeNull();
   });
 
@@ -70,7 +93,9 @@ describe("CompositionBar", () => {
   ];
 
   it("names every part with its amount and share in a table, in the order given", () => {
-    renderWithStrata(<CompositionBar label="Memory" parts={parts} formatValue={(v) => `${v} GB`} />);
+    renderWithStrata(
+      <CompositionBar label="Memory" parts={parts} formatValue={(v) => `${v} GB`} />,
+    );
     const table = screen.getByRole("table", { name: "Memory" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows.map((r) => r.textContent)).toEqual(["Used by apps4 GB40%", "Cached files6 GB60%"]);
@@ -79,33 +104,65 @@ describe("CompositionBar", () => {
   });
 
   it("names the remainder when the parts do not fill the total", () => {
-    renderWithStrata(<CompositionBar label="Memory" parts={parts} total={16} restLabel="Free" formatValue={(v) => `${v} GB`} />);
+    renderWithStrata(
+      <CompositionBar
+        label="Memory"
+        parts={parts}
+        total={16}
+        restLabel="Free"
+        formatValue={(v) => `${v} GB`}
+      />,
+    );
     const free = screen.getByRole("rowheader", { name: "Free" }).closest("tr")!;
     expect(free).toHaveTextContent("6 GB38%");
   });
 
   it("asks for a colour, or an Other part, past the fifth chart token", () => {
-    const six = Array.from({ length: 6 }, (_, i) => ({ key: `p${i}`, label: `Part ${i + 1}`, value: 1 }));
-    expect(() => renderWithStrata(<CompositionBar label="Too many" parts={six} formatValue={String} />)).toThrow(/Other/);
+    const six = Array.from({ length: 6 }, (_, i) => ({
+      key: `p${i}`,
+      label: `Part ${i + 1}`,
+      value: 1,
+    }));
+    expect(() =>
+      renderWithStrata(<CompositionBar label="Too many" parts={six} formatValue={String} />),
+    ).toThrow(/Other/);
     six[5] = { ...six[5], colour: "var(--muted-foreground)" } as (typeof six)[number];
     renderWithStrata(<CompositionBar label="Six" parts={six} formatValue={String} />);
     expect(screen.getByRole("table", { name: "Six" })).toBeInTheDocument();
   });
 
   describe("many parts (#377)", () => {
-    const apps = [3, 9, 1, 5, 2, 7, 4].map((v, i) => ({ key: `a${i}`, label: `App ${i + 1}`, value: v }));
+    const apps = [3, 9, 1, 5, 2, 7, 4].map((v, i) => ({
+      key: `a${i}`,
+      label: `App ${i + 1}`,
+      value: v,
+    }));
     const names = () => screen.getAllByRole("rowheader").map((r) => r.textContent);
 
     it("folds the smallest into one last part when asked, keeping the largest four in their given order", () => {
       renderWithStrata(
-        <CompositionBar label="GPU" parts={apps} other={{ label: (n) => `${n} other apps` }} formatValue={String} />,
+        <CompositionBar
+          label="GPU"
+          parts={apps}
+          other={{ label: (n) => `${n} other apps` }}
+          formatValue={String}
+        />,
       );
       expect(names()).toEqual(["App 2", "App 4", "App 6", "App 7", "3 other apps"]);
-      expect(screen.getByRole("rowheader", { name: "3 other apps" }).closest("tr")).toHaveTextContent("6");
+      expect(
+        screen.getByRole("rowheader", { name: "3 other apps" }).closest("tr"),
+      ).toHaveTextContent("6");
     });
 
     it("leaves five or fewer parts alone, even with `other`", () => {
-      renderWithStrata(<CompositionBar label="GPU" parts={apps.slice(0, 5)} other={{ label: "Other" }} formatValue={String} />);
+      renderWithStrata(
+        <CompositionBar
+          label="GPU"
+          parts={apps.slice(0, 5)}
+          other={{ label: "Other" }}
+          formatValue={String}
+        />,
+      );
       expect(names()).toHaveLength(5);
       expect(names()).not.toContain("Other");
     });
@@ -126,14 +183,27 @@ describe("CompositionBar", () => {
 
   it("fills the track with fractional values (flex factors are shares)", () => {
     const { container } = renderWithStrata(
-      <CompositionBar label="Split" parts={[{ key: "a", label: "A", value: 0.2 }, { key: "b", label: "B", value: 0.3 }]} formatValue={String} />,
+      <CompositionBar
+        label="Split"
+        parts={[
+          { key: "a", label: "A", value: 0.2 },
+          { key: "b", label: "B", value: 0.3 },
+        ]}
+        formatValue={String}
+      />,
     );
     const segments = [...container.querySelectorAll<HTMLElement>("figure > [aria-hidden] > div")];
     expect(segments.map((el) => el.style.flexGrow)).toEqual(["0.4", "0.6"]);
   });
 
   it("copes with a whole of nothing", () => {
-    renderWithStrata(<CompositionBar label="Nothing" parts={[{ key: "a", label: "A", value: 0 }]} formatValue={String} />);
+    renderWithStrata(
+      <CompositionBar
+        label="Nothing"
+        parts={[{ key: "a", label: "A", value: 0 }]}
+        formatValue={String}
+      />,
+    );
     expect(screen.getByRole("rowheader", { name: "A" }).closest("tr")).toHaveTextContent("A00%");
   });
 });
@@ -145,7 +215,12 @@ describe("LinkCard", () => {
     }
     renderWithStrata(
       <>
-        <LinkCard to="/bookings" title="Kiln bookings" description="Book shelves." marks={<Status tone="success">Running</Status>} />
+        <LinkCard
+          to="/bookings"
+          title="Kiln bookings"
+          description="Book shelves."
+          marks={<Status tone="success">Running</Status>}
+        />
         <Where />
       </>,
     );
@@ -166,7 +241,8 @@ describe("LinkCard", () => {
   });
 
   it("draws the leaving arrow only for another origin, or when told (issue #340)", () => {
-    const arrow = (name: string) => screen.getByRole("link", { name }).closest("h3")!.querySelector("svg");
+    const arrow = (name: string) =>
+      screen.getByRole("link", { name }).closest("h3")!.querySelector("svg");
     renderWithStrata(
       <>
         <LinkCard href="https://glazes.example/" title="Other site" />
@@ -190,7 +266,9 @@ describe("LinkCard", () => {
         <LinkCard to="/b" title="B" />
       </LinkCardList>,
     );
-    expect(within(screen.getByRole("list", { name: "Apps" })).getAllByRole("listitem")).toHaveLength(2);
+    expect(
+      within(screen.getByRole("list", { name: "Apps" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
   });
 });
 
@@ -209,7 +287,11 @@ describe("ColorSchemeChoice compact", () => {
     );
     const group = screen.getByRole("radiogroup", { name: "Appearance" });
     const radios = within(group).getAllByRole("radio");
-    expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual(["Match this device", "Light", "Dark"]);
+    expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual([
+      "Match this device",
+      "Light",
+      "Dark",
+    ]);
     await userEvent.click(within(group).getByRole("radio", { name: "Dark" }));
     expect(screen.getByTestId("pref")).toHaveTextContent("dark");
     expect(within(group).getByRole("radio", { name: "Dark" })).toBeChecked();
@@ -217,8 +299,14 @@ describe("ColorSchemeChoice compact", () => {
   });
 
   it("takes the product's words and legend", () => {
-    renderWithStrata(<ColorSchemeChoice compact legend="Screens" labels={{ dark: { label: "Night" } }} />);
-    expect(within(screen.getByRole("radiogroup", { name: "Screens" })).getByRole("radio", { name: "Night" })).toBeInTheDocument();
+    renderWithStrata(
+      <ColorSchemeChoice compact legend="Screens" labels={{ dark: { label: "Night" } }} />,
+    );
+    expect(
+      within(screen.getByRole("radiogroup", { name: "Screens" })).getByRole("radio", {
+        name: "Night",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("keeps the settings-page list when not compact", () => {
@@ -230,16 +318,30 @@ describe("ColorSchemeChoice compact", () => {
 describe("Studio server screen (served by MSW)", () => {
   it("leads with the disk past its threshold, then apps, disks and memory", async () => {
     renderWithStrata(<StudioServerScreen />);
-    expect(await screen.findByText(/\/srv\/photos \(glaze test photos\) is 92% full/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/\/srv\/photos \(glaze test photos\) is 92% full/),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(4);
-    expect(screen.getByRole("meter", { name: "/srv/photos space used" })).toHaveAccessibleDescription(/Nearly full/);
-    expect(screen.getByRole("meter", { name: "/ space used" })).toHaveAccessibleDescription(`${format.bytes(18.4e9)} of ${format.bytes(64e9)}`);
+    expect(
+      screen.getByRole("meter", { name: "/srv/photos space used" }),
+    ).toHaveAccessibleDescription(/Nearly full/);
+    expect(screen.getByRole("meter", { name: "/ space used" })).toHaveAccessibleDescription(
+      `${format.bytes(18.4e9)} of ${format.bytes(64e9)}`,
+    );
     expect(screen.getByRole("table", { name: /16\sGB in all/ })).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "Appearance" })).toBeInTheDocument();
   });
 
   it("shows the empty state when the agent reports nothing", async () => {
-    server.use(http.get(api.server, () => HttpResponse.json({ disks: [], apps: [], memory: { total: 0, used: 0, cached: 0, buffers: 0 } })));
+    server.use(
+      http.get(api.server, () =>
+        HttpResponse.json({
+          disks: [],
+          apps: [],
+          memory: { total: 0, used: 0, cached: 0, buffers: 0 },
+        }),
+      ),
+    );
     renderWithStrata(<StudioServerScreen />);
     expect(await screen.findByText("The status agent has nothing to report")).toBeInTheDocument();
   });
@@ -255,7 +357,9 @@ describe("Studio server screen (served by MSW)", () => {
     await screen.findByText(/\/srv\/photos \(glaze test photos\) is 92% full/);
     server.use(serverUnreachable);
     await act(() => client.refetchQueries({ queryKey: ["server"] }));
-    expect(await screen.findByRole("status")).toHaveTextContent(/502.*These readings are from \d\d:\d\d\./);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /502.*These readings are from \d\d:\d\d\./,
+    );
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("meter", { name: "/srv/photos space used" })).toBeInTheDocument();
   });

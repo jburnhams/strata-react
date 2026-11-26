@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import { toast, StrataToastRegion } from "../../src";
 import { setupStrataTests } from "../../src/testing";
@@ -7,7 +7,10 @@ import { setupStrataTests } from "../../src/testing";
 // hook it registers unmounts after every test and clears the toast queue.
 
 const hooks: Array<() => void | Promise<void>> = [];
-const restore = setupStrataTests({ afterEach: (h) => void hooks.push(h), layout: { width: 123, height: 45 } });
+const restore = setupStrataTests({
+  afterEach: (h) => void hooks.push(h),
+  layout: { width: 123, height: 45 },
+});
 afterEach(() => void hooks.forEach((h) => h()));
 
 describe("setupStrataTests in jsdom", () => {

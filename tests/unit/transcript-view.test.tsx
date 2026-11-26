@@ -1,23 +1,49 @@
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Check, X } from "lucide-react";
-import { PlayWindowButton, TranscriptView, wordId, type MarkKind, type TranscriptGroup, type TranscriptViewProps, type TranscriptWord } from "../../src";
+import {
+  PlayWindowButton,
+  TranscriptView,
+  wordId,
+  type MarkKind,
+  type TranscriptGroup,
+  type TranscriptViewProps,
+  type TranscriptWord,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #186: timed text against a player.
 
 const phrase = (id: string, start: number, text: string, speaker?: string, alt?: string) => {
-  const words: TranscriptWord[] = text.split(" ").map((w, i) => ({ text: w, start: start + i * 0.5, end: start + (i + 1) * 0.5 }));
-  return { id, start, end: start + words.length * 0.5, words, speaker, alt: alt ? { translated: alt } : undefined };
+  const words: TranscriptWord[] = text
+    .split(" ")
+    .map((w, i) => ({ text: w, start: start + i * 0.5, end: start + (i + 1) * 0.5 }));
+  return {
+    id,
+    start,
+    end: start + words.length * 0.5,
+    words,
+    speaker,
+    alt: alt ? { translated: alt } : undefined,
+  };
 };
 const groups: TranscriptGroup[] = [
-  { id: "g1", title: "Clip one", phrases: [phrase("p1", 0, "good morning everyone", "Ada", "bonjour tout le monde"), phrase("p2", 3, "thank you for coming", "Ben", "merci d'être venus")] },
+  {
+    id: "g1",
+    title: "Clip one",
+    phrases: [
+      phrase("p1", 0, "good morning everyone", "Ada", "bonjour tout le monde"),
+      phrase("p2", 3, "thank you for coming", "Ben", "merci d'être venus"),
+    ],
+  },
   { id: "g2", title: "Clip two", phrases: [phrase("p3", 10, "let us begin", "Ada", "commençons")] },
 ];
 
 function Host(props: Partial<TranscriptViewProps>) {
-  return <TranscriptView label="Transcript" groups={groups} time={0} onSeek={() => {}} {...props} />;
+  return (
+    <TranscriptView label="Transcript" groups={groups} time={0} onSeek={() => {}} {...props} />
+  );
 }
 const row = (id: string) => document.querySelector<HTMLElement>(`[data-phrase="${id}"]`)!;
 
@@ -42,10 +68,16 @@ describe("TranscriptView", () => {
 
   it("at the boundaries: a phrase is heard from its start, a word until the next begins, nothing in the gap", () => {
     const { rerender } = renderWithStrata(<Host time={3} />);
-    expect(within(row("p2")).getByRole("button", { name: "thank" })).toHaveAttribute("aria-current", "true");
+    expect(within(row("p2")).getByRole("button", { name: "thank" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     rerender(<Host time={1.4} />);
     expect(row("p2")).not.toHaveAttribute("aria-current");
-    expect(within(row("p1")).getByRole("button", { name: "everyone" })).toHaveAttribute("aria-current", "true");
+    expect(within(row("p1")).getByRole("button", { name: "everyone" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     rerender(<Host time={1.5} />); // p1 has ended and p2 has not begun
     expect(document.querySelector("[data-phrase][aria-current=true]")).toBeNull();
     rerender(<Host time={5.5} />);
@@ -87,7 +119,17 @@ describe("TranscriptView", () => {
 
   it("has a play control slot per phrase, such as PlayWindowButton", () => {
     const media = { playing: false, window: null, playWindow: vi.fn(), pause: vi.fn() };
-    renderWithStrata(<Host renderPlay={(p) => <PlayWindowButton media={media} window={{ start: p.start, end: p.end }} label={`Play phrase ${p.id}`} />} />);
+    renderWithStrata(
+      <Host
+        renderPlay={(p) => (
+          <PlayWindowButton
+            media={media}
+            window={{ start: p.start, end: p.end }}
+            label={`Play phrase ${p.id}`}
+          />
+        )}
+      />,
+    );
     expect(screen.getByRole("button", { name: "Play phrase p2" })).toBeInTheDocument();
   });
 
@@ -157,8 +199,24 @@ describe("a long transcript", () => {
       if (before) Object.defineProperty(Element.prototype, "scrollHeight", before);
       else delete (Element.prototype as unknown as Record<string, unknown>).scrollHeight;
     });
-    const many: TranscriptGroup[] = [{ id: "g", title: "Everything", phrases: Array.from({ length: 2000 }, (_, i) => phrase(`q${i}`, i * 3, `phrase number ${i}`)) }];
-    renderWithStrata(<TranscriptView label="Transcript" groups={many} time={3000} onSeek={() => {}} follow={false} />);
+    const many: TranscriptGroup[] = [
+      {
+        id: "g",
+        title: "Everything",
+        phrases: Array.from({ length: 2000 }, (_, i) =>
+          phrase(`q${i}`, i * 3, `phrase number ${i}`),
+        ),
+      },
+    ];
+    renderWithStrata(
+      <TranscriptView
+        label="Transcript"
+        groups={many}
+        time={3000}
+        onSeek={() => {}}
+        follow={false}
+      />,
+    );
     expect(document.querySelectorAll("[data-phrase]").length).toBeLessThan(60);
     // Not following (the app turned it off): the heard phrase is far away and nothing offers to go there.
     expect(screen.queryByRole("button", { name: /Jump to now/ })).not.toBeInTheDocument();
@@ -174,7 +232,10 @@ describe("TranscriptView doubt, marks, correction and card", () => {
     p1.words[1] = { ...p1.words[1], confidence: 0.3 };
     p3.words[0] = { ...p3.words[0], doubtful: true };
     p2.words[2] = { ...p2.words[2], confidence: 0.9 };
-    return [{ id: "g1", title: "Clip one", phrases: [p1, p2] }, { id: "g2", title: "Clip two", phrases: [p3] }];
+    return [
+      { id: "g1", title: "Clip one", phrases: [p1, p2] },
+      { id: "g2", title: "Clip two", phrases: [p3] },
+    ];
   };
   const notSung = { id: "not-sung", label: "Not sung", tone: "neutral" } as const;
 
@@ -205,13 +266,21 @@ describe("TranscriptView doubt, marks, correction and card", () => {
     const onPhraseState = vi.fn();
     const g = doubtGroups();
     const marked = { ...g[0].phrases[0], state: notSung };
-    renderWithStrata(<Host groups={[{ ...g[0], phrases: [marked, g[0].phrases[1]] }, g[1]]} states={[notSung, { id: "not-lyric", label: "Not a lyric", tone: "warning" }]} onPhraseState={onPhraseState} />);
+    renderWithStrata(
+      <Host
+        groups={[{ ...g[0], phrases: [marked, g[0].phrases[1]] }, g[1]]}
+        states={[notSung, { id: "not-lyric", label: "Not a lyric", tone: "warning" }]}
+        onPhraseState={onPhraseState}
+      />,
+    );
     expect(within(row("p1")).getByText("Not sung")).toBeInTheDocument();
     expect(screen.getByText(/1 not sung/)).toBeInTheDocument();
     await user.click(within(row("p2")).getByRole("button", { name: "Mark the phrase at 0:03" }));
     await user.click(await screen.findByRole("menuitem", { name: "Not a lyric" }));
     expect(onPhraseState).toHaveBeenLastCalledWith("p2", "not-lyric");
-    await user.click(await within(row("p1")).findByRole("button", { name: "Mark the phrase at 0:00" }));
+    await user.click(
+      await within(row("p1")).findByRole("button", { name: "Mark the phrase at 0:00" }),
+    );
     expect(screen.queryByRole("menuitem", { name: "Not sung" })).toBeNull(); // it has that one
     await user.click(await screen.findByRole("menuitem", { name: "Clear mark" }));
     expect(onPhraseState).toHaveBeenLastCalledWith("p1", null);
@@ -271,7 +340,9 @@ describe("TranscriptView doubt, marks, correction and card", () => {
 
   it("opens a card for the hovered phrase after the delay, only for that one, and Escape closes it", async () => {
     const user = userEvent.setup();
-    const renderCard = vi.fn((p: { id: string; speaker?: string }) => <p>{`Card for ${p.id}, spoken by ${p.speaker}`}</p>);
+    const renderCard = vi.fn((p: { id: string; speaker?: string }) => (
+      <p>{`Card for ${p.id}, spoken by ${p.speaker}`}</p>
+    ));
     renderWithStrata(<Host renderCard={renderCard} cardDelay={0} />);
     expect(renderCard).not.toHaveBeenCalled();
     await user.hover(row("p2"));
@@ -309,9 +380,34 @@ describe("TranscriptView doubt, marks, correction and card", () => {
 // Issue #260: a review transcript with no player, marking words, corrected words.
 describe("TranscriptView corrections while marking", () => {
   it("Enter on the caret's corrected word opens its correction, so no pointer is needed", async () => {
-    const corrected: TranscriptGroup[] = [{ id: "g", title: "Clip", phrases: [{ ...phrase("c1", 0, "good morning"), words: [{ text: "good", start: 0, end: 0.5 }, { text: "morning", start: 0.5, end: 1, correction: { original: "mourning" } }] }] }];
+    const corrected: TranscriptGroup[] = [
+      {
+        id: "g",
+        title: "Clip",
+        phrases: [
+          {
+            ...phrase("c1", 0, "good morning"),
+            words: [
+              { text: "good", start: 0, end: 0.5 },
+              { text: "morning", start: 0.5, end: 1, correction: { original: "mourning" } },
+            ],
+          },
+        ],
+      },
+    ];
     const onCorrectionPress = vi.fn();
-    renderWithStrata(<TranscriptView label="Transcript" groups={corrected} marking={{ kinds: [{ key: "use", label: "Must use", tone: "success", pattern: "solid" }], marks: {}, onMark: () => {} }} onCorrectionPress={onCorrectionPress} />);
+    renderWithStrata(
+      <TranscriptView
+        label="Transcript"
+        groups={corrected}
+        marking={{
+          kinds: [{ key: "use", label: "Must use", tone: "success", pattern: "solid" }],
+          marks: {},
+          onMark: () => {},
+        }}
+        onCorrectionPress={onCorrectionPress}
+      />,
+    );
     screen.getByRole("group", { name: "Transcript, for marking" }).focus();
     await userEvent.keyboard("{ArrowRight}{Enter}"); // the caret goes to the first word: nothing to open
     expect(onCorrectionPress).not.toHaveBeenCalled();
@@ -337,8 +433,15 @@ describe("TranscriptView without a player, with marking and corrections", () => 
 
   it("marking: a drag across words selects their ids, in order, across phrases, and onMark is told", async () => {
     const onMark = vi.fn();
-    renderWithStrata(<TranscriptView label="Transcript" groups={groups} marking={{ kinds, marks: { [wordId("p1", 0)]: "use" }, onMark }} />);
-    const word = (phraseId: string, t: string) => within(row(phraseId)).getByText(t, { selector: "[data-mark-id]" });
+    renderWithStrata(
+      <TranscriptView
+        label="Transcript"
+        groups={groups}
+        marking={{ kinds, marks: { [wordId("p1", 0)]: "use" }, onMark }}
+      />,
+    );
+    const word = (phraseId: string, t: string) =>
+      within(row(phraseId)).getByText(t, { selector: "[data-mark-id]" });
     expect(word("p1", "good")).toHaveAttribute("data-mark", "use");
     fireEvent.pointerDown(word("p1", "everyone"), { button: 0 });
     fireEvent.pointerEnter(word("p2", "thank"));
@@ -346,14 +449,43 @@ describe("TranscriptView without a player, with marking and corrections", () => 
     fireEvent.pointerUp(window);
     expect(screen.getByText("3 words selected", { selector: "[aria-live]" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Never use" }));
-    expect(onMark).toHaveBeenCalledWith([wordId("p1", 2), wordId("p2", 0), wordId("p2", 1)], "never");
+    expect(onMark).toHaveBeenCalledWith(
+      [wordId("p1", 2), wordId("p2", 0), wordId("p2", 1)],
+      "never",
+    );
   });
 
   it("a corrected word is underlined, says what it was, and shows the original on hover; a click opens it", async () => {
-    const corrected: TranscriptGroup[] = [{ id: "g", title: "Clip", phrases: [{ ...phrase("c1", 0, "good morning"), words: [{ text: "good", start: 0, end: 0.5 }, { text: "morning", start: 0.5, end: 1, correction: { original: "mourning", by: "Ada" } }] }] }];
+    const corrected: TranscriptGroup[] = [
+      {
+        id: "g",
+        title: "Clip",
+        phrases: [
+          {
+            ...phrase("c1", 0, "good morning"),
+            words: [
+              { text: "good", start: 0, end: 0.5 },
+              {
+                text: "morning",
+                start: 0.5,
+                end: 1,
+                correction: { original: "mourning", by: "Ada" },
+              },
+            ],
+          },
+        ],
+      },
+    ];
     const onCorrectionPress = vi.fn();
     const onSeek = vi.fn();
-    renderWithStrata(<TranscriptView label="Transcript" groups={corrected} onSeek={onSeek} onCorrectionPress={onCorrectionPress} />);
+    renderWithStrata(
+      <TranscriptView
+        label="Transcript"
+        groups={corrected}
+        onSeek={onSeek}
+        onCorrectionPress={onCorrectionPress}
+      />,
+    );
     const word = screen.getByRole("button", { name: /morning/ });
     expect(word).toHaveTextContent("morning (corrected, was mourning)");
     expect(word.className).toMatch(/decoration-dotted/);

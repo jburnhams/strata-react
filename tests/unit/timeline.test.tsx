@@ -1,8 +1,18 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Timeline, noOverlap, tickLabel, tickStep, ticksBetween, useTimelineZoom, type TimelineChange, type TimelineItem, type TimelineProps } from "../../src";
+import {
+  Timeline,
+  noOverlap,
+  tickLabel,
+  tickStep,
+  ticksBetween,
+  useTimelineZoom,
+  type TimelineChange,
+  type TimelineItem,
+  type TimelineProps,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const lanes = [
@@ -15,7 +25,9 @@ const base: TimelineItem[] = [
   { id: "c", lane: "t2", start: 10, length: 30, label: "ambience.wav", kind: "audio" },
 ];
 
-function Harness(props: Partial<TimelineProps> & { onChange?: (id: string, c: TimelineChange) => void }) {
+function Harness(
+  props: Partial<TimelineProps> & { onChange?: (id: string, c: TimelineChange) => void },
+) {
   const { onChange, ...rest } = props;
   const [items, setItems] = React.useState(base);
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -50,7 +62,8 @@ describe("tick arithmetic", () => {
     expect(tickStep(10)).toBe(10); // 80px / 10px per second
     expect(tickStep(100)).toBe(1);
     expect(tickStep(0.5)).toBe(300); // five minutes
-    for (const zoom of [0.2, 1, 7, 33, 120, 900]) expect(tickStep(zoom) * zoom).toBeGreaterThanOrEqual(80);
+    for (const zoom of [0.2, 1, 7, 33, 120, 900])
+      expect(tickStep(zoom) * zoom).toBeGreaterThanOrEqual(80);
   });
   it("lists ticks on multiples of the step, ends included", () => {
     expect(ticksBetween(0, 30, 10)).toEqual([0, 10, 20, 30]);
@@ -67,7 +80,9 @@ describe("tick arithmetic", () => {
 describe("Timeline structure", () => {
   it("names items for a screen reader with time range and lane, and lanes as labelled groups", () => {
     renderWithStrata(<Harness />);
-    expect(screen.getByRole("button", { name: "run-02.mp4, 0:12 to 0:47, Track 1" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "run-02.mp4, 0:12 to 0:47, Track 1" }),
+    ).toBeInTheDocument();
     const lane = screen.getByRole("group", { name: "Track 2" });
     expect(within(lane).getByRole("button", { name: /ambience.wav/ })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Edit" })).toBeInTheDocument();
@@ -93,7 +108,9 @@ describe("Timeline structure", () => {
 
   it("draws ruler labels that never overlap and keeps the last one inside the axis", () => {
     const { container } = renderWithStrata(<Harness />);
-    const labels = [...container.querySelectorAll("[data-ruler] > span")].map((s) => (s as HTMLElement).style.left);
+    const labels = [...container.querySelectorAll("[data-ruler] > span")].map(
+      (s) => (s as HTMLElement).style.left,
+    );
     expect(labels.length).toBeGreaterThan(3);
     const px = labels.map((l) => parseFloat(l));
     for (let i = 1; i < px.length; i++) expect(px[i] - px[i - 1]).toBeGreaterThanOrEqual(80);
@@ -126,7 +143,10 @@ describe("Timeline keyboard", () => {
     expect(a).toHaveAttribute("aria-pressed", "true");
     screen.getByRole("button", { name: /run-03.mp4/ }).focus();
     await user.keyboard("{Shift>}{Enter}{/Shift}");
-    expect(screen.getByRole("button", { name: /run-03.mp4/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /run-03.mp4/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(a).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -158,7 +178,9 @@ describe("Timeline keyboard", () => {
     await user.keyboard("{Control>}{ArrowDown}{/Control}");
     expect(changes.at(-1)).toEqual(["b", { start: 60, length: 20, lane: "t2" }]);
     expect(status()).toBe("run-03.mp4 moved to Track 2.");
-    expect(screen.getByRole("button", { name: "run-03.mp4, 1:00 to 1:20, Track 2" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "run-03.mp4, 1:00 to 1:20, Track 2" }),
+    ).toBeInTheDocument();
   });
 
   it("nudges ten steps with Shift and keeps the item inside the axis", async () => {
@@ -168,7 +190,9 @@ describe("Timeline keyboard", () => {
     screen.getByRole("button", { name: /run-03.mp4/ }).focus();
     await user.keyboard("{Control>}{Shift>}{ArrowRight}{/Shift}{/Control}");
     expect(changes.at(-1)![1].start).toBe(70);
-    await user.keyboard("{Control>}{Shift>}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{/Shift}{/Control}");
+    await user.keyboard(
+      "{Control>}{Shift>}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{/Shift}{/Control}",
+    );
     expect(changes.at(-1)![1].start).toBe(100); // 120 end minus the 20 long item
   });
 
@@ -213,8 +237,14 @@ describe("Timeline review fixes", () => {
     await user.keyboard("{Enter}");
     screen.getByRole("button", { name: /run-03.mp4/ }).focus();
     await user.keyboard("{Control>}{Enter}{/Control}");
-    expect(screen.getByRole("button", { name: /run-02.mp4/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: /run-03.mp4/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /run-02.mp4/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /run-03.mp4/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("keeps focus on an item moved to another lane", async () => {
@@ -237,8 +267,16 @@ describe("Timeline review fixes", () => {
   });
 
   it("keeps the tab-stop item mounted when the view is scrolled far from it", () => {
-    const many: TimelineItem[] = Array.from({ length: 500 }, (_, i) => ({ id: `i${i}`, lane: "t1", start: i * 10, length: 8, label: `Clip ${i}` }));
-    const { container } = renderWithStrata(<Timeline label="Many" lanes={lanes} items={many} to={5000} zoom={10} />);
+    const many: TimelineItem[] = Array.from({ length: 500 }, (_, i) => ({
+      id: `i${i}`,
+      lane: "t1",
+      start: i * 10,
+      length: 8,
+      label: `Clip ${i}`,
+    }));
+    const { container } = renderWithStrata(
+      <Timeline label="Many" lanes={lanes} items={many} to={5000} zoom={10} />,
+    );
     const scroller = container.querySelector<HTMLElement>(".overflow-x-auto")!;
     Object.defineProperty(scroller, "scrollLeft", { value: 40000, configurable: true });
     fireEvent.scroll(scroller);
@@ -294,7 +332,13 @@ describe("Timeline pointer and size", () => {
   });
 
   it("renders only the items near the view, so thousands of items cost what is on screen", () => {
-    const many: TimelineItem[] = Array.from({ length: 3000 }, (_, i) => ({ id: `i${i}`, lane: "t1", start: i * 10, length: 8, label: `Clip ${i}` }));
+    const many: TimelineItem[] = Array.from({ length: 3000 }, (_, i) => ({
+      id: `i${i}`,
+      lane: "t1",
+      start: i * 10,
+      length: 8,
+      label: `Clip ${i}`,
+    }));
     renderWithStrata(<Timeline label="Many" lanes={lanes} items={many} to={30000} zoom={10} />);
     const rendered = screen.getAllByRole("button").length;
     expect(rendered).toBeGreaterThan(5);
@@ -302,7 +346,16 @@ describe("Timeline pointer and size", () => {
   });
 
   it("shows the empty content when there are no lanes", () => {
-    renderWithStrata(<Timeline label="Edit" lanes={[]} items={[]} to={60} zoom={10} empty={<p>Add a track to begin</p>} />);
+    renderWithStrata(
+      <Timeline
+        label="Edit"
+        lanes={[]}
+        items={[]}
+        to={60}
+        zoom={10}
+        empty={<p>Add a track to begin</p>}
+      />,
+    );
     expect(screen.getByText("Add a track to begin")).toBeInTheDocument();
   });
 });

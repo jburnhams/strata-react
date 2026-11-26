@@ -1,6 +1,16 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -17,7 +27,12 @@ const bin = join(root, "bin/strata-visual.js");
 let app: string;
 
 function run(args: string[], env: Record<string, string> = {}) {
-  const r = spawnSync(process.execPath, [bin, ...args], { cwd: app, encoding: "utf8", env: { ...process.env, CI: "", ...env }, timeout: 120_000 });
+  const r = spawnSync(process.execPath, [bin, ...args], {
+    cwd: app,
+    encoding: "utf8",
+    env: { ...process.env, CI: "", ...env },
+    timeout: 120_000,
+  });
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
@@ -44,14 +59,24 @@ beforeAll(() => {
   app = mkdtempSync(join(tmpdir(), "strata-visual-app-"));
   mkdirSync(join(app, "node_modules"));
   symlinkSync(root, join(app, "node_modules/strata-react"), "dir");
-  for (const dep of ["msw", "vite", "playwright"]) symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
-  writeFileSync(join(app, "package.json"), JSON.stringify({ name: "app", type: "module", devDependencies: { playwright: "1.63.0" } }));
+  for (const dep of ["msw", "vite", "playwright"])
+    symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
+  writeFileSync(
+    join(app, "package.json"),
+    JSON.stringify({ name: "app", type: "module", devDependencies: { playwright: "1.63.0" } }),
+  );
   // The app: shows that it is loading, fetches its greeting and renders it or an error, light or
   // dark from the .dark class.
   // Its face is bundled (a fontsource file served with the build), as the runner requires; with
   // ?font=system the text falls back to the machine's sans-serif instead.
   mkdirSync(join(app, "dist"));
-  copyFileSync(join(root, "node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2"), join(app, "dist/public-sans.woff2"));
+  copyFileSync(
+    join(
+      root,
+      "node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2",
+    ),
+    join(app, "dist/public-sans.woff2"),
+  );
   writeFileSync(
     join(app, "dist/index.html"),
     `<!doctype html><html><head><style>
@@ -88,7 +113,9 @@ describe("strata-visual on an app's routes", () => {
   });
 
   it("writes a baseline per state and theme, then matches them", () => {
-    config(`{ ready: [], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`);
+    config(
+      `{ ready: [], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`,
+    );
     const first = run(["--update"]);
     expect(first.out).toContain("Wrote 4 baselines.");
     expect(first.code).toBe(0);
@@ -100,7 +127,9 @@ describe("strata-visual on an app's routes", () => {
       "home--ready--wide--dark.png",
       "home--ready--wide--light.png",
     ]);
-    expect(JSON.parse(readFileSync(join(baselines, ".strata-visual.json"), "utf8"))).toMatchObject({ chromium: expect.any(String) });
+    expect(JSON.parse(readFileSync(join(baselines, ".strata-visual.json"), "utf8"))).toMatchObject({
+      chromium: expect.any(String),
+    });
     // Light and dark differ, and so do the two states.
     const png = (n: string) => readFileSync(join(baselines, `${n}.png`));
     expect(png("home--ready--wide--light").equals(png("home--ready--wide--dark"))).toBe(false);
@@ -112,20 +141,25 @@ describe("strata-visual on an app's routes", () => {
   }, 120_000);
 
   it("fails on a changed screen and writes actual, expected and diff images", () => {
-    config(`{ ready: [http.get("/api/greeting", () => HttpResponse.json({ text: "Kiln 2 is safe to open" }))], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`);
+    config(
+      `{ ready: [http.get("/api/greeting", () => HttpResponse.json({ text: "Kiln 2 is safe to open" }))], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`,
+    );
     const r = run([]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/changed {2}home--ready--wide--light\.png: (size|\d+ pixels)/);
     expect(r.out).toContain("2 of 4 screenshots match");
     const output = join(app, "tests/visual/output");
-    for (const suffix of ["actual", "expected"]) expect(existsSync(join(output, `home--ready--wide--light.${suffix}.png`))).toBe(true);
+    for (const suffix of ["actual", "expected"])
+      expect(existsSync(join(output, `home--ready--wide--light.${suffix}.png`))).toBe(true);
   }, 120_000);
 
   it("fails a shot whose page makes a request no handler answers", () => {
     config(`{ ready: [] }`, "[]");
     const r = run(["--filter", "home--ready--wide--light"]);
     expect(r.code).toBe(1);
-    expect(r.out).toContain("error    home--ready--wide--light.png: no handler for GET /api/greeting");
+    expect(r.out).toContain(
+      "error    home--ready--wide--light.png: no handler for GET /api/greeting",
+    );
   }, 120_000);
 
   it("fails a shot whose text is drawn in a system font, naming the face, or warns when told to", () => {
@@ -133,9 +167,13 @@ describe("strata-visual on an app's routes", () => {
     config(states, undefined, `\n  baselines: "tests/visual/fonts",`);
     const strict = run(["--update"]);
     expect(strict.code).toBe(1);
-    expect(strict.out).toMatch(/error {4}home--system--wide--light\.png: text in a system font, which differs by machine .*: "[^"]+" in <h1> "Kiln 2 is cooling"/);
+    expect(strict.out).toMatch(
+      /error {4}home--system--wide--light\.png: text in a system font, which differs by machine .*: "[^"]+" in <h1> "Kiln 2 is cooling"/,
+    );
     // Generated content on an element with no text of its own counts too.
-    expect(strict.out).toMatch(/error {4}home--pseudo--wide--light\.png: text in a system font.*: "[^"]+" in <div::before>/);
+    expect(strict.out).toMatch(
+      /error {4}home--pseudo--wide--light\.png: text in a system font.*: "[^"]+" in <div::before>/,
+    );
     config(states, undefined, `\n  baselines: "tests/visual/fonts",\n  systemFonts: "warn",`);
     const lenient = run(["--update"]);
     expect(lenient.code).toBe(0);
@@ -146,7 +184,11 @@ describe("strata-visual on an app's routes", () => {
   it("pins the system face so text in it is not a system-font fault (issue #342)", () => {
     const dejavu = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
     expect(existsSync(dejavu), "this test pins DejaVu Sans, which Ubuntu runners have").toBe(true);
-    config(`{ system: { path: "/?font=system" } }`, undefined, `\n  baselines: "tests/visual/pinned",\n  themes: ["light"],\n  systemFonts: { pin: "DejaVu Sans", files: [${JSON.stringify(dejavu)}] },`);
+    config(
+      `{ system: { path: "/?font=system" } }`,
+      undefined,
+      `\n  baselines: "tests/visual/pinned",\n  themes: ["light"],\n  systemFonts: { pin: "DejaVu Sans", files: [${JSON.stringify(dejavu)}] },`,
+    );
     const pinned = run(["--update"]);
     expect(pinned.out).not.toContain("system font");
     expect(pinned.code).toBe(0);
@@ -163,7 +205,11 @@ describe("strata-visual on an app's routes", () => {
     config(states, undefined, `\n  baselines: "tests/visual/lazy",\n  themes: ["light"],`);
     expect(run(["--update"]).code).toBe(0);
     expect(lastRow("home--lazy--wide--light", "tests/visual/lazy")).toEqual([0xdd, 0x22, 0x22]);
-    config(states, undefined, `\n  baselines: "tests/visual/lazy-off",\n  themes: ["light"],\n  scrollThrough: false,`);
+    config(
+      states,
+      undefined,
+      `\n  baselines: "tests/visual/lazy-off",\n  themes: ["light"],\n  scrollThrough: false,`,
+    );
     expect(run(["--update"]).code).toBe(0);
     expect(lastRow("home--lazy--wide--light", "tests/visual/lazy-off")).toEqual([0x88, 0x88, 0x88]); // still its grey box
     rmSync(join(app, "tests/visual/lazy"), { recursive: true, force: true });
@@ -185,7 +231,9 @@ describe("strata-visual on an app's routes", () => {
   }, 60_000);
 
   it("reports obsolete baselines, removes them on update, and in CI fails a shot with no baseline", () => {
-    config(`{ ready: [], loading: [http.get("/api/greeting", async () => { await delay("infinite"); return HttpResponse.json({}); })] }`);
+    config(
+      `{ ready: [], loading: [http.get("/api/greeting", async () => { await delay("infinite"); return HttpResponse.json({}); })] }`,
+    );
     const ci = run([], { CI: "true" });
     expect(ci.code).toBe(1);
     expect(ci.out).toContain("new      home--loading--wide--light.png");
@@ -193,14 +241,24 @@ describe("strata-visual on an app's routes", () => {
     const update = run(["--update"]);
     expect(update.code).toBe(0);
     expect(update.out).toContain("removed 2 obsolete");
-    expect(readdirSync(join(app, "tests/visual/baselines")).filter((f) => f.includes("error"))).toEqual([]);
+    expect(
+      readdirSync(join(app, "tests/visual/baselines")).filter((f) => f.includes("error")),
+    ).toEqual([]);
   }, 120_000);
 });
 
 describe("strata-react/visual from the built package", () => {
   it("exports the runner, the shot builders and the comparison", async () => {
     const mod = await import(pathToFileURL(join(root, "dist/visual.js")).href);
-    for (const name of ["runVisual", "defineVisualConfig", "storybookShots", "routeShots", "compare", "serveStatic", "viewports"]) {
+    for (const name of [
+      "runVisual",
+      "defineVisualConfig",
+      "storybookShots",
+      "routeShots",
+      "compare",
+      "serveStatic",
+      "viewports",
+    ]) {
       expect(mod[name], name).toBeDefined();
     }
   });
@@ -209,11 +267,22 @@ describe("strata-react/visual from the built package", () => {
     const { serveStatic } = await import(pathToFileURL(join(root, "dist/visual.js")).href);
     const server = await serveStatic(join(app, "dist"), { spa: true, base: "/app/" });
     try {
-      const page = await fetch(new URL("review/42", server.url), { headers: { accept: "text/html" } });
+      const page = await fetch(new URL("review/42", server.url), {
+        headers: { accept: "text/html" },
+      });
       expect(page.status).toBe(200);
       expect(await page.text()).toContain('<div id="root">');
-      expect((await fetch(new URL("api/missing", server.url), { headers: { accept: "application/json" } })).status).toBe(404);
-      expect((await fetch(new URL("/elsewhere", server.url), { headers: { accept: "text/html" } })).status).toBe(404);
+      expect(
+        (
+          await fetch(new URL("api/missing", server.url), {
+            headers: { accept: "application/json" },
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (await fetch(new URL("/elsewhere", server.url), { headers: { accept: "text/html" } }))
+          .status,
+      ).toBe(404);
       expect((await fetch(`${server.url}..%2f..%2fpackage.json`)).status).toBe(404);
     } finally {
       await server.close();
@@ -226,8 +295,14 @@ describe("strata-react/visual from the built package", () => {
   describe("a build with a relative base on a nested route", () => {
     const relative = () => {
       mkdirSync(join(app, "dist-relative"), { recursive: true });
-      writeFileSync(join(app, "dist-relative/index.html"), `<!doctype html><html><head><title>x</title></head><body><div id="root"></div><script type="module" src="./main.js"></script></body></html>`);
-      writeFileSync(join(app, "dist-relative/main.js"), `document.getElementById("root").innerHTML = "<h1>The book</h1>";`);
+      writeFileSync(
+        join(app, "dist-relative/index.html"),
+        `<!doctype html><html><head><title>x</title></head><body><div id="root"></div><script type="module" src="./main.js"></script></body></html>`,
+      );
+      writeFileSync(
+        join(app, "dist-relative/main.js"),
+        `document.getElementById("root").innerHTML = "<h1>The book</h1>";`,
+      );
       writeFileSync(
         join(app, "strata-visual.config.ts"),
         `import { defineVisualConfig } from "strata-react/visual";
@@ -247,7 +322,10 @@ export default defineVisualConfig({ themes: ["light"], systemFonts: "allow", app
     it("fails a shot whose script never arrived", () => {
       relative();
       rmSync(join(app, "dist-relative/main.js"));
-      writeFileSync(join(app, "dist-relative/index.html"), `<!doctype html><html><head><title>x</title></head><body><div id="root"><p>shell</p></div><script type="module" src="./gone.js"></script></body></html>`);
+      writeFileSync(
+        join(app, "dist-relative/index.html"),
+        `<!doctype html><html><head><title>x</title></head><body><div id="root"><p>shell</p></div><script type="module" src="./gone.js"></script></body></html>`,
+      );
       const r = run(["--update"]);
       expect(r.code).toBe(1);
       expect(r.out).toMatch(/script \/gone\.js failed with 404/);

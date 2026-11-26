@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { main } from "../../src/api-types/cli";
 import { generateApiTypes, loadSchema } from "../../src/api-types/generate";
 
@@ -27,8 +27,18 @@ describe("generateApiTypes", () => {
 describe("relative references", () => {
   it("resolve against the schema file's folder", async () => {
     const dir = mkdtempSync(join(tmpdir(), "strata-api-"));
-    writeFileSync(join(dir, "shared.json"), JSON.stringify({ Shared: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } }));
-    const doc = { openapi: "3.1.0", info: { title: "t", version: "1" }, paths: {}, components: { schemas: { Wrapper: { $ref: "./shared.json#/Shared" } } } };
+    writeFileSync(
+      join(dir, "shared.json"),
+      JSON.stringify({
+        Shared: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+      }),
+    );
+    const doc = {
+      openapi: "3.1.0",
+      info: { title: "t", version: "1" },
+      paths: {},
+      components: { schemas: { Wrapper: { $ref: "./shared.json#/Shared" } } },
+    };
     const file = join(dir, "openapi.json");
     writeFileSync(file, JSON.stringify(doc));
     const text = await generateApiTypes(await loadSchema(file), file);
@@ -38,12 +48,17 @@ describe("relative references", () => {
 
 describe("loadSchema", () => {
   it("reads a URL and says what is wrong with a docs page or a non-OpenAPI file", async () => {
-    const answer = (body: string, init?: ResponseInit) => (async () => new Response(body, init)) as unknown as typeof fetch;
+    const answer = (body: string, init?: ResponseInit) =>
+      (async () => new Response(body, init)) as unknown as typeof fetch;
     const doc = readFileSync(fixture, "utf8");
-    expect((await loadSchema("http://localhost:8360/api/openapi.json", answer(doc))).openapi).toBe("3.1.0");
+    expect((await loadSchema("http://localhost:8360/api/openapi.json", answer(doc))).openapi).toBe(
+      "3.1.0",
+    );
     await expect(loadSchema("http://x/docs", answer("<html></html>"))).rejects.toThrow(/not JSON/);
     await expect(loadSchema("http://x/a", answer("{}"))).rejects.toThrow(/not an OpenAPI document/);
-    await expect(loadSchema("http://x/a", answer("no", { status: 404, statusText: "Not Found" }))).rejects.toThrow(/404 Not Found/);
+    await expect(
+      loadSchema("http://x/a", answer("no", { status: 404, statusText: "Not Found" })),
+    ).rejects.toThrow(/404 Not Found/);
   });
 });
 
@@ -67,7 +82,9 @@ describe("strata-api-types", () => {
     writeFileSync(changed, JSON.stringify(moved));
     const stale = await run(changed, "-o", out, "--check");
     expect(stale.code).toBe(1);
-    expect(stale.text).toMatch(/no longer matches the schema\. Regenerate it: strata-api-types .* -o /);
+    expect(stale.text).toMatch(
+      /no longer matches the schema\. Regenerate it: strata-api-types .* -o /,
+    );
     expect(readFileSync(out, "utf8")).not.toContain("uptime"); // --check writes nothing
   });
 

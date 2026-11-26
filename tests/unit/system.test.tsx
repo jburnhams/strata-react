@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { ScheduleTable, SystemPanel, useSystemInfo, type SystemInfoLike } from "../../src";
@@ -24,7 +24,9 @@ describe("SystemPanel", () => {
     expect(home).toHaveAttribute("aria-valuetext", "41% used");
     const photos = screen.getByRole("meter", { name: "photos folder disk space used" });
     expect(photos).toHaveAccessibleDescription(/Nearly full/);
-    expect(screen.getByRole("meter", { name: "archive folder disk space used" })).toHaveAccessibleDescription(/Nearly full/);
+    expect(
+      screen.getByRole("meter", { name: "archive folder disk space used" }),
+    ).toHaveAccessibleDescription(/Nearly full/);
 
     // A folder that does not exist is a word, not a meter.
     expect(screen.queryByRole("meter", { name: /scratch/ })).toBeNull();
@@ -37,8 +39,17 @@ describe("SystemPanel", () => {
   });
 
   it("says an installed package has no commit, says when a disk could not be read, and draws the app's own facts", () => {
-    const unread = { ...systemInfoPlain, folders: [{ name: "home", path: "/h", exists: true, free_bytes: null, total_bytes: null }] };
-    renderWithStrata(<SystemPanel load={ready(unread)} facts={[{ term: "Pieces kept", value: "1,284" }]} now={systemNow} />);
+    const unread = {
+      ...systemInfoPlain,
+      folders: [{ name: "home", path: "/h", exists: true, free_bytes: null, total_bytes: null }],
+    };
+    renderWithStrata(
+      <SystemPanel
+        load={ready(unread)}
+        facts={[{ term: "Pieces kept", value: "1,284" }]}
+        now={systemNow}
+      />,
+    );
     expect(screen.getByText("Installed package")).toBeInTheDocument();
     expect(screen.getByText("Not measured")).toBeInTheDocument();
     expect(screen.getByText("Pieces kept")).toBeInTheDocument();
@@ -49,7 +60,15 @@ describe("SystemPanel", () => {
     const { container, unmount } = renderWithStrata(<SystemPanel load={{ status: "loading" }} />);
     expect(container.querySelector("[aria-busy=true]")).not.toBeNull();
     unmount();
-    renderWithStrata(<SystemPanel load={{ status: "error", message: "The server could not answer (503).", retry: () => undefined }} />);
+    renderWithStrata(
+      <SystemPanel
+        load={{
+          status: "error",
+          message: "The server could not answer (503).",
+          retry: () => undefined,
+        }}
+      />,
+    );
     expect(screen.getByRole("alert")).toHaveTextContent("The server could not answer (503).");
   });
 
@@ -60,8 +79,14 @@ describe("SystemPanel", () => {
         <SystemPanel load={ready(systemInfo)} now={systemNow} headingLevel={3} />
       </section>,
     );
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["About this server"]);
-    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Server", "Folders", "Services"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "About this server",
+    ]);
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Server",
+      "Folders",
+      "Services",
+    ]);
   });
 
   it("reads the route through useSystemInfo", async () => {
@@ -70,7 +95,9 @@ describe("SystemPanel", () => {
       return <SystemPanel load={useSystemInfo()} now={systemNow} />;
     }
     renderWithStrata(<Page />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Server" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Server" })).toBeInTheDocument(),
+    );
     expect(screen.getByText("1.8.2")).toBeInTheDocument();
   });
 });
@@ -78,7 +105,9 @@ describe("SystemPanel", () => {
 describe("ScheduleTable", () => {
   it("says each job's last result as a word, with when it last ran and when it runs next", () => {
     renderWithStrata(<ScheduleTable caption="Scheduled jobs" rows={schedule} now={systemNow} />);
-    const rows = within(screen.getByRole("grid", { name: "Scheduled jobs" })).getAllByRole("row").slice(1);
+    const rows = within(screen.getByRole("grid", { name: "Scheduled jobs" }))
+      .getAllByRole("row")
+      .slice(1);
     const text = rows.map((r) => r.textContent);
     expect(text[0]).toContain("Nightly backup");
     expect(text[0]).toContain("OK");
@@ -95,6 +124,8 @@ describe("ScheduleTable", () => {
     renderWithStrata(<ScheduleTable caption="Scheduled jobs" rows={schedule} now={systemNow} />);
     expect(screen.getByRole("columnheader", { name: /Last run/ })).toHaveClass("max-sm:hidden");
     expect(screen.getByRole("columnheader", { name: /Next run/ })).toHaveClass("max-sm:hidden");
-    expect(screen.getByRole("columnheader", { name: /Last result/ })).not.toHaveClass("max-sm:hidden");
+    expect(screen.getByRole("columnheader", { name: /Last result/ })).not.toHaveClass(
+      "max-sm:hidden",
+    );
   });
 });

@@ -1,14 +1,30 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { BookViewer, Status, findPage, sayPosition, useBookUrl, viewOf, viewsOf, type BookPage } from "../../src";
+import {
+  BookViewer,
+  Status,
+  findPage,
+  sayPosition,
+  useBookUrl,
+  viewOf,
+  viewsOf,
+  type BookPage,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #238: a scanned book read page by page or as spreads.
 
 const printed = ["", "", "i", "ii", "iii", "iv", "1", "2", "3", "4"];
-const pages: BookPage[] = Array.from({ length: 10 }, (_, i) => ({ id: `p${i + 1}`, src: `/scan/${i + 1}.jpg`, label: `Scan ${i + 1}`, scan: String(i + 1), printed: printed[i] || undefined, natural: [1200, 1800] }));
+const pages: BookPage[] = Array.from({ length: 10 }, (_, i) => ({
+  id: `p${i + 1}`,
+  src: `/scan/${i + 1}.jpg`,
+  label: `Scan ${i + 1}`,
+  scan: String(i + 1),
+  printed: printed[i] || undefined,
+  natural: [1200, 1800],
+}));
 
 describe("page arithmetic", () => {
   it("opens on the first page alone on the right, then pairs 2 and 3, 4 and 5", () => {
@@ -37,13 +53,31 @@ function Book({ layout }: { layout?: "single" | "spread" }) {
   return (
     <>
       <Where />
-      <BookViewer label="Punch book" pages={pages} {...url} missing="This page could not be loaded." layout={layout} badge={(p) => (p.id === "p4" ? <Status tone="warning">Look</Status> : null)} side={(shown) => <p>Text of {shown.map((p) => p.scan).join(" and ")}</p>} sideLabel="Transcript" />
+      <BookViewer
+        label="Punch book"
+        pages={pages}
+        {...url}
+        missing="This page could not be loaded."
+        layout={layout}
+        badge={(p) => (p.id === "p4" ? <Status tone="warning">Look</Status> : null)}
+        side={(shown) => <p>Text of {shown.map((p) => p.scan).join(" and ")}</p>}
+        sideLabel="Transcript"
+      />
     </>
   );
 }
 
 beforeEach(() => {
-  window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+  window.matchMedia = ((q: string) => ({
+    matches: false,
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    onchange: null,
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
 });
 
 describe("BookViewer", () => {
@@ -53,7 +87,9 @@ describe("BookViewer", () => {
     expect(screen.getByRole("group", { name: "Scan 1" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Scan 2" })).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("Page 1 of 10");
-    expect(screen.getByRole("complementary", { name: "Transcript" })).toHaveTextContent("Text of 1");
+    expect(screen.getByRole("complementary", { name: "Transcript" })).toHaveTextContent(
+      "Text of 1",
+    );
     expect(screen.getByRole("button", { name: "Previous pages" })).toBeDisabled();
   });
 
@@ -116,7 +152,18 @@ describe("BookViewer", () => {
   it("turns a page with a click on its outer half", async () => {
     renderWithStrata(<Book />, { route: "/book?page=2" });
     const right = screen.getByRole("group", { name: "Scan 3" });
-    right.getBoundingClientRect = () => ({ left: 0, top: 0, right: 200, bottom: 300, width: 200, height: 300, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    right.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 300,
+        width: 200,
+        height: 300,
+        x: 0,
+        y: 0,
+        toJSON() {},
+      }) as DOMRect;
     const down = { pointerId: 1, button: 0, clientX: 180, clientY: 100 };
     await act(async () => {
       right.dispatchEvent(new PointerEvent("pointerdown", { ...down, bubbles: true }));

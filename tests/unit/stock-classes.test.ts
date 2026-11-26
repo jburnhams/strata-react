@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,17 +7,28 @@ import { main } from "../../src/migrate/cli";
 
 // The stock-class finder (issue #225): what strata.css would stop compiling, found in an app's source as text.
 
-const names = (source: string, file?: string) => findStockClasses(source, file).map((f) => f.className);
+const names = (source: string, file?: string) =>
+  findStockClasses(source, file).map((f) => f.className);
 
 describe("findStockClasses", () => {
   it("finds stock colours, type sizes, radii, shadows and serif in class strings, whatever the quotes", () => {
     const tsx = `<div className="bg-stone-100 text-sm rounded-xl shadow-lg font-serif" />
       <p className={cn('text-emerald-600', \`border-red-200\`)} />`;
-    expect(names(tsx)).toEqual(["bg-stone-100", "text-sm", "rounded-xl", "shadow-lg", "font-serif", "text-emerald-600", "border-red-200"]);
+    expect(names(tsx)).toEqual([
+      "bg-stone-100",
+      "text-sm",
+      "rounded-xl",
+      "shadow-lg",
+      "font-serif",
+      "text-emerald-600",
+      "border-red-200",
+    ]);
   });
 
   it("reads through variants, important marks and opacity, and says which line", () => {
-    const found = findStockClasses(`<a\n className="dark:hover:bg-zinc-900/50 !text-white md:text-2xl" />`);
+    const found = findStockClasses(
+      `<a\n className="dark:hover:bg-zinc-900/50 !text-white md:text-2xl" />`,
+    );
     expect(found.map((f) => [f.line, f.className, f.kind])).toEqual([
       [2, "dark:hover:bg-zinc-900/50", "colour"],
       [2, "text-white", "colour"],
@@ -68,7 +79,11 @@ describe("strata-stock-classes", () => {
   };
 
   it("lists each use, counts them, and exits 0 unless --fail", async () => {
-    const dir = app({ "src/a.tsx": `<p className="text-sm bg-stone-100" />`, "src/b.css": `.x { @apply shadow-lg; }`, "node_modules/p/i.tsx": `text-xs` });
+    const dir = app({
+      "src/a.tsx": `<p className="text-sm bg-stone-100" />`,
+      "src/b.css": `.x { @apply shadow-lg; }`,
+      "node_modules/p/i.tsx": `text-xs`,
+    });
     try {
       const listed = await run([join(dir, "src")]);
       expect(listed.code).toBe(0);

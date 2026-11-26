@@ -1,14 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Trash2 } from "lucide-react";
-import { Button, ContextMenu, Density, Dialog, IconButton, Input, Menu, NativeSelect, NumberField, ThemeProvider, Toggle } from "../../src";
+import {
+  Button,
+  ContextMenu,
+  Density,
+  Dialog,
+  IconButton,
+  Input,
+  Menu,
+  NativeSelect,
+  NumberField,
+  ThemeProvider,
+  Toggle,
+} from "../../src";
 
 const root = document.documentElement;
 
 describe("Density (issue #117)", () => {
   it("ThemeProvider density sets the attribute on the root and takes it off again", () => {
-    const { unmount } = render(<ThemeProvider density="compact" storageKey={null}><p>app</p></ThemeProvider>);
+    const { unmount } = render(
+      <ThemeProvider density="compact" storageKey={null}>
+        <p>app</p>
+      </ThemeProvider>,
+    );
     expect(root).toHaveAttribute("data-density", "compact");
     unmount();
     expect(root).not.toHaveAttribute("data-density");
@@ -16,10 +32,18 @@ describe("Density (issue #117)", () => {
 
   it("sets nothing when no density is chosen, and restores an attribute the page already had", () => {
     root.setAttribute("data-density", "default");
-    const { unmount } = render(<ThemeProvider storageKey={null}><p>app</p></ThemeProvider>);
+    const { unmount } = render(
+      <ThemeProvider storageKey={null}>
+        <p>app</p>
+      </ThemeProvider>,
+    );
     expect(root).toHaveAttribute("data-density", "default");
     unmount();
-    const again = render(<Density page value="compact"><p>app</p></Density>);
+    const again = render(
+      <Density page value="compact">
+        <p>app</p>
+      </Density>,
+    );
     expect(root).toHaveAttribute("data-density", "compact");
     again.unmount();
     expect(root).toHaveAttribute("data-density", "default");
@@ -46,7 +70,11 @@ describe("Density (issue #117)", () => {
       render(
         <ThemeProvider density="compact" storageKey={null}>
           <Dialog title="Export video" open />
-          <Menu label="Edit" trigger={<Button>Edit</Button>} items={[{ id: "split", label: "Split", run: () => undefined }]} />
+          <Menu
+            label="Edit"
+            trigger={<Button>Edit</Button>}
+            items={[{ id: "split", label: "Split", run: () => undefined }]}
+          />
         </ThemeProvider>,
       );
       const dialog = await screen.findByRole("dialog", { name: "Export video" });
@@ -58,7 +86,10 @@ describe("Density (issue #117)", () => {
     it("a context menu is inside the root when the page is compact", async () => {
       render(
         <ThemeProvider density="compact" storageKey={null}>
-          <ContextMenu label="Clip actions" items={[{ id: "split", label: "Split", run: () => undefined }]}>
+          <ContextMenu
+            label="Clip actions"
+            items={[{ id: "split", label: "Split", run: () => undefined }]}
+          >
             <div>Clip</div>
           </ContextMenu>
         </ThemeProvider>,
@@ -89,8 +120,12 @@ describe("one set of control sizes (issue #117)", () => {
         <Toggle label="Mute small" iconOnly icon={Trash2} size="sm" />
         <Input aria-label="Small input" size="sm" />
         <Input aria-label="Input" />
-        <NativeSelect aria-label="Small select" size="sm"><option>One</option></NativeSelect>
-        <NativeSelect aria-label="Select"><option>One</option></NativeSelect>
+        <NativeSelect aria-label="Small select" size="sm">
+          <option>One</option>
+        </NativeSelect>
+        <NativeSelect aria-label="Select">
+          <option>One</option>
+        </NativeSelect>
         <NumberField aria-label="Small number" size="sm" value={1} onChange={() => undefined} />
         <NumberField aria-label="Number" value={1} onChange={() => undefined} />
       </>,
@@ -108,8 +143,10 @@ describe("one set of control sizes (issue #117)", () => {
       screen.getByRole("combobox", { name: "Select" }),
       screen.getByRole("textbox", { name: "Number" }).parentElement!,
     ];
-    for (const el of small) expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h-sm\)/);
-    for (const el of normal) expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h\)/);
+    for (const el of small)
+      expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h-sm\)/);
+    for (const el of normal)
+      expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h\)/);
   });
 
   it("does not pass the native `size` attribute on, since `size` is a control size here", () => {

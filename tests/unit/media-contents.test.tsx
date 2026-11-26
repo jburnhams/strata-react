@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MediaContents, currentItem, type MediaContentsItem } from "../../src";
@@ -16,7 +16,11 @@ describe("MediaContents", () => {
   it("names each row for what pressing it does, with its start and length", () => {
     renderWithStrata(<MediaContents label="Chapters" items={items} onSeek={() => {}} />);
     const list = screen.getByRole("list", { name: "Chapters" });
-    expect(within(list).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+    expect(
+      within(list)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")),
+    ).toEqual([
       "Play Christmas morning, from 0:00",
       "Play Christmas dinner, from 40:12",
       "Play The evening, from 1:34:10",
@@ -26,7 +30,9 @@ describe("MediaContents", () => {
   });
 
   it("marks the item the playhead is in, and none in a gap or before it plays", () => {
-    const { rerender } = renderWithStrata(<MediaContents label="Chapters" items={items} time={3000} onSeek={() => {}} />);
+    const { rerender } = renderWithStrata(
+      <MediaContents label="Chapters" items={items} time={3000} onSeek={() => {}} />,
+    );
     const rows = () => screen.getAllByRole("listitem").map((li) => li.getAttribute("aria-current"));
     expect(rows()).toEqual([null, "time", null]);
     rerender(<MediaContents label="Chapters" items={items} time={2405} onSeek={() => {}} />);
@@ -38,7 +44,9 @@ describe("MediaContents", () => {
     const user = userEvent.setup();
     const onSeek = vi.fn();
     const onSelect = vi.fn();
-    renderWithStrata(<MediaContents label="Chapters" items={items} onSeek={onSeek} onSelect={onSelect} />);
+    renderWithStrata(
+      <MediaContents label="Chapters" items={items} onSeek={onSeek} onSelect={onSelect} />,
+    );
     await user.click(screen.getByRole("button", { name: /^Play Christmas dinner/ }));
     expect(onSeek).toHaveBeenCalledWith(2412);
     expect(onSelect).toHaveBeenCalledWith("b");

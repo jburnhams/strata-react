@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -33,7 +33,12 @@ describe("chords", () => {
   });
 
   it("matches exactly on modifiers: Undo is not Redo", () => {
-    const undo = (e: KeyboardEventInit & { key: string }) => matchesChord({ code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...e }, "Mod+Z", "other");
+    const undo = (e: KeyboardEventInit & { key: string }) =>
+      matchesChord(
+        { code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...e },
+        "Mod+Z",
+        "other",
+      );
     expect(undo(key({ key: "z", ctrlKey: true }))).toBe(true);
     expect(undo(key({ key: "Z", ctrlKey: true, shiftKey: true }))).toBe(false); // Shift held: that is Redo
     expect(undo(key({ key: "z" }))).toBe(false);
@@ -43,7 +48,9 @@ describe("chords", () => {
   it("matches Mod to Meta on macOS and Alt letters by physical key", () => {
     const base = { code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false };
     expect(matchesChord({ ...base, key: "z", metaKey: true }, "Mod+Z", "mac")).toBe(true);
-    expect(matchesChord({ ...base, key: "Ω", code: "KeyZ", altKey: true }, "Alt+Z", "mac")).toBe(true);
+    expect(matchesChord({ ...base, key: "Ω", code: "KeyZ", altKey: true }, "Alt+Z", "mac")).toBe(
+      true,
+    );
   });
 
   it("ignores Shift for a symbol key such as ?", () => {
@@ -82,7 +89,13 @@ function editor(over: Partial<Record<string, Partial<Command>>> = {}) {
   return { commands, log };
 }
 
-function Keys({ commands, platform = "other" as const }: { commands: Command[]; platform?: "mac" | "other" }) {
+function Keys({
+  commands,
+  platform = "other" as const,
+}: {
+  commands: Command[];
+  platform?: "mac" | "other";
+}) {
   useCommands(commands, { platform });
   return <input aria-label="Name" />;
 }
@@ -155,13 +168,30 @@ describe("useCommands", () => {
 });
 
 describe("one list, every surface", () => {
-  const entries = (commands: Command[]): MenuEntry[] => [commands[0], commands[1], "separator", commands[2], commands[4]];
+  const entries = (commands: Command[]): MenuEntry[] => [
+    commands[0],
+    commands[1],
+    "separator",
+    commands[2],
+    commands[4],
+  ];
 
-  function Surfaces({ commands, platform = "other" as const }: { commands: Command[]; platform?: "mac" | "other" }) {
+  function Surfaces({
+    commands,
+    platform = "other" as const,
+  }: {
+    commands: Command[];
+    platform?: "mac" | "other";
+  }) {
     useCommands(commands, { platform });
     return (
       <>
-        <Menu label="Edit" trigger={<Button>Edit</Button>} items={entries(commands)} platform={platform} />
+        <Menu
+          label="Edit"
+          trigger={<Button>Edit</Button>}
+          items={entries(commands)}
+          platform={platform}
+        />
         <CommandLegend commands={commands} platform={platform} />
       </>
     );
@@ -203,7 +233,9 @@ describe("one list, every surface", () => {
     const { commands } = editor();
     render(<Surfaces commands={commands} platform="mac" />);
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent("Command Z");
+    expect(
+      within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ }),
+    ).toHaveTextContent("Command Z");
     expect(commandShortcut(commands[1], "mac")).toBe("⇧⌘Z");
   });
 });
@@ -212,7 +244,14 @@ describe("Menu", () => {
   it("opens by keyboard, runs an item with Enter, returns focus to the trigger on Escape", async () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
-    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[0], commands[2]]} platform="other" />);
+    render(
+      <Menu
+        label="Edit"
+        trigger={<Button>Edit</Button>}
+        items={[commands[0], commands[2]]}
+        platform="other"
+      />,
+    );
     const trigger = screen.getByRole("button", { name: "Edit" });
     trigger.focus();
     await user.keyboard("{Enter}");
@@ -231,7 +270,14 @@ describe("Menu", () => {
   it("opens by pointer, supports Home, End and typeahead", async () => {
     const user = userEvent.setup();
     const { commands } = editor();
-    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[0], commands[2], commands[4]]} platform="other" />);
+    render(
+      <Menu
+        label="Edit"
+        trigger={<Button>Edit</Button>}
+        items={[commands[0], commands[2], commands[4]]}
+        platform="other"
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Edit" }));
     const menu = await screen.findByRole("menu");
     await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
@@ -246,7 +292,9 @@ describe("Menu", () => {
   it("says why an item is unavailable and does not run it", async () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
-    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[1]]} platform="other" />);
+    render(
+      <Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[1]]} platform="other" />,
+    );
     await user.click(screen.getByRole("button", { name: "Edit" }));
     const item = await screen.findByRole("menuitem", { name: /Redo/ });
     expect(item).toHaveAttribute("aria-disabled", "true");
@@ -258,7 +306,9 @@ describe("Menu", () => {
   it("marks a destructive item with an icon as well as colour", async () => {
     const user = userEvent.setup();
     const { commands } = editor();
-    render(<Menu label="Clip" trigger={<Button>Clip</Button>} items={[commands[4]]} platform="other" />);
+    render(
+      <Menu label="Clip" trigger={<Button>Clip</Button>} items={[commands[4]]} platform="other" />,
+    );
     await user.click(screen.getByRole("button", { name: "Clip" }));
     const item = await screen.findByRole("menuitem", { name: /Delete clip/ });
     expect(item.querySelector("svg")).not.toBeNull();
@@ -268,14 +318,22 @@ describe("Menu", () => {
   it("draws groups with a heading, separators, and checkable items that report their state", async () => {
     const user = userEvent.setup();
     const toggled: string[] = [];
-    const view = (id: string, label: string, checked: boolean): Command => ({ id, label, checked, run: () => void toggled.push(id) });
+    const view = (id: string, label: string, checked: boolean): Command => ({
+      id,
+      label,
+      checked,
+      run: () => void toggled.push(id),
+    });
     render(
       <Menu
         label="View"
         trigger={<Button>View</Button>}
         platform="other"
         items={[
-          { group: "Overlays", items: [view("grid", "Show grid", true), view("safe", "Show safe areas", false)] },
+          {
+            group: "Overlays",
+            items: [view("grid", "Show grid", true), view("safe", "Show safe areas", false)],
+          },
           "separator",
           { id: "fit", label: "Fit to window", run: () => undefined },
         ]}
@@ -298,7 +356,12 @@ describe("Menu", () => {
         label="File"
         trigger={<Button>File</Button>}
         platform="other"
-        items={[{ submenu: "Export", items: [{ id: "mp4", label: "As video", run: () => void ran.push("mp4") }] }]}
+        items={[
+          {
+            submenu: "Export",
+            items: [{ id: "mp4", label: "As video", run: () => void ran.push("mp4") }],
+          },
+        ]}
       />,
     );
     await user.click(screen.getByRole("button", { name: "File" }));
@@ -315,7 +378,9 @@ describe("ContextMenu", () => {
   function Clip({ commands }: { commands: Command[] }) {
     return (
       <ContextMenu label="Clip actions" items={[commands[2], commands[4]]} platform="other">
-        <div role="button" tabIndex={0} aria-label="Clip run.mp4">run.mp4</div>
+        <div role="button" tabIndex={0} aria-label="Clip run.mp4">
+          run.mp4
+        </div>
       </ContextMenu>
     );
   }
@@ -324,7 +389,10 @@ describe("ContextMenu", () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
     render(<Clip commands={commands} />);
-    await user.pointer({ keys: "[MouseRight]", target: screen.getByRole("button", { name: "Clip run.mp4" }) });
+    await user.pointer({
+      keys: "[MouseRight]",
+      target: screen.getByRole("button", { name: "Clip run.mp4" }),
+    });
     const menu = await screen.findByRole("menu", { name: "Clip actions" });
     await user.click(within(menu).getByRole("menuitem", { name: /Split clip/ }));
     expect(log).toEqual(["split"]);
@@ -377,7 +445,9 @@ describe("CommandMenu", () => {
     const { commands } = editor();
     render(<CommandMenu commands={commands} open platform="other" />);
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("menuitem", { name: /Redo/ })).toHaveTextContent("Nothing to redo");
+    expect(within(dialog).getByRole("menuitem", { name: /Redo/ })).toHaveTextContent(
+      "Nothing to redo",
+    );
     await user.type(within(dialog).getByRole("searchbox"), "zzzz");
     expect(await within(dialog).findByText("No command matches.")).toBeInTheDocument();
   });
@@ -387,7 +457,15 @@ describe("CommandMenu", () => {
     const { commands } = editor();
     function Harness() {
       const [open, setOpen] = useState(true);
-      return <CommandMenu commands={commands} open={open} onOpenChange={setOpen} shortcut={null} platform="other" />;
+      return (
+        <CommandMenu
+          commands={commands}
+          open={open}
+          onOpenChange={setOpen}
+          shortcut={null}
+          platform="other"
+        />
+      );
     }
     render(<Harness />);
     await screen.findByRole("dialog");

@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { gainToVolume, loudnessOf, matchGains } from "../../src";
 
-const sine = (amplitude: number, n = 4800) => Float32Array.from({ length: n }, (_, i) => amplitude * Math.sin((2 * Math.PI * 440 * i) / 48000));
+const sine = (amplitude: number, n = 4800) =>
+  Float32Array.from({ length: n }, (_, i) => amplitude * Math.sin((2 * Math.PI * 440 * i) / 48000));
 
 describe("loudness", () => {
   it("measures RMS and peak in dB relative to full scale", () => {
@@ -18,7 +19,10 @@ describe("loudness", () => {
   it("lowers the louder of two clips to the quieter, and never raises one", () => {
     expect(matchGains({ rms: -20, peak: -10 }, { rms: -23, peak: -9 })).toEqual({ a: -3, b: 0 });
     expect(matchGains({ rms: -23, peak: -10 }, { rms: -20, peak: -9 })).toEqual({ a: 0, b: -3 });
-    expect(matchGains({ rms: -20, peak: -10 }, { rms: -Infinity, peak: -Infinity })).toEqual({ a: 0, b: 0 });
+    expect(matchGains({ rms: -20, peak: -10 }, { rms: -Infinity, peak: -Infinity })).toEqual({
+      a: 0,
+      b: 0,
+    });
   });
 
   it("turns decibels into a media element's volume, capped at 1", () => {

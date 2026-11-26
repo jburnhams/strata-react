@@ -1,9 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vite-plus/test";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { AsyncButton, JobStatus, StrataToastRegion, jobProgressText, toast, useJobAction, type Job } from "../../src";
+import {
+  AsyncButton,
+  JobStatus,
+  StrataToastRegion,
+  jobProgressText,
+  toast,
+  useJobAction,
+  type Job,
+} from "../../src";
 import { resetToastWarnings } from "../../src/components/toast";
 import { renderWithStrata } from "../../src/testing";
 
@@ -17,7 +25,15 @@ function fakeJob(status: Status, poll = () => {}): Job<Status> {
   return { status: "ready", data: status, running: status.running, poll } as Job<Status>;
 }
 
-function Row({ status, start, poll }: { status: Status; start: () => Promise<{ id: string }>; poll?: () => void }) {
+function Row({
+  status,
+  start,
+  poll,
+}: {
+  status: Status;
+  start: () => Promise<{ id: string }>;
+  poll?: () => void;
+}) {
   // The same object for the same status, as TanStack Query's structural sharing gives `useJob`.
   const key = JSON.stringify(status);
   const stable = React.useMemo(() => status, [key]);
@@ -31,7 +47,14 @@ function Row({ status, start, poll }: { status: Status; start: () => Promise<{ i
   return (
     <>
       <p aria-label="Path">{useLocation().pathname}</p>
-      <AsyncButton size="sm" variant="ghost" phase={action.phase} labels={labels} error={action.error} onPress={() => void action.run()} />
+      <AsyncButton
+        size="sm"
+        variant="ghost"
+        phase={action.phase}
+        labels={labels}
+        error={action.error}
+        onPress={() => void action.run()}
+      />
     </>
   );
 }
@@ -88,11 +111,21 @@ describe("toast with no region (#249)", () => {
 
 describe("jobProgressText and JobStatus progress (#250)", () => {
   it("says how many are done, how many remain and what it is on", () => {
-    expect(jobProgressText({ done: 3, total: 9, current: "Night Sky" })).toBe("3 of 9 done, 6 remaining · Night Sky");
+    expect(jobProgressText({ done: 3, total: 9, current: "Night Sky" })).toBe(
+      "3 of 9 done, 6 remaining · Night Sky",
+    );
     expect(jobProgressText({ done: 12, total: 9 })).toBe("9 of 9 done, 0 remaining");
   });
   it("draws the bar and the sentence from one object", () => {
-    renderWithStrata(<JobStatus label="Scan" running words={{ running: "Scanning", finished: "Finished", failed: "Failed" }} summary="Scanning the roll." progress={{ done: 3, total: 9, current: "Frame 4" }} />);
+    renderWithStrata(
+      <JobStatus
+        label="Scan"
+        running
+        words={{ running: "Scanning", finished: "Finished", failed: "Failed" }}
+        summary="Scanning the roll."
+        progress={{ done: 3, total: 9, current: "Frame 4" }}
+      />,
+    );
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
     expect(screen.getByText("3 of 9 done, 6 remaining · Frame 4")).toBeInTheDocument();
   });

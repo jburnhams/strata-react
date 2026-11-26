@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { CursorScope, SeekBar, useSharedCursor } from "../../src";
 import { renderWithStrata } from "../../src/testing";
@@ -45,7 +45,12 @@ describe("SeekBar in a CursorScope", () => {
     const reads: { at: number | null }[] = [];
     renderWithStrata(
       <CursorScope>
-        <SeekBar time={10} duration={60} onSeek={() => {}} cursor={{ toCursor: (t) => t * 100, fromCursor: (m) => m / 100 }} />
+        <SeekBar
+          time={10}
+          duration={60}
+          onSeek={() => {}}
+          cursor={{ toCursor: (t) => t * 100, fromCursor: (m) => m / 100 }}
+        />
         <Probe onRead={(r) => reads.push(r)} />
       </CursorScope>,
     );
@@ -81,7 +86,17 @@ describe("SeekBar in a CursorScope", () => {
       </CursorScope>,
     );
     const bar = track(container);
-    bar.getBoundingClientRect = () => ({ left: 0, width: 200, top: 0, height: 10, right: 200, bottom: 10, x: 0, y: 0, toJSON: () => ({}) });
+    bar.getBoundingClientRect = () => ({
+      left: 0,
+      width: 200,
+      top: 0,
+      height: 10,
+      right: 200,
+      bottom: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
     fireEvent.pointerMove(bar, { clientX: 100 });
     expect(reads.at(-1)).toEqual({ at: 30, owner: "pointer" });
     fireEvent.pointerLeave(bar);
@@ -99,8 +114,27 @@ describe("review fixes", () => {
   it("renders on the server: a seek bar and a chart without a scope need no browser store", async () => {
     const { renderToString } = await import("react-dom/server");
     const { LineChart } = await import("../../src");
-    expect(() => renderToString(<SeekBar time={1} duration={10} onSeek={() => {}} cursor />)).not.toThrow();
-    expect(() => renderToString(<CursorScope><LineChart label="L" series={[{ x: 0, y: 1 }, { x: 1, y: 2 }]} seriesLabel="L" formatX={String} formatY={String} xTicks={[0, 1]} cursor /></CursorScope>)).not.toThrow();
+    expect(() =>
+      renderToString(<SeekBar time={1} duration={10} onSeek={() => {}} cursor />),
+    ).not.toThrow();
+    expect(() =>
+      renderToString(
+        <CursorScope>
+          <LineChart
+            label="L"
+            series={[
+              { x: 0, y: 1 },
+              { x: 1, y: 2 },
+            ]}
+            seriesLabel="L"
+            formatX={String}
+            formatY={String}
+            xTicks={[0, 1]}
+            cursor
+          />
+        </CursorScope>,
+      ),
+    ).not.toThrow();
   });
   it("lets go of the pointer when a bar that was being pointed at unmounts", () => {
     const reads: { at: number | null; owner: string | null }[] = [];

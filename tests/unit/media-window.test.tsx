@@ -1,8 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import { MediaGroup, MediaPlayer, PlayWindowButton, SPEECH_RATES, useMediaElement, type MediaWindow } from "../../src";
+import {
+  MediaGroup,
+  MediaPlayer,
+  PlayWindowButton,
+  SPEECH_RATES,
+  useMediaElement,
+  type MediaWindow,
+} from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Issue #180: a window of a file, one player at a time, speech at reduced speed. jsdom has no
@@ -13,13 +20,25 @@ beforeEach(() => void (media = installFakeMedia()));
 afterEach(() => media.uninstall());
 const audio = (c: HTMLElement, i = 0) => c.querySelectorAll("audio")[i] as HTMLAudioElement;
 
-function Probe({ window: w, loop, onEnd, onFrame }: { window?: MediaWindow | null; loop?: boolean; onEnd?: () => void; onFrame?: (t: number) => void }) {
+function Probe({
+  window: w,
+  loop,
+  onEnd,
+  onFrame,
+}: {
+  window?: MediaWindow | null;
+  loop?: boolean;
+  onEnd?: () => void;
+  onFrame?: (t: number) => void;
+}) {
   const ref = React.useRef<HTMLAudioElement>(null);
   const m = useMediaElement(ref, { window: w, loop, onWindowEnd: onEnd, onTimeUpdate: onFrame });
   return (
     <div>
       <audio ref={ref} src="/a.mp3" />
-      <output aria-label="state">{JSON.stringify({ playing: m.playing, time: m.time, ended: m.ended })}</output>
+      <output aria-label="state">
+        {JSON.stringify({ playing: m.playing, time: m.time, ended: m.ended })}
+      </output>
       <button onClick={m.toggle}>toggle</button>
       <button onClick={() => m.setRate(0.75)}>slow</button>
       <button onClick={() => void m.playWindow({ start: 20, end: 23 })}>phrase</button>
@@ -87,7 +106,9 @@ describe("a window on the hook", () => {
     vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
     try {
       const frames: number[] = [];
-      const { container } = render(<Probe window={{ start: 12, end: 15 }} onFrame={(t) => frames.push(t)} />);
+      const { container } = render(
+        <Probe window={{ start: 12, end: 15 }} onFrame={(t) => frames.push(t)} />,
+      );
       act(() => media.loaded(audio(container), 120));
       await act(async () => void audio(container).play());
       // The element reaches the end without a timeupdate (they come about four times a second).
@@ -114,7 +135,9 @@ describe("a window on the hook", () => {
 describe("MediaPlayer with a window", () => {
   it("shows the window as the bar and announces it while it plays", async () => {
     const user = userEvent.setup();
-    const { container } = render(<MediaPlayer label="Phrase" src="/a.mp3" window={{ start: 12, end: 15 }} />);
+    const { container } = render(
+      <MediaPlayer label="Phrase" src="/a.mp3" window={{ start: 12, end: 15 }} />,
+    );
     act(() => media.loaded(audio(container), 120));
     expect(screen.getByText(/0:12 to 0:15/)).toBeInTheDocument();
     expect(screen.getByRole("slider", { name: "Seek in Phrase" })).toHaveAttribute("max", "3");
@@ -123,7 +146,9 @@ describe("MediaPlayer with a window", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Playing 0:12 to 0:15");
   });
   it("with showFull draws the whole file with the window marked", () => {
-    const { container } = render(<MediaPlayer label="Phrase" src="/a.mp3" window={{ start: 12, end: 15 }} showFull />);
+    const { container } = render(
+      <MediaPlayer label="Phrase" src="/a.mp3" window={{ start: 12, end: 15 }} showFull />,
+    );
     act(() => media.loaded(audio(container), 120));
     expect(screen.getByRole("slider", { name: "Seek in Phrase" })).toHaveAttribute("max", "120");
   });
@@ -164,7 +189,12 @@ describe("groups", () => {
     expect(a.paused).toBe(false); // b is gone from the group
   });
   it("players in no group play together as before", async () => {
-    const { container } = render(<><MediaPlayer label="One" src="/1.mp3" controls="strata" /><MediaPlayer label="Two" src="/2.mp3" controls="strata" /></>);
+    const { container } = render(
+      <>
+        <MediaPlayer label="One" src="/1.mp3" controls="strata" />
+        <MediaPlayer label="Two" src="/2.mp3" controls="strata" />
+      </>,
+    );
     await act(async () => void audio(container, 0).play());
     await act(async () => void audio(container, 1).play());
     expect(audio(container, 0).paused).toBe(false);

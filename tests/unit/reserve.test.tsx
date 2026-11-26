@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import { createReserve, useReserve } from "../../src";
 
@@ -7,8 +7,17 @@ const round = (id: string, version = 1): Round => ({ id, version });
 
 afterEach(() => window.localStorage.clear());
 
-function make(fetch: (key: string, n: number) => Promise<Round[]>, extra: { size?: number; storage?: Storage | null } = {}) {
-  return createReserve<Round, string>({ name: "t", size: 4, fetch, sameMake: (a, b) => a.version === b.version, ...extra });
+function make(
+  fetch: (key: string, n: number) => Promise<Round[]>,
+  extra: { size?: number; storage?: Storage | null } = {},
+) {
+  return createReserve<Round, string>({
+    name: "t",
+    size: 4,
+    fetch,
+    sameMake: (a, b) => a.version === b.version,
+    ...extra,
+  });
 }
 
 describe("createReserve (#319)", () => {
@@ -30,7 +39,9 @@ describe("createReserve (#319)", () => {
   });
 
   it("drops kept items made differently from the fresh one, and tops up from the server in one request", async () => {
-    const fetch = vi.fn(async (_key: string, n: number) => Array.from({ length: n }, (_, i) => round(`new${i}`, 2)));
+    const fetch = vi.fn(async (_key: string, n: number) =>
+      Array.from({ length: n }, (_, i) => round(`new${i}`, 2)),
+    );
     const reserve = make(fetch);
     reserve.seed("a", [round("old1", 1), round("old2", 2), round("old3", 1)]);
     await reserve.refresh("a", round("fresh", 2));
@@ -79,7 +90,10 @@ describe("createReserve (#319)", () => {
   });
 
   it("keeps what it has when the top-up fails, and tries again at the next fresh item", async () => {
-    const fetch = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce([round("n")]);
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce([round("n")]);
     const reserve = make(fetch);
     reserve.seed("a", [round("1")]);
     await expect(reserve.refresh("a", round("f"))).resolves.toBeUndefined();
@@ -90,7 +104,10 @@ describe("createReserve (#319)", () => {
 
   it("never holds more than size", async () => {
     const reserve = make(async () => Array.from({ length: 9 }, (_, i) => round(`n${i}`)));
-    reserve.seed("a", Array.from({ length: 9 }, (_, i) => round(`s${i}`)));
+    reserve.seed(
+      "a",
+      Array.from({ length: 9 }, (_, i) => round(`s${i}`)),
+    );
     expect(reserve.kept("a")).toBe(4);
     reserve.clear("a");
     await reserve.refresh("a", round("f"));
@@ -98,7 +115,14 @@ describe("createReserve (#319)", () => {
   });
 
   it("keeps nothing where storage is refused, and says so", async () => {
-    const refusing = { ...window.localStorage, getItem: () => null, setItem: () => { throw new Error("full"); }, removeItem: () => {} } as unknown as Storage;
+    const refusing = {
+      ...window.localStorage,
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("full");
+      },
+      removeItem: () => {},
+    } as unknown as Storage;
     const reserve = make(async () => [round("n")], { storage: refusing });
     reserve.seed("a", [round("1")]);
     expect(reserve.persisted).toBe(false);
@@ -131,7 +155,10 @@ describe("createReserve (#319)", () => {
     act(() => void reserve.take("a"));
     expect(screen.getByText("1 kept for offline")).toBeInTheDocument();
     act(() => {
-      window.localStorage.setItem("strata:reserve:t:a", JSON.stringify([round("1"), round("2"), round("3")]));
+      window.localStorage.setItem(
+        "strata:reserve:t:a",
+        JSON.stringify([round("1"), round("2"), round("3")]),
+      );
       window.dispatchEvent(new StorageEvent("storage", { key: "strata:reserve:t:a" }));
     });
     expect(screen.getByText("3 kept for offline")).toBeInTheDocument();

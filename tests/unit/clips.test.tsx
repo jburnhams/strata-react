@@ -1,9 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { ClipsProvider, SayAgain, clipsQueryKey, useClips, useSayOnShow, createApi } from "../../src";
+import {
+  ClipsProvider,
+  SayAgain,
+  clipsQueryKey,
+  useClips,
+  useSayOnShow,
+  createApi,
+} from "../../src";
 import { installFakeSpeech, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 
@@ -11,7 +18,12 @@ const list = { "Which one is the cat?": "/clips/cat.mp3", "The sound": "/clips/s
 let reads = 0;
 function serve(answer: () => Response = () => HttpResponse.json(list)) {
   reads = 0;
-  server.use(http.get("*/api/clips", () => { reads++; return answer(); }));
+  server.use(
+    http.get("*/api/clips", () => {
+      reads++;
+      return answer();
+    }),
+  );
 }
 const api = createApi();
 const load = () => api.get<Record<string, string>>("/api/clips");
@@ -57,7 +69,11 @@ describe("ClipsProvider (#318)", () => {
       );
     }
     renderWithStrata(
-      <ClipsProvider load={load} split={(t) => t.split("|")} describe={(line) => (line === "/m/" ? "the sound m" : undefined)}>
+      <ClipsProvider
+        load={load}
+        split={(t) => t.split("|")}
+        describe={(line) => (line === "/m/" ? "the sound m" : undefined)}
+      >
         <Probe />
       </ClipsProvider>,
     );
@@ -73,9 +89,18 @@ describe("ClipsProvider (#318)", () => {
   it("holds a prompt spoken on show until the list has arrived, so the first one is a clip too", async () => {
     let release: () => void = () => {};
     const gate = new Promise<void>((r) => (release = r));
-    server.use(http.get("*/api/clips", async () => { await gate; return HttpResponse.json(list); }));
+    server.use(
+      http.get("*/api/clips", async () => {
+        await gate;
+        return HttpResponse.json(list);
+      }),
+    );
     speech = installFakeSpeech();
-    renderWithStrata(<ClipsProvider load={load}><Prompt text="Which one is the cat?" /></ClipsProvider>);
+    renderWithStrata(
+      <ClipsProvider load={load}>
+        <Prompt text="Which one is the cat?" />
+      </ClipsProvider>,
+    );
     expect(screen.getByText("waiting")).toBeInTheDocument();
     expect(speech.said).toHaveLength(0);
     release();
@@ -86,7 +111,11 @@ describe("ClipsProvider (#318)", () => {
   it("is ready when the list failed, and the browser's voice says the prompt", async () => {
     serve(() => HttpResponse.json({ detail: "down" }, { status: 400 }));
     speech = installFakeSpeech();
-    renderWithStrata(<ClipsProvider load={load}><Prompt text="Which one is the cat?" /></ClipsProvider>);
+    renderWithStrata(
+      <ClipsProvider load={load}>
+        <Prompt text="Which one is the cat?" />
+      </ClipsProvider>,
+    );
     await screen.findByText("ready");
     expect(speech.texts()).toEqual(["Which one is the cat?"]);
   });
@@ -95,7 +124,11 @@ describe("ClipsProvider (#318)", () => {
     speech = installFakeSpeech();
     onlineManager.setOnline(false);
     try {
-      renderWithStrata(<ClipsProvider load={() => Promise.reject(new Error("offline"))}><Prompt text="Which one is the cat?" /></ClipsProvider>);
+      renderWithStrata(
+        <ClipsProvider load={() => Promise.reject(new Error("offline"))}>
+          <Prompt text="Which one is the cat?" />
+        </ClipsProvider>,
+      );
       await screen.findByText("ready", undefined, { timeout: 4000 });
       expect(speech.texts()).toEqual(["Which one is the cat?"]);
     } finally {
@@ -106,11 +139,23 @@ describe("ClipsProvider (#318)", () => {
   it("says a prompt once, not again when the provider is given new functions on each render", async () => {
     serve();
     speech = installFakeSpeech();
-    const { rerender } = renderWithStrata(<ClipsProvider load={load} split={(t) => [t]}><Prompt text="The sound" /></ClipsProvider>);
+    const { rerender } = renderWithStrata(
+      <ClipsProvider load={load} split={(t) => [t]}>
+        <Prompt text="The sound" />
+      </ClipsProvider>,
+    );
     await screen.findByText("ready");
     await waitFor(() => expect(speech.clips()).toHaveLength(1));
-    rerender(<ClipsProvider load={load} split={(t) => [t]}><Prompt text="The sound" /></ClipsProvider>);
-    rerender(<ClipsProvider load={load} split={(t) => [t]}><Prompt text="Which one is the cat?" /></ClipsProvider>);
+    rerender(
+      <ClipsProvider load={load} split={(t) => [t]}>
+        <Prompt text="The sound" />
+      </ClipsProvider>,
+    );
+    rerender(
+      <ClipsProvider load={load} split={(t) => [t]}>
+        <Prompt text="Which one is the cat?" />
+      </ClipsProvider>,
+    );
     await waitFor(() => expect(speech.clips()).toEqual(["/clips/sound.mp3", "/clips/cat.mp3"]));
   });
 
@@ -118,9 +163,18 @@ describe("ClipsProvider (#318)", () => {
     serve();
     function Keep() {
       const qc = useQueryClient();
-      return <button onClick={() => void qc.invalidateQueries({ queryKey: clipsQueryKey })}>Recording kept</button>;
+      return (
+        <button onClick={() => void qc.invalidateQueries({ queryKey: clipsQueryKey })}>
+          Recording kept
+        </button>
+      );
     }
-    renderWithStrata(<ClipsProvider load={load}><Keep /><Prompt text="x" /></ClipsProvider>);
+    renderWithStrata(
+      <ClipsProvider load={load}>
+        <Keep />
+        <Prompt text="x" />
+      </ClipsProvider>,
+    );
     await screen.findByText("ready");
     expect(reads).toBe(1);
     await userEvent.setup().click(screen.getByRole("button", { name: "Recording kept" }));
@@ -133,7 +187,12 @@ describe("ClipsProvider (#318)", () => {
       useSayOnShow("Hej", { muted: true });
       return null;
     }
-    const { unmount } = render(<><Prompt text="Hej" /><Muted /></>);
+    const { unmount } = render(
+      <>
+        <Prompt text="Hej" />
+        <Muted />
+      </>,
+    );
     expect(screen.getByText("ready")).toBeInTheDocument();
     expect(speech.texts()).toEqual(["Hej"]);
     unmount();

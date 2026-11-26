@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -23,11 +32,45 @@ describe("package exports", () => {
 
   it("exports the components and helpers from the ESM build", async () => {
     const mod = await import(pathToFileURL(join(root, "dist/index.js")).href);
-    for (const name of ["Button", "IconButton", "AsyncButton", "DataView", "DataTable", "VirtualList", "InfiniteList", "LineChart", "Meter", "CompositionBar", "LinkCard", "LinkCardList", "AppShell", "Tabs", "Done", "ThemeProvider", "useColorScheme", "ColorSchemeChoice", "colorSchemeScript", "useLoad", "useInfiniteLoad", "toLoad", "staleOf", "StaleNotice", "fetchJson", "cn", "format"]) {
+    for (const name of [
+      "Button",
+      "IconButton",
+      "AsyncButton",
+      "DataView",
+      "DataTable",
+      "VirtualList",
+      "InfiniteList",
+      "LineChart",
+      "Meter",
+      "CompositionBar",
+      "LinkCard",
+      "LinkCardList",
+      "AppShell",
+      "Tabs",
+      "Done",
+      "ThemeProvider",
+      "useColorScheme",
+      "ColorSchemeChoice",
+      "colorSchemeScript",
+      "useLoad",
+      "useInfiniteLoad",
+      "toLoad",
+      "staleOf",
+      "StaleNotice",
+      "fetchJson",
+      "cn",
+      "format",
+    ]) {
       expect(mod[name], name).toBeDefined();
     }
     const testing = await import(pathToFileURL(join(root, "dist/testing.js")).href);
-    for (const name of ["renderWithStrata", "renderRoutes", "createTestQueryClient", "installLayoutShims", "installFakeIntersectionObserver"]) {
+    for (const name of [
+      "renderWithStrata",
+      "renderRoutes",
+      "createTestQueryClient",
+      "installLayoutShims",
+      "installFakeIntersectionObserver",
+    ]) {
       expect(testing[name], name).toBeTypeOf("function");
     }
   });
@@ -37,7 +80,13 @@ describe("package exports", () => {
       .filter((f) => f.endsWith(".js"))
       .map((f) => readFileSync(join(root, "dist", f), "utf8"))
       .join("\n");
-    for (const dep of ["react", "react-router", "@tanstack/react-query", "@tanstack/react-table", "react-aria-components"]) {
+    for (const dep of [
+      "react",
+      "react-router",
+      "@tanstack/react-query",
+      "@tanstack/react-table",
+      "react-aria-components",
+    ]) {
       expect(js).toMatch(new RegExp(`from "${dep.replace("/", "\\/")}"`));
     }
     expect(js).not.toContain("__SECRET_INTERNALS");
@@ -62,12 +111,15 @@ describe("package exports", () => {
 // stay optional for an app that never imports strata-react/testing or strata-react/visual.
 describe("peer contract", () => {
   const dist = join(root, "dist");
-  const optional = new Set(Object.keys(pkg.peerDependenciesMeta ?? {}).filter((p) => pkg.peerDependenciesMeta[p].optional));
+  const optional = new Set(
+    Object.keys(pkg.peerDependenciesMeta ?? {}).filter((p) => pkg.peerDependenciesMeta[p].optional),
+  );
   const required = new Set(Object.keys(pkg.peerDependencies).filter((p) => !optional.has(p)));
   const deps = new Set(Object.keys(pkg.dependencies));
   // A specifier has no spaces, so a string that only ends in "from" ("Play from", FilmStrip's verb) is not read as one.
   const specifier = /(?:\bfrom|\bimport)\s*\(?\s*"([^"\s]+)"/g;
-  const packageOf = (id: string) => (id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
+  const packageOf = (id: string) =>
+    id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0];
 
   function packagesReached(entry: string) {
     const seen = new Set<string>();
@@ -91,10 +143,12 @@ describe("peer contract", () => {
 
   it("lets the main entry reach only dependencies and required peers", () => {
     const reached = packagesReached("index.js");
-    for (const p of reached) expect(deps.has(p) || required.has(p), `strata-react imports ${p}`).toBe(true);
+    for (const p of reached)
+      expect(deps.has(p) || required.has(p), `strata-react imports ${p}`).toBe(true);
     // The router and the query client are imported by the barrel itself, which is why they are
     // required peers and not optional ones (react-dom and tailwindcss are the app's, not imported).
-    for (const p of ["react", "react-router", "@tanstack/react-query"]) expect(reached.has(p), p).toBe(true);
+    for (const p of ["react", "react-router", "@tanstack/react-query"])
+      expect(reached.has(p), p).toBe(true);
   });
 
   it("declares every package any entry imports", () => {
@@ -109,9 +163,16 @@ describe("peer contract", () => {
     const reached = (key: string) => packagesReached(entries.find(([k]) => k === key)![1]);
     expect([...reached("./map")].filter((p) => optional.has(p))).toEqual(["leaflet"]);
     expect([...reached("./hls")].filter((p) => optional.has(p))).toEqual(["hls.js"]);
-    expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual(["@testing-library/react"]);
-    expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual(["msw", "playwright"]);
-    expect([...reached("./api-types")].filter((p) => optional.has(p))).toEqual(["openapi-typescript"]);
+    expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual([
+      "@testing-library/react",
+    ]);
+    expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual([
+      "msw",
+      "playwright",
+    ]);
+    expect([...reached("./api-types")].filter((p) => optional.has(p))).toEqual([
+      "openapi-typescript",
+    ]);
   });
 });
 
@@ -121,10 +182,19 @@ describe("strata.css in an app", () => {
     const app = mkdtempSync(join(tmpdir(), "strata-app-"));
     mkdirSync(join(app, "node_modules"));
     symlinkSync(root, join(app, "node_modules/strata-react"), "dir");
-    for (const dep of ["tailwindcss"]) symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
+    for (const dep of ["tailwindcss"])
+      symlinkSync(join(root, "node_modules", dep), join(app, "node_modules", dep), "dir");
     // An app's own palette (what a product built before the default look brings), used with the bare contract.
-    writeFileSync(join(app, "theme.css"), ownTheme ? readFileSync(join(root, "tests/integration/fixtures/own-theme.generated.css"), "utf8") : "");
-    writeFileSync(join(app, "page.tsx"), `<div className="bg-indigo-500 text-sm rounded-xl shadow-lg grid gap-4 bg-primary" />`);
+    writeFileSync(
+      join(app, "theme.css"),
+      ownTheme
+        ? readFileSync(join(root, "tests/integration/fixtures/own-theme.generated.css"), "utf8")
+        : "",
+    );
+    writeFileSync(
+      join(app, "page.tsx"),
+      `<div className="bg-indigo-500 text-sm rounded-xl shadow-lg grid gap-4 bg-primary" />`,
+    );
     const input = `@import "tailwindcss";\n@import "strata-react/${sheet}";\n@import "./theme.css";\n@source "./page.tsx";\n${own}`;
     try {
       const compiler = await compile(input, { base: app, onDependency: () => undefined });
@@ -137,7 +207,16 @@ describe("strata.css in an app", () => {
 
   it("generates the classes the built components use", async () => {
     const css = await compileApp();
-    for (const cls of [".type-label", ".rounded-control", ".bg-primary", ".border-input", ".bg-danger-subtle", ".transition-state", ".press", ".h-\\(--control-h\\)"]) {
+    for (const cls of [
+      ".type-label",
+      ".rounded-control",
+      ".bg-primary",
+      ".border-input",
+      ".bg-danger-subtle",
+      ".transition-state",
+      ".press",
+      ".h-\\(--control-h\\)",
+    ]) {
       expect(css, cls).toContain(cls);
     }
   });
@@ -148,7 +227,12 @@ describe("strata.css in an app", () => {
     expect(css).toMatch(/--font-mono:\s*"JetBrains Mono Variable"/);
     expect(css).toContain("Instrument Sans Variable");
     expect(css).not.toContain("Geist Variable");
-    for (const role of ["--radius-control: 6px;", "--radius-surface: 10px;", "--radius-overlay: 14px;", "--title-stretch: 85%;"]) {
+    for (const role of [
+      "--radius-control: 6px;",
+      "--radius-surface: 10px;",
+      "--radius-overlay: 14px;",
+      "--title-stretch: 85%;",
+    ]) {
       expect(css, role).toContain(role);
     }
     expect(css).toMatch(/\.bg-primary\s*{[^}]*var\(--primary\)/);
@@ -156,7 +240,10 @@ describe("strata.css in an app", () => {
   });
 
   it("lets an app override any part of the default look in a later block, or leave it with strata.bare.css", async () => {
-    const own = await compileApp("strata.css", `@theme { --radius-control: 2px; --font-sans: "Source Sans 3 Variable", sans-serif; }\n:root { --primary: red; }\n`);
+    const own = await compileApp(
+      "strata.css",
+      `@theme { --radius-control: 2px; --font-sans: "Source Sans 3 Variable", sans-serif; }\n:root { --primary: red; }\n`,
+    );
     expect(own).toContain("--radius-control: 2px;");
     expect(own).not.toContain("--radius-control: 6px;");
     expect(own).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
@@ -165,15 +252,25 @@ describe("strata.css in an app", () => {
     const bare = await compileApp("strata.bare.css");
     expect(bare).toContain("--radius-control: 4px;");
     expect(bare).toContain("--radius-surface: 6px;");
-    expect(bare).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/);
+    expect(bare).toMatch(
+      /--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/,
+    );
     expect(bare).not.toContain("Instrument Sans");
-    const bareOwn = await compileApp("strata.bare.css", `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`);
+    const bareOwn = await compileApp(
+      "strata.bare.css",
+      `@theme { --font-sans: "Source Sans 3 Variable", sans-serif; }\n`,
+    );
     expect(bareOwn).toMatch(/--font-sans:\s*"Source Sans 3 Variable",\s*sans-serif/);
     expect(bareOwn).not.toMatch(/--font-sans:\s*"Geist Variable"/);
   });
 
   it("brings the reading serif only when reading.css is imported", async () => {
-    expect(await compileApp("strata.css", `@import "strata-react/reading.css";\n@source inline("font-reading");\n`)).toContain("Source Serif 4 Variable");
+    expect(
+      await compileApp(
+        "strata.css",
+        `@import "strata-react/reading.css";\n@source inline("font-reading");\n`,
+      ),
+    ).toContain("Source Serif 4 Variable");
     expect(await compileApp("strata.css")).not.toContain("Source Serif 4");
   });
 
@@ -183,7 +280,8 @@ describe("strata.css in an app", () => {
     expect(css).toContain("line-height: var(--type-body-leading, 1.5rem)");
     expect(css).toContain("font-weight: var(--type-heading-weight, 600)");
     expect(css).toContain("font-size: var(--type-caption-size, 0.75rem)");
-    for (const role of ["--control-px: 1rem", "--control-px-sm: 0.75rem", "--control-icon: 1rem"]) expect(css, role).toContain(role);
+    for (const role of ["--control-px: 1rem", "--control-px-sm: 0.75rem", "--control-icon: 1rem"])
+      expect(css, role).toContain(role);
     expect(css).toContain(".px-\\(--control-px\\)");
     expect(css).toContain(".px-\\(--control-px-sm\\)");
   });
@@ -192,11 +290,22 @@ describe("strata.css in an app", () => {
   it("keeps the stock classes beside Strata's roles in migration mode, and clears them in normal mode", async () => {
     const own = `.card { @apply bg-stone-100 text-sm rounded-xl shadow-lg; }\n`;
     const migrating = await compileApp("strata.migrate.css", own);
-    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg", ".card"]) expect(migrating, cls).toContain(cls);
-    for (const cls of [".type-label", ".rounded-control", ".bg-primary", ".border-input", ".transition-state", ".press"]) expect(migrating, cls).toContain(cls);
+    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg", ".card"])
+      expect(migrating, cls).toContain(cls);
+    for (const cls of [
+      ".type-label",
+      ".rounded-control",
+      ".bg-primary",
+      ".border-input",
+      ".transition-state",
+      ".press",
+    ])
+      expect(migrating, cls).toContain(cls);
     // The stock font sizes really are there, not only the class names.
     expect(migrating).toMatch(/\.text-sm\s*{[^}]*font-size:/);
-    await expect(compileApp("strata.css", own)).rejects.toThrow(/Cannot apply unknown utility class/);
+    await expect(compileApp("strata.css", own)).rejects.toThrow(
+      /Cannot apply unknown utility class/,
+    );
   });
 
   it("makes strata.migrate.css from strata.bare.css and nothing else", () => {
@@ -206,7 +315,12 @@ describe("strata.css in an app", () => {
     expect(migrate).not.toContain("--color-*: initial;");
     expect(migrate).toContain("MIGRATION MODE");
     // Everything else is shared: the roles, the type steps, the plugin and the built components' source.
-    for (const shared of ["--radius-control: 4px;", '@plugin "tailwindcss-react-aria-components";', '@source "./*.js";', "@utility type-label"]) {
+    for (const shared of [
+      "--radius-control: 4px;",
+      '@plugin "tailwindcss-react-aria-components";',
+      '@source "./*.js";',
+      "@utility type-label",
+    ]) {
       expect(migrate, shared).toContain(shared);
       expect(strict, shared).toContain(shared);
     }
@@ -216,12 +330,25 @@ describe("strata.css in an app", () => {
     const app = mkdtempSync(join(tmpdir(), "strata-stock-"));
     try {
       mkdirSync(join(app, "src"));
-      writeFileSync(join(app, "src/screen.tsx"), `<p className="text-sm bg-stone-100 bg-primary" />`);
-      const out = execFileSync(process.execPath, [join(root, "bin/strata-stock-classes.js"), join(app, "src")], { encoding: "utf8" });
+      writeFileSync(
+        join(app, "src/screen.tsx"),
+        `<p className="text-sm bg-stone-100 bg-primary" />`,
+      );
+      const out = execFileSync(
+        process.execPath,
+        [join(root, "bin/strata-stock-classes.js"), join(app, "src")],
+        { encoding: "utf8" },
+      );
       expect(out).toContain("screen.tsx:1  text-sm  (text size)");
       expect(out).toContain("screen.tsx:1  bg-stone-100  (colour)");
       expect(out).not.toContain("bg-primary  (");
-      expect(() => execFileSync(process.execPath, [join(root, "bin/strata-stock-classes.js"), "--fail", join(app, "src")], { stdio: "pipe" })).toThrow();
+      expect(() =>
+        execFileSync(
+          process.execPath,
+          [join(root, "bin/strata-stock-classes.js"), "--fail", join(app, "src")],
+          { stdio: "pipe" },
+        ),
+      ).toThrow();
     } finally {
       rmSync(app, { recursive: true, force: true });
     }
@@ -229,7 +356,8 @@ describe("strata.css in an app", () => {
 
   it("removes Tailwind's stock palette, sizes, radii and shadows", async () => {
     const css = await compileApp();
-    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg"]) expect(css, cls).not.toContain(cls);
+    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg"])
+      expect(css, cls).not.toContain(cls);
     expect(css).toContain(".gap-4");
   });
 });

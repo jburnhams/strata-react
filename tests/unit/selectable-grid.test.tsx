@@ -1,8 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BulkBar, Button, DataTable, SelectableGrid, useHotkeys, useSelection, type Column, type InitialSelection } from "../../src";
+import {
+  BulkBar,
+  Button,
+  DataTable,
+  SelectableGrid,
+  useHotkeys,
+  useSelection,
+  type Column,
+  type InitialSelection,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { shelfPhotos, type ShelfPhoto } from "../../stories/fixtures/kiln";
 
@@ -12,7 +21,13 @@ const box = (p: ShelfPhoto) => screen.getByRole("checkbox", { name: `Select ${la
 const selectAll = () => screen.getByRole("checkbox", { name: "Select all shown" });
 const uncollected = (p: ShelfPhoto) => !p.collected;
 
-function Grid({ rows = photos, initial }: { rows?: ShelfPhoto[]; initial?: InitialSelection<ShelfPhoto> }) {
+function Grid({
+  rows = photos,
+  initial,
+}: {
+  rows?: ShelfPhoto[];
+  initial?: InitialSelection<ShelfPhoto>;
+}) {
   const selection = useSelection(rows, (p) => p.id, initial);
   return (
     <>
@@ -74,7 +89,9 @@ describe("SelectableGrid", () => {
       if (p.collected) expect(box(p)).not.toBeChecked();
       else expect(box(p)).toBeChecked();
     }
-    expect(screen.getByText(`${run.filter(uncollected).length} pieces selected`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${run.filter(uncollected).length} pieces selected`),
+    ).toBeInTheDocument();
     expect(box(photos[4])).not.toBeChecked();
     expect(box(photos[11])).not.toBeChecked();
   });
@@ -133,14 +150,19 @@ describe("SelectableGrid", () => {
     expect(box(photos[0])).not.toBeChecked();
     await userEvent.click(selectAll());
     expect(selectAll()).toBeChecked();
-    expect(screen.getByText(`${photos.filter(uncollected).length} pieces selected`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${photos.filter(uncollected).length} pieces selected`),
+    ).toBeInTheDocument();
   });
 
   it("virtualises from 100 tiles and select-all still covers every tile", async () => {
     // React Aria's Virtualizer sizes a tile by its scroll size, which jsdom does not do (0, so every
     // tile would count as visible). Give tiles one, like a drawn tile.
     const before = Object.getOwnPropertyDescriptor(Element.prototype, "scrollHeight");
-    Object.defineProperty(Element.prototype, "scrollHeight", { configurable: true, get: () => 180 });
+    Object.defineProperty(Element.prototype, "scrollHeight", {
+      configurable: true,
+      get: () => 180,
+    });
     onTestFinished(() => {
       if (before) Object.defineProperty(Element.prototype, "scrollHeight", before);
       else delete (Element.prototype as unknown as Record<string, unknown>).scrollHeight;
@@ -152,7 +174,9 @@ describe("SelectableGrid", () => {
     expect(shown.length).toBeLessThan(many.length);
     expect(grid).toHaveAttribute("aria-rowcount", String(many.length));
     await userEvent.click(selectAll());
-    expect(screen.getByText(`${many.filter(uncollected).length} pieces selected`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${many.filter(uncollected).length} pieces selected`),
+    ).toBeInTheDocument();
   });
 
   it("starts with the rows `initial` names, once they arrive", async () => {
@@ -236,7 +260,12 @@ describe("useSelection initial", () => {
 
 describe("DataTable range select", () => {
   const columns: Column<ShelfPhoto>[] = [
-    { key: "piece", header: "Piece", cell: (p) => p.piece, sort: (a, b) => a.piece.localeCompare(b.piece) },
+    {
+      key: "piece",
+      header: "Piece",
+      cell: (p) => p.piece,
+      sort: (a, b) => a.piece.localeCompare(b.piece),
+    },
   ];
   function Table() {
     const rows = photos.slice(0, 8);
@@ -261,6 +290,8 @@ describe("DataTable range select", () => {
     await user.keyboard("{Shift>}");
     await user.click(shown[4]);
     await user.keyboard("{/Shift}");
-    shown.forEach((b, i) => (i >= 1 && i <= 4 ? expect(b).toBeChecked() : expect(b).not.toBeChecked()));
+    shown.forEach((b, i) =>
+      i >= 1 && i <= 4 ? expect(b).toBeChecked() : expect(b).not.toBeChecked(),
+    );
   });
 });

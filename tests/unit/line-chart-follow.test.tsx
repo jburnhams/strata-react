@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LineChart, type LineChartProps, type Point } from "../../src";
@@ -6,18 +6,30 @@ import { renderWithStrata } from "../../src/testing";
 
 // Issue #79: a chart tied to something else on the screen. The new options draw nothing unless given.
 
-const profile: Point[] = [0, 100, 200, 300, 400, 500].map((x, i) => ({ x, y: [20, 45, 87, 60, 30, 55][i] }));
+const profile: Point[] = [0, 100, 200, 300, 400, 500].map((x, i) => ({
+  x,
+  y: [20, 45, 87, 60, 30, 55][i],
+}));
 const formatX = (x: number) => `${x} m`;
 const formatY = (y: number) => `${y} m up`;
 // The slider is a range input inside a track; the pointer acts on the track, which has the plot's box.
 const trackOf = (plot: HTMLElement) => plot.closest("[style*='touch-action']") as HTMLElement;
-const props: LineChartProps = { label: "Elevation along the route", series: profile, seriesLabel: "Elevation", formatX, formatY, xTicks: [0, 250, 500], yMin: 0, yMax: 100 };
+const props: LineChartProps = {
+  label: "Elevation along the route",
+  series: profile,
+  seriesLabel: "Elevation",
+  formatX,
+  formatY,
+  xTicks: [0, 250, 500],
+  yMin: 0,
+  yMax: 100,
+};
 
 describe("LineChart without the new options", () => {
   it("draws no slider, no rule and no area", () => {
     const { container } = renderWithStrata(<LineChart {...props} />);
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
-    expect(container.querySelector('path[fill-opacity]')).toBeNull();
+    expect(container.querySelector("path[fill-opacity]")).toBeNull();
     expect(screen.getByRole("img", { name: "Elevation along the route" })).toBeInTheDocument();
   });
 });
@@ -26,7 +38,9 @@ describe("current position", () => {
   it("draws the current x as a rule with its value read off the line, and moves it without redrawing the axis", () => {
     const fx = vi.fn(formatX);
     const fy = vi.fn(formatY);
-    const { rerender } = renderWithStrata(<LineChart {...props} formatX={fx} formatY={fy} current={100} />);
+    const { rerender } = renderWithStrata(
+      <LineChart {...props} formatX={fx} formatY={fy} current={100} />,
+    );
     expect(screen.getByText("100 m: 45 m up")).toBeInTheDocument();
     const xCalls = fx.mock.calls.length;
     const yCalls = fy.mock.calls.length;
@@ -44,7 +58,13 @@ describe("current position", () => {
   });
 
   it("words the value with formatCurrent", () => {
-    renderWithStrata(<LineChart {...props} current={200} formatCurrent={({ x, y }) => `Dist: ${x} m, Ele: ${y} m`} />);
+    renderWithStrata(
+      <LineChart
+        {...props}
+        current={200}
+        formatCurrent={({ x, y }) => `Dist: ${x} m, Ele: ${y} m`}
+      />,
+    );
     expect(screen.getByText("Dist: 200 m, Ele: 87 m")).toBeInTheDocument();
   });
 });
@@ -129,11 +149,21 @@ describe("one selection for what is announced, drawn and picked", () => {
   it("clamps a stored keyboard position when the series is replaced by a shorter one", async () => {
     const user = userEvent.setup();
     const picked: number[] = [];
-    const { rerender } = renderWithStrata(<LineChart {...props} readout onPick={(x) => picked.push(x)} />);
+    const { rerender } = renderWithStrata(
+      <LineChart {...props} readout onPick={(x) => picked.push(x)} />,
+    );
     const plot = screen.getByRole("slider");
     plot.focus();
     await user.keyboard("{Home}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}");
-    rerender(<LineChart {...props} readout onPick={(x) => picked.push(x)} series={profile.slice(0, 3)} xTicks={[0, 100, 200]} />);
+    rerender(
+      <LineChart
+        {...props}
+        readout
+        onPick={(x) => picked.push(x)}
+        series={profile.slice(0, 3)}
+        xTicks={[0, 100, 200]}
+      />,
+    );
     expect(plot).toHaveAttribute("aria-valuetext", "200 m: 87 m up");
     await user.keyboard("{Enter}");
     expect(picked).toEqual([200]);
@@ -171,8 +201,19 @@ describe("area", () => {
     expect(container.querySelectorAll("linearGradient")).toHaveLength(0);
   });
   it("does not fill with a colour scale's gradient ink: the fill is still the one flat tint", () => {
-    const { container } = renderWithStrata(<LineChart {...props} area colourScale={[{ at: 0, colour: "#00f" }, { at: 60, colour: "#f00" }]} />);
-    expect(container.querySelector('path[fill-opacity="0.12"]')!.getAttribute("fill")).toBe("var(--chart-1)");
+    const { container } = renderWithStrata(
+      <LineChart
+        {...props}
+        area
+        colourScale={[
+          { at: 0, colour: "#00f" },
+          { at: 60, colour: "#f00" },
+        ]}
+      />,
+    );
+    expect(container.querySelector('path[fill-opacity="0.12"]')!.getAttribute("fill")).toBe(
+      "var(--chart-1)",
+    );
   });
 });
 
@@ -192,13 +233,13 @@ describe("the end of the line", () => {
     expect(container.textContent).not.toMatch(/\bnow\b/);
   });
 
-  it("leaves it unmarked with end=\"none\" and no current", () => {
+  it('leaves it unmarked with end="none" and no current', () => {
     renderWithStrata(<LineChart {...props} end="none" />);
     expect(endLabel()).toBeNull();
     expect(screen.getByText("87 m up peak")).toBeInTheDocument();
   });
 
-  it("marks it with end=\"now\" even while `current` is set", () => {
+  it('marks it with end="now" even while `current` is set', () => {
     renderWithStrata(<LineChart {...props} current={200} end="now" />);
     expect(endLabel()).toBeInTheDocument();
   });

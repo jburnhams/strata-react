@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -7,13 +7,19 @@ import { ChoiceGroup, Field, Input, NativeSelect } from "../../src";
 describe("Field", () => {
   it("labels its control and describes it with the error first, then the hint", () => {
     render(
-      <Field label="Tallest piece (cm)" hint="Kiln 2 has 30 cm between shelves." error="Your piece is 38 cm; choose kiln 1.">
+      <Field
+        label="Tallest piece (cm)"
+        hint="Kiln 2 has 30 cm between shelves."
+        error="Your piece is 38 cm; choose kiln 1."
+      >
         <Input name="tallest" />
       </Field>,
     );
     const input = screen.getByLabelText("Tallest piece (cm)");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAccessibleDescription("Your piece is 38 cm; choose kiln 1. Kiln 2 has 30 cm between shelves.");
+    expect(input).toHaveAccessibleDescription(
+      "Your piece is 38 cm; choose kiln 1. Kiln 2 has 30 cm between shelves.",
+    );
   });
 
   it("is not invalid without an error", () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -12,7 +12,12 @@ import { server } from "../utils/server";
 
 function Live({ every = 40 }: { every?: number }) {
   const poll = usePoll({ every });
-  const load = useLoad({ queryKey: ["live"], queryFn: () => fetchJson<{ n: number }>("/api/live"), poll, staleTime: 0 });
+  const load = useLoad({
+    queryKey: ["live"],
+    queryFn: () => fetchJson<{ n: number }>("/api/live"),
+    poll,
+    staleTime: 0,
+  });
   return (
     <>
       <PauseButton poll={poll} />
@@ -59,8 +64,18 @@ describe("a polled read with a pause", () => {
 // #349: a read with its own pace under the page's shared pause.
 function TwoPaces() {
   const poll = usePoll({ every: 30 });
-  const fast = useLoad({ queryKey: ["fast"], queryFn: () => fetchJson<{ n: number }>("/api/fast"), poll, staleTime: 0 });
-  const slow = useLoad({ queryKey: ["slow"], queryFn: () => fetchJson<{ n: number }>("/api/slow"), poll: poll.with({ every: 100_000 }), staleTime: 0 });
+  const fast = useLoad({
+    queryKey: ["fast"],
+    queryFn: () => fetchJson<{ n: number }>("/api/fast"),
+    poll,
+    staleTime: 0,
+  });
+  const slow = useLoad({
+    queryKey: ["slow"],
+    queryFn: () => fetchJson<{ n: number }>("/api/slow"),
+    poll: poll.with({ every: 100_000 }),
+    staleTime: 0,
+  });
   return (
     <>
       <PauseButton poll={poll} />
@@ -75,7 +90,10 @@ describe("poll.with({ every })", () => {
     const user = userEvent.setup();
     let fast = 0;
     let slow = 0;
-    server.use(http.get("/api/fast", () => HttpResponse.json({ n: ++fast })), http.get("/api/slow", () => HttpResponse.json({ n: ++slow })));
+    server.use(
+      http.get("/api/fast", () => HttpResponse.json({ n: ++fast })),
+      http.get("/api/slow", () => HttpResponse.json({ n: ++slow })),
+    );
     renderWithStrata(<TwoPaces />);
     await waitFor(() => expect(fast).toBeGreaterThanOrEqual(3));
     expect(slow).toBe(1);

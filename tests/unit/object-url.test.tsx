@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as React from "react";
 import { render, renderHook } from "@testing-library/react";
 import { useObjectUrl } from "../../src";
@@ -20,7 +20,12 @@ function installBlobStore() {
   const before = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
   URL.createObjectURL = create as never;
   URL.revokeObjectURL = revoke as never;
-  return { made, revoked, restore: () => Object.assign(URL, { createObjectURL: before.create, revokeObjectURL: before.revoke }) };
+  return {
+    made,
+    revoked,
+    restore: () =>
+      Object.assign(URL, { createObjectURL: before.create, revokeObjectURL: before.revoke }),
+  };
 }
 
 describe("useObjectUrl", () => {
@@ -39,7 +44,9 @@ describe("useObjectUrl", () => {
     const store = installBlobStore();
     const a = new Uint8Array([1]);
     const b = new Uint8Array([2, 2]);
-    const { result, rerender } = renderHook(({ data }) => useObjectUrl(data), { initialProps: { data: a } });
+    const { result, rerender } = renderHook(({ data }) => useObjectUrl(data), {
+      initialProps: { data: a },
+    });
     const first = result.current;
     rerender({ data: a });
     expect(result.current).toBe(first);
@@ -67,7 +74,11 @@ describe("useObjectUrl", () => {
     const store = installBlobStore();
     const bytes = new Uint8Array([9]);
     const Probe = () => <a href={useObjectUrl(bytes) ?? undefined}>file</a>;
-    const { unmount, container } = render(<React.StrictMode><Probe /></React.StrictMode>);
+    const { unmount, container } = render(
+      <React.StrictMode>
+        <Probe />
+      </React.StrictMode>,
+    );
     expect(container.querySelector("a")?.getAttribute("href")).toMatch(/^blob:/);
     unmount();
     expect(store.revoked.sort()).toEqual([...store.made.keys()].sort());

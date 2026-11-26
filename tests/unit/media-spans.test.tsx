@@ -1,8 +1,14 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MediaPlayer, SeekBar, type MediaElementState, type MediaSpanData, type SpanKind } from "../../src";
+import {
+  MediaPlayer,
+  SeekBar,
+  type MediaElementState,
+  type MediaSpanData,
+  type SpanKind,
+} from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Marked stretches (issue #207) and the player's state and overlay (issue #211). The element's events are
@@ -20,8 +26,19 @@ const kinds: Record<string, SpanKind> = {
   sponsor: { label: "Sponsor", behaviour: "auto", tone: "danger" },
 };
 
-function Player(props: Partial<React.ComponentProps<typeof MediaPlayer>> & { spans?: MediaSpanData[] }) {
-  return <MediaPlayer label="Episode 4" kind="video" src="/a.mp4" controls="strata" spanKinds={kinds} {...props} />;
+function Player(
+  props: Partial<React.ComponentProps<typeof MediaPlayer>> & { spans?: MediaSpanData[] },
+) {
+  return (
+    <MediaPlayer
+      label="Episode 4"
+      kind="video"
+      src="/a.mp4"
+      controls="strata"
+      spanKinds={kinds}
+      {...props}
+    />
+  );
 }
 
 async function start(ui: React.ReactElement, duration = 100) {
@@ -34,15 +51,33 @@ async function start(ui: React.ReactElement, duration = 100) {
 
 describe("spans on the seek bar", () => {
   it("draws each stretch as a named range, in order, cut to the bar", () => {
-    const { container } = render(<Player spans={[{ start: 60, end: 400, kind: "credits" }, { start: 0, end: 12, kind: "intro" }, { start: 30, end: 20, kind: "recap" }]} />);
+    const { container } = render(
+      <Player
+        spans={[
+          { start: 60, end: 400, kind: "credits" },
+          { start: 0, end: 12, kind: "intro" },
+          { start: 30, end: 20, kind: "recap" },
+        ]}
+      />,
+    );
     act(() => media.loaded(video(container), 100));
     const drawn = screen.getAllByRole("img").filter((e) => e.hasAttribute("data-span"));
-    expect(drawn.map((e) => e.getAttribute("aria-label"))).toEqual(["Intro, 0:00 to 0:12", "Credits, 1:00 to 1:40"]); // the backwards one is dropped, the long one is cut to 100 s
+    expect(drawn.map((e) => e.getAttribute("aria-label"))).toEqual([
+      "Intro, 0:00 to 0:12",
+      "Credits, 1:00 to 1:40",
+    ]); // the backwards one is dropped, the long one is cut to 100 s
     expect(drawn[0]).toHaveAttribute("title", "Intro, 0:00 to 0:12");
   });
 
   it("is a prop of the bar itself, for an app that uses the parts", () => {
-    render(<SeekBar time={0} duration={50} onSeek={() => undefined} spans={[{ start: 5, end: 6, label: "Ad break", tone: "danger" }]} />);
+    render(
+      <SeekBar
+        time={0}
+        duration={50}
+        onSeek={() => undefined}
+        spans={[{ start: 5, end: 6, label: "Ad break", tone: "danger" }]}
+      />,
+    );
     expect(screen.getByRole("img", { name: "Ad break, 0:05 to 0:06" })).toBeInTheDocument();
   });
 
@@ -102,7 +137,10 @@ describe("auto: skipped as it starts, with Undo", () => {
   });
 
   it("waits for a growing source to have the end of the stretch before skipping into it", async () => {
-    const { el } = await start(<Player spans={[{ start: 10, end: 40, kind: "intro" }]} growing={{}} />, 30);
+    const { el } = await start(
+      <Player spans={[{ start: 10, end: 40, kind: "intro" }]} growing={{}} />,
+      30,
+    );
     act(() => media.tick(el, 12));
     expect(el.currentTime).toBe(12);
     act(() => media.loaded(el, 60));
@@ -234,7 +272,8 @@ describe("mute: a stretch whose picture is wanted but whose sound is not", () =>
 
 describe("the app's hold on the player (issue #211)", () => {
   it("hands out the state and requests through a ref, so a chapter list can seek", async () => {
-    const ref = React.createRef<MediaElementState>() as React.MutableRefObject<MediaElementState | null>;
+    const ref =
+      React.createRef<MediaElementState>() as React.MutableRefObject<MediaElementState | null>;
     const { el } = await start(<Player mediaRef={ref} />);
     expect(ref.current!.duration).toBe(100);
     act(() => ref.current!.seek(42));
@@ -264,7 +303,11 @@ describe("the app's hold on the player (issue #211)", () => {
     act(() => media.tick(el, 9));
     const button = screen.getByRole("button", { name: "Comment at 9" });
     expect(el.parentElement).toContainElement(button);
-    expect(screen.getByRole("group", { name: "Episode 4" }).querySelector("[aria-label='Seek in Episode 4']")).not.toContainElement(button); // not among the controls
+    expect(
+      screen
+        .getByRole("group", { name: "Episode 4" })
+        .querySelector("[aria-label='Seek in Episode 4']"),
+    ).not.toContainElement(button); // not among the controls
     await userEvent.click(button);
     expect(seek).toHaveBeenCalledWith(9);
     expect(container).toBeTruthy();

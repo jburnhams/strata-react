@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
-import { Inspector, InspectorSection, Pane, Split, Workspace, WorkspaceBar, useWorkspaceState } from "../../src";
+import {
+  Inspector,
+  InspectorSection,
+  Pane,
+  Split,
+  Workspace,
+  WorkspaceBar,
+  useWorkspaceState,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #365: the bar across the top of a Workspace. Issue #366: a Pane's body is inset by default
@@ -8,9 +16,18 @@ import { renderWithStrata } from "../../src/testing";
 
 describe("WorkspaceBar", () => {
   it("is the banner with the tool's name as the heading, a polite status, actions and an end slot", () => {
-    renderWithStrata(<WorkspaceBar title="Quake 2 explorer" status="pak.pak, mod.pak, 3 MB" actions={<button>Add files</button>} end={<button>Theme</button>} />);
+    renderWithStrata(
+      <WorkspaceBar
+        title="Quake 2 explorer"
+        status="pak.pak, mod.pak, 3 MB"
+        actions={<button>Add files</button>}
+        end={<button>Theme</button>}
+      />,
+    );
     const bar = screen.getByRole("banner");
-    expect(within(bar).getByRole("heading", { level: 1, name: "Quake 2 explorer" })).toBeInTheDocument();
+    expect(
+      within(bar).getByRole("heading", { level: 1, name: "Quake 2 explorer" }),
+    ).toBeInTheDocument();
     expect(within(bar).getByRole("status")).toHaveTextContent("pak.pak, mod.pak, 3 MB");
     expect(within(bar).getByRole("button", { name: "Add files" })).toBeInTheDocument();
     expect(within(bar).getByRole("button", { name: "Theme" })).toBeInTheDocument();
@@ -28,10 +45,14 @@ describe("Pane body", () => {
     return (
       <Workspace label="Tool" state={state}>
         <Split direction="row">
-          <Pane id="stage" name="Stage" grow>Stage</Pane>
+          <Pane id="stage" name="Stage" grow>
+            Stage
+          </Pane>
           <Pane id="details" name="Details" flush={flush}>
             <Inspector title="clip.wal" empty={null}>
-              <InspectorSection id="a" title="Size">32 by 32</InspectorSection>
+              <InspectorSection id="a" title="Size">
+                32 by 32
+              </InspectorSection>
             </Inspector>
           </Pane>
         </Split>
@@ -62,7 +83,9 @@ describe("data-part hooks", () => {
           <Split direction="row">
             <Pane id="details" name="Details">
               <Inspector title="clip.wal" empty={null}>
-                <InspectorSection id="a" title="Size">32 by 32</InspectorSection>
+                <InspectorSection id="a" title="Size">
+                  32 by 32
+                </InspectorSection>
               </Inspector>
             </Pane>
           </Split>
@@ -71,7 +94,16 @@ describe("data-part hooks", () => {
     }
     renderWithStrata(<Tool />);
     const part = (name: string) => document.querySelector(`[data-part="${name}"]`);
-    for (const name of ["workspace-bar", "pane", "pane-header", "pane-title", "inspector", "inspector-header", "inspector-section"]) expect(part(name), name).not.toBeNull();
+    for (const name of [
+      "workspace-bar",
+      "pane",
+      "pane-header",
+      "pane-title",
+      "inspector",
+      "inspector-header",
+      "inspector-section",
+    ])
+      expect(part(name), name).not.toBeNull();
     expect(part("pane-title")).toHaveTextContent("Details");
   });
 });

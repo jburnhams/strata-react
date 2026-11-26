@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RegionEditor, type EditableRegion, type RegionEditorProps } from "../../src";
@@ -8,22 +8,50 @@ import { renderWithStrata } from "../../src/testing";
 // jsdom has no layout: the overlay is given a 500 x 250 box for a 1000 x 500 picture, so one pixel is two units.
 beforeEach(() => {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
-    const box = this.getAttribute("role") === "group" && this.getAttribute("aria-label") === "Cover crop" ? { width: 500, height: 250 } : { width: 0, height: 0 };
-    return { ...box, left: 0, top: 0, right: box.width, bottom: box.height, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    const box =
+      this.getAttribute("role") === "group" && this.getAttribute("aria-label") === "Cover crop"
+        ? { width: 500, height: 250 }
+        : { width: 0, height: 0 };
+    return {
+      ...box,
+      left: 0,
+      top: 0,
+      right: box.width,
+      bottom: box.height,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect;
   });
 });
 afterEach(() => vi.restoreAllMocks());
 
-const crop: EditableRegion = { id: "crop", label: "Crop", x: 100, y: 100, w: 400, h: 200, tone: "info" };
+const crop: EditableRegion = {
+  id: "crop",
+  label: "Crop",
+  x: 100,
+  y: 100,
+  w: 400,
+  h: 200,
+  tone: "info",
+};
 
-function Editor(props: Partial<RegionEditorProps> & { initial?: EditableRegion[]; onKept?: (r: readonly EditableRegion[]) => void }) {
+function Editor(
+  props: Partial<RegionEditorProps> & {
+    initial?: EditableRegion[];
+    onKept?: (r: readonly EditableRegion[]) => void;
+  },
+) {
   const [regions, setRegions] = React.useState<readonly EditableRegion[]>(props.initial ?? [crop]);
   return (
     <RegionEditor
       label="Cover crop"
       size={[1000, 500]}
       regions={regions}
-      onChange={(r) => { setRegions(r); props.onKept?.(r); }}
+      onChange={(r) => {
+        setRegions(r);
+        props.onKept?.(r);
+      }}
       {...props}
     >
       <div data-testid="picture" className="size-full" />
@@ -36,7 +64,9 @@ const box = () => screen.getByRole("group", { name: /^Crop:/ });
 describe("RegionEditor", () => {
   it("is a labelled group with each window named in words and a hint for the keys", () => {
     renderWithStrata(<Editor />);
-    expect(screen.getByRole("group", { name: "Cover crop" })).toHaveAccessibleDescription(/arrows move, Shift and arrows resize, Enter keeps, Escape undoes/);
+    expect(screen.getByRole("group", { name: "Cover crop" })).toHaveAccessibleDescription(
+      /arrows move, Shift and arrows resize, Enter keeps, Escape undoes/,
+    );
     expect(box()).toHaveAccessibleName("Crop: 400 wide by 200 high, 100 across and 100 down");
   });
 
@@ -49,7 +79,9 @@ describe("RegionEditor", () => {
     expect(onKept).not.toHaveBeenCalled();
     expect(el).toHaveStyle({ left: "20%" });
     fireEvent.pointerUp(el, { pointerId: 1, clientX: 150, clientY: 130 });
-    expect(onKept).toHaveBeenCalledWith([expect.objectContaining({ x: 200, y: 160, w: 400, h: 200 })]);
+    expect(onKept).toHaveBeenCalledWith([
+      expect.objectContaining({ x: 200, y: 160, w: 400, h: 200 }),
+    ]);
     fireEvent.pointerDown(box(), { pointerId: 1, clientX: 200, clientY: 100, button: 0 });
     fireEvent.pointerMove(box(), { pointerId: 1, clientX: 5000, clientY: 5000 });
     fireEvent.pointerUp(box(), { pointerId: 1 });
@@ -111,11 +143,17 @@ describe("RegionEditor", () => {
     box().focus();
     await user.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}");
     expect(onKept).not.toHaveBeenCalled();
-    expect(screen.getByRole("status")).toHaveTextContent("Crop: 400 wide by 200 high, 120 across and 110 down");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Crop: 400 wide by 200 high, 120 across and 110 down",
+    );
     await user.keyboard("{Shift>}{ArrowRight}{ArrowDown}{/Shift}");
-    expect(screen.getByRole("status")).toHaveTextContent("Crop: 410 wide by 210 high, 120 across and 110 down");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Crop: 410 wide by 210 high, 120 across and 110 down",
+    );
     await user.keyboard("{Enter}");
-    expect(onKept).toHaveBeenCalledWith([expect.objectContaining({ x: 120, y: 110, w: 410, h: 210 })]);
+    expect(onKept).toHaveBeenCalledWith([
+      expect.objectContaining({ x: 120, y: 110, w: 410, h: 210 }),
+    ]);
   });
 
   it("Escape throws the draft away", async () => {
@@ -132,7 +170,9 @@ describe("RegionEditor", () => {
   it("holds the bounds and the minimum from the keyboard", async () => {
     const user = userEvent.setup();
     const onKept = vi.fn();
-    renderWithStrata(<Editor bounds={{ x: 0, y: 0, w: 520, h: 320 }} min={{ w: 380, h: 190 }} onKept={onKept} />);
+    renderWithStrata(
+      <Editor bounds={{ x: 0, y: 0, w: 520, h: 320 }} min={{ w: 380, h: 190 }} onKept={onKept} />,
+    );
     box().focus();
     await user.keyboard("{ArrowRight>40/}{Enter}");
     expect(onKept).toHaveBeenLastCalledWith([expect.objectContaining({ x: 120, w: 400 })]);
@@ -170,15 +210,49 @@ describe("RegionEditor", () => {
 });
 
 describe("RegionEditor, from and to", () => {
-  const from: EditableRegion = { id: "from", label: "From", x: 0, y: 0, w: 500, h: 250, tone: "success" };
-  const to: EditableRegion = { id: "to", label: "To", x: 400, y: 200, w: 300, h: 150, tone: "danger" };
+  const from: EditableRegion = {
+    id: "from",
+    label: "From",
+    x: 0,
+    y: 0,
+    w: 500,
+    h: 250,
+    tone: "success",
+  };
+  const to: EditableRegion = {
+    id: "to",
+    label: "To",
+    x: 400,
+    y: 200,
+    w: 300,
+    h: 150,
+    tone: "danger",
+  };
 
-  beforeEach(() => vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "setTimeout", "clearTimeout"] }));
+  beforeEach(() =>
+    vi.useFakeTimers({
+      toFake: [
+        "requestAnimationFrame",
+        "cancelAnimationFrame",
+        "performance",
+        "setTimeout",
+        "clearTimeout",
+      ],
+    }),
+  );
   afterEach(() => vi.useRealTimers());
 
   it("names both windows and plays the move through onPreview, ending on the second", () => {
     const onPreview = vi.fn();
-    renderWithStrata(<Editor initial={[from, to]} mode="move" onPreview={onPreview} duration={1000} easing="linear" />);
+    renderWithStrata(
+      <Editor
+        initial={[from, to]}
+        mode="move"
+        onPreview={onPreview}
+        duration={1000}
+        easing="linear"
+      />,
+    );
     expect(screen.getByRole("group", { name: /^From:/ })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /^To:/ })).toBeInTheDocument();
     act(() => screen.getByRole("button", { name: "Watch" }).click());
@@ -198,7 +272,9 @@ describe("RegionEditor, from and to", () => {
 
   it("Stop ends the preview where it is", () => {
     const onPreview = vi.fn();
-    renderWithStrata(<Editor initial={[from, to]} mode="move" onPreview={onPreview} duration={1000} />);
+    renderWithStrata(
+      <Editor initial={[from, to]} mode="move" onPreview={onPreview} duration={1000} />,
+    );
     act(() => screen.getByRole("button", { name: "Watch" }).click());
     act(() => void vi.advanceTimersByTime(200));
     act(() => screen.getByRole("button", { name: "Stop" }).click());
@@ -218,7 +294,12 @@ describe("RegionEditor, from and to", () => {
 
 describe("RegionEditor turning (issue #241)", () => {
   it("draws the picture turned on the canvas it needs and works in that canvas's units", () => {
-    renderWithStrata(<Editor angle={90} initial={[{ id: "crop", label: "Crop", x: 100, y: 100, w: 200, h: 100 }]} />);
+    renderWithStrata(
+      <Editor
+        angle={90}
+        initial={[{ id: "crop", label: "Crop", x: 100, y: 100, w: 200, h: 100 }]}
+      />,
+    );
     const turned = screen.getByTestId("picture").parentElement!;
     expect(turned.style.transform).toContain("rotate(90deg)");
     // The canvas is 500 wide by 1000 high at 90°: the picture (1000 by 500) is 2× its width and half its height.
@@ -229,7 +310,14 @@ describe("RegionEditor turning (issue #241)", () => {
   it("turns the windows with the picture when the angle changes, in the same step", async () => {
     const onAngleChange = vi.fn();
     const onKept = vi.fn();
-    renderWithStrata(<Editor angle={0} onAngleChange={onAngleChange} onKept={onKept} initial={[{ id: "crop", label: "Crop", x: 0, y: 0, w: 200, h: 100 }]} />);
+    renderWithStrata(
+      <Editor
+        angle={0}
+        onAngleChange={onAngleChange}
+        onKept={onKept}
+        initial={[{ id: "crop", label: "Crop", x: 0, y: 0, w: 200, h: 100 }]}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Turn right 90°" }));
     expect(onAngleChange).toHaveBeenCalledWith(90);
     const kept = onKept.mock.calls[0][0][0];
@@ -241,7 +329,9 @@ describe("RegionEditor turning (issue #241)", () => {
 
   it("has Level once the picture is turned a little, and a guide of level lines on request", async () => {
     const onAngleChange = vi.fn();
-    const { container } = renderWithStrata(<Editor angle={1.5} onAngleChange={onAngleChange} guide />);
+    const { container } = renderWithStrata(
+      <Editor angle={1.5} onAngleChange={onAngleChange} guide />,
+    );
     expect(container.querySelector("svg[data-guide]")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Level" }));
     expect(onAngleChange).toHaveBeenCalledWith(0);
@@ -255,11 +345,22 @@ describe("RegionEditor spread (issue #241)", () => {
   ];
   it("splits one window in two and makes two one again", async () => {
     const onKept = vi.fn();
-    renderWithStrata(<Editor mode="spread" onKept={onKept} initial={[{ id: "page", label: "Page", x: 0, y: 0, w: 1000, h: 500 }]} />);
+    renderWithStrata(
+      <Editor
+        mode="spread"
+        onKept={onKept}
+        initial={[{ id: "page", label: "Page", x: 0, y: 0, w: 1000, h: 500 }]}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Split into two" }));
-    expect(onKept.mock.calls[0][0].map((r: EditableRegion) => [r.label, r.x, r.w])).toEqual([["Left page", 0, 500], ["Right page", 500, 500]]);
+    expect(onKept.mock.calls[0][0].map((r: EditableRegion) => [r.label, r.x, r.w])).toEqual([
+      ["Left page", 0, 500],
+      ["Right page", 500, 500],
+    ]);
     await userEvent.click(screen.getByRole("button", { name: "Make one" }));
-    expect(onKept.mock.calls[1][0]).toEqual([expect.objectContaining({ id: "page", label: "Page", x: 0, w: 1000 })]);
+    expect(onKept.mock.calls[1][0]).toEqual([
+      expect.objectContaining({ id: "page", label: "Page", x: 0, w: 1000 }),
+    ]);
   });
   it("moves the gutter from the keyboard so both windows resize together", async () => {
     const onKept = vi.fn();

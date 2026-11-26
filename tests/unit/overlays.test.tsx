@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button, IconButton, Tooltip } from "../../src";
@@ -45,7 +45,12 @@ describe("Dialog", () => {
   it("opens from its trigger by role and title, moves focus in, and returns it on Escape", async () => {
     const user = userEvent.setup();
     render(
-      <Dialog title="Export video" description="Choose a size." trigger={<Button>Export</Button>} actions={(close) => <Button onPress={close}>Done</Button>}>
+      <Dialog
+        title="Export video"
+        description="Choose a size."
+        trigger={<Button>Export</Button>}
+        actions={(close) => <Button onPress={close}>Done</Button>}
+      >
         <p>Body</p>
       </Dialog>,
     );
@@ -61,7 +66,13 @@ describe("Dialog", () => {
 
   it("closes from its close control and from an action built with the close render prop", async () => {
     const user = userEvent.setup();
-    render(<Dialog title="Rename" trigger={<Button>Open</Button>} actions={(close) => <Button onPress={close}>Save name</Button>} />);
+    render(
+      <Dialog
+        title="Rename"
+        trigger={<Button>Open</Button>}
+        actions={(close) => <Button onPress={close}>Save name</Button>}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Open" }));
     await user.click(await screen.findByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -116,38 +127,65 @@ describe("controlled dialogs without a trigger (issue #116)", () => {
       <>
         <button onClick={() => setOpen(true)}>Open from a command</button>
         {alert ? (
-          <AlertDialog title="Delete 3 firings?" confirm="Delete 3 firings" onConfirm={() => undefined} open={open} onOpenChange={setOpen} />
+          <AlertDialog
+            title="Delete 3 firings?"
+            confirm="Delete 3 firings"
+            onConfirm={() => undefined}
+            open={open}
+            onOpenChange={setOpen}
+          />
         ) : (
-          <Dialog title="Export video" open={open} onOpenChange={setOpen} actions={(close) => <Button onPress={close}>Done</Button>} />
+          <Dialog
+            title="Export video"
+            open={open}
+            onOpenChange={setOpen}
+            actions={(close) => <Button onPress={close}>Done</Button>}
+          />
         )}
       </>
     );
   }
 
-  it.each([["Dialog", false], ["AlertDialog", true]])("%s mounts, opens, closes and returns focus without a console warning", async (_name, alert) => {
-    const user = userEvent.setup();
-    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      render(<Driven alert={alert} />);
-      const opener = screen.getByRole("button", { name: "Open from a command" });
-      await user.click(opener);
-      const dialog = await screen.findByRole(alert ? "alertdialog" : "dialog");
-      expect(dialog.contains(document.activeElement)).toBe(true);
-      await user.keyboard("{Escape}");
-      await waitFor(() => expect(screen.queryByRole(alert ? "alertdialog" : "dialog")).toBeNull());
-      await waitFor(() => expect(opener).toHaveFocus());
-      expect([...logged.mock.calls, ...warned.mock.calls]).toEqual([]);
-    } finally {
-      logged.mockRestore();
-      warned.mockRestore();
-    }
-  });
+  it.each([
+    ["Dialog", false],
+    ["AlertDialog", true],
+  ])(
+    "%s mounts, opens, closes and returns focus without a console warning",
+    async (_name, alert) => {
+      const user = userEvent.setup();
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      try {
+        render(<Driven alert={alert} />);
+        const opener = screen.getByRole("button", { name: "Open from a command" });
+        await user.click(opener);
+        const dialog = await screen.findByRole(alert ? "alertdialog" : "dialog");
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        await user.keyboard("{Escape}");
+        await waitFor(() =>
+          expect(screen.queryByRole(alert ? "alertdialog" : "dialog")).toBeNull(),
+        );
+        await waitFor(() => expect(opener).toHaveFocus());
+        expect([...logged.mock.calls, ...warned.mock.calls]).toEqual([]);
+      } finally {
+        logged.mockRestore();
+        warned.mockRestore();
+      }
+    },
+  );
 });
 
 describe("AlertDialog", () => {
   function Harness({ onConfirm }: { onConfirm: () => void | Promise<unknown> }) {
-    return <AlertDialog title="Delete 3 firings?" description="This cannot be undone." confirm="Delete 3 firings" onConfirm={onConfirm} trigger={<Button>Delete</Button>} />;
+    return (
+      <AlertDialog
+        title="Delete 3 firings?"
+        description="This cannot be undone."
+        confirm="Delete 3 firings"
+        onConfirm={onConfirm}
+        trigger={<Button>Delete</Button>}
+      />
+    );
   }
 
   it("is an alertdialog that focuses the safe choice and ignores an outside press", async () => {
@@ -182,7 +220,11 @@ describe("AlertDialog", () => {
   });
 
   it("stays open with the server's reason when an async confirm fails, over real HTTP via MSW", async () => {
-    server.use(http.delete("/api/firings", () => HttpResponse.json({ detail: "Firing 2 is running." }, { status: 409 })));
+    server.use(
+      http.delete("/api/firings", () =>
+        HttpResponse.json({ detail: "Firing 2 is running." }, { status: 409 }),
+      ),
+    );
     const user = userEvent.setup();
     const { fetchJson } = await import("../../src");
     renderWithStrata(<Harness onConfirm={() => fetchJson("/api/firings", { method: "DELETE" })} />);
@@ -202,12 +244,22 @@ describe("overlay descriptions and height", () => {
   });
 
   it("describes an alert dialog by its consequence, and keeps a tall message scrollable above the buttons", async () => {
-    render(<AlertDialog open title="Delete 3 firings?" description="Their bookings go too." confirm="Delete 3 firings" onConfirm={() => undefined} />);
+    render(
+      <AlertDialog
+        open
+        title="Delete 3 firings?"
+        description="Their bookings go too."
+        confirm="Delete 3 firings"
+        onConfirm={() => undefined}
+      />,
+    );
     const dialog = await screen.findByRole("alertdialog", { name: "Delete 3 firings?" });
     expect(dialog).toHaveAccessibleDescription("Their bookings go too.");
     expect(dialog.parentElement).toHaveClass("max-h-full");
     expect(screen.getByText("Their bookings go too.").closest(".overflow-y-auto")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Delete 3 firings" }).closest(".overflow-y-auto")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Delete 3 firings" }).closest(".overflow-y-auto"),
+    ).toBeNull();
   });
 });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as React from "react";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,7 +9,11 @@ import { renderWithStrata } from "../../src/testing";
 
 type Piece = { id: string; picture: string; word: string };
 type Place = { id: string; name: string };
-const numbers: Piece[] = [5, 2, 9].map((n) => ({ id: `n${n}`, picture: String(n), word: String(n) }));
+const numbers: Piece[] = [5, 2, 9].map((n) => ({
+  id: `n${n}`,
+  picture: String(n),
+  word: String(n),
+}));
 const slots: Place[] = [
   { id: "first", name: "first" },
   { id: "second", name: "second" },
@@ -18,7 +22,17 @@ const slots: Place[] = [
 const marks = { held: "Picked up", right: "Right", wrong: "Not yet" };
 
 // The app's side: it keeps the placement, applies moves, and checks.
-function Order({ onMove = () => {}, initial = {}, states = {}, locked }: { onMove?: (piece: string, place: string | null) => void; initial?: Record<string, string>; states?: Record<string, PlaceState>; locked?: boolean }) {
+function Order({
+  onMove = () => {},
+  initial = {},
+  states = {},
+  locked,
+}: {
+  onMove?: (piece: string, place: string | null) => void;
+  initial?: Record<string, string>;
+  states?: Record<string, PlaceState>;
+  locked?: boolean;
+}) {
   const [placement, setPlacement] = React.useState<Record<string, string | undefined>>(initial);
   return (
     <PlaceBoard
@@ -134,7 +148,14 @@ describe("PlaceBoard", () => {
   it("marks checked places with their word, and a locked board moves nothing", async () => {
     const user = userEvent.setup();
     const onMove = vi.fn();
-    renderWithStrata(<Order onMove={onMove} initial={{ n2: "first", n9: "second" }} states={{ first: "right", second: "wrong" }} locked />);
+    renderWithStrata(
+      <Order
+        onMove={onMove}
+        initial={{ n2: "first", n9: "second" }}
+        states={{ first: "right", second: "wrong" }}
+        locked
+      />,
+    );
     // The checked word is in each place's name, not only drawn inside it.
     expect(place("first, right")).toHaveTextContent("Right");
     expect(place("second, not yet")).toHaveTextContent("Not yet");
@@ -169,7 +190,9 @@ describe("PlaceBoard", () => {
         marks={marks}
       />,
     );
-    expect(within(screen.getByRole("group", { name: "Apples" })).getAllByRole("button")).toHaveLength(2);
+    expect(
+      within(screen.getByRole("group", { name: "Apples" })).getAllByRole("button"),
+    ).toHaveLength(2);
     expect(screen.getByRole("button", { name: "the basket" })).toHaveTextContent("🧺");
   });
 });

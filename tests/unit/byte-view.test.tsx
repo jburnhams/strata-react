@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ByteView } from "../../src";
@@ -33,7 +33,14 @@ describe("ByteView", () => {
 
   it("moves by byte, row and page from the keyboard, and says where it is", async () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(512)} label="file" height={100} onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView
+        bytes={bytes(512)}
+        label="file"
+        height={100}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
     await userEvent.tab();
     expect(group()).toHaveFocus();
     expect(onSelectionChange).toHaveBeenLastCalledWith({ start: 0, end: 1 });
@@ -58,7 +65,9 @@ describe("ByteView", () => {
 
   it("stays inside the file", async () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(3)} label="tiny" onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView bytes={bytes(3)} label="tiny" onSelectionChange={onSelectionChange} />,
+    );
     await userEvent.tab();
     await userEvent.keyboard("{ArrowLeft}{ArrowUp}");
     expect(onSelectionChange).toHaveBeenLastCalledWith({ start: 0, end: 1 });
@@ -68,7 +77,9 @@ describe("ByteView", () => {
 
   it("extends a range with Shift and collapses it with Escape", async () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(64)} label="file" onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView bytes={bytes(64)} label="file" onSelectionChange={onSelectionChange} />,
+    );
     await userEvent.tab();
     await userEvent.keyboard("{ArrowRight}{Shift>}{ArrowRight}{ArrowRight}{ArrowRight}{/Shift}");
     expect(onSelectionChange).toHaveBeenLastCalledWith({ start: 1, end: 5 });
@@ -81,7 +92,9 @@ describe("ByteView", () => {
 
   it("selects with the pointer: press, drag across bytes, and Shift+press", () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(64)} label="file" onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView bytes={bytes(64)} label="file" onSelectionChange={onSelectionChange} />,
+    );
     fireEvent.pointerDown(cell(2), { button: 0, buttons: 1 });
     expect(onSelectionChange).toHaveBeenLastCalledWith({ start: 2, end: 3 });
     fireEvent.pointerMove(cell(5), { buttons: 1 });
@@ -94,14 +107,23 @@ describe("ByteView", () => {
   });
 
   it("starts with a chosen range", () => {
-    renderWithStrata(<ByteView bytes={bytes(64)} label="file" defaultSelection={{ start: 4, end: 8 }} />);
+    renderWithStrata(
+      <ByteView bytes={bytes(64)} label="file" defaultSelection={{ start: 4, end: 8 }} />,
+    );
     expect(cell(4)).toHaveAttribute("data-selected");
     expect(cell(7)).toHaveAttribute("data-selected");
     expect(cell(8)).not.toHaveAttribute("data-selected");
   });
 
   it("names the highlight the cursor is in, in words", async () => {
-    renderWithStrata(<ByteView bytes={bytes(64)} label="file" highlight={[{ start: 4, end: 8, tone: "info", label: "version field" }]} defaultSelection={{ start: 5, end: 6 }} />);
+    renderWithStrata(
+      <ByteView
+        bytes={bytes(64)}
+        label="file"
+        highlight={[{ start: 4, end: 8, tone: "info", label: "version field" }]}
+        defaultSelection={{ start: 5, end: 6 }}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("in version field");
   });
 
@@ -113,7 +135,9 @@ describe("ByteView", () => {
 
 describe("ByteView edge cases", () => {
   it("survives a shorter buffer after a byte past its end was chosen", async () => {
-    const { rerender } = renderWithStrata(<ByteView bytes={bytes(512)} label="file" defaultSelection={{ start: 400, end: 401 }} />);
+    const { rerender } = renderWithStrata(
+      <ByteView bytes={bytes(512)} label="file" defaultSelection={{ start: 400, end: 401 }} />,
+    );
     rerender(<ByteView bytes={bytes(16)} label="file" />);
     expect(screen.getByRole("status")).toHaveTextContent("Byte 0xf of 16");
     rerender(<ByteView bytes={new Uint8Array()} label="file" />);
@@ -122,7 +146,14 @@ describe("ByteView edge cases", () => {
 
   it("reaches the last byte of a file too big for one element (Ctrl+End)", async () => {
     const onSelectionChange = vi.fn();
-    renderWithStrata(<ByteView bytes={bytes(50 * 1024 * 1024)} label="big" height={200} onSelectionChange={onSelectionChange} />);
+    renderWithStrata(
+      <ByteView
+        bytes={bytes(50 * 1024 * 1024)}
+        label="big"
+        height={200}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
     await userEvent.tab();
     await userEvent.keyboard("{Control>}{End}{/Control}");
     const last = 50 * 1024 * 1024 - 1;

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DragSource, FileButton, FileDropZone, Timeline, type TimelineDrop } from "../../src";
@@ -9,10 +9,23 @@ import { renderWithStrata } from "../../src/testing";
 
 const TYPE = "application/x-clip";
 
-function Screen({ onDrop, onDragEnd, disabled }: { onDrop: (d: TimelineDrop) => void; onDragEnd?: (dropped: boolean) => void; disabled?: boolean }) {
+function Screen({
+  onDrop,
+  onDragEnd,
+  disabled,
+}: {
+  onDrop: (d: TimelineDrop) => void;
+  onDragEnd?: (dropped: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
     <>
-      <DragSource label="run-02.mp4" items={() => [{ [TYPE]: "clip-9", "text/plain": "run-02.mp4" }]} onDragEnd={onDragEnd} disabled={disabled}>
+      <DragSource
+        label="run-02.mp4"
+        items={() => [{ [TYPE]: "clip-9", "text/plain": "run-02.mp4" }]}
+        onDragEnd={onDragEnd}
+        disabled={disabled}
+      >
         <button type="button">Select run-02.mp4</button>
       </DragSource>
       <Timeline
@@ -47,7 +60,9 @@ describe("DragSource", () => {
     const user = userEvent.setup();
     const drops: TimelineDrop[] = [];
     const ends: boolean[] = [];
-    renderWithStrata(<Screen onDrop={(d) => drops.push(d)} onDragEnd={(dropped) => ends.push(dropped)} />);
+    renderWithStrata(
+      <Screen onDrop={(d) => drops.push(d)} onDragEnd={(dropped) => ends.push(dropped)} />,
+    );
     screen.getByRole("button", { name: "Drag run-02.mp4" }).focus();
     await user.keyboard("{Enter}");
     await waitFor(() => expect(announced()).toMatch(/Started dragging/));
@@ -85,10 +100,27 @@ describe("FileDropZone and an in-app drag", () => {
       <DragSource label="run-02.mp4" items={() => [drag]}>
         <button type="button">Select run-02.mp4</button>
       </DragSource>
-      <FileDropZone title="Drag more files here" acceptLabel="a video" onFiles={() => {}} refuseTypes={refuseTypes}>
-        <FileButton accept={["video/*"]} onFiles={() => {}}>Add files</FileButton>
+      <FileDropZone
+        title="Drag more files here"
+        acceptLabel="a video"
+        onFiles={() => {}}
+        refuseTypes={refuseTypes}
+      >
+        <FileButton accept={["video/*"]} onFiles={() => {}}>
+          Add files
+        </FileButton>
       </FileDropZone>
-      <Timeline label="Edit" lanes={[{ id: "t1", label: "Track 1" }]} items={[]} to={120} zoom={10} position={30} dropTypes={[TYPE]} dropLength={4} onDrop={() => {}} />
+      <Timeline
+        label="Edit"
+        lanes={[{ id: "t1", label: "Track 1" }]}
+        items={[]}
+        to={120}
+        zoom={10}
+        position={30}
+        dropTypes={[TYPE]}
+        dropLength={4}
+        onDrop={() => {}}
+      />
     </>
   );
 
@@ -115,7 +147,9 @@ describe("FileDropZone and an in-app drag", () => {
 describe("refusesDrag", () => {
   const set = (...types: string[]) => ({ has: (t: string) => types.includes(t) });
   it("refuses a drag that carries a listed type, and not a drag of files", () => {
-    expect(refusesDrag(set("application/x-strata-drag", "text/plain"), ["application/x-strata-drag"])).toBe(true);
+    expect(
+      refusesDrag(set("application/x-strata-drag", "text/plain"), ["application/x-strata-drag"]),
+    ).toBe(true);
     expect(refusesDrag(set("video/mp4"), ["application/x-strata-drag", "text/plain"])).toBe(false);
     expect(refusesDrag(set("application/octet-stream"), ["application/x-strata-drag"])).toBe(false);
   });

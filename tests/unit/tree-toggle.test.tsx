@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as React from "react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,11 +9,26 @@ import { renderWithStrata } from "../../src/testing";
 // `reveal` writes into the URL.
 
 type N = { id: string; name: string; file?: boolean };
-const ready = <T,>(data: T[]) => ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
-const roots: N[] = [{ id: "textures", name: "textures" }, { id: "readme.txt", name: "readme.txt", file: true }];
-const kids = (id: string): N[] => (id === "textures" ? [{ id: "textures/clip.wal", name: "clip.wal", file: true }] : []);
+const ready = <T,>(data: T[]) =>
+  ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
+const roots: N[] = [
+  { id: "textures", name: "textures" },
+  { id: "readme.txt", name: "readme.txt", file: true },
+];
+const kids = (id: string): N[] =>
+  id === "textures" ? [{ id: "textures/clip.wal", name: "clip.wal", file: true }] : [];
 
-function Host({ onSelect, branchPress, reveal, param }: { onSelect: (key: string) => void; branchPress?: "select" | "toggle"; reveal?: string[]; param?: string }) {
+function Host({
+  onSelect,
+  branchPress,
+  reveal,
+  param,
+}: {
+  onSelect: (key: string) => void;
+  branchPress?: "select" | "toggle";
+  reveal?: string[];
+  param?: string;
+}) {
   const expanded = useExpanded(param ? { param } : {});
   const [selected, setSelected] = React.useState<string | null>(null);
   return (
@@ -28,7 +43,10 @@ function Host({ onSelect, branchPress, reveal, param }: { onSelect: (key: string
         expanded={expanded}
         emptyRow="Empty"
         selected={selected}
-        onSelect={(k) => { setSelected(k); onSelect(k); }}
+        onSelect={(k) => {
+          setSelected(k);
+          onSelect(k);
+        }}
         branchPress={branchPress}
         reveal={reveal}
       />
@@ -74,7 +92,9 @@ describe("branchPress", () => {
 
 describe("reveal and the URL", () => {
   it("writes the ancestors into the open param", async () => {
-    renderWithStrata(<Host onSelect={() => {}} reveal={["textures", "textures/clip.wal"]} param="open" />);
+    renderWithStrata(
+      <Host onSelect={() => {}} reveal={["textures", "textures/clip.wal"]} param="open" />,
+    );
     expect(await screen.findByRole("row", { name: /clip\.wal/ })).toBeInTheDocument();
     expect(screen.getByLabelText("open")).toHaveTextContent("textures");
   });

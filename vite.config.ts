@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 import react from "@vitejs/plugin-react";
 import dts from "vite-plugin-dts";
 import { resolve } from "node:path";
@@ -12,6 +12,13 @@ const external = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.pee
 // source the app compiles with its own theme (scripts/copy-css.mjs). The visual entries run in
 // Node (the strata-visual command), so Node's built-ins stay external too.
 export default defineConfig({
+  // One toolchain (Vite+): `vp lint` is Oxlint, `vp fmt` is Oxfmt. Width 120 and double quotes are the
+  // style the code was already written in, so adopting the formatter does not rewrite the tree.
+  lint: { ignorePatterns: [".storybook/public/**", "dist/**", "storybook-static/**", "site/**", "tests/visual/**"] },
+  fmt: {
+    printWidth: 120,
+    ignorePatterns: ["CHANGELOG.md", "UPGRADING.md", "*.md", "*.css", "*.json", "tests/visual/**", ".storybook/public/**", "site/**", "dist/**"],
+  },
   plugins: [react(), dts({ include: ["src"], entryRoot: "src" })],
   build: {
     lib: {

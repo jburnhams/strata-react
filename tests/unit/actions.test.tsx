@@ -1,5 +1,5 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RefreshCw } from "lucide-react";
@@ -61,7 +61,9 @@ describe("AsyncButton", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let resolve!: () => void;
     function Live() {
-      const { phase, run } = useAsyncAction(() => new Promise<void>((r) => (resolve = r)), { settleMs: 2000 });
+      const { phase, run } = useAsyncAction(() => new Promise<void>((r) => (resolve = r)), {
+        settleMs: 2000,
+      });
       return <AsyncButton phase={phase} labels={labels} onClick={() => run()} />;
     }
     render(<Live />);
@@ -75,9 +77,13 @@ describe("AsyncButton", () => {
   });
 
   it("announces the error's own words with the retry label", () => {
-    render(<AsyncButton phase="error" labels={labels} error="Kiln 2 is already booked for Thursday." />);
+    render(
+      <AsyncButton phase="error" labels={labels} error="Kiln 2 is already booked for Thursday." />,
+    );
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("Kiln 2 is already booked for Thursday. Try again");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Kiln 2 is already booked for Thursday. Try again",
+    );
   });
 
   it("surfaces the thrown message, calls onError, and clears the error on a re-run", async () => {
@@ -100,8 +106,12 @@ describe("AsyncButton", () => {
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
-    expect(screen.getByText("Kiln 2 is already booked for Thursday.", { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Kiln 2 is already booked for Thursday. Try again");
+    expect(
+      screen.getByText("Kiln 2 is already booked for Thursday.", { selector: "p" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Kiln 2 is already booked for Thursday. Try again",
+    );
     expect(onError).toHaveBeenCalledWith(failure);
 
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -155,25 +165,38 @@ describe("AsyncButton", () => {
   it("describes an HttpError from fetchJson in a sentence, not its log message", async () => {
     server.use(bookingConflict);
     function Live() {
-      const { phase, run, error } = useAsyncAction(() => fetchJson(api.bookings, { method: "POST", body: "{}" }));
+      const { phase, run, error } = useAsyncAction(() =>
+        fetchJson(api.bookings, { method: "POST", body: "{}" }),
+      );
       return <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />;
     }
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
     expect(await screen.findByRole("button", { name: "Try again" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("The request was refused: Kiln 2 is already booked for Friday's bisque. Try again");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The request was refused: Kiln 2 is already booked for Friday's bisque. Try again",
+    );
   });
 
   it("falls back to the status text when the refusal has no body", async () => {
-    server.use(http.post(api.bookings, () => new HttpResponse(null, { status: 409, statusText: "Conflict" })));
+    server.use(
+      http.post(
+        api.bookings,
+        () => new HttpResponse(null, { status: 409, statusText: "Conflict" }),
+      ),
+    );
     function Live() {
-      const { phase, run, error } = useAsyncAction(() => fetchJson(api.bookings, { method: "POST", body: "{}" }));
+      const { phase, run, error } = useAsyncAction(() =>
+        fetchJson(api.bookings, { method: "POST", body: "{}" }),
+      );
       return <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />;
     }
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
     expect(await screen.findByRole("button", { name: "Try again" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("The request was refused (409): Conflict. Try again");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The request was refused (409): Conflict. Try again",
+    );
   });
 
   it("takes the product's own words through describeError", async () => {
@@ -185,15 +208,20 @@ describe("AsyncButton", () => {
     }
     render(<Live />);
     await userEvent.click(screen.getByRole("button", { name: "Book firing" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Kiln 2 was booked by someone else a moment ago. Try again");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Kiln 2 was booked by someone else a moment ago. Try again",
+    );
   });
 
   it("calls onError after the error render, so it can move focus to an error message shown on error", async () => {
     function Live() {
       const ref = React.useRef<HTMLParagraphElement>(null);
-      const { phase, run, error } = useAsyncAction(() => Promise.reject(new Error("Kiln 2 is offline.")), {
-        onError: () => ref.current?.focus(),
-      });
+      const { phase, run, error } = useAsyncAction(
+        () => Promise.reject(new Error("Kiln 2 is offline.")),
+        {
+          onError: () => ref.current?.focus(),
+        },
+      );
       return (
         <>
           <AsyncButton phase={phase} labels={labels} error={error} onClick={() => run()} />
@@ -240,14 +268,23 @@ describe("Button title (issue #231)", () => {
 });
 
 describe("useAsyncAction after unmount (issue #267)", () => {
-  function Probe({ action, onError }: { action: () => Promise<unknown>; onError: (e: unknown) => void }) {
+  function Probe({
+    action,
+    onError,
+  }: {
+    action: () => Promise<unknown>;
+    onError: (e: unknown) => void;
+  }) {
     const { run } = useAsyncAction(action, { onError });
     return <button onClick={() => void run()}>Go</button>;
   }
 
   it.each([
     ["resolves", () => new Promise<void>((resolve) => resolveLater.push(resolve))],
-    ["rejects", () => new Promise<void>((_, reject) => resolveLater.push(() => reject(new Error("late"))))],
+    [
+      "rejects",
+      () => new Promise<void>((_, reject) => resolveLater.push(() => reject(new Error("late")))),
+    ],
   ])("does nothing when the action %s after the component has gone", async (_name, action) => {
     resolveLater.length = 0;
     const onError = vi.fn();

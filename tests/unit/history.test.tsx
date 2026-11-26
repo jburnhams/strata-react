@@ -1,8 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Menu, Button, SaveStatus, useAutoSave, useCommands, useHistoryState, useLeaveGuard, type SaveState } from "../../src";
+import {
+  Menu,
+  Button,
+  SaveStatus,
+  useAutoSave,
+  useCommands,
+  useHistoryState,
+  useLeaveGuard,
+  type SaveState,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 function Editor({ limit }: { limit?: number }) {
@@ -25,7 +34,13 @@ function Editor({ limit }: { limit?: number }) {
       >
         Drag
       </button>
-      <button onClick={() => set((v) => ({ ...v, volume: v.volume + 1 }), "change volume", { key: "volume" })}>Louder</button>
+      <button
+        onClick={() =>
+          set((v) => ({ ...v, volume: v.volume + 1 }), "change volume", { key: "volume" })
+        }
+      >
+        Louder
+      </button>
       <Menu label="Edit" trigger={<Button>Edit</Button>} items={[undo, redo]} />
     </>
   );
@@ -51,12 +66,17 @@ describe("useHistory", () => {
   it("reads the next step's name from the menu item and the command", async () => {
     renderWithStrata(<Editor />);
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    expect(screen.getByRole("menuitem", { name: /^Undo/ })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: /^Undo/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("button", { name: "Move" }));
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     const menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: /Undo move clip/ })).not.toHaveAttribute("aria-disabled");
+    expect(within(menu).getByRole("menuitem", { name: /Undo move clip/ })).not.toHaveAttribute(
+      "aria-disabled",
+    );
     await userEvent.click(within(menu).getByRole("menuitem", { name: /Undo move clip/ }));
     expect(x()).toHaveTextContent("0");
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -65,7 +85,8 @@ describe("useHistory", () => {
 
   it("merges pushes that share a key into one step, and a new step drops the redo", async () => {
     renderWithStrata(<Editor />);
-    for (let i = 0; i < 3; i++) await userEvent.click(screen.getByRole("button", { name: "Louder" }));
+    for (let i = 0; i < 3; i++)
+      await userEvent.click(screen.getByRole("button", { name: "Louder" }));
     expect(screen.getByTestId("volume")).toHaveTextContent("53");
     expect(screen.getByTestId("past")).toHaveTextContent(/^change volume$/);
     await userEvent.keyboard("{Control>}z{/Control}");
@@ -106,7 +127,13 @@ const failing = (n: number) => {
   });
 };
 
-function Doc({ save, delayMs = 10 }: { save: (v: string) => Promise<unknown>; delayMs?: number | null }) {
+function Doc({
+  save,
+  delayMs = 10,
+}: {
+  save: (v: string) => Promise<unknown>;
+  delayMs?: number | null;
+}) {
   const [text, setText] = React.useState("a");
   const { state, saveNow } = useAutoSave({ value: text, save, delayMs });
   useLeaveGuard(state.status !== "saved");
@@ -119,7 +146,8 @@ function Doc({ save, delayMs = 10 }: { save: (v: string) => Promise<unknown>; de
   );
 }
 
-const sign = (container: HTMLElement) => container.querySelector("[data-status]")!.getAttribute("data-status");
+const sign = (container: HTMLElement) =>
+  container.querySelector("[data-status]")!.getAttribute("data-status");
 
 describe("useAutoSave and SaveStatus", () => {
   it("moves saved, unsaved, saving, saved, and keeps one fixed-width sign", async () => {
@@ -147,7 +175,9 @@ describe("useAutoSave and SaveStatus", () => {
     const { container } = render(<Doc save={save} />);
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     await vi.waitFor(() => expect(sign(container)).toBe("failed"));
-    expect(screen.getByRole("status")).toHaveTextContent("Not saved: The connection dropped. Your changes are still here.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not saved: The connection dropped. Your changes are still here.",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     await vi.waitFor(() => expect(sign(container)).toBe("saved"));
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
@@ -223,7 +253,9 @@ describe("useAutoSave and SaveStatus", () => {
       calls++;
       if (calls === 1) throw new Error("No connection.");
     });
-    const { container } = render(<Doc save={save as (v: string) => Promise<unknown>} delayMs={null} />);
+    const { container } = render(
+      <Doc save={save as (v: string) => Promise<unknown>} delayMs={null} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     await userEvent.click(screen.getByRole("button", { name: "Save now" }));
     await vi.waitFor(() => expect(sign(container)).toBe("failed"));
@@ -233,8 +265,19 @@ describe("useAutoSave and SaveStatus", () => {
   });
 
   it("shows each state's word", () => {
-    const states: SaveState[] = [{ status: "saved", at: new Date("2026-11-12T10:42:00Z") }, { status: "saving" }, { status: "dirty" }, { status: "failed", reason: "Disk is full." }];
-    render(<>{states.map((s) => <SaveStatus key={s.status} state={s} onRetry={() => undefined} />)}</>);
+    const states: SaveState[] = [
+      { status: "saved", at: new Date("2026-11-12T10:42:00Z") },
+      { status: "saving" },
+      { status: "dirty" },
+      { status: "failed", reason: "Disk is full." },
+    ];
+    render(
+      <>
+        {states.map((s) => (
+          <SaveStatus key={s.status} state={s} onRetry={() => undefined} />
+        ))}
+      </>,
+    );
     const saved = document.querySelector('[data-status="saved"]') as HTMLElement;
     expect(saved).toHaveTextContent(/Saved \d\d:\d\d/);
     expect(screen.getByText("Not saved: Disk is full.")).toBeInTheDocument();

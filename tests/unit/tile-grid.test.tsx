@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
@@ -8,8 +8,15 @@ import { renderWithStrata } from "../../src/testing";
 // Issue #240: a grid of picture tiles that open something, with no selection.
 
 type Page = { id: string; n: number; label: string; words: number | null; look: boolean };
-const pages: Page[] = Array.from({ length: 12 }, (_, i) => ({ id: `p${i + 1}`, n: i + 1, label: `${i + 1 + 8}`, words: i === 3 ? null : 100 + i, look: i === 1 }));
-const name = (p: Page) => `Page ${p.n}, ${p.label}, ${p.words === null ? "blank" : `${p.words} words`}${p.look ? ", needs a look" : ""}`;
+const pages: Page[] = Array.from({ length: 12 }, (_, i) => ({
+  id: `p${i + 1}`,
+  n: i + 1,
+  label: `${i + 1 + 8}`,
+  words: i === 3 ? null : 100 + i,
+  look: i === 1,
+}));
+const name = (p: Page) =>
+  `Page ${p.n}, ${p.label}, ${p.words === null ? "blank" : `${p.words} words`}${p.look ? ", needs a look" : ""}`;
 
 const Path = () => <output aria-label="Path">{useLocation().pathname}</output>;
 
@@ -81,7 +88,12 @@ describe("TileGrid", () => {
 
   it("gives DataView its skeleton: the same grid of picture boxes, hidden from assistive technology", () => {
     const { container } = renderWithStrata(
-      <DataView state={{ status: "loading" }} isEmpty={(p: Page[]) => p.length === 0} skeleton={<TileGridSkeleton count={6} />} empty={<p>No pages yet.</p>}>
+      <DataView
+        state={{ status: "loading" }}
+        isEmpty={(p: Page[]) => p.length === 0}
+        skeleton={<TileGridSkeleton count={6} />}
+        empty={<p>No pages yet.</p>}
+      >
         {(rows) => <Grid items={rows} />}
       </DataView>,
     );

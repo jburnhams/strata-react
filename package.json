@@ -80,13 +80,13 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "npm run clean && vite build && node scripts/copy-css.mjs",
+    "build": "npm run clean && vp build && node scripts/copy-css.mjs",
     "typecheck": "node node_modules/typescript7/bin/tsc --noEmit",
     "test": "npm run typecheck && npm run test:unit",
-    "test:unit": "vitest run --project unit",
-    "test:integration": "npm run build && vitest run --project integration",
+    "test:unit": "vp test run --project unit",
+    "test:integration": "npm run build && vp test run --project integration",
     "test:all": "npm run test && npm run test:integration",
-    "coverage": "vitest run --project unit --coverage",
+    "coverage": "vp test run --project unit --coverage",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build --quiet -o storybook-static",
     "test:visual": "npm run build && npm run build-storybook && npm run build-example && node bin/strata-visual.js",
@@ -95,7 +95,7 @@
     "prepublishOnly": "npm run test:all",
     "docs:api": "typedoc",
     "site": "npm run build-storybook && typedoc && node scripts/build-site.mjs",
-    "build-example": "vite build --config examples/kiln-app/vite.config.ts --logLevel warn"
+    "build-example": "vp build --config examples/kiln-app/vite.config.ts --logLevel warn"
   },
   "keywords": [
     "react",
@@ -178,7 +178,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
-    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "hls.js": "^1.7.4",
     "jsdom": "^31.0.0",
     "leaflet": "^1.9.4",
@@ -195,9 +195,10 @@
     "typedoc": "^0.28.20",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
     "typescript7": "npm:typescript@~7.0.2",
-    "vite": "^8.3.6",
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
     "vite-plugin-dts": "^5.1.2",
-    "vitest": "^5.1.0"
+    "vitest": "5.1.1",
+    "vite-plus": "1.8.0"
   },
   "engines": {
     "node": ">=26.0.0"
@@ -215,6 +216,9 @@
   "overrides": {
     "openapi-typescript": {
       "typescript": "$typescript"
-    }
+    },
+    "vite-plus": "$vite-plus",
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
+    "vitest": "5.1.1"
   }
 }

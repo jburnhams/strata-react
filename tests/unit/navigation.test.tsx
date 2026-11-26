@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
@@ -32,7 +32,9 @@ describe("AppShell", () => {
 
 describe("Breadcrumb", () => {
   it("links every crumb but the last, which is the current page", () => {
-    renderWithStrata(<Breadcrumb items={[{ label: "Kiln room", to: "/" }, { label: "Bookings" }]} />);
+    renderWithStrata(
+      <Breadcrumb items={[{ label: "Kiln room", to: "/" }, { label: "Bookings" }]} />,
+    );
     expect(screen.getByRole("link", { name: "Kiln room" })).toBeInTheDocument();
     expect(screen.getByText("Bookings")).toHaveAttribute("aria-current", "page");
   });

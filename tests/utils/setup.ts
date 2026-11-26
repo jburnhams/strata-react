@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll } from "vite-plus/test";
 import { cleanup } from "@testing-library/react";
 import { server } from "./server";
 import { installLayoutShims } from "../../src/testing";

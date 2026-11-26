@@ -1,5 +1,5 @@
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
@@ -21,15 +21,40 @@ afterEach(() => {
   window.matchMedia = realMatchMedia;
 });
 
-const clip = (label: string): Candidate<VideoMedia> => ({ id: `id-${label}`, label, media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 } });
+const clip = (label: string): Candidate<VideoMedia> => ({
+  id: `id-${label}`,
+  label,
+  media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 },
+});
 const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
 const load = (labels = ["A", "B"]) => act(() => labels.forEach((l) => media.loaded(el(l), 10)));
 const reduceMotion = (on: boolean) => {
-  window.matchMedia = ((q: string) => ({ matches: on && q.includes("reduce"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} })) as unknown as typeof window.matchMedia;
+  window.matchMedia = ((q: string) => ({
+    matches: on && q.includes("reduce"),
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+  })) as unknown as typeof window.matchMedia;
 };
 
-function Pair({ pair = ["A", "B"], ...props }: Partial<React.ComponentProps<typeof CompareVideo>> & { pair?: [string, string] }) {
-  return <CompareVideo label="Pair" a={clip(pair[0])} b={clip(pair[1])} blind missing="Video not found" mode="side" onModeChange={() => undefined} {...props} />;
+function Pair({
+  pair = ["A", "B"],
+  ...props
+}: Partial<React.ComponentProps<typeof CompareVideo>> & { pair?: [string, string] }) {
+  return (
+    <CompareVideo
+      label="Pair"
+      a={clip(pair[0])}
+      b={clip(pair[1])}
+      blind
+      missing="Video not found"
+      mode="side"
+      onModeChange={() => undefined}
+      {...props}
+    />
+  );
 }
 
 describe("autoPlay", () => {
@@ -107,7 +132,7 @@ describe("autoPlay", () => {
     expect(el("A").muted).toBe(false);
   });
 
-  it("is off with reduced motion unless it is \"always\"", async () => {
+  it('is off with reduced motion unless it is "always"', async () => {
     reduceMotion(true);
     const first = renderWithStrata(<Pair autoPlay />);
     load();
@@ -119,7 +144,15 @@ describe("autoPlay", () => {
   });
 
   it("starts every cell of a grid on one clock", async () => {
-    renderWithStrata(<CompareVideoGrid label="Three" items={[clip("A"), clip("B"), clip("C")]} blind missing="Video not found" autoPlay />);
+    renderWithStrata(
+      <CompareVideoGrid
+        label="Three"
+        items={[clip("A"), clip("B"), clip("C")]}
+        blind
+        missing="Video not found"
+        autoPlay
+      />,
+    );
     act(() => ["A", "B", "C"].forEach((l) => io.intersect(el(l).closest("figure")!, true)));
     load(["A", "B", "C"]);
     await waitFor(() => expect(el("A").paused).toBe(false));

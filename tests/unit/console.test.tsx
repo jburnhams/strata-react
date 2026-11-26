@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as React from "react";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,7 +8,17 @@ import { renderWithStrata } from "../../src/testing";
 // Issue #369: a log with levels over a command line with history and Tab completion.
 
 const COMMANDS = ["map", "maplist", "quit", "echo"];
-function Host({ initial = [], historyKey, onRun, lineHeight }: { initial?: ConsoleLine[]; historyKey?: string; onRun?: (c: string) => void; lineHeight?: number }) {
+function Host({
+  initial = [],
+  historyKey,
+  onRun,
+  lineHeight,
+}: {
+  initial?: ConsoleLine[];
+  historyKey?: string;
+  onRun?: (c: string) => void;
+  lineHeight?: number;
+}) {
   const [lines, setLines] = React.useState<ConsoleLine[]>(initial);
   return (
     <Console
@@ -19,7 +29,11 @@ function Host({ initial = [], historyKey, onRun, lineHeight }: { initial?: Conso
       complete={(text) => COMMANDS.filter((c) => c.startsWith(text))}
       onCommand={(text) => {
         onRun?.(text);
-        setLines((l) => [...l, { id: l.length, level: "echo", text }, { id: l.length + 1, text: `ran ${text}` }]);
+        setLines((l) => [
+          ...l,
+          { id: l.length, level: "echo", text },
+          { id: l.length + 1, text: `ran ${text}` },
+        ]);
       }}
     />
   );
@@ -35,7 +49,15 @@ describe("Console", () => {
   });
 
   it("says each level in a word, never by colour alone, and marks an echo as a command", () => {
-    renderWithStrata(<Host initial={[{ id: 1, level: "warning", text: "low memory" }, { id: 2, level: "error", text: "no such map" }, { id: 3, level: "echo", text: "map e1m1" }]} />);
+    renderWithStrata(
+      <Host
+        initial={[
+          { id: 1, level: "warning", text: "low memory" },
+          { id: 2, level: "error", text: "no such map" },
+          { id: 3, level: "echo", text: "map e1m1" },
+        ]}
+      />,
+    );
     expect(screen.getByText("Warning")).toBeInTheDocument();
     expect(screen.getByText("Error")).toBeInTheDocument();
     expect(screen.getByText("Command:")).toBeInTheDocument();

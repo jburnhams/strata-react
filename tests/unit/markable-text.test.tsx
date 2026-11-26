@@ -1,9 +1,17 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Check, X } from "lucide-react";
-import { Mark, MarkableText, MarkSummary, countMarks, rangeBetween, stepId, type MarkKind } from "../../src";
+import {
+  Mark,
+  MarkableText,
+  MarkSummary,
+  countMarks,
+  rangeBetween,
+  stepId,
+  type MarkKind,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const kinds: MarkKind[] = [
@@ -13,13 +21,39 @@ const kinds: MarkKind[] = [
 const words = ["The", "kiln", "ran", "hot", "all", "night"];
 const ids = words.map((_, i) => `w${i}`);
 
-function Demo({ onMark, initial = {}, rows = false }: { onMark?: (ids: readonly string[], kind: string | null) => void; initial?: Record<string, string>; rows?: boolean }) {
+function Demo({
+  onMark,
+  initial = {},
+  rows = false,
+}: {
+  onMark?: (ids: readonly string[], kind: string | null) => void;
+  initial?: Record<string, string>;
+  rows?: boolean;
+}) {
   const [marks, setMarks] = React.useState<Record<string, string | undefined>>(initial);
   // Rows: only the first and last words are mounted, as a virtualised list would leave them.
   const shown = rows ? [0, 5] : ids.map((_, i) => i);
   return (
-    <MarkableText label="Transcript" ids={ids} marks={marks} kinds={kinds} clearKeys={["w"]} onMark={(sel, k) => { onMark?.(sel, k); setMarks((m) => Object.fromEntries([...Object.entries(m), ...sel.map((id) => [id, k ?? undefined])])); }}>
-      <p>{shown.map((i) => <React.Fragment key={i}><Mark id={ids[i]!}>{words[i]}</Mark>{" "}</React.Fragment>)}</p>
+    <MarkableText
+      label="Transcript"
+      ids={ids}
+      marks={marks}
+      kinds={kinds}
+      clearKeys={["w"]}
+      onMark={(sel, k) => {
+        onMark?.(sel, k);
+        setMarks((m) =>
+          Object.fromEntries([...Object.entries(m), ...sel.map((id) => [id, k ?? undefined])]),
+        );
+      }}
+    >
+      <p>
+        {shown.map((i) => (
+          <React.Fragment key={i}>
+            <Mark id={ids[i]!}>{words[i]}</Mark>{" "}
+          </React.Fragment>
+        ))}
+      </p>
     </MarkableText>
   );
 }
@@ -60,7 +94,9 @@ describe("MarkableText", () => {
     expect(word("kiln")).toHaveAttribute("data-selected");
     fireEvent.pointerDown(word("all"), { button: 0, shiftKey: true });
     fireEvent.pointerUp(window);
-    expect(["kiln", "ran", "hot", "all"].every((t) => word(t).hasAttribute("data-selected"))).toBe(true);
+    expect(["kiln", "ran", "hot", "all"].every((t) => word(t).hasAttribute("data-selected"))).toBe(
+      true,
+    );
   });
 
   it("selects every id between two ends even when the rows between are not mounted", () => {
@@ -77,8 +113,21 @@ describe("MarkableText", () => {
     const user = userEvent.setup();
     const onCaret = vi.fn();
     renderWithStrata(
-      <MarkableText label="Transcript" ids={ids} marks={{}} kinds={kinds} onMark={() => {}} onCaretChange={onCaret}>
-        <p>{words.map((w, i) => <Mark key={i} id={ids[i]!}>{w}</Mark>)}</p>
+      <MarkableText
+        label="Transcript"
+        ids={ids}
+        marks={{}}
+        kinds={kinds}
+        onMark={() => {}}
+        onCaretChange={onCaret}
+      >
+        <p>
+          {words.map((w, i) => (
+            <Mark key={i} id={ids[i]!}>
+              {w}
+            </Mark>
+          ))}
+        </p>
       </MarkableText>,
     );
     await user.tab();
@@ -99,7 +148,12 @@ describe("MarkableText", () => {
   it("marks the selection with a chord, announces it, and never while typing", async () => {
     const user = userEvent.setup();
     const onMark = vi.fn();
-    renderWithStrata(<><input aria-label="Note" /><Demo onMark={onMark} /></>);
+    renderWithStrata(
+      <>
+        <input aria-label="Note" />
+        <Demo onMark={onMark} />
+      </>,
+    );
     await user.type(screen.getByRole("textbox", { name: "Note" }), "g");
     expect(onMark).not.toHaveBeenCalled();
     screen.getByRole("textbox", { name: "Note" }).blur();

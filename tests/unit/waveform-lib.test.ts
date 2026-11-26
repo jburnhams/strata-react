@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
-import { clampView, peaksBetween, peaksFromAudio, resamplePeaks, timeAt, toPeakPair } from "../../src/lib/waveform";
+import { describe, expect, it, vi } from "vite-plus/test";
+import {
+  clampView,
+  peaksBetween,
+  peaksFromAudio,
+  resamplePeaks,
+  timeAt,
+  toPeakPair,
+} from "../../src/lib/waveform";
 
 // Issue #185: the numbers behind Waveform, with no DOM.
 
@@ -45,17 +52,32 @@ describe("peaksBetween", () => {
 });
 
 describe("peaksFromAudio", () => {
-  const audio = (samples: number[][]) => ({ duration: 1, numberOfChannels: samples.length, length: samples[0].length, getChannelData: (c: number) => samples[c] });
+  const audio = (samples: number[][]) => ({
+    duration: 1,
+    numberOfChannels: samples.length,
+    length: samples[0].length,
+    getChannelData: (c: number) => samples[c],
+  });
   it("reduces every channel to the buckets and reports progress", async () => {
     const progress = vi.fn();
-    const r = await peaksFromAudio(audio([[0, 0.5, -0.5, 0], [0, 0, 0, 0.9]]), 2, { progress, chunk: 1 });
+    const r = await peaksFromAudio(
+      audio([
+        [0, 0.5, -0.5, 0],
+        [0, 0, 0, 0.9],
+      ]),
+      2,
+      { progress, chunk: 1 },
+    );
     expect(r2(r.max)).toEqual([0.5, 0.9]);
     expect(Array.from(r.min)).toEqual([0, -0.5]);
     expect(progress).toHaveBeenLastCalledWith(2, 2);
   });
   it("stops when cancelled", async () => {
     const ctl = new AbortController();
-    const run = peaksFromAudio(audio([new Array(1000).fill(0.1)]), 1000, { signal: ctl.signal, chunk: 10 });
+    const run = peaksFromAudio(audio([new Array(1000).fill(0.1)]), 1000, {
+      signal: ctl.signal,
+      chunk: 10,
+    });
     ctl.abort();
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
   });

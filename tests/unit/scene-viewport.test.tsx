@@ -1,7 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SceneViewport, useOrbitCamera, type OrbitCamera, type SceneFrame, type SceneViewportHandle } from "../../src/scene";
+import {
+  SceneViewport,
+  useOrbitCamera,
+  type OrbitCamera,
+  type SceneFrame,
+  type SceneViewportHandle,
+} from "../../src/scene";
 import { renderWithStrata } from "../../src/testing";
 import { installFakeGl, type FakeGl } from "../utils/gl";
 
@@ -10,7 +16,10 @@ import { installFakeGl, type FakeGl } from "../utils/gl";
 let gl: FakeGl;
 beforeEach(() => {
   gl = installFakeGl();
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number);
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number,
+  );
   vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
 });
 afterEach(() => {
@@ -18,11 +27,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 const frames = async () => {
-  for (let i = 0; i < 3; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 12))));
+  for (let i = 0; i < 3; i++)
+    await act(async () => void (await new Promise((r) => setTimeout(r, 12))));
 };
 
 type Seen = { frames: SceneFrame[]; camera: OrbitCamera };
-function Host({ mode, seen, onHandle, initial }: { mode?: "orbit" | "fly"; seen: Seen; onHandle?: (h: SceneViewportHandle | null) => void; initial?: Partial<OrbitCamera> }) {
+function Host({
+  mode,
+  seen,
+  onHandle,
+  initial,
+}: {
+  mode?: "orbit" | "fly";
+  seen: Seen;
+  onHandle?: (h: SceneViewportHandle | null) => void;
+  initial?: Partial<OrbitCamera>;
+}) {
   const { camera, setCamera, home } = useOrbitCamera(initial ?? { distance: 10, yaw: 0, pitch: 0 });
   seen.camera = camera;
   return (
@@ -96,10 +116,14 @@ describe("words", () => {
   it("names the canvas by the label and the camera, always current", async () => {
     const seen = fresh();
     renderWithStrata(<Host seen={seen} initial={{ distance: 10, yaw: 0, pitch: 0 }} />);
-    expect(screen.getByRole("img", { name: "Map e1m1. Looking at 0, 0, 0 from 10 away" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Map e1m1. Looking at 0, 0, 0 from 10 away" }),
+    ).toBeInTheDocument();
     await userEvent.click(view());
     await userEvent.keyboard("{ArrowRight}");
-    expect(screen.getByRole("img", { name: /turned 3\.5° right|turned 4° right/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /turned 3\.5° right|turned 4° right/ }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -114,7 +138,13 @@ describe("input", () => {
     expect(seen.camera.yaw).toBeGreaterThan(30);
     fireEvent.pointerUp(view(), { pointerId: 1 });
     fireEvent.pointerDown(view(), { pointerId: 2, clientX: 0, clientY: 0, button: 0 });
-    fireEvent.pointerMove(view(), { pointerId: 2, clientX: 40, clientY: 0, buttons: 1, shiftKey: true });
+    fireEvent.pointerMove(view(), {
+      pointerId: 2,
+      clientX: 40,
+      clientY: 0,
+      buttons: 1,
+      shiftKey: true,
+    });
     expect(seen.camera.target[0]).not.toBe(0);
   });
 
@@ -161,7 +191,11 @@ describe("input", () => {
     expect(seen.camera.distance).toBe(8);
     await userEvent.keyboard("-");
     expect(seen.camera.distance).toBeCloseTo(10);
-    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("reduce"), addEventListener() {}, removeEventListener() {} }));
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q.includes("reduce"),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
     await userEvent.keyboard("0");
     expect(seen.camera).toMatchObject({ yaw: 0, pitch: 0, distance: 10, target: [0, 0, 0] });
   });
@@ -180,7 +214,11 @@ describe("input", () => {
 
 describe("fly mode", () => {
   it("walks along the look direction and strafes, one step a press under reduced motion", async () => {
-    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("reduce"), addEventListener() {}, removeEventListener() {} }));
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q.includes("reduce"),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
     const seen = fresh();
     renderWithStrata(<Host seen={seen} mode="fly" initial={{ distance: 0, yaw: 0, pitch: 0 }} />);
     await userEvent.click(view());
@@ -222,7 +260,16 @@ describe("time (#386)", () => {
     const seen = fresh();
     function Timed({ time }: { time: number }) {
       const { camera, setCamera, home } = useOrbitCamera({ distance: 10, yaw: 0, pitch: 0 });
-      return <SceneViewport label="Map e1m1" camera={camera} onCameraChange={setCamera} home={home} time={time} render={(_gl, frame) => void seen.frames.push(frame)} />;
+      return (
+        <SceneViewport
+          label="Map e1m1"
+          camera={camera}
+          onCameraChange={setCamera}
+          home={home}
+          time={time}
+          render={(_gl, frame) => void seen.frames.push(frame)}
+        />
+      );
     }
     const { rerender } = renderWithStrata(<Timed time={0} />);
     await frames();
