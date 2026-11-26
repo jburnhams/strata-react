@@ -222,3 +222,20 @@ describe("MediaStage", () => {
     expect(document.querySelectorAll("svg line").length).toBeGreaterThan(0);
   });
 });
+
+describe("SeekBar marks (#387)", () => {
+  it("names each mark in a tooltip with its time, draws scenes apart from chapters, and seeks without starting a drag", async () => {
+    const user = userEvent.setup();
+    const seen: number[] = [];
+    renderWithStrata(<SeekBar time={10} duration={1200} onSeek={(t) => seen.push(t)} marks={[{ time: 600, label: "Christmas dinner" }, { time: 640, label: "The pudding", kind: "scene" }]} />);
+    const dinner = screen.getByRole("button", { name: "Christmas dinner, 10:00" });
+    expect(dinner).toHaveAttribute("data-kind", "chapter");
+    expect(screen.getByRole("button", { name: "The pudding, 10:40" })).toHaveAttribute("data-kind", "scene");
+    // React Aria opens on hover only after it has seen a real pointer.
+    await user.click(document.body);
+    await user.hover(dinner);
+    expect(await screen.findByRole("tooltip", {}, { timeout: 2000 })).toHaveTextContent("Christmas dinner10:00");
+    await user.click(dinner);
+    expect(seen).toEqual([600]);
+  });
+});

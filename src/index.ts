@@ -92,6 +92,7 @@ export { ScheduleTable, type ScheduleTableProps, type ScheduleRow } from "./comp
 export { Thumbnail, ThumbnailSkeleton, type ThumbnailProps, type AspectRatio } from "./components/thumbnail";
 export { FilmStrip, pickEvenly, frameAt, type FilmStripProps, type FilmFrame } from "./components/film-strip";
 export { MediaContents, currentItem, type MediaContentsProps, type MediaContentsItem } from "./components/media-contents";
+export { skipAction, marksFor, type MediaMark, type SkipLevel, type SkipSteps, type SkipAction } from "./components/media-skip";
 export {
   DataTable,
   TableSkeleton,

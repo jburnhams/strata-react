@@ -164,6 +164,40 @@ export const FileChapters: Story = {
   },
 };
 
+const firingScenes = [
+  { time: 25, label: "The bottom shelf", kind: "scene" as const },
+  { time: 48, label: "Setting the cones", kind: "scene" as const },
+  { time: 110, label: "Body reduction", kind: "scene" as const },
+  { time: 150, label: "Cone 6 bends", kind: "scene" as const },
+  { time: 210, label: "The first bowl", kind: "scene" as const },
+];
+
+/** Chapters and the scenes within them on the seek bar (issue #387): a scene is a shorter, fainter mark, each one names itself in a tooltip and plays from there when pressed, and the skip buttons step through them: Previous and Next scene the small skip, Previous and Next chapter the large. */
+export const ScenesAndChapters: Story = {
+  args: { label: "x" },
+  render: () => <One marks={[...firingMarks, ...firingScenes]} />,
+};
+
+/** A file with no marks skips by time (10 s and 1 min, or the app's `skip`), and a video with a frame rate (`fps`) gets Back one frame and Forward one frame beside Play. */
+export const FrameSteps: Story = {
+  args: { label: "x" },
+  render: () => <div className="max-w-3xl"><MediaPlayer label="Kiln cam" kind="video" src={clipSrc} fps={25} controls="strata" /></div>,
+};
+
+/** A video that follows the reader (issue #387): play it, then scroll down; once it is off the top of the screen the picture floats in the corner with its own seek bar, Play, Back to the player and Close. */
+export const Floating: Story = {
+  tags: ["no-visual"],
+  args: { label: "x" },
+  render: () => (
+    <div className="grid max-w-3xl gap-6">
+      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" float marks={[{ time: 1, label: "The door opens" }]} />
+      {Array.from({ length: 30 }, (_, i) => (
+        <p key={i} className="type-body text-muted-foreground">Notes on the firing, part {i + 1}. Scroll on with the video playing and it stays in sight in the corner.</p>
+      ))}
+    </div>
+  ),
+};
+
 /** A video player a phone wide, with a side rail's width taken off (issue #213): the speed and volume row wraps, the volume track gives way, and "100%" stays inside the player. */
 export const VideoPhone: Story = {
   tags: ["visual-phone"],

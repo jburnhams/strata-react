@@ -5,7 +5,8 @@ import * as React from "react";
 import { useLocation } from "react-router";
 import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
-import { renderWithStrata } from "../../src/testing";
+import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
+import { box } from "../../src/testing/layout";
 
 // Issue #134. jsdom has no media engine, so tests/utils/media.ts plays the browser's decoder;
 // the hook, the element's events and the components are the real ones.
@@ -630,4 +631,145 @@ describe("MediaPlayer heading (issue #329)", () => {
 it("leaves the picture unlinked when no subtitle names the link (Codex on #330)", () => {
   renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={{ title: "Only a title", subtitleTo: "/makers/1", avatar: null }} />);
   expect(screen.queryAllByRole("link")).toEqual([]);
+});
+
+describe("skip and frame buttons (#387)", () => {
+  const tape = [
+    { time: 0, label: "Morning" },
+    { time: 30, label: "Stockings", kind: "scene" as const },
+    { time: 90, label: "Presents", kind: "scene" as const },
+    { time: 600, label: "Dinner" },
+  ];
+  const video = (container: HTMLElement) => container.querySelector("video") as HTMLVideoElement;
+  const playback = () => within(screen.getByRole("toolbar", { name: "Playback" }));
+
+  it("skips by a file's scenes and chapters, each button named for where it goes", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" marks={tape} controls="strata" />);
+    const el = video(container);
+    act(() => media.loaded(el, 1200));
+    act(() => media.tick(el, 40));
+    await user.click(playback().getByRole("button", { name: "Next scene" }));
+    expect(el.currentTime).toBe(90);
+    await user.click(playback().getByRole("button", { name: "Next chapter" }));
+    expect(el.currentTime).toBe(600);
+    act(() => media.tick(el, 700));
+    await user.click(playback().getByRole("button", { name: "Previous chapter" }));
+    expect(el.currentTime).toBe(600);
+    expect(playback().getByRole("button", { name: "Next chapter" })).toBeDisabled();
+  });
+
+  it("skips 10 s and 1 min in a file with no marks, and draws no frame buttons without a frame rate", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" />);
+    const el = video(container);
+    act(() => media.loaded(el, 300));
+    expect(playback().getByRole("button", { name: "Back 10 s" })).toBeDisabled();
+    await user.click(playback().getByRole("button", { name: "Forward 1 min" }));
+    expect(el.currentTime).toBe(60);
+    await user.click(playback().getByRole("button", { name: "Back 10 s" }));
+    expect(el.currentTime).toBe(50);
+    expect(playback().queryByRole("button", { name: "Forward one frame" })).toBeNull();
+  });
+
+  it("takes the app's steps, and draws none with skip={false}", () => {
+    const { container, rerender } = render(<MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" skip={{ small: 5, large: 30 }} />);
+    act(() => media.loaded(video(container), 300));
+    expect(playback().getByRole("button", { name: "Forward 5 s" })).toBeInTheDocument();
+    expect(playback().getByRole("button", { name: "Forward 30 s" })).toBeInTheDocument();
+    rerender(<MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" skip={false} />);
+    expect(playback().getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Play"]);
+  });
+
+  it("keeps a sequence's large skip as its previous and next source", () => {
+    render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
+    expect(playback().getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Previous chapter", "Back 10 s", "Play", "Forward 10 s", "Next chapter"]);
+  });
+
+  it("steps one frame with the buttons and the , and . keys, pausing first", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />);
+    const el = video(container);
+    act(() => media.loaded(el, 60));
+    await user.click(playback().getByRole("button", { name: "Play" }));
+    act(() => media.tick(el, 2.02));
+    await user.click(playback().getByRole("button", { name: "Forward one frame" }));
+    expect(el.paused).toBe(true);
+    expect(el.currentTime).toBeCloseTo(51.5 / 25);
+    await user.keyboard(",");
+    expect(el.currentTime).toBeCloseTo(50.5 / 25);
+    await user.keyboard(".");
+    expect(el.currentTime).toBeCloseTo(51.5 / 25);
+  });
+});
+
+describe("a player that floats when scrolled past (#387)", () => {
+  let io: ReturnType<typeof installFakeIntersectionObserver>;
+  beforeEach(() => void (io = installFakeIntersectionObserver()));
+  afterEach(() => io.uninstall());
+  const end = (container: HTMLElement) => container.querySelector("[data-player-end]") as HTMLElement;
+  const scrollPast = (container: HTMLElement, gone: boolean) => {
+    const el = end(container);
+    el.getBoundingClientRect = () => box(0, gone ? -50 : 400, 0, 0);
+    io.intersect(el, !gone);
+  };
+
+  it("moves the same video to the corner once it has played and gone off the top, and back when scrolled to", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
+    const el = container.querySelector("video")!;
+    act(() => media.loaded(el, 600));
+    scrollPast(container, true);
+    // Not started: it stays where it is.
+    expect(container.querySelector("[data-floating]")).toBeNull();
+    scrollPast(container, false);
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    scrollPast(container, true);
+    const group = screen.getByRole("group", { name: "Tape" });
+    expect(group).toHaveAttribute("data-floating");
+    expect(container.querySelector("video")).toBe(el);
+    expect(container.querySelector("[data-player-place]")).toBeInTheDocument();
+    expect(within(group).getByRole("slider", { name: "Seek in Tape" })).toBeInTheDocument();
+    expect(within(group).queryByRole("toolbar", { name: "Playback" })).toBeNull();
+    scrollPast(container, false);
+    expect(group).not.toHaveAttribute("data-floating");
+    expect(container.querySelector("[data-player-place]")).toBeNull();
+  });
+
+  it("stays in place after Close until the player is scrolled back to", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
+    act(() => media.loaded(container.querySelector("video")!, 600));
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    scrollPast(container, true);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.getByRole("group", { name: "Tape" })).not.toHaveAttribute("data-floating");
+    scrollPast(container, false);
+    scrollPast(container, true);
+    expect(screen.getByRole("group", { name: "Tape" })).toHaveAttribute("data-floating");
+  });
+
+  it("scrolls back to the player with Back to the player", async () => {
+    const user = userEvent.setup();
+    const scrolled = vi.fn();
+    const saved = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
+    Element.prototype.scrollIntoView = scrolled;
+    try {
+      const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
+      act(() => media.loaded(container.querySelector("video")!, 600));
+      await user.click(screen.getByRole("button", { name: "Play" }));
+      scrollPast(container, true);
+      await user.click(screen.getByRole("button", { name: "Back to the player" }));
+      expect(scrolled).toHaveBeenCalled();
+      expect(screen.getByRole("group", { name: "Tape" })).not.toHaveAttribute("data-floating");
+    } finally {
+      if (saved) Object.defineProperty(Element.prototype, "scrollIntoView", saved);
+      else delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("does nothing for audio, or without float", () => {
+    const { container } = render(<MediaPlayer label="Talk" src="/talk.mp3" controls="strata" float />);
+    expect(end(container)).toBeNull();
+  });
 });
