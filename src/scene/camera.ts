@@ -8,6 +8,8 @@
 // scene formats; an app whose world is Z-up (a Quake 2 map) rotates its world, or its `render`, once.
 // Matrices are column-major `Float32Array(16)`, the order WebGL's `uniformMatrix4fv` takes.
 
+import { followAim } from "../lib/follow";
+
 /** Where the eye is and what it looks at. */
 export type OrbitCamera = {
   /** The point looked at (orbit) or the eye itself (fly, `distance` 0). */
@@ -155,4 +157,25 @@ export function describeCamera(c: OrbitCamera): string {
   const at = `${n(c.target[0])}, ${n(c.target[1])}, ${n(c.target[2])}`;
   const parts = [turned && `turned ${turned}`, tilted && `looking ${tilted}`].filter(Boolean).join(", ");
   return c.distance === 0 ? `At ${at}${parts ? `, ${parts}` : ", looking straight ahead"}` : `Looking at ${at} from ${n(c.distance)} away${parts ? `, ${parts}` : ""}`;
+}
+
+/** A view from inside a sphere as `PanoramaViewer` holds it: the same degrees, positive yaw to the right and positive pitch up. */
+export type LookView = { yaw: number; pitch: number; fov: number };
+
+/** The fly camera that sees what a `PanoramaViewer` view sees from `eye`: one view model for looking from a point, in a picture or a scene (issue #386). */
+export function cameraFromView(view: Pick<LookView, "yaw" | "pitch">, eye: readonly [number, number, number] = [0, 0, 0]): OrbitCamera {
+  return { target: eye, distance: 0, yaw: view.yaw, pitch: view.pitch };
+}
+
+/** The panorama view a camera looks along from its eye (an orbit camera looks along its `forward` just the same), with the field of view given. */
+export function viewFromCamera(camera: Pick<OrbitCamera, "yaw" | "pitch">, fov: number): LookView {
+  return { yaw: camera.yaw, pitch: camera.pitch, fov };
+}
+
+/**
+ * A camera that follows a moving point (issue #386, "through the player's eyes" in a replay): the eye is at `eye` and looks along the
+ * heading the app supplies, plus the person's own `look` on top. With `behind` it is a chase camera instead, that far back along the look.
+ */
+export function followCamera({ eye, heading, pitch = 0, look, behind = 0, maxPitch = 89 }: { eye: readonly [number, number, number]; heading: number; pitch?: number; look?: { yaw?: number; pitch?: number }; behind?: number; maxPitch?: number }): OrbitCamera {
+  return { target: eye, distance: Math.max(0, behind), ...followAim({ heading, pitch, look, maxPitch }) };
 }

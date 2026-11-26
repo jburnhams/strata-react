@@ -1,6 +1,7 @@
 import * as React from "react";
 import { VisuallyHidden } from "react-aria";
 import { useInView } from "../lib/in-view";
+import { useSettledStatus, useViewPointers, useWheelZoom } from "../lib/viewer-input";
 import { cn } from "../lib/utils";
 import { Slider } from "../components/value-controls";
 import { createRenderer, type PanoramaPicture, type PanoramaRenderer } from "./gl";
@@ -282,67 +283,30 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
     };
   }, [video, inView, schedule]);
 
-  // Pointer: drag turns the view with the pointer, two pointers pinch, a click that did not drag picks.
-  const pointers = React.useRef(new Map<number, { x: number; y: number }>());
-  const gesture = React.useRef<{ moved: boolean; pinch: number | null; start: { x: number; y: number } } | null>(null);
+  // Pointer: drag turns the view with the pointer, two pointers pinch, a click that did not drag picks (`useViewPointers`).
   const hostRect = () => box.current!.getBoundingClientRect();
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.pointerType === "mouse") return;
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    const [first, second] = [...pointers.current.values()];
-    const distance = second ? Math.hypot(first.x - second.x, first.y - second.y) : null;
-    gesture.current = { moved: false, pinch: distance, start: { x: e.clientX, y: e.clientY } };
-    e.currentTarget.focus({ preventScroll: true });
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const last = pointers.current.get(e.pointerId);
-    if (!last || !gesture.current) return;
-    const now = { x: e.clientX, y: e.clientY };
-    pointers.current.set(e.pointerId, now);
-    const v = live.current.view;
-    const s = { width: hostRect().width, height: hostRect().height };
-    if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (gesture.current.pinch && d > 0) change({ ...v, fov: v.fov * (gesture.current.pinch / d) });
-      gesture.current.pinch = d;
-      gesture.current.moved = true;
-      return;
-    }
-    if (Math.hypot(now.x - gesture.current.start.x, now.y - gesture.current.start.y) > 4) gesture.current.moved = true;
-    if (!gesture.current.moved) return;
-    // The picture follows the pointer: dragging right turns the view left.
-    const per = degreesPerPixel(v, s);
-    change({ ...v, yaw: v.yaw - (now.x - last.x) * per, pitch: v.pitch + (now.y - last.y) * per });
-  };
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const g = gesture.current;
-    pointers.current.delete(e.pointerId);
-    if (pointers.current.size === 0) {
-      gesture.current = null;
-      if (g && !g.moved && live.current.onPick) {
-        const r = hostRect();
-        const s = { width: r.width, height: r.height };
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
-        live.current.onPick(current.current.flat ? unprojectFlat(live.current.view, s, x, y) : unproject(live.current.view, s, x, y));
-      }
-    } else if (g) g.pinch = null;
-  };
+  const pointers = useViewPointers({
+    ignore: (e) => e.button !== 0 && e.pointerType === "mouse",
+    onDrag: (dx, dy) => {
+      const v = live.current.view;
+      const r = hostRect();
+      // The picture follows the pointer: dragging right turns the view left.
+      const per = degreesPerPixel(v, { width: r.width, height: r.height });
+      change({ ...v, yaw: v.yaw - dx * per, pitch: v.pitch + dy * per });
+    },
+    onPinch: (ratio) => change({ ...live.current.view, fov: live.current.view.fov * ratio }),
+    onTap: (e) => {
+      if (!live.current.onPick) return;
+      const r = hostRect();
+      const s = { width: r.width, height: r.height };
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      live.current.onPick(current.current.flat ? unprojectFlat(live.current.view, s, x, y) : unproject(live.current.view, s, x, y));
+    },
+  });
 
   // The wheel zooms; native, because React's wheel listener is passive and the page must not scroll too.
-  React.useEffect(() => {
-    const el = box.current;
-    if (!el || !wheelZoom) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const v = live.current.view;
-      change({ ...v, fov: v.fov * Math.exp(e.deltaY * 0.0015) });
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [wheelZoom, change]);
+  useWheelZoom(box, (factor) => change({ ...live.current.view, fov: live.current.view.fov * factor }), { enabled: wheelZoom });
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const v = live.current.view;
@@ -360,16 +324,7 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
 
   // Said in words: always on the picture; politely once the view has been still for a moment.
   const direction = describeView(view);
-  const [said, setSaid] = React.useState("");
-  const first = React.useRef(true);
-  React.useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    const t = setTimeout(() => setSaid(`${direction}, field of view ${Math.round(view.fov)}°`), STILL_MS);
-    return () => clearTimeout(t);
-  }, [direction, view.fov]);
+  const said = useSettledStatus(`${direction}, field of view ${Math.round(view.fov)}°`, STILL_MS);
 
   const api: PanoramaOverlayApi = {
     view,
@@ -389,10 +344,10 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
         aria-describedby={undefined}
         tabIndex={0}
         onKeyDown={onKeyDown}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerDown={pointers.onPointerDown}
+        onPointerMove={pointers.onPointerMove}
+        onPointerUp={pointers.onPointerUp}
+        onPointerCancel={pointers.onPointerUp}
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}
       >

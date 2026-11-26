@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { basis, clampCamera, describeCamera, dolly, frameFor, multiply, pan, perspective, turn, walk, type OrbitCamera } from "../../src/scene";
+import { basis, cameraFromView, clampCamera, followCamera, viewFromCamera, describeCamera, dolly, frameFor, multiply, pan, perspective, turn, walk, type OrbitCamera } from "../../src/scene";
 
 // Issue #370: the camera maths behind SceneViewport, with no GL and no component.
 
@@ -96,5 +96,19 @@ describe("clampCamera and describeCamera", () => {
   it("says where it looks, in words", () => {
     expect(describeCamera(cam({ yaw: 45, pitch: -30, target: [0, 2, 0] }))).toBe("Looking at 0, 2, 0 from 10 away, turned 45° right, looking 30° down");
     expect(describeCamera(cam({ distance: 0, target: [1, 2, 3] }))).toBe("At 1, 2, 3, looking straight ahead");
+  });
+});
+
+describe("one view model with the panorama (#386)", () => {
+  it("turns a panorama view into the fly camera that looks the same way, and back", () => {
+    const camera = cameraFromView({ yaw: 40, pitch: -10 }, [1, 2, 3]);
+    expect(camera).toEqual({ target: [1, 2, 3], distance: 0, yaw: 40, pitch: -10 });
+    expect(viewFromCamera(camera, 75)).toEqual({ yaw: 40, pitch: -10, fov: 75 });
+    near(frameFor(camera, 800, 600).eye, [1, 2, 3]);
+  });
+
+  it("follows a heading with the person's own look on top, wrapped and held short of the poles", () => {
+    expect(followCamera({ eye: [0, 1, 0], heading: 170, look: { yaw: 30, pitch: 100 } })).toEqual({ target: [0, 1, 0], distance: 0, yaw: -160, pitch: 89 });
+    expect(followCamera({ eye: [5, 0, 0], heading: 90, behind: 4 })).toMatchObject({ distance: 4, yaw: 90, pitch: 0 });
   });
 });

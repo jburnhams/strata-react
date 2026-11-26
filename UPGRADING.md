@@ -11,6 +11,9 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-26 (shared 3D input, #386)
+- No action needed. `PanoramaViewer` and `SceneViewport` read pointers, the wheel and the status through shared hooks with the same behaviour; a pointer cancelled mid-press no longer calls `onPick`.
+
 ## 2026-11-26 (clock, key scope and theming hooks, #383–#386)
 - `useHotkeys` now returns `{ live }` (it returned nothing) and takes `within` (a ref: keys count only while focus is inside it; a `Shortcut` with `anywhere` stays page-wide). Nothing changes for a call that passes neither.
 - `SceneFrame` has a new member, `time` (0 unless `SceneViewport time` is given): a `SceneFrame` you build by hand in a test needs it. `MediaPlayer`'s several-players warning now reads "several players are on this page" (the store is shared with `useTimeline`).
