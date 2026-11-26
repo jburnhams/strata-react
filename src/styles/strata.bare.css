@@ -151,7 +151,9 @@
 @utility type-label { font-size: var(--type-label-size, 0.875rem); line-height: var(--type-label-leading, 1.25rem); font-weight: var(--type-label-weight, 500); }
 @utility type-body-sm { font-size: var(--type-body-sm-size, 0.875rem); line-height: var(--type-body-sm-leading, 1.25rem); font-weight: var(--type-body-sm-weight, 400); }
 @utility type-body { font-size: var(--type-body-size, 1rem); line-height: var(--type-body-leading, 1.5rem); font-weight: var(--type-body-weight, 400); }
-@utility type-heading { font-size: var(--type-heading-size, 1.125rem); line-height: var(--type-heading-leading, 1.5rem); font-weight: var(--type-heading-weight, 600); }
+/* `type-heading` reads `--type-heading-font` (default: inherit) the way `type-figure` reads `--figure-font`, so a look with display headings
+   sets one variable and not a `.type-heading` rule (issue #383). `--figure-ink`, `--surface-image` and the `data-part` attributes are in the base layer below. */
+@utility type-heading { font-family: var(--type-heading-font, inherit); font-size: var(--type-heading-size, 1.125rem); line-height: var(--type-heading-leading, 1.5rem); font-weight: var(--type-heading-weight, 600); }
 @utility type-title {
   font-family: var(--font-display);
   font-size: var(--type-title-size, 1.75rem);
@@ -259,6 +261,12 @@
     line-height: 1.5rem;
     -webkit-font-smoothing: antialiased;
   }
+  /* Hooks for a second look (issue #383), all inert by default. `--figure-ink` colours `type-figure` where the figure sets no
+     colour of its own (this layer is below the utilities, so a `text-*` class wins). `--surface-image` is a texture for the ground
+     (the body) and the surface parts that draw their own panel; themes read `data-part` (pane, pane-header, pane-title,
+     workspace-bar, inspector, inspector-header, inspector-section, link-card) and not markup or class names. */
+  .type-figure { color: var(--figure-ink, inherit); }
+  body, [data-part="pane"], [data-part="link-card"], [data-part="inspector"] { background-image: var(--surface-image, none); }
   /* One focus treatment for everything focusable, so no component can forget it. */
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   /* Except where a script moved focus to a heading to announce a result (Done): the heading is not

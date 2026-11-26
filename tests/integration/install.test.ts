@@ -64,6 +64,13 @@ describe("strata-react installed from its tarball", () => {
     }
   });
 
+  it("has the hooks a second look reads, all inert by default (#383): a heading face, a figure ink, a surface image", async () => {
+    const css = await compileApp();
+    expect(css).toContain("var(--type-heading-font, inherit)");
+    expect(css).toMatch(/\.type-figure\s*{[^}]*color:\s*var\(--figure-ink, inherit\)/);
+    expect(css).toMatch(/\[data-part="pane"\][^{]*{[^}]*background-image:\s*var\(--surface-image, none\)/);
+  });
+
   it("brings its default faces with it: Instrument Sans and JetBrains Mono @font-face rules and the role names, with no app install step and no theme file", async () => {
     const css = await compileApp();
     expect(css).toMatch(/@font-face\s*{[^}]*font-family:\s*["']?Instrument Sans Variable["']?/);

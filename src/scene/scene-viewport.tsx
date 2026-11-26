@@ -80,6 +80,8 @@ export type SceneViewportProps = {
   limits?: Partial<CameraLimits>;
   /** World units a second of fly walking covers. Default 5. */
   flySpeed?: number;
+  /** The scene's time in seconds, from a `useTimeline` clock (issue #386): the scene is drawn again when it changes, with `frame.time` set, so a recorded run or a replay scrubs and plays like a video under `TimelinePlayer`. Default: no time. */
+  time?: number;
   /** Redraw every frame while on screen, for a scene that moves by itself. Default false: draw on change. */
   continuous?: boolean;
   /** The shape of the box. Default 16/9. */
@@ -97,11 +99,11 @@ const RESET_MS = 300;
 const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** A sized, focusable canvas for a 3D scene the app draws: orbit by drag, pan by right drag or Shift, zoom by Ctrl/Cmd+wheel or pinch, keys, a Reset button, a fly mode, a lost context restored, and the camera in words. */
-export function SceneViewport({ label, camera, onCameraChange, home, render, mode = "orbit", fov = 60, near = 0.1, far = 10_000, limits, flySpeed = 5, continuous = false, aspect = "16/9", handle, className }: SceneViewportProps) {
+export function SceneViewport({ label, camera, onCameraChange, home, render, mode = "orbit", fov = 60, near = 0.1, far = 10_000, limits, flySpeed = 5, time = 0, continuous = false, aspect = "16/9", handle, className }: SceneViewportProps) {
   const first = React.useRef(camera);
   const target = home ?? first.current;
-  const live = React.useRef({ camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target });
-  live.current = { camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target };
+  const live = React.useRef({ camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target, time });
+  live.current = { camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target, time };
   const change = React.useCallback((next: OrbitCamera) => {
     live.current.onCameraChange(clampCamera(next, live.current.limits));
   }, []);
@@ -154,7 +156,7 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
     }
     ctx.viewport(0, 0, w, h);
     const l = live.current;
-    l.render(ctx, frameFor(l.camera, w, h, { fov: l.fov, near: l.near, far: l.far, context: context.current }));
+    l.render(ctx, frameFor(l.camera, w, h, { fov: l.fov, near: l.near, far: l.far, context: context.current, time: l.time }));
     if (again) frameHandle.current = requestAnimationFrame(paint);
   }, []);
   const schedule = React.useCallback(() => {
@@ -188,7 +190,7 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
   }, [schedule]);
   React.useEffect(() => {
     schedule();
-  }, [schedule, camera, size.width, size.height, inView, fov, near, far, continuous]);
+  }, [schedule, camera, size.width, size.height, inView, fov, near, far, continuous, time]);
 
   // Reset: animated unless the person asked for less motion.
   const animation = React.useRef(0);

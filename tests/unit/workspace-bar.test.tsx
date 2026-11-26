@@ -50,3 +50,28 @@ describe("Pane body", () => {
     expect(body()).not.toHaveClass("p-3");
   });
 });
+
+// Issue #383: structural parts carry `data-part`, so a second look styles a stable name and not markup.
+describe("data-part hooks", () => {
+  it("names the bar, the pane and its header and title, the inspector, its header and sections, and a link card", () => {
+    function Tool() {
+      const state = useWorkspaceState();
+      return (
+        <Workspace label="Tool" state={state}>
+          <WorkspaceBar title="Tool" />
+          <Split direction="row">
+            <Pane id="details" name="Details">
+              <Inspector title="clip.wal" empty={null}>
+                <InspectorSection id="a" title="Size">32 by 32</InspectorSection>
+              </Inspector>
+            </Pane>
+          </Split>
+        </Workspace>
+      );
+    }
+    renderWithStrata(<Tool />);
+    const part = (name: string) => document.querySelector(`[data-part="${name}"]`);
+    for (const name of ["workspace-bar", "pane", "pane-header", "pane-title", "inspector", "inspector-header", "inspector-section"]) expect(part(name), name).not.toBeNull();
+    expect(part("pane-title")).toHaveTextContent("Details");
+  });
+});

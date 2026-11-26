@@ -111,7 +111,9 @@ export { TranscriptView, type TranscriptViewProps, type TranscriptSeek } from ".
 export { phraseAt, wordAt, wordId, phraseOfWordId, isDoubtful, phraseDoubtful, type TranscriptGroup, type TranscriptPhrase, type TranscriptPhraseState, type TranscriptWord } from "./lib/transcript";
 export { Waveform, type WaveformProps, type WaveformMark, type WaveformMarkKind, type WaveformSpan, type WaveformTone } from "./components/waveform";
 export { resamplePeaks, toPeakPair, peaksFromAudio, peakGain, type WaveformPeaks, type PeakPair, type DecodedAudio } from "./lib/waveform";
-export { MediaGroup, PlayWindowButton, joinMediaGroup, type PlayWindowButtonProps } from "./components/media-group";
+export { MediaGroup, PlayWindowButton, joinMediaGroup, type GroupMember, type PlayWindowButtonProps } from "./components/media-group";
+export { useTimeline, type TimelineClock, type TimelineClockOptions } from "./components/use-timeline";
+export { TimelinePlayer, type TimelinePlayerProps } from "./components/timeline-player";
 export { Transport, TimeReadout, SeekBar, SpanStrip, VolumeControl, RateChoice, MediaStage, StageGuides, transportShortcuts, type TransportProps, type SeekBarProps, type SeekBarSpan, type VolumeControlProps, type Precision } from "./components/media";
 export { Timeline, TimelineZoomControls, useTimelineZoom, noOverlap, type TimelineProps, type TimelineItem, type TimelineLane, type TimelineMarker, type TimelineChange, type TimelineDrop } from "./components/timeline";
 export { tickStep, ticksBetween, tickLabel } from "./lib/timeline";
@@ -156,7 +158,7 @@ export { AppShell, SideNav, Breadcrumb, type NavItem } from "./components/app-sh
 export { Tabs, type TabItem } from "./components/tabs";
 export { Density, type DensityName, type DensityProps } from "./components/density";
 export type { ControlSize } from "./lib/control";
-export { useHotkeys, KeysLegend, isTypingTarget, keyName, type Shortcut } from "./components/hotkeys";
+export { useHotkeys, KeysLegend, isTypingTarget, keyName, type Shortcut, type HotkeysOptions } from "./components/hotkeys";
 export { useActiveItem, ActiveList, type ActiveItem } from "./components/active-list";
 export {
   ThemeProvider,

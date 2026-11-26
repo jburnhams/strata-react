@@ -216,3 +216,21 @@ describe("fly mode", () => {
     expect(seen.camera.yaw).toBeLessThan(0);
   });
 });
+
+describe("time (#386)", () => {
+  it("draws again when the clock's time changes, with frame.time set", async () => {
+    const seen = fresh();
+    function Timed({ time }: { time: number }) {
+      const { camera, setCamera, home } = useOrbitCamera({ distance: 10, yaw: 0, pitch: 0 });
+      return <SceneViewport label="Map e1m1" camera={camera} onCameraChange={setCamera} home={home} time={time} render={(_gl, frame) => void seen.frames.push(frame)} />;
+    }
+    const { rerender } = renderWithStrata(<Timed time={0} />);
+    await frames();
+    const count = seen.frames.length;
+    expect(seen.frames.at(-1)!.time).toBe(0);
+    rerender(<Timed time={1.5} />);
+    await frames();
+    expect(seen.frames.length).toBeGreaterThan(count);
+    expect(seen.frames.at(-1)!.time).toBe(1.5);
+  });
+});

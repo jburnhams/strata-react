@@ -124,12 +124,12 @@ export function Inspector({ title, kind, empty, selectionKey, storageKey, action
 
   return (
     <InspectorContext.Provider value={state}>
-      <aside ref={root} tabIndex={-1} aria-labelledby={title === null ? undefined : headingId} aria-label={title === null ? "Properties" : undefined} className={cn("min-w-0", className)}>
+      <aside ref={root} data-part="inspector" tabIndex={-1} aria-labelledby={title === null ? undefined : headingId} aria-label={title === null ? "Properties" : undefined} className={cn("min-w-0", className)}>
         {title === null ? (
           empty
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            <header className="flex items-start gap-3">
+            <header data-part="inspector-header" className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <Heading level={2} id={headingId} ref={heading} tabIndex={-1} title={title} className="truncate type-heading outline-offset-2">
                   {title}
@@ -169,7 +169,7 @@ export function InspectorSection({ id, title, defaultOpen = true, actions, child
   const expanded = inspector ? inspector.isOpen(id, defaultOpen) : own;
   const onChange = (open: boolean) => (inspector ? inspector.setOpen(id, open) : setOwn(open));
   return (
-    <Disclosure isExpanded={expanded} onExpandedChange={onChange} className={cn("min-w-0 border-t border-border first:border-t-0", className)}>
+    <Disclosure data-part="inspector-section" isExpanded={expanded} onExpandedChange={onChange} className={cn("min-w-0 border-t border-border first:border-t-0", className)}>
       {({ isExpanded }) => (
         <>
           <div className="flex items-center gap-2">

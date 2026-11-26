@@ -11,11 +11,11 @@ import { useHotkeys, type Shortcut } from "./hotkeys";
 import { RateChoice, SeekBar, SpanStrip, TimeReadout, VolumeControl } from "./media";
 import { skipAction, type MediaMark, type SkipSteps } from "./media-skip";
 import { Toolbar } from "./toolbar";
+import { useKeyOwner } from "./key-owner";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
 import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
-import { isDev } from "../lib/dev";
 import { createWatchedRanges, type MediaProgress } from "./media-progress";
 import { Link as AriaLink } from "react-aria-components";
 import { useTarget } from "./link";
@@ -687,49 +687,6 @@ export type MediaPlayerProps = {
   className?: string;
 };
 
-// Which player the page's keys belong to. A page with one player binds them for it, as ever. With
-// several, binding Space once per player played and paused every one of them at once, so the keys go
-// to the player last used (played, focused or pressed) and the others leave them alone (issue #147,
-// from strata-models' blind A/B of two voices). A tiny store outside React so the players on a page
-// can see each other without a provider the app would have to add.
-const keyPlayers = (() => {
-  const ids = new Set<string>();
-  let active: string | null = null;
-  let warned = false;
-  const listeners = new Set<() => void>();
-  let snapshot = { count: 0, active: null as string | null };
-  const emit = () => {
-    snapshot = { count: ids.size, active };
-    listeners.forEach((l) => l());
-  };
-  return {
-    subscribe: (l: () => void) => {
-      listeners.add(l);
-      return () => void listeners.delete(l);
-    },
-    get: () => snapshot,
-    add(id: string) {
-      ids.add(id);
-      if (ids.size === 2 && !warned && isDev()) {
-        warned = true;
-        console.warn("strata-react: several MediaPlayers are on this page, so Space, K, J, L and M go to the one last played or focused. Pass shortcuts={false} to one you bind your own keys for.");
-      }
-      emit();
-    },
-    remove(id: string) {
-      ids.delete(id);
-      if (active === id) active = null;
-      emit();
-    },
-    use(id: string) {
-      // A player with shortcuts off is not registered and must not take the keys from the others.
-      if (active === id || !ids.has(id)) return;
-      active = id;
-      emit();
-    },
-  };
-})();
-
 /** Playback speeds an audiobook or lecture listener expects. */
 export const SPEECH_RATES: readonly number[] = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -1082,17 +1039,8 @@ export function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [media, time, offsets, index, offer, canFull, full, frames, fps],
   );
-  // Several players on a page: the keys follow the last used (see keyPlayers); alone, they are this one's.
-  const id = React.useId();
-  React.useEffect(() => {
-    if (!shortcuts || native) return;
-    keyPlayers.add(id);
-    return () => keyPlayers.remove(id);
-  }, [id, shortcuts, native]);
-  const page = React.useSyncExternalStore(keyPlayers.subscribe, keyPlayers.get, keyPlayers.get);
-  React.useEffect(() => {
-    if (media.playing && shortcuts && !native) keyPlayers.use(id);
-  }, [media.playing, id, shortcuts, native]);
+  // Several players on a page: the keys follow the last used (see useKeyOwner); alone, they are this one's.
+  const owner = useKeyOwner(shortcuts && !native, media.playing);
   const activeKeys = autoHide ? keys.map((shortcut) => ({
     ...shortcut,
     run: () => {
@@ -1100,7 +1048,7 @@ export function MediaPlayer({
       shortcut.run();
     },
   })) : keys;
-  useHotkeys(activeKeys, { enabled: shortcuts && !native && (page.count <= 1 || page.active === id) });
+  useHotkeys(activeKeys, { enabled: shortcuts && !native && owner.owns });
 
   // Lock-screen and headset controls.
   React.useEffect(() => {
@@ -1170,7 +1118,7 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div ref={box} role="group" aria-label={label} data-floating={floating || undefined} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { keyPlayers.use(id); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col", floating && cn("fixed right-4 bottom-4 layer-bar w-80 max-w-full gap-1.5 p-2", overlaySurface))}>
+    <div ref={box} role="group" aria-label={label} data-floating={floating || undefined} onFocusCapture={owner.claim} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { owner.claim(); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col", floating && cn("fixed right-4 bottom-4 layer-bar w-80 max-w-full gap-1.5 p-2", overlaySurface))}>
       {element}
       {floating && (
         <div className="grid gap-1">
