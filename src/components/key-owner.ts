@@ -60,5 +60,6 @@ export function useKeyOwner(enabled: boolean, playing = false): KeyOwner {
   React.useEffect(() => {
     if (playing && enabled) claim();
   }, [playing, enabled, claim]);
-  return { owns: page.count <= 1 || page.active === id, claim };
+  // A player with its keys off never owns them, even when it is alone on the page.
+  return { owns: enabled && (page.count <= 1 || page.active === id), claim };
 }

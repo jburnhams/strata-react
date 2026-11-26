@@ -10,6 +10,7 @@
 - `src/components/timeline-player.tsx` **new** (#386): `TimelinePlayer` is a stage over `Transport`, `SeekBar`, `TimeReadout` and `RateChoice`, driven by a clock, with the legend of live keys.
 - `src/scene/`: `SceneViewport time` redraws when the clock changes and sets `frame.time`.
 - `src/styles/strata.bare.css`, `workspace.tsx`, `inspector.tsx`, `link-card.tsx` (#383): `data-part` on structural parts, `--type-heading-font`, `--figure-ink` and `--surface-image`, all inert by default. `--figure-ink` and `--surface-image` are in the base layer, so a `text-*` class or an app's own background wins.
+- Review fixes (Codex, both real): `useKeyOwner` returns `owns: false` when its keys are off (a `keys: false` clock alone on the page reported owning them), and a `within` ref with no element keeps only `anywhere` keys instead of making every key page-wide.
 - Tests: `use-timeline.test.tsx`, `timeline-player.test.tsx` **new**; `scene-viewport`, `workspace-bar` and `tests/integration/install.test.ts` extended. `stories/media.stories.tsx`: `TimelineClockPlayer` (`no-visual`: it plays). `README.md`, `UPGRADING.md` updated.
 
 ## 2026-11-26 (player skips, frame steps and floating, #387)

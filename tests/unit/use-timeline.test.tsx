@@ -116,3 +116,35 @@ describe("keys on a page with a stage (#385)", () => {
     expect(read().time).toBeGreaterThan(0);
   });
 });
+
+describe("review fixes", () => {
+  it("a clock with keys off never owns the keys, even alone on the page", () => {
+    function Off() {
+      const clock = useTimeline({ duration: 2, keys: false });
+      return <output aria-label="owns">{String(clock.ownsKeys)}</output>;
+    }
+    render(<Off />);
+    expect(screen.getByLabelText("owns")).toHaveTextContent("false");
+  });
+
+  it("a within ref with no element keeps scoped keys off and anywhere keys on", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    const ran: string[] = [];
+    function Gone() {
+      const missing = React.useRef<HTMLDivElement>(null);
+      useHotkeys(
+        [
+          { keys: ["a"], label: "Scoped", run: () => void ran.push("a") },
+          { keys: ["b"], label: "Everywhere", run: () => void ran.push("b"), anywhere: true },
+        ],
+        { within: missing },
+      );
+      return <button>Page</button>;
+    }
+    render(<Gone />);
+    await user.click(screen.getByRole("button", { name: "Page" }));
+    await user.keyboard("ab");
+    expect(ran).toEqual(["b"]);
+  });
+});

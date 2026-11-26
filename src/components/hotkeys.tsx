@@ -106,8 +106,9 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
       seen.add(e);
       if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
+      // A `within` that was given but has no element (a region not rendered now) keeps only the `anywhere` keys.
       const region = within?.current;
-      const here = !region || (e.target instanceof Node && region.contains(e.target));
+      const here = !within || (!!region && e.target instanceof Node && region.contains(e.target));
       const hit = latest.current.find((s) => !s.disabled && (here || s.anywhere) && s.keys.includes(e.key));
       if (!hit || (e.repeat && !hit.repeat)) return;
       e.preventDefault();
