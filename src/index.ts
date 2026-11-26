@@ -24,6 +24,8 @@ export {
   type NumberFormatter,
 } from "./lib/format";
 export { useInView, type InViewOptions } from "./lib/in-view";
+export { followAim } from "./lib/follow";
+export { useSettledStatus, useViewPointers, useWheelZoom, type ViewPointerOptions } from "./lib/viewer-input";
 export type { IconComponent } from "./lib/icon";
 
 export {

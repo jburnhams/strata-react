@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 (one view layer for the 3D viewers, #386)
+**Finished #386: the panorama and scene viewers share their input and one view model** (branch `claude/project-thread-wn07qt`). The first PR (#390) did the clock side; this is the shared view model and input layer the issue also asked for. No dependency added. Not done: a `look` mode inside `SceneViewport` that draws an equirectangular picture as its scene; the panorama stays its own viewer (a picture on a sphere needs no scene), and the two now agree on every convention an app touches.
+
+- `src/lib/viewer-input.ts` **new**: `useViewPointers` (one pointer drags, two pinch, a press that did not move is a tap; capture and focus decided once), `useWheelZoom` (native non-passive wheel, with `when` for which wheels count) and `useSettledStatus` (the polite sentence once the view has been still; not on first render). `panorama-viewer.tsx` and `scene-viewport.tsx` use them in place of two copies each; behaviour is unchanged (a cancelled press no longer picks in the panorama, which it did by accident).
+- Review fix (Codex, real): `useViewPointers` returns `onPointerCancel` (forgets the pointer, no tap), so a spread onto a viewer does not keep a cancelled pointer and read the next press as a pinch.
+- `src/lib/follow.ts` **new**: `followAim` (heading plus the person's look, wrapped and held short of the poles). `src/scene/camera.ts`: `cameraFromView`, `viewFromCamera` (the panorama's yaw, pitch and fov and the fly camera are the same numbers: both are degrees, positive yaw right, positive pitch up) and `followCamera` (eye at a moving point, optional `behind` for a chase camera).
+- `src/index.ts`, `src/scene/index.ts`: exports. `README.md` updated.
+- Tests: `viewer-input.test.tsx` **new** (tap and drag, threshold 0, ignored press, pinch ratio, wheel `when`, settled status, `followAim`); `scene-camera.test.ts` extended.
+
 ## 2026-11-26 (theming hooks, useTimeline, key scope, 3D time, #383–#386)
 **Fixed #383, #384, #385 and the first step of #386, in one PR** (branch `claude/project-thread-wn07qt`). Four issues from the quake2ts explorer. PR 378 (#377) had already merged. No dependency added. The shared view model and input layer for `PanoramaViewer` and `SceneViewport` that #386 also asks for (look, orbit and fly modes, a follow aim) is **not** done here: it rewrites both viewers' input and wants its own PR; what is done is the part that makes a 3D replay play like a video.
 

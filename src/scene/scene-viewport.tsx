@@ -3,6 +3,7 @@ import { RotateCcw } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
 import { Button } from "../components/button";
 import { useInView } from "../lib/in-view";
+import { useSettledStatus, useViewPointers, useWheelZoom } from "../lib/viewer-input";
 import { cn } from "../lib/utils";
 import { clampCamera, describeCamera, dolly, frameFor, pan, turn, walk, type CameraLimits, type OrbitCamera, type SceneFrame } from "./camera";
 
@@ -218,58 +219,32 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
   };
   React.useEffect(() => () => cancelAnimationFrame(animation.current), []);
 
-  // Pointer: drag orbits (or looks), a right drag or Shift pans, two pointers pinch.
-  const pointers = React.useRef(new Map<number, { x: number; y: number }>());
-  const pinch = React.useRef<number | null>(null);
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.target instanceof HTMLButtonElement) return;
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    e.currentTarget.focus({ preventScroll: true });
-    cancelAnimationFrame(animation.current);
-    if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()];
-      pinch.current = Math.hypot(a!.x - b!.x, a!.y - b!.y);
-    }
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const last = pointers.current.get(e.pointerId);
-    if (!last) return;
-    const now = { x: e.clientX, y: e.clientY };
-    pointers.current.set(e.pointerId, now);
-    const l = live.current;
-    if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()];
-      const d = Math.hypot(a!.x - b!.x, a!.y - b!.y);
-      if (pinch.current && d > 0 && l.mode === "orbit") change(dolly(l.camera, pinch.current / d));
-      pinch.current = d;
-      return;
-    }
-    const dx = now.x - last.x;
-    const dy = now.y - last.y;
-    const panning = e.shiftKey || (e.buttons & 6) !== 0; // Shift, or the right or middle button
-    change(panning ? pan(l.camera, dx, dy, size.height, l.fov) : turn(l.camera, dx, dy, l.mode));
-  };
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    pointers.current.delete(e.pointerId);
-    pinch.current = null;
-  };
+  // Pointer: drag orbits (or looks), a right drag or Shift pans, two pointers pinch (`useViewPointers`).
+  const pointers = useViewPointers({
+    threshold: 0,
+    ignore: (e) => e.target instanceof HTMLButtonElement,
+    onDown: () => cancelAnimationFrame(animation.current),
+    onPinch: (ratio) => {
+      const l = live.current;
+      if (l.mode === "orbit") change(dolly(l.camera, ratio));
+    },
+    onDrag: (dx, dy, e) => {
+      const l = live.current;
+      const panning = e.shiftKey || (e.buttons & 6) !== 0; // Shift, or the right or middle button
+      change(panning ? pan(l.camera, dx, dy, size.height, l.fov) : turn(l.camera, dx, dy, l.mode));
+    },
+  });
 
   // The wheel zooms only with Ctrl or Cmd (a trackpad pinch sends Ctrl); a plain wheel scrolls the page.
-  // Native, because React's wheel listener is passive and the page's own zoom must be refused.
-  React.useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
+  useWheelZoom(
+    box,
+    (factor, e) => {
       const l = live.current;
-      if (l.mode === "orbit") change(dolly(l.camera, Math.exp(e.deltaY * 0.0015)));
+      if (l.mode === "orbit") change(dolly(l.camera, factor));
       else change(walk(l.camera, -e.deltaY * 0.01 * l.flySpeed, 0, 0));
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [change]);
+    },
+    { when: (e) => e.ctrlKey || e.metaKey },
+  );
 
   // Keys. Orbit: arrows turn (Shift pans), + and - zoom, 0 resets. Fly: W A S D and arrows walk, Q and E go
   // down and up, held keys move every frame (one step each press under reduced motion).
@@ -321,16 +296,7 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
 
   // Said in words, politely once the camera has been still for a moment.
   const words = describeCamera(camera);
-  const [said, setSaid] = React.useState("");
-  const firstWords = React.useRef(true);
-  React.useEffect(() => {
-    if (firstWords.current) {
-      firstWords.current = false;
-      return;
-    }
-    const t = setTimeout(() => setSaid(words), STILL_MS);
-    return () => clearTimeout(t);
-  }, [words]);
+  const said = useSettledStatus(words, STILL_MS);
 
   return (
     <div className={cn("grid min-w-0 gap-2", className)}>
@@ -342,10 +308,10 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
         onBlur={() => held.current.clear()}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerDown={pointers.onPointerDown}
+        onPointerMove={pointers.onPointerMove}
+        onPointerUp={pointers.onPointerUp}
+        onPointerCancel={pointers.onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}
