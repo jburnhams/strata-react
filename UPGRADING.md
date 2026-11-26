@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-26 (player skips and frame steps, #387)
+- **`MediaPlayer` draws skip buttons either side of Play** (`Back 10 s`, `Forward 10 s`, `Back 1 min`, `Forward 1 min`, or `Previous scene`, `Next chapter`… when `marks` has them), and a sequence's `Previous chapter` now comes before Play. A test that listed the `Playback` toolbar's buttons, or found the only "Play" by position, needs the new names; `skip={false}` removes them. Visual baselines with a player move.
+- `SeekBar` marks are buttons with a `Tooltip`, not a `title`: a test that read a mark's `title` reads its accessible name (unchanged, "Dinner, 10:00") or hovers for the tooltip.
+- `MediaPlayer` no longer renders `Transport`; the toolbar is still named "Playback".
+
 ## 2026-11-25 (seek bar marks past the end)
 - **`SeekBar` (and `MediaPlayer` through it) no longer draws a mark outside 0 to the duration.** A test that found a mark button past the loaded file's end will not find it; pass marks within the file.
 

@@ -9,6 +9,8 @@ import { IconButton } from "./button";
 import type { Shortcut } from "./hotkeys";
 import { useSharedCursor, type CursorMapping } from "./cursor";
 import { Toolbar } from "./toolbar";
+import { Tooltip } from "./tooltip";
+import type { MediaMark } from "./media-skip";
 import { Slider } from "./value-controls";
 import { Button as AriaButton, ListBox, ListBoxItem, Popover as AriaPopover, Select as AriaSelect, SelectValue } from "react-aria-components";
 import { VisuallyHidden, mergeProps, useFocusRing, useSlider, useSliderThumb } from "react-aria";
@@ -134,12 +136,12 @@ export type SeekBarProps = TimeProps & {
   duration: number | null;
   /** The viewer asked for this time (drag, click or key). */
   onSeek: (time: number) => void;
-  /** Named points on the bar (chapters, markers). Pressing one seeks to it. */
-  marks?: readonly { time: number; label: string }[];
+  /** Named points on the bar (chapters, scenes, markers), each with its name and time in a tooltip on hover. Pressing one seeks to it. A `kind: "scene"` mark is drawn shorter and fainter than a chapter, so the parts read inside the whole. */
+  marks?: readonly MediaMark[];
   /** Stretches drawn along the bar as ranges (strata-react issue #207): each named for a screen reader and in a tooltip, in a status role's colour, and never thinner than a few pixels so a one-second span still shows. They only draw; `MediaPlayer`'s `spans` is what acts on them. */
   spans?: readonly SeekBarSpan[];
   /** What pressing a mark does. Default seeks to it; a screen that wants to land on it and pause (a moment to look at) passes its own. */
-  onMarkPress?: (mark: { time: number; label: string }) => void;
+  onMarkPress?: (mark: MediaMark) => void;
   /** How far has loaded or been recorded, drawn behind the played part. */
   buffered?: number;
   /** Arrow key step in seconds. Default 5. */
@@ -229,22 +231,28 @@ export function SeekBar({ time, duration: known, onSeek, marks = [], spans = [],
         {otherTime !== null && otherTime >= 0 && otherTime <= duration && <span aria-hidden data-cursor="" className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-foreground/60" style={{ left: `${(otherTime / duration) * 100}%` }} />}
         {duration > 0 &&
           // A mark past the end (a chapter list longer than the file that loaded) would sit thousands of widths to the right and widen the page.
-          marks.filter((m) => m.time >= 0 && m.time <= duration).map((m) => (
-            <button
-              key={`${m.time}-${m.label}`}
-              type="button"
-              tabIndex={-1}
-              disabled={disabled}
-              title={`${m.label}, ${timecode(m.time, { precision, fps })}`}
-              aria-label={`${m.label}, ${timecode(m.time, { precision, fps })}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => (onMarkPress ? onMarkPress(m) : seekTo(m.time))}
-              className="absolute top-1/2 h-3 w-1 -translate-y-1/2 cursor-pointer rounded-pill bg-foreground"
-              style={{ left: `${(m.time / duration) * 100}%` }}
-            />
-          ))}
-        <div {...thumbProps} className={cn("absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: `${frac * 100}%` }}>
+          marks.filter((m) => m.time >= 0 && m.time <= duration).map((m) => {
+            const at = timecode(m.time, { precision, fps });
+            const scene = m.kind === "scene";
+            // React Aria's press stops the pointer reaching the track, so pressing a mark does not also start a drag. Out of the tab
+            // order: the bar is one stop, and the player's skip buttons step through the marks from the keyboard.
+            return (
+              <Tooltip key={`${m.time}-${m.kind ?? "chapter"}-${m.label}`} label={m.label} hint={<span className="tabular-nums">{at}</span>} delay={150}>
+                <AriaButton
+                  excludeFromTabOrder
+                  isDisabled={disabled}
+                  aria-label={`${m.label}, ${at}`}
+                  data-kind={m.kind ?? "chapter"}
+                  onPress={() => (onMarkPress ? onMarkPress(m) : seekTo(m.time))}
+                  className={cn("group/mark absolute inset-y-0 flex -translate-x-1/2 cursor-pointer items-center justify-center", scene ? "w-2" : "z-10 w-3")}
+                  style={{ left: `${(m.time / duration) * 100}%` }}
+                >
+                  <span aria-hidden className={cn("rounded-pill transition-state group-hover/mark:bg-primary", scene ? "h-2 w-0.5 bg-foreground/50" : "h-3.5 w-1 bg-foreground")} />
+                </AriaButton>
+              </Tooltip>
+            );
+          })}
+        <div {...thumbProps} className={cn("absolute top-1/2 z-20 size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-primary bg-background", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: `${frac * 100}%` }}>
           <VisuallyHidden>
             <input ref={input} {...mergeProps(inputProps, focusProps)} aria-labelledby={undefined} onKeyDownCapture={onKeyDownCapture} />
           </VisuallyHidden>

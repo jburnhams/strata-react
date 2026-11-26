@@ -1,13 +1,16 @@
 import * as React from "react";
-import { LoaderCircle, Maximize, Minimize, SkipBack, SkipForward } from "lucide-react";
+import { ArrowUp, FastForward, LoaderCircle, Maximize, Minimize, Pause, Play, Rewind, SkipBack, SkipForward, StepBack, StepForward, X } from "lucide-react";
 import { Status } from "./status";
 import { cn } from "../lib/utils";
 import { Alert } from "./alert";
 import { PlayerWarningToast, type PlayerWarningEvent } from "./player-warning";
 import { Button, IconButton } from "./button";
+import { overlaySurface } from "../lib/overlay";
 import { FullscreenFrame, canFullscreen } from "./fullscreen-frame";
 import { useHotkeys, type Shortcut } from "./hotkeys";
-import { RateChoice, SeekBar, SpanStrip, TimeReadout, Transport, VolumeControl } from "./media";
+import { RateChoice, SeekBar, SpanStrip, TimeReadout, VolumeControl } from "./media";
+import { skipAction, type MediaMark, type SkipSteps } from "./media-skip";
+import { Toolbar } from "./toolbar";
 import { joinMediaGroup, useMediaGroupName } from "./media-group";
 import { SpanActions, useMediaSpans, type MediaSpanData, type SpanKind, type SpanOutcome, type SpanWords } from "./media-spans";
 import { format } from "../lib/format";
@@ -45,6 +48,12 @@ export type { MediaProgress };
 //   only on an element the person has already started. When every source gives its `duration` the
 //   seek bar spans the whole sequence, with a mark at each source's title; otherwise it spans the
 //   current one.
+// - Skips and steps (issue #387, from strata-reels' tape page): either side of Play, a small and a
+//   large skip and, for a video with `fps`, one frame. A file with marks skips by its parts (scenes
+//   small, chapters large, `media-skip.ts`) because a person skims "the next scene", not "30 s on";
+//   a level without marks skips 10 s and 1 min. Frame steps need the rate from the app: a browser
+//   does not say it. `float` keeps a playing video in sight while the page scrolls, by moving the
+//   same element to a corner box (a second element would start from nothing and need a gesture).
 //
 // Checked: React Aria has no media element hook (its `VisuallyHidden`, `useSlider` and toolbar are
 // what the parts are built on), so the hook is ours. Volume is 0 to 100 and 0 is muted, the way
@@ -641,8 +650,14 @@ export type MediaPlayerProps = {
   spans?: readonly MediaSpanData[];
   /** For each kind of span: its `label`, its `tone` (a status role) and what happens on reaching one: `"auto"` skips it (or mutes it, for a span whose `action` is `"mute"`) with "Skipped intro" and Undo, `"ask"` offers a Skip button over the picture (and the `s` key), `"off"` (default) only draws it. Keep the object stable (state or `useMemo`). */
   spanKinds?: Readonly<Record<string, SpanKind>>;
-  /** Named points of one file drawn on the seek bar (its chapters: "Christmas dinner" at 40:12); pressing one seeks there (strata-react issue #371). For a single `src` without a `window`: a sequence's own marks (each source's start) and a window's take their place. Keep the array stable. */
-  marks?: readonly { time: number; label: string }[];
+  /** Named points of one file drawn on the seek bar (its chapters: "Christmas dinner" at 40:12, and `kind: "scene"` for the scenes within them), each named in a tooltip; pressing one seeks there (strata-react issues #371, #387). They are also what the skip buttons step through. For a single `src` without a `window`: a sequence's own marks (each source's start) and a window's take their place. Keep the array stable. */
+  marks?: readonly MediaMark[];
+  /** The skip buttons either side of Play. A file with marks skips by them (scenes small, chapters large: "Next scene", "Previous chapter"); a level without marks skips by time, `small` (default 10 s) and `large` (default 60 s). A sequence's large skip is its previous and next source. `false` draws none. */
+  skip?: SkipSteps | false;
+  /** The video's frame rate: draws Back one frame and Forward one frame beside Play (and the `,` and `.` keys), which pause and step one frame. Not drawn without it, since a browser does not say a file's rate. */
+  fps?: number;
+  /** Keep a playing video in sight while the page scrolls: once the player has scrolled off the top of the screen, the picture floats in a small box in the corner with its own seek bar, Play, Back to the player and Close, and goes back in place when the player is scrolled to. The same element moves, so playback carries on. Video only. */
+  float?: boolean;
   /** Told what was done with a span: `skipped`, `muted`, `undone` or `played`. */
   onSpan?: (span: MediaSpanData, what: SpanOutcome) => void;
   /** The Skip button's and the notice's words, in the product's language. */
@@ -781,6 +796,9 @@ export function MediaPlayer({
   warning,
   aspect,
   fullscreen = true,
+  skip = {},
+  fps,
+  float = false,
   className,
 }: MediaPlayerProps) {
   const list = React.useMemo<readonly MediaSource[]>(() => sources ?? (src ? [{ src, title: label }] : []), [sources, src, label]);
@@ -879,6 +897,23 @@ export function MediaPlayer({
     resume.current = media.playing;
     go(to);
   };
+
+  // The skip buttons (strata-react issue #387): a single file's own marks are what the skips step through (scenes small, chapters
+  // large); a sequence's large skip is its sources, and a window has no marks of its own, so both skip by time at the small level.
+  const ownMarks = !cut && !offsets && list.length <= 1 && !bound ? (marks ?? []) : [];
+  const skipping = skip !== false;
+  const skipTo = (level: "small" | "large", direction: -1 | 1) => skipAction(ownMarks, level, direction, time, { steps: skip || {}, duration });
+  // One frame: pause, then land in the middle of the next or previous frame (a seek to a frame's very start can show the one before it).
+  const stepFrame = (direction: -1 | 1) => {
+    if (!fps) return;
+    media.pause();
+    // From the element's own position: the rendered `time` can be a quarter second behind a playing video.
+    const el = ref.current;
+    const now = el && Number.isFinite(el.currentTime) ? (cut ? el.currentTime - cut.start : (offsets ? offsets[index] : 0) + el.currentTime) : time;
+    const at = Math.floor(now * fps + 0.001);
+    seek(Math.max(0, (at + direction + 0.5) / fps));
+  };
+  const frames = Boolean(fps) && kind === "video";
 
   const carried = React.useRef<{ index: number; end: number } | null>(null);
   // Runs after the hook's own effect that starts a new count for a new file.
@@ -983,6 +1018,41 @@ export function MediaPlayer({
   const idle = autoHide && controlsIdle;
   const autoHideControls = full && canFull && autoHide;
   const hideControls = autoHideControls && controlsIdle;
+  // Floating (strata-react issue #387): a zero-height mark under the player says when the player has gone off the top of the screen. The
+  // group then moves to the corner and a spacer of its height holds its place, so the page does not jump and the same `<video>`
+  // carries on. Only once it has played (a video nobody started does not follow the reader), and Close keeps it in place until the
+  // player is scrolled back to.
+  const floatable = float && kind === "video";
+  const box = React.useRef<HTMLDivElement>(null);
+  const below = React.useRef<HTMLSpanElement>(null);
+  const [offTop, setOffTop] = React.useState(false);
+  const [played, setPlayed] = React.useState(false);
+  const [closed, setClosed] = React.useState(false);
+  React.useEffect(() => {
+    if (media.playing) setPlayed(true);
+  }, [media.playing]);
+  React.useEffect(() => {
+    const el = below.current;
+    if (!floatable || !el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      const e = entries[entries.length - 1];
+      const gone = !e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0);
+      setOffTop(gone);
+      if (!gone) setClosed(false);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [floatable]);
+  const wantFloat = floatable && offTop && played && !closed && !full;
+  const [held, setHeld] = React.useState<number | null>(null);
+  // Measured as it starts to float, while it is still in its place.
+  React.useLayoutEffect(() => setHeld(wantFloat ? (box.current?.getBoundingClientRect().height ?? 0) : null), [wantFloat]);
+  const floating = wantFloat && held !== null;
+  const backToPlayer = () => {
+    below.current?.previousElementSibling?.scrollIntoView({ block: "nearest" });
+    setOffTop(false);
+  };
+
   // On the picture: a click plays or pauses and a double click toggles full screen (two clicks cancel out, so the double click leaves playback as it was); the wheel sets the volume, but only while the player has focus, so scrolling past a video still scrolls the page. With the browser's own controls its click and double click are left alone (they do this already); the wheel works there too. The wheel listener is not passive, to stop the page scrolling.
   const stage = React.useRef<HTMLDivElement>(null);
   const latest = React.useRef(media);
@@ -1005,11 +1075,12 @@ export function MediaPlayer({
       { keys: ["j"], label: `Back ${JUMP} s`, run: () => seek(time - JUMP), repeat: true },
       { keys: ["l"], label: `Forward ${JUMP} s`, run: () => seek(time + JUMP), repeat: true },
       { keys: ["m"], label: "Mute", run: () => media.setVolume(media.muted ? 100 : 0) },
+      ...(frames ? [{ keys: [","], label: "Back one frame", run: () => stepFrame(-1), repeat: true }, { keys: ["."], label: "Forward one frame", run: () => stepFrame(1), repeat: true }] : []),
       ...(canFull ? [{ keys: ["f"], label: full ? "Leave full screen" : "Full screen", run: () => setFull((f) => !f) }] : []),
       ...(offer ? [{ keys: ["s"], label: offer.label, run: offer.run }] : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [media, time, offsets, index, offer, canFull, full],
+    [media, time, offsets, index, offer, canFull, full, frames, fps],
   );
   // Several players on a page: the keys follow the last used (see keyPlayers); alone, they are this one's.
   const id = React.useId();
@@ -1065,6 +1136,7 @@ export function MediaPlayer({
   const common = { ref: ref as React.Ref<never>, src: attach ? undefined : current?.src, controls: native, autoPlay, preload: "metadata" as const, "aria-label": `${label}, ${kind}` };
   const hasSpans = (spans?.length ?? 0) > 0;
   const showActions = hasSpans || picked;
+  const barMarks: readonly MediaMark[] = bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : (!bound && marks) || [];
   // The picture sits in a box of its own shape (the app's `aspect`, else the video's, else 16:9 until it says), so the page does not jump
   // when the metadata arrives and an overlay has a place to be. The controls are outside the box.
   const element =
@@ -1078,7 +1150,7 @@ export function MediaPlayer({
           onDoubleClick={canFull ? () => setFull((f) => !f) : undefined}
           className="absolute inset-0 size-full object-contain"
         />
-        {heading && <PictureHeading heading={heading} shown={!idle} />}
+        {heading && !floating && <PictureHeading heading={heading} shown={!idle} />}
         {(overlay || showActions) && (
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {overlay?.(media)}
@@ -1098,11 +1170,24 @@ export function MediaPlayer({
 
   return (
     <FullscreenFrame label={label} active={full} onActiveChange={setFull} modal={false} className={className}>
-    <div role="group" aria-label={label} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { keyPlayers.use(id); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col")}>
+    <div ref={box} role="group" aria-label={label} data-floating={floating || undefined} onFocusCapture={() => keyPlayers.use(id)} onMouseMoveCapture={autoHide ? wakeControls : undefined} onKeyDownCapture={autoHide ? wakeControls : undefined} onMouseLeave={autoHide && !full ? sleepControls : undefined} onPointerDownCapture={() => { keyPlayers.use(id); if (autoHide) wakeControls(); }} className={cn("relative grid w-full gap-2", full && "flex h-full min-h-0 flex-col", floating && cn("fixed right-4 bottom-4 layer-bar w-80 max-w-full gap-1.5 p-2", overlaySurface))}>
       {element}
-      {native && hasSpans && <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />}
+      {floating && (
+        <div className="grid gap-1">
+          {!native && <SeekBar time={time} duration={duration} onSeek={seek} spans={spanState.bars} marks={barMarks} step={JUMP} bigStep={60} label={`Seek in ${label}`} />}
+          <div className="flex items-center gap-1">
+            <IconButton icon={media.playing ? Pause : Play} label={media.playing ? "Pause" : "Play"} hint="Space" size="sm" onClick={media.toggle} />
+            <TimeReadout time={time} duration={duration} className="type-caption" />
+            <span className="ml-auto flex items-center gap-1">
+              <IconButton icon={ArrowUp} label="Back to the player" size="sm" onPress={backToPlayer} />
+              <IconButton icon={X} label="Close" size="sm" onPress={() => setClosed(true)} />
+            </span>
+          </div>
+        </div>
+      )}
+      {!floating && native && hasSpans && <SpanStrip spans={spanState.bars} duration={duration} label={`Marked parts of ${label}`} />}
       {warningToast}
-      {kind === "audio" && showActions && <SpanActions state={spanState} other={resumeNotice} className="flex flex-wrap items-center gap-2" />}
+      {!floating && kind === "audio" && showActions && <SpanActions state={spanState} other={resumeNotice} className="flex flex-wrap items-center gap-2" />}
       {kind === "audio" && overlay?.(media)}
       {media.error?.kind === "load" && (
         <Alert
@@ -1124,7 +1209,7 @@ export function MediaPlayer({
         </p>
       )}
       {/* Keep controls and status actions tabbable without reserving space for the idle panel. */}
-      {(growing || bound || !native || status) && (
+      {!floating && (growing || bound || !native || status) && (
         <div className={cn("grid gap-2", hideControls && "pointer-events-none absolute inset-x-0 bottom-0 opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100")}>
           {growing && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -1157,7 +1242,7 @@ export function MediaPlayer({
                   onSeek={seek}
                   buffered={growing ? media.ready : offsets ? undefined : media.buffered}
                   spans={spanState.bars}
-                  marks={bound && showFull ? [{ time: bound.start, label: "Window starts" }, { time: bound.end, label: "Window ends" }] : offsets ? list.map((s, i) => ({ time: offsets[i], label: s.title })).slice(1) : (!bound && marks) || []}
+                  marks={barMarks}
                   step={JUMP}
                   bigStep={60}
                   label={`Seek in ${label}`}
@@ -1165,10 +1250,15 @@ export function MediaPlayer({
                 <TimeReadout time={time} duration={duration} />
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <Transport playing={media.playing} onPlayPause={media.toggle}>
-                  {list.length > 1 && <IconButton icon={SkipBack} label="Previous chapter" disabled={index === 0} onClick={() => step(-1)} />}
-                  {list.length > 1 && <IconButton icon={SkipForward} label="Next chapter" disabled={index === list.length - 1} onClick={() => step(1)} />}
-                </Transport>
+                <Toolbar label="Playback" className="gap-2">
+                  {list.length > 1 ? <IconButton icon={SkipBack} label="Previous chapter" disabled={index === 0} onClick={() => step(-1)} /> : skipping && <SkipButton action={skipTo("large", -1)} icon={SkipBack} seek={seek} />}
+                  {skipping && <SkipButton action={skipTo("small", -1)} icon={Rewind} seek={seek} />}
+                  {frames && <IconButton icon={StepBack} label="Back one frame" hint="," onClick={() => stepFrame(-1)} />}
+                  <IconButton icon={media.playing ? Pause : Play} label={media.playing ? "Pause" : "Play"} hint="Space" variant="outline" onClick={media.toggle} />
+                  {frames && <IconButton icon={StepForward} label="Forward one frame" hint="." onClick={() => stepFrame(1)} />}
+                  {skipping && <SkipButton action={skipTo("small", 1)} icon={FastForward} seek={seek} />}
+                  {list.length > 1 ? <IconButton icon={SkipForward} label="Next chapter" disabled={index === list.length - 1} onClick={() => step(1)} /> : skipping && <SkipButton action={skipTo("large", 1)} icon={SkipForward} seek={seek} />}
+                </Toolbar>
                 {list.length > 1 && (
                   <span className="type-body-sm text-muted-foreground">
                     {current?.title} ({index + 1} of {list.length})
@@ -1186,8 +1276,15 @@ export function MediaPlayer({
         </div>
       )}
     </div>
+    {floating && <div aria-hidden data-player-place="" style={{ height: held ?? 0 }} />}
+    {floatable && <span ref={below} aria-hidden data-player-end="" className="block" />}
     </FullscreenFrame>
   );
+}
+
+/** One skip button: named for where it goes ("Next scene", "Back 10 s"), and not pressable when there is nowhere to go. */
+function SkipButton({ action, icon, seek }: { action: { label: string; to: number | null }; icon: React.ComponentProps<typeof IconButton>["icon"]; seek: (t: number) => void }) {
+  return <IconButton icon={icon} label={action.label} disabled={action.to === null} onClick={() => action.to !== null && seek(action.to)} />;
 }
 
 // The heading over a video (issue #329): the words a video site puts across the top of its player, so a person who paused or
