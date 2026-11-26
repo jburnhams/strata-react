@@ -34,19 +34,31 @@ function sprite(n: number) {
 }
 
 /** A 32×32 texture fitted to 512px: sixteen screen pixels to each, square and unsmoothed. The canvas is named with its size and zoom. */
-export const Texture: Story = { render: () => <PixelImage label="textures/e1u1/brick.wal" width={32} height={32} rgba={bricks(32, 32)} /> };
+export const Texture: Story = {
+  render: () => <PixelImage label="textures/e1u1/brick.wal" width={32} height={32} rgba={bricks(32, 32)} />,
+};
 
 /** A sprite with clear corners over the checkerboard, so transparent reads as transparent. */
-export const Transparency: Story = { render: () => <PixelImage label="sprites/orb" width={24} height={24} rgba={sprite(24)} zoom={8} /> };
+export const Transparency: Story = {
+  render: () => <PixelImage label="sprites/orb" width={24} height={24} rgba={sprite(24)} zoom={8} />,
+};
 
 /** A zoom is a whole number: 2.6 is drawn at 3. */
-export const WholeZoom: Story = { render: () => <PixelImage label="Palette swatch" width={16} height={16} rgba={bricks(16, 16)} zoom={2.6} /> };
+export const WholeZoom: Story = {
+  render: () => <PixelImage label="Palette swatch" width={16} height={16} rgba={bricks(16, 16)} zoom={2.6} />,
+};
 
 /** Bigger than `maxSize`: drawn at 1× and scrolled in its box, never shrunk by a fraction. */
-export const LargerThanTheBox: Story = { render: () => <PixelImage label="lightmap" width={640} height={320} rgba={bricks(640, 320)} maxSize={400} className="max-w-md" /> };
+export const LargerThanTheBox: Story = {
+  render: () => (
+    <PixelImage label="lightmap" width={640} height={320} rgba={bricks(640, 320)} maxSize={400} className="max-w-md" />
+  ),
+};
 
 /** A buffer of the wrong length is not half-drawn: it is named “no picture data”. */
-export const WrongLength: Story = { render: () => <PixelImage label="broken.wal" width={8} height={8} rgba={new Uint8Array(20)} /> };
+export const WrongLength: Story = {
+  render: () => <PixelImage label="broken.wal" width={8} height={8} rgba={new Uint8Array(20)} />,
+};
 
 /** `rgbaToBlob` and `useObjectUrl` make the picture a download without the app writing either. Interactive. */
 export const Download: Story = {
@@ -59,7 +71,11 @@ export const Download: Story = {
       <div className="grid max-w-sm justify-items-start gap-3">
         <PixelImage label="brick.wal" width={32} height={32} rgba={rgba} zoom={6} />
         <Button onPress={() => void rgbaToBlob(32, 32, rgba).then(setPng)}>Prepare PNG</Button>
-        {url && <TextLink href={url} download="brick.png">Download brick.png</TextLink>}
+        {url && (
+          <TextLink href={url} download="brick.png">
+            Download brick.png
+          </TextLink>
+        )}
       </div>
     );
   },

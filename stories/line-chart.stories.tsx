@@ -26,7 +26,11 @@ export const OneSeries: Story = {};
 
 /** What the person compares against: the programmed firing (dashed) and the safe-to-open band. */
 export const PlanAndBand: Story = {
-  args: { planned, plannedLabel: "Programmed", band: { below: SAFE_TO_OPEN_C, label: `Safe to open below ${format.celsius(SAFE_TO_OPEN_C)}` } },
+  args: {
+    planned,
+    plannedLabel: "Programmed",
+    band: { below: SAFE_TO_OPEN_C, label: `Safe to open below ${format.celsius(SAFE_TO_OPEN_C)}` },
+  },
 };
 
 /** colourScale: the line coloured as the kiln glows. Only where the colour is a fact of the subject. */
@@ -38,7 +42,10 @@ export const ColouredAsTheKilnGlows: Story = {
   },
 };
 
-const cpu = Array.from({ length: 48 }, (_, i) => ({ x: i * 30, y: 1 + Math.round((Math.sin(i / 3) + 1) * 10) / 10 + (i === 30 ? 2 : 0) }));
+const cpu = Array.from({ length: 48 }, (_, i) => ({
+  x: i * 30,
+  y: 1 + Math.round((Math.sin(i / 3) + 1) * 10) / 10 + (i === 30 ? 2 : 0),
+}));
 
 /** yMax: a percentage pinned to 0 to 100%, so a machine at 2% CPU looks idle. Autoscaled, the same readings fill the chart and look busy. */
 export const PinnedPercentage: Story = {
@@ -62,7 +69,10 @@ export const Phone: Story = {
 
 // Issue #79: a chart tied to something else on the screen. An elevation profile for a route: the
 // area under the line is the meaning (height gained), so it is one flat tint.
-const route = Array.from({ length: 26 }, (_, i) => ({ x: i * 200, y: Math.round(70 + 35 * Math.sin(i / 4) + 12 * Math.sin(i / 1.7)) }));
+const route = Array.from({ length: 26 }, (_, i) => ({
+  x: i * 200,
+  y: Math.round(70 + 35 * Math.sin(i / 4) + 12 * Math.sin(i / 1.7)),
+}));
 const routeArgs = {
   label: "Elevation along the route",
   series: route,
@@ -93,11 +103,16 @@ export const ReadoutAtAPoint: Story = {
         if (!plot) return;
         clearInterval(timer);
         plot.focus();
-        for (const key of ["Home", ...Array(8).fill("ArrowRight")]) plot.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+        for (const key of ["Home", ...Array(8).fill("ArrowRight")])
+          plot.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
       }, 50);
       return () => clearInterval(timer);
     }, []);
-    return <div ref={ref}><LineChart {...args} /></div>;
+    return (
+      <div ref={ref}>
+        <LineChart {...args} />
+      </div>
+    );
   },
 };
 
@@ -124,7 +139,10 @@ const km = (x: number) => `${(x / 1000).toFixed(1)} km`;
 const paceText = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")} /km`;
 const distanceTicks = ({ min, max }: { min: number; max: number }) => {
   const step = (max - min) / 5 > 1000 ? 1000 : 500;
-  return Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, i) => Math.ceil(min / step) * step + i * step).filter((t) => t <= max);
+  return Array.from(
+    { length: Math.floor((max - min) / step) + 1 },
+    (_, i) => Math.ceil(min / step) * step + i * step,
+  ).filter((t) => t <= max);
 };
 
 /** Shaded spans for the stops, named in the key and for screen readers; twelve clip marks on the line (one tab stop, arrows between them), one selected. */
@@ -174,8 +192,24 @@ export const StackedWithSharedReading: Story = {
       marks={riverClips}
       current={2600}
       charts={[
-        { series: riverElevation, seriesLabel: "Elevation", formatY: (y: number) => `${y} m`, yMin: 0, area: true, end: "none", height: 170 },
-        { series: riverPace, seriesLabel: "Pace", formatY: paceText, yScale: "log", yInvert: true, end: "none", height: 170 },
+        {
+          series: riverElevation,
+          seriesLabel: "Elevation",
+          formatY: (y: number) => `${y} m`,
+          yMin: 0,
+          area: true,
+          end: "none",
+          height: 170,
+        },
+        {
+          series: riverPace,
+          seriesLabel: "Pace",
+          formatY: paceText,
+          yScale: "log",
+          yInvert: true,
+          end: "none",
+          height: 170,
+        },
       ]}
     />
   ),
@@ -206,8 +240,24 @@ function LiveGroupStage() {
       marks={riverClips}
       current={along * 5200}
       charts={[
-        { series: riverElevation, seriesLabel: "Elevation", formatY: (y: number) => `${y} m`, yMin: 0, area: true, end: "none", height: 170 },
-        { series: riverPace, seriesLabel: "Pace", formatY: paceText, yScale: "log", yInvert: true, end: "none", height: 170 },
+        {
+          series: riverElevation,
+          seriesLabel: "Elevation",
+          formatY: (y: number) => `${y} m`,
+          yMin: 0,
+          area: true,
+          end: "none",
+          height: 170,
+        },
+        {
+          series: riverPace,
+          seriesLabel: "Pace",
+          formatY: paceText,
+          yScale: "log",
+          yInvert: true,
+          end: "none",
+          height: 170,
+        },
       ]}
     />
   );
@@ -224,7 +274,12 @@ const trackBuckets = (() => {
   for (let i = 0; i < riverElevation.length; i += step) {
     const bucket = riverElevation.slice(i, i + step);
     const ys = bucket.map((p) => p.y);
-    out.push({ x: bucket[0]!.x, y: Math.round(ys.reduce((a, b) => a + b, 0) / ys.length), low: Math.min(...ys), high: Math.max(...ys) });
+    out.push({
+      x: bucket[0]!.x,
+      y: Math.round(ys.reduce((a, b) => a + b, 0) / ys.length),
+      low: Math.min(...ys),
+      high: Math.max(...ys),
+    });
   }
   return out;
 })();
@@ -235,7 +290,11 @@ export const RangeBehindTheLine: Story = {
     label: "Elevation along the river run",
     series: trackBuckets.map(({ x, y }) => ({ x, y })),
     seriesLabel: "Elevation",
-    range: { low: trackBuckets.map((b) => b.low), high: trackBuckets.map((b) => b.high), label: "Lowest to highest in each stretch" },
+    range: {
+      low: trackBuckets.map((b) => b.low),
+      high: trackBuckets.map((b) => b.high),
+      label: "Lowest to highest in each stretch",
+    },
     formatX: (m: number) => `${(m / 1000).toFixed(1)} km`,
     formatY: (y: number) => `${y} m`,
     xTicks: [0, 2000, 4000, 6000, 8000],

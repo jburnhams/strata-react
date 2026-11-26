@@ -17,9 +17,7 @@ describe("Field", () => {
     );
     const input = screen.getByLabelText("Tallest piece (cm)");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAccessibleDescription(
-      "Your piece is 38 cm; choose kiln 1. Kiln 2 has 30 cm between shelves.",
-    );
+    expect(input).toHaveAccessibleDescription("Your piece is 38 cm; choose kiln 1. Kiln 2 has 30 cm between shelves.");
   });
 
   it("is not invalid without an error", () => {

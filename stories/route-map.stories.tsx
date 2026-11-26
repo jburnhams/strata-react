@@ -1,7 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Button, format, geo, type LatLng } from "../src";
-import { RouteMap, type MapMarker, type MapPosition, type MapRoute, type PickNearest, type RouteMapProps } from "../src/map";
+import {
+  RouteMap,
+  type MapMarker,
+  type MapPosition,
+  type MapRoute,
+  type PickNearest,
+  type RouteMapProps,
+} from "../src/map";
 import { canalWalk, parkLoop, riverRun, riverRunMetres, riverRunAt, riverRunSpeed, speedScale } from "./fixtures/route";
 
 // Issue #80. The tiles are served by MSW (mocks/handlers.ts), so every story is the same picture
@@ -36,7 +43,9 @@ export const SingleRoute: Story = {};
 export const SeveralRoutes: Story = { args: { label: "Routes this week", routes: stable.several, selectedId: "loop" } };
 
 /** A loop has one mark for start and finish. */
-export const Loop: Story = { args: { label: "Park loop", routes: [{ id: "loop", label: "Park loop", points: parkLoop }] } };
+export const Loop: Story = {
+  args: { label: "Park loop", routes: [{ id: "loop", label: "Park loop", points: parkLoop }] },
+};
 
 /** Colour by value, with the key that names the steps. Colour is not the only cue: the key lists where each step starts. */
 export const ColourByValue: Story = {
@@ -60,12 +69,20 @@ export const WithOverlays: Story = {
     formatValue: (v) => `${v} km/h`,
     position: riverRunAt(0.62),
     topEnd: <Button size="sm">Elevation</Button>,
-    bottomStart: <p className="rounded-control border border-border bg-background px-2 py-1 type-caption tabular-nums">{format.distance(geo.length(riverRun) * 0.62)} of {format.distance(geo.length(riverRun))}</p>,
+    bottomStart: (
+      <p className="rounded-control border border-border bg-background px-2 py-1 type-caption tabular-nums">
+        {format.distance(geo.length(riverRun) * 0.62)} of {format.distance(geo.length(riverRun))}
+      </p>
+    ),
   },
 };
 
 /** Phone width: the key and the figure stay inside the map, the controls keep their size. */
-export const Phone: Story = { ...WithOverlays, tags: ["visual-phone"], args: { ...WithOverlays.args, className: "w-full" } };
+export const Phone: Story = {
+  ...WithOverlays,
+  tags: ["visual-phone"],
+  args: { ...WithOverlays.args, className: "w-full" },
+};
 
 // Map as picture content (issue #161): the map is part of a frame, so it is set up once and must be
 // the same on every frame. The dark tiles are the light ones, so the picture does not change with the scheme.
@@ -81,10 +98,21 @@ const pairAt = (a: number, b: number): MapPosition[] => [
 ];
 
 /** Two routes, two positions at different places, each marker in its route's colour; the text alternative names both. */
-export const TwoPositions: Story = { args: { label: "Two runners", routes: pair, positions: pairAt(0.62, 0.3), tiles: sameTiles } };
+export const TwoPositions: Story = {
+  args: { label: "Two runners", routes: pair, positions: pairAt(0.62, 0.3), tiles: sameTiles },
+};
 
 /** Centred follow at a set zoom: the view is held on Runner A, so the marker sits in the middle of the frame. */
-export const CentredAtZoom: Story = { args: { label: "Runner A, centred", routes: pair, positions: pairAt(0.45, 0.3), follow: "centre", zoom: 14, tiles: sameTiles } };
+export const CentredAtZoom: Story = {
+  args: {
+    label: "Runner A, centred",
+    routes: pair,
+    positions: pairAt(0.45, 0.3),
+    follow: "centre",
+    zoom: 14,
+    tiles: sameTiles,
+  },
+};
 
 /** The same frame one second of footage later: the view has moved with the runner, the zoom is unchanged. */
 export const CentredLater: Story = { args: { ...CentredAtZoom.args, positions: pairAt(0.5, 0.35) } };
@@ -106,13 +134,19 @@ function PictureStage(args: RouteMapProps) {
   return (
     <div className="grid w-full max-w-3xl gap-2">
       <RouteMap {...args} positions={pairAt(t, (t * 0.7) % 1)} follow="centre" followId="a" zoom={zoom} />
-      <p className="type-body-sm text-muted-foreground tabular-nums">Zoom {zoom.toFixed(2)}, centred on Runner A every frame; neither route is redrawn.</p>
+      <p className="type-body-sm text-muted-foreground tabular-nums">
+        Zoom {zoom.toFixed(2)}, centred on Runner A every frame; neither route is redrawn.
+      </p>
     </div>
   );
 }
 
 /** Live: zoom animates 12 to 15 while the view stays centred on a moving position. Skipped by the visual suite. */
-export const AnimatedZoom: Story = { tags: ["no-visual"], args: { label: "Runners", routes: pair, tiles: sameTiles }, render: (args) => <PictureStage {...args} /> };
+export const AnimatedZoom: Story = {
+  tags: ["no-visual"],
+  args: { label: "Runners", routes: pair, tiles: sameTiles },
+  render: (args) => <PictureStage {...args} />,
+};
 
 function LiveStage(args: RouteMapProps) {
   const [share, setShare] = React.useState(0);
@@ -134,7 +168,9 @@ function LiveStage(args: RouteMapProps) {
         <Button size="sm" variant="outline" onClick={() => setFollow((f) => !f)}>
           {follow ? "Stop following" : "Follow the runner"}
         </Button>
-        <p className="type-body-sm text-muted-foreground tabular-nums">{format.distance(geo.length(riverRun) * share)} along, updated every frame; the routes are not redrawn.</p>
+        <p className="type-body-sm text-muted-foreground tabular-nums">
+          {format.distance(geo.length(riverRun) * share)} along, updated every frame; the routes are not redrawn.
+        </p>
       </div>
     </div>
   );
@@ -155,30 +191,63 @@ const clips: MapMarker[] = [
   ...spots(5, mid, 0.00008),
   { id: "far-1", label: "Clip 6", at: riverRun[20] },
   { id: "far-2", label: "Clip 7", at: riverRun[160], highlighted: true },
-  { id: "stretch", label: "Clip 8, the climb", at: { routeId: "run", from: riverRunMetres[80], to: riverRunMetres[110] }, selected: true },
+  {
+    id: "stretch",
+    label: "Clip 8, the climb",
+    at: { routeId: "run", from: riverRunMetres[80], to: riverRunMetres[110] },
+    selected: true,
+  },
 ];
 
 /** Items on the map: a close group fans out around its true place with leader lines, the rest are single pins, a stretch of the route is drawn heavier, and the key names each state. */
 export const Markers: Story = { args: { label: "Clips on the run", markers: clips } };
 
 /** Zoomed in until the group separates: no fan, each pin at its own place. */
-export const MarkersZoomedIn: Story = { args: { ...Markers.args, zoom: 18, follow: "centre", positions: [{ id: "a", label: "Here", at: mid }], tiles: sameTiles } };
+export const MarkersZoomedIn: Story = {
+  args: {
+    ...Markers.args,
+    zoom: 18,
+    follow: "centre",
+    positions: [{ id: "a", label: "Here", at: mid }],
+    tiles: sameTiles,
+  },
+};
 
 /** Phone width: the key stays inside the map. */
-export const MarkersPhone: Story = { ...Markers, tags: ["visual-phone"], args: { ...Markers.args, className: "w-full" } };
+export const MarkersPhone: Story = {
+  ...Markers,
+  tags: ["visual-phone"],
+  args: { ...Markers.args, className: "w-full" },
+};
 
 /** Picking a place: the crosshair cursor and the banner; the keyboard moves a crosshair with the arrows. */
-export const Picking: Story = { args: { picking: true, pickBanner: "Click the map to place the clip", onPick: () => {} } };
+export const Picking: Story = {
+  args: { picking: true, pickBanner: "Click the map to place the clip", onPick: () => {} },
+};
 
 function PickStage(args: RouteMapProps) {
   const [picking, setPicking] = React.useState(false);
   const [picked, setPicked] = React.useState<PickNearest | null>(null);
   return (
     <div className="grid w-full max-w-3xl gap-2">
-      <RouteMap {...args} picking={picking} onPick={(_, info) => { setPicked(info.nearest); setPicking(false); }} onPickCancel={() => setPicking(false)} />
+      <RouteMap
+        {...args}
+        picking={picking}
+        onPick={(_, info) => {
+          setPicked(info.nearest);
+          setPicking(false);
+        }}
+        onPickCancel={() => setPicking(false)}
+      />
       <div className="flex items-center gap-3">
-        <Button size="sm" onClick={() => setPicking(true)}>Pick a place</Button>
-        <p className="type-body-sm text-muted-foreground tabular-nums">{picked ? `${format.distance(picked.alongM)} along, ${format.distance(picked.distanceM)} off the route` : "Nothing picked"}</p>
+        <Button size="sm" onClick={() => setPicking(true)}>
+          Pick a place
+        </Button>
+        <p className="type-body-sm text-muted-foreground tabular-nums">
+          {picked
+            ? `${format.distance(picked.alongM)} along, ${format.distance(picked.distanceM)} off the route`
+            : "Nothing picked"}
+        </p>
       </div>
     </div>
   );

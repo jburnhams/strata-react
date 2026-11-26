@@ -33,10 +33,11 @@ export function diffWords(a: string, b: string): TextDifference | null {
   const table = new Uint32Array((wa.length + 1) * w);
   for (let i = wa.length - 1; i >= 0; i--)
     for (let j = wb.length - 1; j >= 0; j--)
-      table[i * w + j] = wa[i] === wb[j] ? table[(i + 1) * w + j + 1] + 1 : Math.max(table[(i + 1) * w + j], table[i * w + j + 1]);
+      table[i * w + j] =
+        wa[i] === wb[j] ? table[(i + 1) * w + j + 1] + 1 : Math.max(table[(i + 1) * w + j], table[i * w + j + 1]);
   const sameA = new Set<number>();
   const sameB = new Set<number>();
-  for (let i = 0, j = 0; i < wa.length && j < wb.length; ) {
+  for (let i = 0, j = 0; i < wa.length && j < wb.length;) {
     if (wa[i] === wb[j]) {
       sameA.add(i++);
       sameB.add(j++);

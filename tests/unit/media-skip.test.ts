@@ -60,9 +60,7 @@ describe("skipAction", () => {
 
   it("falls back per level, and takes the app's steps", () => {
     const chaptersOnly = tape.filter((m) => !m.kind);
-    expect(skipAction(chaptersOnly, "small", 1, 5, { steps: { small: 5 } }).label).toBe(
-      "Forward 5 s",
-    );
+    expect(skipAction(chaptersOnly, "small", 1, 5, { steps: { small: 5 } }).label).toBe("Forward 5 s");
     expect(skipAction(chaptersOnly, "large", 1, 5).label).toBe("Next chapter");
     expect(skipAction([], "large", -1, 500, { steps: { large: 90 } })).toMatchObject({
       label: "Back 90 s",

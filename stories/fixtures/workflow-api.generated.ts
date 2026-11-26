@@ -3,727 +3,727 @@
 // regenerate with `strata-api-types <schema> -o <this file>`; CI runs it with --check.
 
 export interface paths {
-    "/api/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Jobs */
-        get: operations["list_jobs_api_jobs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/jobs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jobs/counts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Job Counts */
-        get: operations["job_counts_api_jobs_counts_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Jobs */
+    get: operations["list_jobs_api_jobs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jobs/counts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jobs/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Job */
-        get: operations["get_job_api_jobs__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Job Counts */
+    get: operations["job_counts_api_jobs_counts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jobs/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jobs/{job_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel Job */
-        post: operations["cancel_job_api_jobs__job_id__cancel_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Get Job */
+    get: operations["get_job_api_jobs__job_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jobs/{job_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jobs/{job_id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Retry Job */
-        post: operations["retry_job_api_jobs__job_id__retry_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Cancel Job */
+    post: operations["cancel_job_api_jobs__job_id__cancel_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jobs/{job_id}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Runs */
-        get: operations["list_runs_api_workflows_ingest_subjects_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Retry Job */
+    post: operations["retry_job_api_jobs__job_id__retry_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects/{subject}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Run */
-        get: operations["get_run_api_workflows_ingest_subjects__subject__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Runs */
+    get: operations["list_runs_api_workflows_ingest_subjects_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects/{subject}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects/{subject}/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run Subject */
-        post: operations["run_subject_api_workflows_ingest_subjects__subject__run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Get Run */
+    get: operations["get_run_api_workflows_ingest_subjects__subject__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects/{subject}/run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects/{subject}/stages/{stage}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Stage History */
-        get: operations["stage_history_api_workflows_ingest_subjects__subject__stages__stage__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Run Subject */
+    post: operations["run_subject_api_workflows_ingest_subjects__subject__run_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects/{subject}/stages/{stage}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects/{subject}/stages/{stage}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve Stage */
-        post: operations["approve_stage_api_workflows_ingest_subjects__subject__stages__stage__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Stage History */
+    get: operations["stage_history_api_workflows_ingest_subjects__subject__stages__stage__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects/{subject}/stages/{stage}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/workflows/ingest/subjects/{subject}/stages/{stage}/clear": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Clear Stage */
-        post: operations["clear_stage_api_workflows_ingest_subjects__subject__stages__stage__clear_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Approve Stage */
+    post: operations["approve_stage_api_workflows_ingest_subjects__subject__stages__stage__approve_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/workflows/ingest/subjects/{subject}/stages/{stage}/clear": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /** Clear Stage */
+    post: operations["clear_stage_api_workflows_ingest_subjects__subject__stages__stage__clear_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /**
-         * Approval
-         * @description The body of an approval: `value` is kept with it (the choice made, the policy judged by). A request body, so a
-         *     plain BaseModel (`contracts.ApiModel` would give the schema an -Input and an -Output twin).
-         */
-        Approval: {
-            /** Value */
-            value?: unknown;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** Page[Task] */
-        Page_Task_: {
-            /** Items */
-            items: components["schemas"]["Task"][];
-            /** Next */
-            next: string | null;
-            /** Total */
-            total: number | null;
-        };
-        /** Page[WorkflowRun] */
-        Page_WorkflowRun_: {
-            /** Items */
-            items: components["schemas"]["WorkflowRun"][];
-            /** Next */
-            next: string | null;
-            /** Total */
-            total: number | null;
-        };
-        /**
-         * Progress
-         * @description How far a task has got. `total` None means not known yet; `text` is the line a person reads ("Page 3 of 40").
-         */
-        Progress: {
-            /** At */
-            at: string | null;
-            /**
-             * Done
-             * @default 0
-             */
-            done: number;
-            /** Stage */
-            stage: string | null;
-            /**
-             * Text
-             * @default
-             */
-            text: string;
-            /** Total */
-            total: number | null;
-        };
-        /**
-         * StageEvent
-         * @description One record of a stage: `status` done, failed or cleared; `by` who approved a gate or cleared it; `data` the
-         *     stage's answer (or a gate's value), sent only where one stage's history is asked for.
-         */
-        StageEvent: {
-            /**
-             * At
-             * Format: date-time
-             */
-            at: string;
-            /** By */
-            by: string | null;
-            /** Data */
-            data: unknown;
-            /**
-             * Elapsed S
-             * @default 0
-             */
-            elapsed_s: number;
-            /** Error */
-            error: string | null;
-            /** Metrics */
-            metrics: {
-                [key: string]: unknown;
-            };
-            /** Stage */
-            stage: string;
-            /** Status */
-            status: string;
-        };
-        /**
-         * StageRun
-         * @description A stage of a pipeline as one subject stands: what a step list on screen draws, a row per stage.
-         */
-        StageRun: {
-            /** Gate */
-            gate: boolean;
-            last: components["schemas"]["StageEvent"] | null;
-            /** Name */
-            name: string;
-            /** Needs */
-            needs: string[];
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "done" | "ready" | "stale" | "failed" | "waiting" | "blocked";
-            /** Title */
-            title: string;
-        };
-        /**
-         * Task
-         * @description A job or task row as an API answers it.
-         */
-        Task: {
-            /**
-             * Attempts
-             * @default 0
-             */
-            attempts: number;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Domain */
-            domain: string | null;
-            /** Error */
-            error: string | null;
-            /** Finished At */
-            finished_at: string | null;
-            /** Id */
-            id: number | string;
-            /** Kind */
-            kind: string;
-            progress: components["schemas"]["Progress"] | null;
-            /** Result */
-            result: unknown;
-            /** Started At */
-            started_at: string | null;
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "queued" | "running" | "done" | "failed" | "cancelled";
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-        };
-        /**
-         * WorkflowRun
-         * @description One subject's way through one pipeline, and the queue job advancing it now (or the last one), if any.
-         */
-        WorkflowRun: {
-            /** Failed */
-            failed: string[];
-            job: components["schemas"]["Task"] | null;
-            /** Pipeline */
-            pipeline: string;
-            /** Stages */
-            stages: components["schemas"]["StageRun"][];
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "done" | "failed" | "waiting" | "blocked" | "stopped";
-            /** Subject */
-            subject: string;
-            /** Waiting */
-            waiting: string[];
-        };
+  schemas: {
+    /**
+     * Approval
+     * @description The body of an approval: `value` is kept with it (the choice made, the policy judged by). A request body, so a
+     *     plain BaseModel (`contracts.ApiModel` would give the schema an -Input and an -Output twin).
+     */
+    Approval: {
+      /** Value */
+      value?: unknown;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
+    /** Page[Task] */
+    Page_Task_: {
+      /** Items */
+      items: components["schemas"]["Task"][];
+      /** Next */
+      next: string | null;
+      /** Total */
+      total: number | null;
+    };
+    /** Page[WorkflowRun] */
+    Page_WorkflowRun_: {
+      /** Items */
+      items: components["schemas"]["WorkflowRun"][];
+      /** Next */
+      next: string | null;
+      /** Total */
+      total: number | null;
+    };
+    /**
+     * Progress
+     * @description How far a task has got. `total` None means not known yet; `text` is the line a person reads ("Page 3 of 40").
+     */
+    Progress: {
+      /** At */
+      at: string | null;
+      /**
+       * Done
+       * @default 0
+       */
+      done: number;
+      /** Stage */
+      stage: string | null;
+      /**
+       * Text
+       * @default
+       */
+      text: string;
+      /** Total */
+      total: number | null;
+    };
+    /**
+     * StageEvent
+     * @description One record of a stage: `status` done, failed or cleared; `by` who approved a gate or cleared it; `data` the
+     *     stage's answer (or a gate's value), sent only where one stage's history is asked for.
+     */
+    StageEvent: {
+      /**
+       * At
+       * Format: date-time
+       */
+      at: string;
+      /** By */
+      by: string | null;
+      /** Data */
+      data: unknown;
+      /**
+       * Elapsed S
+       * @default 0
+       */
+      elapsed_s: number;
+      /** Error */
+      error: string | null;
+      /** Metrics */
+      metrics: {
+        [key: string]: unknown;
+      };
+      /** Stage */
+      stage: string;
+      /** Status */
+      status: string;
+    };
+    /**
+     * StageRun
+     * @description A stage of a pipeline as one subject stands: what a step list on screen draws, a row per stage.
+     */
+    StageRun: {
+      /** Gate */
+      gate: boolean;
+      last: components["schemas"]["StageEvent"] | null;
+      /** Name */
+      name: string;
+      /** Needs */
+      needs: string[];
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "done" | "ready" | "stale" | "failed" | "waiting" | "blocked";
+      /** Title */
+      title: string;
+    };
+    /**
+     * Task
+     * @description A job or task row as an API answers it.
+     */
+    Task: {
+      /**
+       * Attempts
+       * @default 0
+       */
+      attempts: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Domain */
+      domain: string | null;
+      /** Error */
+      error: string | null;
+      /** Finished At */
+      finished_at: string | null;
+      /** Id */
+      id: number | string;
+      /** Kind */
+      kind: string;
+      progress: components["schemas"]["Progress"] | null;
+      /** Result */
+      result: unknown;
+      /** Started At */
+      started_at: string | null;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "queued" | "running" | "done" | "failed" | "cancelled";
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Context */
+      ctx?: Record<string, never>;
+      /** Input */
+      input?: unknown;
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+    };
+    /**
+     * WorkflowRun
+     * @description One subject's way through one pipeline, and the queue job advancing it now (or the last one), if any.
+     */
+    WorkflowRun: {
+      /** Failed */
+      failed: string[];
+      job: components["schemas"]["Task"] | null;
+      /** Pipeline */
+      pipeline: string;
+      /** Stages */
+      stages: components["schemas"]["StageRun"][];
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "done" | "failed" | "waiting" | "blocked" | "stopped";
+      /** Subject */
+      subject: string;
+      /** Waiting */
+      waiting: string[];
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_jobs_api_jobs_get: {
-        parameters: {
-            query?: {
-                state?: ("queued" | "running" | "done" | "failed" | "cancelled")[] | null;
-                kind?: string | null;
-                domain?: string | null;
-                after?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_Task_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  list_jobs_api_jobs_get: {
+    parameters: {
+      query?: {
+        state?: ("queued" | "running" | "done" | "failed" | "cancelled")[] | null;
+        kind?: string | null;
+        domain?: string | null;
+        after?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    job_counts_api_jobs_counts_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: number;
-                    };
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["Page_Task_"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    get_job_api_jobs__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Task"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  job_counts_api_jobs_counts_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    cancel_job_api_jobs__job_id__cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: number;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Task"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: number;
+          };
         };
+      };
     };
-    retry_job_api_jobs__job_id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Task"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  get_job_api_jobs__job_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: number;
+      };
+      cookie?: never;
     };
-    list_runs_api_workflows_ingest_subjects_get: {
-        parameters: {
-            query?: {
-                state?: string[] | null;
-                after?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_WorkflowRun_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["Task"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    get_run_api_workflows_ingest_subjects__subject__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                subject: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkflowRun"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  cancel_job_api_jobs__job_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: number;
+      };
+      cookie?: never;
     };
-    run_subject_api_workflows_ingest_subjects__subject__run_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                subject: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkflowRun"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["Task"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    stage_history_api_workflows_ingest_subjects__subject__stages__stage__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                subject: string;
-                stage: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StageEvent"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  retry_job_api_jobs__job_id__retry_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: number;
+      };
+      cookie?: never;
     };
-    approve_stage_api_workflows_ingest_subjects__subject__stages__stage__approve_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                subject: string;
-                stage: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["Approval"] | null;
-            };
+        content: {
+          "application/json": components["schemas"]["Task"];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkflowRun"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    clear_stage_api_workflows_ingest_subjects__subject__stages__stage__clear_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                subject: string;
-                stage: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkflowRun"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  list_runs_api_workflows_ingest_subjects_get: {
+    parameters: {
+      query?: {
+        state?: string[] | null;
+        after?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_WorkflowRun_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_run_api_workflows_ingest_subjects__subject__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowRun"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  run_subject_api_workflows_ingest_subjects__subject__run_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowRun"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  stage_history_api_workflows_ingest_subjects__subject__stages__stage__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: string;
+        stage: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StageEvent"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  approve_stage_api_workflows_ingest_subjects__subject__stages__stage__approve_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: string;
+        stage: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Approval"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowRun"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  clear_stage_api_workflows_ingest_subjects__subject__stages__stage__clear_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: string;
+        stage: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkflowRun"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
 }
 
 /** A named schema of the API: `Schema<"Task">`. */

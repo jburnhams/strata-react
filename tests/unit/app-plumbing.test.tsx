@@ -42,9 +42,7 @@ function Search() {
 
 describe("fetchJson json (#296) and createApi (#295)", () => {
   it("sends the value as a JSON body with the content type and POST, keeping the caller's headers", async () => {
-    let seen:
-      | { method: string; type: string | null; auth: string | null; body: unknown }
-      | undefined;
+    let seen: { method: string; type: string | null; auth: string | null; body: unknown } | undefined;
     server.use(
       http.post("http://localhost/api/learners", async ({ request }) => {
         seen = {
@@ -264,9 +262,7 @@ describe("speech (#299)", () => {
       { name: "Alva", lang: "sv-SE" },
     ]);
     try {
-      expect(pickVoice([{ name: "Alva", lang: "sv-SE" } as SpeechSynthesisVoice], "sv")?.name).toBe(
-        "Alva",
-      );
+      expect(pickVoice([{ name: "Alva", lang: "sv-SE" } as SpeechSynthesisVoice], "sv")?.name).toBe("Alva");
       render(<SayAgain text="Which one is the cat?" lang="en-GB" />);
       const button = screen.getByRole("button", { name: "Say: Which one is the cat?" });
       await userEvent.click(button);
@@ -386,9 +382,7 @@ describe("recorded speech (#310)", () => {
   it("draws the button for recordings where the browser has no voice, and not when muted or there is nothing to say", () => {
     // jsdom has Audio but no speechSynthesis: what a browser without voices looks like
     render(<SayAgain text="Listen. sh, as in ship." parts={parts} verb="Hear" />);
-    expect(
-      screen.getByRole("button", { name: "Hear: Listen. sh, as in ship." }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hear: Listen. sh, as in ship." })).toBeInTheDocument();
     cleanup();
     render(<SayAgain text="Listen. sh, as in ship." parts={parts} muted />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -419,10 +413,9 @@ describe("storage shim (#298)", () => {
 
 describe("strata-api-types import failures (#293)", () => {
   it("asks for an install only when the package is missing, and names TypeScript 7 otherwise", () => {
-    const missing = Object.assign(
-      new Error("Cannot find package 'openapi-typescript' imported from /app/x.js"),
-      { code: "ERR_MODULE_NOT_FOUND" },
-    );
+    const missing = Object.assign(new Error("Cannot find package 'openapi-typescript' imported from /app/x.js"), {
+      code: "ERR_MODULE_NOT_FOUND",
+    });
     expect(explainImportFailure(missing, 6)).toMatch(/npm install --save-dev openapi-typescript/);
     const broken = new TypeError("Cannot read properties of undefined (reading 'ScriptTarget')");
     const seven = explainImportFailure(broken, 7);

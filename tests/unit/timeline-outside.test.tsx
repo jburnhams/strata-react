@@ -11,9 +11,7 @@ const lanes = [
   { id: "t1", label: "Track 1" },
   { id: "t2", label: "Track 2 (locked)" },
 ];
-const items: TimelineItem[] = [
-  { id: "a", lane: "t1", start: 12, length: 8, label: "run-02.mp4", kind: "video" },
-];
+const items: TimelineItem[] = [{ id: "a", lane: "t1", start: 12, length: 8, label: "run-02.mp4", kind: "video" }];
 
 function Harness({ onDrop, position }: { onDrop: (d: TimelineDrop) => void; position?: number }) {
   return (
@@ -88,9 +86,7 @@ describe("Timeline: drops from outside", () => {
     d.drop();
     expect(drops).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent("Track 2 is locked.");
-    expect(
-      screen.queryByText("Track 2 is locked.", { selector: "p[aria-hidden]" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Track 2 is locked.", { selector: "p[aria-hidden]" })).not.toBeInTheDocument();
   });
 
   it("refuses a drop that would overlap, with the item named", () => {
@@ -139,9 +135,9 @@ describe("Timeline: lane height, kind colours, header", () => {
     const { container } = renderWithStrata(
       <Timeline label="Edit" lanes={lanes} items={items} to={120} zoom={10} laneRows={3} />,
     );
-    expect(
-      container.querySelector<HTMLElement>("[role=group]")!.style.getPropertyValue("--lane-h"),
-    ).toBe("calc(var(--control-h) * 3)");
+    expect(container.querySelector<HTMLElement>("[role=group]")!.style.getPropertyValue("--lane-h")).toBe(
+      "calc(var(--control-h) * 3)",
+    );
     expect(lane("Track 1").className).toContain("h-(--lane-h)");
   });
 
@@ -163,12 +159,9 @@ describe("Timeline: lane height, kind colours, header", () => {
     expect(stripe(more, kinds)).toBe("var(--info)");
     // Without the map, the palette follows the order kinds appear in.
     expect(stripe(items)).toBe("var(--chart-1)");
-    expect(
-      stripe([
-        { id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" },
-        ...items,
-      ]),
-    ).toBe("var(--chart-2)");
+    expect(stripe([{ id: "z", lane: "t2", start: 0, length: 5, label: "notes.gpx", kind: "gpx" }, ...items])).toBe(
+      "var(--chart-2)",
+    );
   });
 
   it("sizes the header column to its content with a cap, and names a truncated lane", () => {

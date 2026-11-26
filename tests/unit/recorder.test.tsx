@@ -23,9 +23,7 @@ import { fakeMicrophone, renderWithStrata } from "../../src/testing";
 
 describe("recording arithmetic", () => {
   it("joins chunks in order", () => {
-    expect(
-      Array.from(joinSamples([Float32Array.of(1, 2), Float32Array.of(), Float32Array.of(3)])),
-    ).toEqual([1, 2, 3]);
+    expect(Array.from(joinSamples([Float32Array.of(1, 2), Float32Array.of(), Float32Array.of(3)]))).toEqual([1, 2, 3]);
   });
 
   it("writes a mono 16-bit PCM WAV, clipping beyond full scale", async () => {
@@ -41,9 +39,7 @@ describe("recording arithmetic", () => {
     expect(view.getUint32(28, true)).toBe(96_000);
     expect(view.getUint16(34, true)).toBe(16);
     expect(view.getUint32(40, true)).toBe(8);
-    expect([44, 46, 48, 50].map((at) => view.getInt16(at, true))).toEqual([
-      0, 16383, -32768, 32767,
-    ]);
+    expect([44, 46, 48, 50].map((at) => view.getInt16(at, true))).toEqual([0, 16383, -32768, 32767]);
   });
 
   it("reads the peak in dBFS, silence as the floor", () => {
@@ -64,18 +60,14 @@ describe("recording arithmetic", () => {
     expect(explainMicrophoneError(new DOMException("no", "NotAllowedError")).message).toMatch(
       /not allowed.*address bar/,
     );
-    expect(explainMicrophoneError(new DOMException("no", "NotFoundError")).message).toMatch(
-      /No microphone was found/,
-    );
+    expect(explainMicrophoneError(new DOMException("no", "NotFoundError")).message).toMatch(/No microphone was found/);
     expect(explainMicrophoneError(new DOMException("busy", "NotReadableError")).message).toMatch(
       /in use by another program/,
     );
     expect(explainMicrophoneError(new DOMException("odd", "AbortError")).message).toBe(
       "The microphone could not be opened (odd).",
     );
-    expect(explainMicrophoneError("strange").message).toBe(
-      "The microphone could not be opened (strange).",
-    );
+    expect(explainMicrophoneError("strange").message).toBe("The microphone could not be opened (strange).");
   });
 });
 
@@ -106,11 +98,7 @@ function Booth({ maxSeconds = 60, microphone }: { maxSeconds?: number; microphon
       </Button>
       <span>{again}</span>
       {recorder.state.phase === "recording" && (
-        <InputLevel
-          level={recorder.state.level}
-          seconds={recorder.state.seconds}
-          maxSeconds={maxSeconds}
-        />
+        <InputLevel level={recorder.state.level} seconds={recorder.state.seconds} maxSeconds={maxSeconds} />
       )}
       {recorder.state.phase === "failed" && <p role="alert">{recorder.state.reason}</p>}
       {take && (
@@ -136,12 +124,8 @@ describe("useRecorder", () => {
     await waitFor(() => expect(screen.getByText(/Recording 0:01/)).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Stop" }));
     expect(await screen.findByText("Good level")).toBeInTheDocument();
-    expect(
-      screen.getByText(/^Kept \d\.\d s, peak -10\sdBFS\. The level suits speech\.$/),
-    ).toBeInTheDocument();
-    const [rate, samples, bytes, ...device] = screen
-      .getByRole("status", { hidden: true })
-      .textContent!.split(" ");
+    expect(screen.getByText(/^Kept \d\.\d s, peak -10\sdBFS\. The level suits speech\.$/)).toBeInTheDocument();
+    const [rate, samples, bytes, ...device] = screen.getByRole("status", { hidden: true }).textContent!.split(" ");
     expect(rate).toBe("16000");
     expect(Number(bytes)).toBe(44 + 2 * Number(samples));
     expect(device.join(" ")).toBe("Fake USB microphone");
@@ -150,9 +134,7 @@ describe("useRecorder", () => {
 
   it("stops itself at the longest take", async () => {
     const user = userEvent.setup();
-    renderWithStrata(
-      <Booth maxSeconds={1} microphone={fakeMicrophone({ amplitude: 0.01, speed: 20 })} />,
-    );
+    renderWithStrata(<Booth maxSeconds={1} microphone={fakeMicrophone({ amplitude: 0.01, speed: 20 })} />);
     await user.click(screen.getByRole("button", { name: "Record" }));
     expect(await screen.findByText("Too quiet")).toBeInTheDocument();
     expect(screen.getByText(/^Kept 1\.0 s, peak -40\sdBFS\. Move closer/)).toBeInTheDocument();
@@ -226,9 +208,7 @@ describe("useRecorder at the edges", () => {
     await screen.findByRole("button", { name: "Stop" });
     act(() => send?.(new Float32Array(600).fill(0.1)));
     act(() => send?.(new Float32Array(600).fill(0.1)));
-    const [, samples, bytes] = (
-      await screen.findByRole("status", { hidden: true })
-    ).textContent!.split(" ");
+    const [, samples, bytes] = (await screen.findByRole("status", { hidden: true })).textContent!.split(" ");
     expect([samples, bytes]).toEqual(["1000", String(44 + 2000)]);
   });
 
@@ -260,14 +240,8 @@ describe("level views", () => {
       </>,
     );
     expect(screen.getByRole("meter", { name: "Loud" })).toHaveAccessibleDescription(/Too loud/);
-    expect(screen.getByRole("meter", { name: "Over" })).toHaveAttribute(
-      "aria-valuetext",
-      "0\u00a0dBFS",
-    );
-    expect(screen.getByRole("meter", { name: "Under" })).toHaveAttribute(
-      "aria-valuetext",
-      "-60\u00a0dBFS",
-    );
+    expect(screen.getByRole("meter", { name: "Over" })).toHaveAttribute("aria-valuetext", "0\u00a0dBFS");
+    expect(screen.getByRole("meter", { name: "Under" })).toHaveAttribute("aria-valuetext", "-60\u00a0dBFS");
   });
 
   it("says a take's verdict with or without a lead", () => {

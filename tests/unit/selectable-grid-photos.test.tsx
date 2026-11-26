@@ -15,9 +15,11 @@ const photos: P[] = Array.from({ length: 6 }, (_, i) => ({
 }));
 
 function Grid(
-  props: Partial<
-    Omit<React.ComponentProps<typeof SelectableGrid<P>>, "aspect" | "naturalAspect">
-  > & { rows?: P[]; start?: number; locked?: string },
+  props: Partial<Omit<React.ComponentProps<typeof SelectableGrid<P>>, "aspect" | "naturalAspect">> & {
+    rows?: P[];
+    start?: number;
+    locked?: string;
+  },
 ) {
   const { rows = photos, start = 144, locked, ...rest } = props;
   // The selection is made from every row, so a filtered-away row stays chosen (as a screen with a filter does).
@@ -162,11 +164,7 @@ describe("SelectableGrid as a photo grid", () => {
 
   it("says in words why a tile cannot be chosen, and shows a corner badge", () => {
     renderWithStrata(
-      <Grid
-        locked="p1"
-        unselectableReason={() => "In a project"}
-        badge={(p) => (p.id === "p0" ? <b>New</b> : null)}
-      />,
+      <Grid locked="p1" unselectableReason={() => "In a project"} badge={(p) => (p.id === "p0" ? <b>New</b> : null)} />,
     );
     expect(screen.getByText("New")).toBeInTheDocument();
     expect(screen.getByText("In a project")).toBeInTheDocument();

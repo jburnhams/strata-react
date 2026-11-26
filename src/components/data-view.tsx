@@ -114,7 +114,13 @@ export function StaleNotice({
   className?: string;
 }) {
   return (
-    <div role="status" className={cn("mb-4 flex flex-wrap items-start gap-3 rounded-surface bg-warning-subtle p-3 text-warning", className)}>
+    <div
+      role="status"
+      className={cn(
+        "mb-4 flex flex-wrap items-start gap-3 rounded-surface bg-warning-subtle p-3 text-warning",
+        className,
+      )}
+    >
       <History aria-hidden className="mt-0.5 size-4 shrink-0" />
       <p className="min-w-0 flex-1 type-body-sm">
         {stale.message} {shown ? shown(readTime(stale.readAt)) : `Showing data from ${readTime(stale.readAt)}.`}
@@ -129,7 +135,15 @@ export function StaleNotice({
 
 // An empty state teaches the next action. No illustration slot exists, on purpose.
 /** An empty state that teaches the next action: a title, a sentence and an action. No illustration slot, on purpose. */
-export function EmptyState({ title, children, action }: { title: string; children?: React.ReactNode; action?: React.ReactNode }) {
+export function EmptyState({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="grid justify-items-start gap-2 border-y border-border py-6">
       <p className="type-heading">{title}</p>

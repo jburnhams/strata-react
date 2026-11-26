@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
-import {
-  Inspector,
-  InspectorSection,
-  Pane,
-  Split,
-  Workspace,
-  WorkspaceBar,
-  useWorkspaceState,
-} from "../../src";
+import { Inspector, InspectorSection, Pane, Split, Workspace, WorkspaceBar, useWorkspaceState } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #365: the bar across the top of a Workspace. Issue #366: a Pane's body is inset by default
@@ -25,9 +17,7 @@ describe("WorkspaceBar", () => {
       />,
     );
     const bar = screen.getByRole("banner");
-    expect(
-      within(bar).getByRole("heading", { level: 1, name: "Quake 2 explorer" }),
-    ).toBeInTheDocument();
+    expect(within(bar).getByRole("heading", { level: 1, name: "Quake 2 explorer" })).toBeInTheDocument();
     expect(within(bar).getByRole("status")).toHaveTextContent("pak.pak, mod.pak, 3 MB");
     expect(within(bar).getByRole("button", { name: "Add files" })).toBeInTheDocument();
     expect(within(bar).getByRole("button", { name: "Theme" })).toBeInTheDocument();

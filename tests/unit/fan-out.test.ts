@@ -2,8 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { fanOut } from "../../src/map/fan";
 
 const at = (id: string, x: number, y: number) => ({ id, x, y });
-const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
-  Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
 describe("fanOut", () => {
   it("leaves markers that are apart where they are", () => {
@@ -31,8 +30,7 @@ describe("fanOut", () => {
         24,
       );
       for (let i = 0; i < n; i++)
-        for (let j = i + 1; j < n; j++)
-          expect(dist(out[i], out[j])).toBeGreaterThanOrEqual(24 - 1e-6);
+        for (let j = i + 1; j < n; j++) expect(dist(out[i], out[j])).toBeGreaterThanOrEqual(24 - 1e-6);
     }
   });
 
@@ -42,8 +40,7 @@ describe("fanOut", () => {
       26,
     );
     for (let i = 0; i < out.length; i++)
-      for (let j = i + 1; j < out.length; j++)
-        expect(dist(out[i], out[j])).toBeGreaterThan(26 * 0.7);
+      for (let j = i + 1; j < out.length; j++) expect(dist(out[i], out[j])).toBeGreaterThan(26 * 0.7);
     expect(Math.max(...out.map((o) => Math.hypot(o.x, o.y)))).toBeLessThan(26 * 5);
   });
 
@@ -69,9 +66,7 @@ describe("fanOut", () => {
   });
 
   it("handles 500 markers quickly", () => {
-    const items = Array.from({ length: 500 }, (_, i) =>
-      at(`m${i}`, (i * 37) % 900, (i * 91) % 700),
-    );
+    const items = Array.from({ length: 500 }, (_, i) => at(`m${i}`, (i * 37) % 900, (i * 91) % 700));
     const start = performance.now();
     fanOut(items);
     expect(performance.now() - start).toBeLessThan(200);

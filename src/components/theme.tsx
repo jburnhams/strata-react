@@ -341,18 +341,18 @@ export function ColorSchemeChoice({
           const Icon = icons[value];
           return (
             <Tooltip key={value} label={words[value].label}>
-            <Radio
-              value={value}
-              aria-label={words[value].label}
-              className={cn(
-                // Outer 6px less 2px padding: the segments are 4px, as optical nesting asks.
-                "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control text-muted-foreground transition-state",
-                "hover:text-foreground selected:bg-muted selected:text-foreground",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              )}
-            >
-              <Icon aria-hidden className="size-4" />
-            </Radio>
+              <Radio
+                value={value}
+                aria-label={words[value].label}
+                className={cn(
+                  // Outer 6px less 2px padding: the segments are 4px, as optical nesting asks.
+                  "grid size-(--control-h-sm) cursor-pointer place-items-center rounded-control text-muted-foreground transition-state",
+                  "hover:text-foreground selected:bg-muted selected:text-foreground",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                )}
+              >
+                <Icon aria-hidden className="size-4" />
+              </Radio>
             </Tooltip>
           );
         })}
@@ -384,7 +384,10 @@ export function usePalette(): PaletteState {
  * from the stored choice, so a page does not flash the default palette while the bundle loads. Pass the
  * same key and default as the `ThemeProvider`; put it beside `colorSchemeScript()`.
  */
-export function paletteScript(storageKey: string = PALETTE_STORAGE_KEY, defaultPalette: string = DEFAULT_PALETTE): string {
+export function paletteScript(
+  storageKey: string = PALETTE_STORAGE_KEY,
+  defaultPalette: string = DEFAULT_PALETTE,
+): string {
   const key = JSON.stringify(storageKey);
   const fallback = JSON.stringify(defaultPalette);
   return (
@@ -419,7 +422,11 @@ export function PaletteChoice({
   const name = React.useId();
   const swatch = (option: PaletteOption) => (
     // Scoping the palette on the swatch draws it in its own colours, in light and in a dark page.
-    <span data-palette={option.name} aria-hidden className="inline-flex size-5 shrink-0 overflow-hidden rounded-pill border border-border">
+    <span
+      data-palette={option.name}
+      aria-hidden
+      className="inline-flex size-5 shrink-0 overflow-hidden rounded-pill border border-border"
+    >
       <span className="w-1/2 bg-primary" />
       <span className="w-1/2 bg-secondary-9" />
     </span>
@@ -458,7 +465,12 @@ export function PaletteChoice({
       name={name}
       value={palette}
       onChange={setPalette}
-      choices={options.map((option) => ({ value: option.name, label: option.label, detail: option.detail, leading: swatch(option) }))}
+      choices={options.map((option) => ({
+        value: option.name,
+        label: option.label,
+        detail: option.detail,
+        leading: swatch(option),
+      }))}
     />
   );
 }

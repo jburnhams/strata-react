@@ -51,14 +51,12 @@ describe("loadSchema", () => {
     const answer = (body: string, init?: ResponseInit) =>
       (async () => new Response(body, init)) as unknown as typeof fetch;
     const doc = readFileSync(fixture, "utf8");
-    expect((await loadSchema("http://localhost:8360/api/openapi.json", answer(doc))).openapi).toBe(
-      "3.1.0",
-    );
+    expect((await loadSchema("http://localhost:8360/api/openapi.json", answer(doc))).openapi).toBe("3.1.0");
     await expect(loadSchema("http://x/docs", answer("<html></html>"))).rejects.toThrow(/not JSON/);
     await expect(loadSchema("http://x/a", answer("{}"))).rejects.toThrow(/not an OpenAPI document/);
-    await expect(
-      loadSchema("http://x/a", answer("no", { status: 404, statusText: "Not Found" })),
-    ).rejects.toThrow(/404 Not Found/);
+    await expect(loadSchema("http://x/a", answer("no", { status: 404, statusText: "Not Found" }))).rejects.toThrow(
+      /404 Not Found/,
+    );
   });
 });
 
@@ -82,9 +80,7 @@ describe("strata-api-types", () => {
     writeFileSync(changed, JSON.stringify(moved));
     const stale = await run(changed, "-o", out, "--check");
     expect(stale.code).toBe(1);
-    expect(stale.text).toMatch(
-      /no longer matches the schema\. Regenerate it: strata-api-types .* -o /,
-    );
+    expect(stale.text).toMatch(/no longer matches the schema\. Regenerate it: strata-api-types .* -o /);
     expect(readFileSync(out, "utf8")).not.toContain("uptime"); // --check writes nothing
   });
 

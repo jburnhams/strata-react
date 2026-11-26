@@ -30,5 +30,11 @@ function EarlierReadings({ children }: { children: React.ReactNode }) {
 export const ReadingsOld: Story = {
   name: "Readings old (poll failed)",
   beforeEach: ({ msw }) => msw.use(serverUnreachable),
-  decorators: [(Story) => <EarlierReadings><Story /></EarlierReadings>],
+  decorators: [
+    (Story) => (
+      <EarlierReadings>
+        <Story />
+      </EarlierReadings>
+    ),
+  ],
 };

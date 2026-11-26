@@ -17,12 +17,7 @@ import {
 } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
-import {
-  api,
-  bookingsEmpty,
-  bookingsServerError,
-  manyBookings,
-} from "../../stories/mocks/handlers";
+import { api, bookingsEmpty, bookingsServerError, manyBookings } from "../../stories/mocks/handlers";
 import { bookings, type Booking } from "../../stories/fixtures/kiln";
 
 const columns: Column<Booking>[] = [
@@ -53,9 +48,7 @@ function Bookings() {
       skeleton={<TableSkeleton />}
       empty={<EmptyState title="All three kilns are cold" />}
     >
-      {(rows) => (
-        <DataTable caption="Work in the kilns" columns={columns} rows={rows} rowKey={(b) => b.id} />
-      )}
+      {(rows) => <DataTable caption="Work in the kilns" columns={columns} rows={rows} rowKey={(b) => b.id} />}
     </DataView>
   );
 }
@@ -112,9 +105,7 @@ describe("a refresh that fails after a good read (issue #26)", () => {
   it("still shows the error panel when the first read fails", async () => {
     server.use(bookingsServerError);
     renderWithStrata(<Bookings />);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The server could not answer (503).",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("The server could not answer (503).");
     expect(screen.queryByRole("grid")).toBeNull();
   });
 
@@ -135,9 +126,7 @@ describe("a refresh that fails after a good read (issue #26)", () => {
         isEmpty={(rows) => rows.length === 0}
         skeleton={<TableSkeleton />}
         empty={<EmptyState title="All three kilns are cold" />}
-        staleNotice={(stale) => (
-          <StaleNotice stale={stale} shown={(when) => `Readings from ${when}.`} />
-        )}
+        staleNotice={(stale) => <StaleNotice stale={stale} shown={(when) => `Readings from ${when}.`} />}
       >
         {() => null}
       </DataView>,
@@ -152,22 +141,14 @@ describe("a refresh that fails after a good read (issue #26)", () => {
 
   it("names the day when the data was not read today", () => {
     const readAt = new Date(2026, 0, 5, 9, 30);
-    render(
-      <StaleNotice
-        stale={{ message: "The server could not answer (503).", readAt, retry: () => undefined }}
-      />,
-    );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      `Showing data from ${format.shortDay.format(readAt)}.`,
-    );
+    render(<StaleNotice stale={{ message: "The server could not answer (503).", readAt, retry: () => undefined }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(`Showing data from ${format.shortDay.format(readAt)}.`);
   });
 });
 
 describe("DataTable", () => {
   it("sorts by clicking a header and says which way with aria-sort", async () => {
-    renderWithStrata(
-      <DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />,
-    );
+    renderWithStrata(<DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
     const header = screen.getByRole("columnheader", { name: /Pieces/ });
     expect(header).toHaveAttribute("aria-sort", "none");
     await userEvent.click(header);
@@ -184,21 +165,12 @@ describe("DataTable", () => {
     }
     renderWithStrata(
       <>
-        <DataTable
-          caption="Work"
-          columns={columns}
-          rows={bookings}
-          rowKey={(b) => b.id}
-          sortParam="sort"
-        />
+        <DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} sortParam="sort" />
         <Search />
       </>,
       { route: "/bookings?sort=member.desc" },
     );
-    expect(screen.getByRole("columnheader", { name: /Member/ })).toHaveAttribute(
-      "aria-sort",
-      "descending",
-    );
+    expect(screen.getByRole("columnheader", { name: /Member/ })).toHaveAttribute("aria-sort", "descending");
     expect(within(bodyRows()[0]).getByText("Tom Ellery")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("columnheader", { name: /Pieces/ }));
     expect(screen.getByTestId("search")).toHaveTextContent("?sort=pieces.asc");
@@ -206,30 +178,17 @@ describe("DataTable", () => {
 
   it("renders only the visible rows of a long table (React Aria's Virtualizer)", () => {
     renderWithStrata(
-      <DataTable
-        caption="Many"
-        columns={columns}
-        rows={manyBookings}
-        rowKey={(b) => b.id}
-        maxHeight={280}
-      />,
+      <DataTable caption="Many" columns={columns} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />,
     );
     const rendered = bodyRows().filter((r) => r.getAttribute("aria-hidden") !== "true");
     expect(rendered.length).toBeGreaterThan(0);
     expect(rendered.length).toBeLessThan(40);
-    expect(screen.getByRole("grid")).toHaveAttribute(
-      "aria-rowcount",
-      String(manyBookings.length + 1),
-    );
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-rowcount", String(manyBookings.length + 1));
   });
 
   it("hides a column's header and cells together below a breakpoint, in CSS (issue #339)", () => {
-    const narrowing = columns.map((c) =>
-      c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c,
-    );
-    renderWithStrata(
-      <DataTable caption="Work" columns={narrowing} rows={bookings} rowKey={(b) => b.id} />,
-    );
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
+    renderWithStrata(<DataTable caption="Work" columns={narrowing} rows={bookings} rowKey={(b) => b.id} />);
     const header = screen.getByRole("columnheader", { name: /Pieces/ });
     expect(header).toHaveClass("max-sm:hidden");
     expect(
@@ -249,17 +208,9 @@ describe("DataTable", () => {
       removeEventListener: () => {},
     })) as unknown as typeof window.matchMedia;
     onTestFinished(() => void (window.matchMedia = real));
-    const narrowing = columns.map((c) =>
-      c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c,
-    );
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
     renderWithStrata(
-      <DataTable
-        caption="Many"
-        columns={narrowing}
-        rows={manyBookings}
-        rowKey={(b) => b.id}
-        maxHeight={280}
-      />,
+      <DataTable caption="Many" columns={narrowing} rows={manyBookings} rowKey={(b) => b.id} maxHeight={280} />,
     );
     await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
     expect(screen.getByRole("columnheader", { name: /Member/ })).toBeInTheDocument();
@@ -274,9 +225,7 @@ describe("DataTable", () => {
       removeEventListener: () => {},
     })) as unknown as typeof window.matchMedia;
     onTestFinished(() => void (window.matchMedia = real));
-    const narrowing = columns.map((c) =>
-      c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c,
-    );
+    const narrowing = columns.map((c) => (c.key === "pieces" ? { ...c, hideBelow: "sm" as const } : c));
     renderWithStrata(
       <DataTable
         caption="Many"
@@ -289,17 +238,14 @@ describe("DataTable", () => {
       { route: "/?sort=pieces.desc" },
     );
     await waitFor(() => expect(screen.queryByRole("columnheader", { name: /Pieces/ })).toBeNull());
-    const first = within(
-      bodyRows().find((r) => r.getAttribute("aria-hidden") !== "true")!,
-    ).getAllByRole("rowheader")[0].textContent;
+    const first = within(bodyRows().find((r) => r.getAttribute("aria-hidden") !== "true")!).getAllByRole("rowheader")[0]
+      .textContent;
     const top = [...manyBookings].sort((a, b) => b.pieces - a.pieces)[0];
     expect(manyBookings.find((b) => b.member === first)?.pieces).toBe(top.pieces);
   });
 
   it("renders every row of a short table", () => {
-    renderWithStrata(
-      <DataTable caption="Few" columns={columns} rows={bookings} rowKey={(b) => b.id} />,
-    );
+    renderWithStrata(<DataTable caption="Few" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
     expect(bodyRows()).toHaveLength(bookings.length);
   });
 });

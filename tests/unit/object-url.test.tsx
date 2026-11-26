@@ -23,8 +23,7 @@ function installBlobStore() {
   return {
     made,
     revoked,
-    restore: () =>
-      Object.assign(URL, { createObjectURL: before.create, revokeObjectURL: before.revoke }),
+    restore: () => Object.assign(URL, { createObjectURL: before.create, revokeObjectURL: before.revoke }),
   };
 }
 

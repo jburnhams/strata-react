@@ -12,7 +12,9 @@ import { FiringWork } from "./screens/firing-history";
 function Summary({ f }: { f: Firing }) {
   return (
     <span className="flex items-center gap-4 type-body-sm">
-      <span className="w-24 shrink-0 text-muted-foreground tabular-nums">{format.shortDay.format(minuteToDate(f.endedMin))}</span>
+      <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
+        {format.shortDay.format(minuteToDate(f.endedMin))}
+      </span>
       <span className="min-w-0 flex-1 truncate">
         {firingTypes[f.type].label} in {kilns[f.kiln].name.split(",")[0]}
       </span>
@@ -51,7 +53,10 @@ export const WithAction: Story = { args: { actions: true } };
 export const BodyLoading: Story = { args: { defaultOpen: true }, beforeEach: ({ msw }) => msw.use(firingWorkLoading) };
 export const BodyEmpty: Story = { args: { defaultOpen: true }, beforeEach: ({ msw }) => msw.use(firingWorkEmpty) };
 /** The body's request failed: the error and Try again are inside it; the summary still works. */
-export const BodyError: Story = { args: { defaultOpen: true }, beforeEach: ({ msw }) => msw.use(firingWorkServerError) };
+export const BodyError: Story = {
+  args: { defaultOpen: true },
+  beforeEach: ({ msw }) => msw.use(firingWorkServerError),
+};
 
 /** A list of disclosures sharing `useExpanded`, kept in ?open= so an opened firing can be linked. Two are open. */
 export const List: Story = {
@@ -65,7 +70,11 @@ function FiringList() {
     <ul aria-label="Recent firings" className="grid max-w-2xl">
       {firings.slice(0, 5).map((x) => (
         <li key={x.id} className="border-t border-border py-1 first:border-t-0">
-          <Disclosure summary={<Summary f={x} />} open={expanded.isOpen(x.id)} onOpenChange={(o) => expanded.setOpen(x.id, o)}>
+          <Disclosure
+            summary={<Summary f={x} />}
+            open={expanded.isOpen(x.id)}
+            onOpenChange={(o) => expanded.setOpen(x.id, o)}
+          >
             <FiringWork firing={x} />
           </Disclosure>
         </li>

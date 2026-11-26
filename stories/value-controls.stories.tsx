@@ -10,7 +10,10 @@ const meta = { title: "Form/Value controls", parameters: { layout: "padded" } } 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function NumberDemo({ initial = 40, ...props }: { initial?: number | null } & Partial<React.ComponentProps<typeof NumberField>>) {
+function NumberDemo({
+  initial = 40,
+  ...props
+}: { initial?: number | null } & Partial<React.ComponentProps<typeof NumberField>>) {
   const [v, setV] = React.useState<number | null>(initial);
   return <NumberField value={v} onChange={setV} {...props} />;
 }
@@ -20,7 +23,10 @@ function Range({ initial = 40, ...props }: { initial?: number } & Partial<React.
   return <Slider value={v} onChange={setV} min={0} max={100} {...props} />;
 }
 
-function Colour({ initial = "#1a7f64", ...props }: { initial?: string | null } & Partial<React.ComponentProps<typeof ColorField>>) {
+function Colour({
+  initial = "#1a7f64",
+  ...props
+}: { initial?: string | null } & Partial<React.ComponentProps<typeof ColorField>>) {
   const [v, setV] = React.useState<string | null>(initial);
   return <ColorField value={v} onChange={setV} {...props} />;
 }
@@ -135,7 +141,13 @@ export const Colours: Story = {
 
 /** Compact density: every control follows `--control-h`. */
 export const Compact: Story = {
-  decorators: [(Story) => <div data-density="compact"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div data-density="compact">
+        <Story />
+      </div>
+    ),
+  ],
   render: () => (
     <div className="grid max-w-sm gap-5">
       <Field label="Volume">
@@ -168,7 +180,6 @@ export const Phone: Story = {
   ),
 };
 
-
 /** A value set a little at a time: −10 −1 −0.1 +0.1 +1 +10, each named ("Subtract 1 s"), held to repeat, stopping at the limits. */
 export const Nudge: Story = {
   render: () => (
@@ -185,7 +196,19 @@ export const Suggestion: Story = {
   render: () => (
     <div className="max-w-xl">
       <Field label="Camera clock offset">
-        <NumberDemo initial={0} min={-60} max={60} step={0.1} unit="s" nudge={[0.1, 1]} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both the camera and the GPS saw you start running at 10:02." }} />
+        <NumberDemo
+          initial={0}
+          min={-60}
+          max={60}
+          step={0.1}
+          unit="s"
+          nudge={[0.1, 1]}
+          suggestion={{
+            value: 2.4,
+            label: "+2.4 s",
+            reason: "both the camera and the GPS saw you start running at 10:02.",
+          }}
+        />
       </Field>
     </div>
   ),
@@ -198,7 +221,14 @@ function Held() {
       <Field label="Camera clock offset" hint="Changing it re-times every clip.">
         <NumberField
           value={saved}
-          onChange={(n) => new Promise((done) => setTimeout(() => { setSaved(n); done(null); }, 600))}
+          onChange={(n) =>
+            new Promise((done) =>
+              setTimeout(() => {
+                setSaved(n);
+                done(null);
+              }, 600),
+            )
+          }
           min={-60}
           max={60}
           step={0.1}
@@ -206,7 +236,9 @@ function Held() {
           nudge={[0.1, 1, 10]}
           suggestion={{ value: 3.1, label: "+3.1 s", reason: "the GPS and the camera agree on the finish." }}
           applyLabels={{ idle: "Re-time clips", pending: "Re-timing…", done: "Re-timed" }}
-          preview={(p) => <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - (saved ?? 0)).toFixed(1)} s ${p > (saved ?? 0) ? "later" : "earlier"}`}.`}</p>}
+          preview={(p) => (
+            <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - (saved ?? 0)).toFixed(1)} s ${p > (saved ?? 0) ? "later" : "earlier"}`}.`}</p>
+          )}
         />
       </Field>
     </div>
@@ -231,12 +263,28 @@ function PendingDemo() {
   // A press moves the pending value once, so the story walks to a change the way a person would.
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    ref.current?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse", button: 0 }));
-    ref.current?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerType: "mouse", button: 0 }));
+    ref.current
+      ?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')
+      ?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse", button: 0 }));
+    ref.current
+      ?.querySelector<HTMLButtonElement>('button[aria-label^="Add 1"]')
+      ?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerType: "mouse", button: 0 }));
   }, []);
   return (
     <div ref={ref}>
-      <NumberField value={2.4} onChange={() => {}} min={-60} max={60} step={0.1} unit="s" nudge={[1]} preview={(p) => <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - 2.4).toFixed(1)} s later`}.`}</p>} applyLabels={{ idle: "Re-time clips", pending: "Re-timing…", done: "Re-timed" }} />
+      <NumberField
+        value={2.4}
+        onChange={() => {}}
+        min={-60}
+        max={60}
+        step={0.1}
+        unit="s"
+        nudge={[1]}
+        preview={(p) => (
+          <p className="type-body-sm">{`12 clips would move ${p === null ? "by nothing" : `${Math.abs(p - 2.4).toFixed(1)} s later`}.`}</p>
+        )}
+        applyLabels={{ idle: "Re-time clips", pending: "Re-timing…", done: "Re-timed" }}
+      />
     </div>
   );
 }

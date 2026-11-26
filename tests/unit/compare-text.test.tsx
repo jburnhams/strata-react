@@ -28,10 +28,7 @@ describe("diffWords", () => {
 
   it("handles an empty side, and refuses a pair too long to table", () => {
     expect(diffWords("", "one two")).toMatchObject({ changedA: 0, changedB: 2 });
-    const long = Array.from(
-      { length: Math.ceil(Math.sqrt(MAX_CELLS)) + 5 },
-      (_, i) => `w${i}`,
-    ).join(" ");
+    const long = Array.from({ length: Math.ceil(Math.sqrt(MAX_CELLS)) + 5 }, (_, i) => `w${i}`).join(" ");
     expect(diffWords(long, long)).toBeNull();
   });
 });
@@ -42,14 +39,9 @@ describe("CompareText", () => {
 
   it("shows both texts under their labels and nothing that names a candidate when blind", () => {
     const { container } = renderWithStrata(<CompareText label="Transcripts" a={a} b={b} blind />);
-    expect(screen.getByRole("region", { name: "Text A" })).toHaveTextContent(
-      "The cat sat on the mat.",
-    );
-    expect(screen.getByRole("region", { name: "Text B" })).toHaveTextContent(
-      "The cat sits on a mat.",
-    );
-    for (const secret of ["model-x", "model-y", "secret-note"])
-      expect(container.innerHTML).not.toContain(secret);
+    expect(screen.getByRole("region", { name: "Text A" })).toHaveTextContent("The cat sat on the mat.");
+    expect(screen.getByRole("region", { name: "Text B" })).toHaveTextContent("The cat sits on a mat.");
+    for (const secret of ["model-x", "model-y", "secret-note"]) expect(container.innerHTML).not.toContain(secret);
   });
 
   it("shows the notes when it is not blind", () => {
@@ -102,9 +94,7 @@ describe("CompareText", () => {
       />,
     );
     expect(screen.getByRole("radio", { name: "What was said" })).toBeChecked();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "A: 0 words differ, 0 missing. B: 2 words differ, 2 missing.",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 0 missing. B: 2 words differ, 2 missing.");
     await userEvent.click(screen.getByRole("radio", { name: "The other text" }));
     expect(screen.getByRole("status")).toHaveTextContent("A: 2 words differ. B: 2 words differ.");
     expect(screen.getByText("What was said", { selector: "figcaption" })).toBeInTheDocument();
@@ -121,9 +111,7 @@ describe("CompareText", () => {
         reference={{ label: "What was said", text: "the cat sat" }}
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "A: 0 words differ, 1 missing. B: 0 words differ, 3 missing.",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("A: 0 words differ, 1 missing. B: 0 words differ, 3 missing.");
     expect(screen.getByRole("status")).not.toHaveTextContent("word for word");
   });
 

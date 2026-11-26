@@ -36,7 +36,8 @@ const entries: Entry[] = [
   { path: "maps/base1.bsp", name: "base1.bsp", folder: false, size: 12288 },
   { path: "readme.txt", name: "readme.txt", folder: false, size: 1536 },
 ];
-const childrenOf = (path: string | null) => entries.filter((e) => (e.path.includes("/") ? e.path.slice(0, e.path.lastIndexOf("/")) : null) === path);
+const childrenOf = (path: string | null) =>
+  entries.filter((e) => (e.path.includes("/") ? e.path.slice(0, e.path.lastIndexOf("/")) : null) === path);
 const ready = (data: Entry[]): Load<readonly Entry[]> => ({ status: "ready", data, refreshing: false }) as never;
 
 const brick = (() => {
@@ -55,7 +56,13 @@ const header = (() => {
   return out;
 })();
 
-export function PakExplorer({ initialFile = "textures/e1u1/brick.wal", narrow }: { initialFile?: string; narrow?: number }) {
+export function PakExplorer({
+  initialFile = "textures/e1u1/brick.wal",
+  narrow,
+}: {
+  initialFile?: string;
+  narrow?: number;
+}) {
   const ws = useWorkspaceState();
   const open = useExpanded({ initial: ["textures", "textures/e1u1"] });
   const [file, setFile] = React.useState<string | null>(initialFile);
@@ -64,11 +71,26 @@ export function PakExplorer({ initialFile = "textures/e1u1/brick.wal", narrow }:
 
   return (
     <div className="h-160">
-      <Workspace label="Quake 2 explorer" state={ws} narrowBelow={narrow} onFiles={(files) => setLines((l) => [...l, { id: l.length + 1, text: `Dropped ${files.length} file${files.length === 1 ? "" : "s"}` }])} acceptLabel="PAK files">
+      <Workspace
+        label="Quake 2 explorer"
+        state={ws}
+        narrowBelow={narrow}
+        onFiles={(files) =>
+          setLines((l) => [
+            ...l,
+            { id: l.length + 1, text: `Dropped ${files.length} file${files.length === 1 ? "" : "s"}` },
+          ])
+        }
+        acceptLabel="PAK files"
+      >
         <WorkspaceBar
           title="Quake 2 explorer"
           status="pak0.pak, 6 entries, 19 KB"
-          actions={<FileButton accept={[".pak"]} multiple onFiles={() => {}} variant="default" size="sm">Add PAK files</FileButton>}
+          actions={
+            <FileButton accept={[".pak"]} multiple onFiles={() => {}} variant="default" size="sm">
+              Add PAK files
+            </FileButton>
+          }
           end={<ColorSchemeChoice compact />}
         />
         <Split direction="column">
@@ -90,23 +112,60 @@ export function PakExplorer({ initialFile = "textures/e1u1/brick.wal", narrow }:
               />
             </Pane>
             <Pane id="bytes" name="Bytes" grow flush>
-              <div className="p-3">{chosen && !chosen.folder ? <ByteView label={chosen.name} bytes={header} highlight={[{ start: 0, end: 9, tone: "info", label: "name" }]} height={220} /> : <p className="type-body-sm text-muted-foreground">Choose a file to see its bytes.</p>}</div>
+              <div className="p-3">
+                {chosen && !chosen.folder ? (
+                  <ByteView
+                    label={chosen.name}
+                    bytes={header}
+                    highlight={[{ start: 0, end: 9, tone: "info", label: "name" }]}
+                    height={220}
+                  />
+                ) : (
+                  <p className="type-body-sm text-muted-foreground">Choose a file to see its bytes.</p>
+                )}
+              </div>
             </Pane>
             <Pane id="details" name="Details" size={280} min={220} collapsible>
-              <Inspector title={chosen?.name ?? null} kind={chosen?.path.endsWith(".wal") ? "Texture" : "File"} empty={<p className="type-body-sm text-muted-foreground">Choose a file to see what it is.</p>} selectionKey={file ?? undefined}>
-                {chosen?.path.endsWith(".wal") && <PixelImage label={chosen.name} width={32} height={32} rgba={brick} zoom={4} />}
+              <Inspector
+                title={chosen?.name ?? null}
+                kind={chosen?.path.endsWith(".wal") ? "Texture" : "File"}
+                empty={<p className="type-body-sm text-muted-foreground">Choose a file to see what it is.</p>}
+                selectionKey={file ?? undefined}
+              >
+                {chosen?.path.endsWith(".wal") && (
+                  <PixelImage label={chosen.name} width={32} height={32} rgba={brick} zoom={4} />
+                )}
                 <InspectorSection id="facts" title="Facts">
-                  <PropertyList items={[{ term: "Path", value: chosen?.path }, { term: "Size", value: chosen?.size?.toLocaleString("en-US"), unit: "bytes" }]} />
+                  <PropertyList
+                    items={[
+                      { term: "Path", value: chosen?.path },
+                      { term: "Size", value: chosen?.size?.toLocaleString("en-US"), unit: "bytes" },
+                    ]}
+                  />
                 </InspectorSection>
               </Inspector>
             </Pane>
           </Split>
           <Pane id="console" name="Console" size={200} min={140} collapsible>
-            <Console label="Explorer console" lines={lines} lineHeight={24} height={90} onCommand={(text) => setLines((l) => [...l, { id: l.length + 1, level: "echo", text }, { id: l.length + 2, text: `ran ${text}` }])} />
+            <Console
+              label="Explorer console"
+              lines={lines}
+              lineHeight={24}
+              height={90}
+              onCommand={(text) =>
+                setLines((l) => [
+                  ...l,
+                  { id: l.length + 1, level: "echo", text },
+                  { id: l.length + 2, text: `ran ${text}` },
+                ])
+              }
+            />
           </Pane>
         </Split>
       </Workspace>
-      <Button className="sr-only" onPress={() => ws.reset()}>Reset layout</Button>
+      <Button className="sr-only" onPress={() => ws.reset()}>
+        Reset layout
+      </Button>
     </div>
   );
 }

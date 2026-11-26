@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PakExplorer } from "./pak-explorer";
 
-const meta = { title: "Screens/Quake 2 explorer", component: PakExplorer, parameters: { layout: "fullscreen" }, tags: ["visual-wide"] } satisfies Meta<typeof PakExplorer>;
+const meta = {
+  title: "Screens/Quake 2 explorer",
+  component: PakExplorer,
+  parameters: { layout: "fullscreen" },
+  tags: ["visual-wide"],
+} satisfies Meta<typeof PakExplorer>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

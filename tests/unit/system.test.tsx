@@ -24,9 +24,9 @@ describe("SystemPanel", () => {
     expect(home).toHaveAttribute("aria-valuetext", "41% used");
     const photos = screen.getByRole("meter", { name: "photos folder disk space used" });
     expect(photos).toHaveAccessibleDescription(/Nearly full/);
-    expect(
-      screen.getByRole("meter", { name: "archive folder disk space used" }),
-    ).toHaveAccessibleDescription(/Nearly full/);
+    expect(screen.getByRole("meter", { name: "archive folder disk space used" })).toHaveAccessibleDescription(
+      /Nearly full/,
+    );
 
     // A folder that does not exist is a word, not a meter.
     expect(screen.queryByRole("meter", { name: /scratch/ })).toBeNull();
@@ -44,11 +44,7 @@ describe("SystemPanel", () => {
       folders: [{ name: "home", path: "/h", exists: true, free_bytes: null, total_bytes: null }],
     };
     renderWithStrata(
-      <SystemPanel
-        load={ready(unread)}
-        facts={[{ term: "Pieces kept", value: "1,284" }]}
-        now={systemNow}
-      />,
+      <SystemPanel load={ready(unread)} facts={[{ term: "Pieces kept", value: "1,284" }]} now={systemNow} />,
     );
     expect(screen.getByText("Installed package")).toBeInTheDocument();
     expect(screen.getByText("Not measured")).toBeInTheDocument();
@@ -79,9 +75,7 @@ describe("SystemPanel", () => {
         <SystemPanel load={ready(systemInfo)} now={systemNow} headingLevel={3} />
       </section>,
     );
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
-      "About this server",
-    ]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["About this server"]);
     expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Server",
       "Folders",
@@ -95,9 +89,7 @@ describe("SystemPanel", () => {
       return <SystemPanel load={useSystemInfo()} now={systemNow} />;
     }
     renderWithStrata(<Page />);
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Server" })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Server" })).toBeInTheDocument());
     expect(screen.getByText("1.8.2")).toBeInTheDocument();
   });
 });
@@ -124,8 +116,6 @@ describe("ScheduleTable", () => {
     renderWithStrata(<ScheduleTable caption="Scheduled jobs" rows={schedule} now={systemNow} />);
     expect(screen.getByRole("columnheader", { name: /Last run/ })).toHaveClass("max-sm:hidden");
     expect(screen.getByRole("columnheader", { name: /Next run/ })).toHaveClass("max-sm:hidden");
-    expect(screen.getByRole("columnheader", { name: /Last result/ })).not.toHaveClass(
-      "max-sm:hidden",
-    );
+    expect(screen.getByRole("columnheader", { name: /Last result/ })).not.toHaveClass("max-sm:hidden");
   });
 });

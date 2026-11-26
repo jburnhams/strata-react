@@ -94,7 +94,18 @@ function commonStart(items: readonly string[]): string {
 }
 
 /** A command console: a polite, virtualised log pinned to its end, above a command line with history (Up, Down) and Tab completion from the app's list. */
-export function Console({ label, lines, onCommand, complete, historyKey, height = 320, lineHeight, commandLabel = "Command", inputRef, className }: ConsoleProps) {
+export function Console({
+  label,
+  lines,
+  onCommand,
+  complete,
+  historyKey,
+  height = 320,
+  lineHeight,
+  commandLabel = "Command",
+  inputRef,
+  className,
+}: ConsoleProps) {
   const [text, setText] = React.useState("");
   const history = React.useRef<string[]>(readHistory(historyKey));
   const [cursor, setCursor] = React.useState<number | null>(null); // index into history while walking it
@@ -126,7 +137,8 @@ export function Console({ label, lines, onCommand, complete, historyKey, height 
   const run = () => {
     const command = text.trim();
     if (!command) return;
-    if (history.current[history.current.length - 1] !== command) history.current = [...history.current, command].slice(-HISTORY_MAX);
+    if (history.current[history.current.length - 1] !== command)
+      history.current = [...history.current, command].slice(-HISTORY_MAX);
     if (historyKey) {
       try {
         window.localStorage.setItem(historyKey, JSON.stringify(history.current));
@@ -181,7 +193,14 @@ export function Console({ label, lines, onCommand, complete, historyKey, height 
 
   return (
     <section aria-label={label} className={cn("grid min-w-0 gap-2", className)}>
-      <div ref={box} role="log" aria-live="polite" aria-relevant="additions" aria-label={`${label}: log`} className="relative min-w-0 rounded-control border border-border bg-surface-sunken">
+      <div
+        ref={box}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label={`${label}: log`}
+        className="relative min-w-0 rounded-control border border-border bg-surface-sunken"
+      >
         <VirtualList
           label={`${label} lines`}
           items={lines as ConsoleLine[]}
@@ -194,17 +213,41 @@ export function Console({ label, lines, onCommand, complete, historyKey, height 
           {(line) => {
             const word = LEVEL_WORD[line.level ?? "info"];
             return (
-              <div className={cn("flex min-w-0 items-start gap-2 px-3 py-0.5 font-mono type-body-sm", line.level === "echo" && "text-muted-foreground")}>
-                {word ? <Status tone={word.tone}>{word.word}</Status> : line.level === "echo" ? <span aria-hidden>›</span> : null}
+              <div
+                className={cn(
+                  "flex min-w-0 items-start gap-2 px-3 py-0.5 font-mono type-body-sm",
+                  line.level === "echo" && "text-muted-foreground",
+                )}
+              >
+                {word ? (
+                  <Status tone={word.tone}>{word.word}</Status>
+                ) : line.level === "echo" ? (
+                  <span aria-hidden>›</span>
+                ) : null}
                 {line.level === "echo" && <span className="sr-only">Command: </span>}
-                <span title={lineHeight ? line.text : undefined} className={cn("min-w-0 flex-1", lineHeight ? "truncate" : "break-words whitespace-pre-wrap")}>{line.text}</span>
+                <span
+                  title={lineHeight ? line.text : undefined}
+                  className={cn("min-w-0 flex-1", lineHeight ? "truncate" : "break-words whitespace-pre-wrap")}
+                >
+                  {line.text}
+                </span>
               </div>
             );
           }}
         </VirtualList>
-        {lines.length === 0 && <p className="px-3 py-2 type-body-sm text-muted-foreground">Nothing has been written yet.</p>}
+        {lines.length === 0 && (
+          <p className="px-3 py-2 type-body-sm text-muted-foreground">Nothing has been written yet.</p>
+        )}
         {!pinned && (
-          <Button size="sm" variant="outline" onPress={() => { setPinned(true); toEnd(); }} className="absolute bottom-2 left-1/2 -translate-x-1/2 shadow-overlay">
+          <Button
+            size="sm"
+            variant="outline"
+            onPress={() => {
+              setPinned(true);
+              toEnd();
+            }}
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 shadow-overlay"
+          >
             <ArrowDown /> Latest
           </Button>
         )}

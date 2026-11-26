@@ -1,14 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  BoxList,
-  BoxOverlay,
-  ViewportFrame,
-  useBoxes,
-  useViewport,
-  type PictureBox,
-} from "../../src";
+import { BoxList, BoxOverlay, ViewportFrame, useBoxes, useViewport, type PictureBox } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #237: read-only boxes on a picture, linked to a list beside it.
@@ -52,9 +45,7 @@ describe("BoxOverlay and BoxList", () => {
     renderWithStrata(<Screen />);
     const layer = screen.getByRole("group", { name: "Lines the reader found" });
     expect(within(layer).getAllByRole("button")).toHaveLength(3);
-    expect(
-      within(layer).getByRole("button", { name: "Line 2: The Play of Puncn anp Jupy, 62%" }),
-    ).toBeInTheDocument();
+    expect(within(layer).getByRole("button", { name: "Line 2: The Play of Puncn anp Jupy, 62%" })).toBeInTheDocument();
     expect(
       within(screen.getByRole("listbox", { name: "Lines on this page" }))
         .getAllByRole("option")
@@ -66,8 +57,7 @@ describe("BoxOverlay and BoxList", () => {
     const user = userEvent.setup();
     renderWithStrata(<Screen />);
     const layer = screen.getByRole("group", { name: "Lines the reader found" });
-    const box = (n: number) =>
-      within(layer).getByRole("button", { name: new RegExp(`^Line ${n}`) });
+    const box = (n: number) => within(layer).getByRole("button", { name: new RegExp(`^Line ${n}`) });
     expect(box(1)).toHaveAttribute("tabindex", "0");
     expect(box(2)).toHaveAttribute("tabindex", "-1");
     box(1).focus();
@@ -88,10 +78,7 @@ describe("BoxOverlay and BoxList", () => {
     expect(onChoose).toHaveBeenCalledWith(expect.objectContaining({ id: "l3" }));
     expect(screen.getByLabelText("Active")).toHaveTextContent("l3");
     expect(screen.getByRole("option", { name: /^Line 3/ })).toHaveFocus();
-    expect(screen.getByRole("option", { name: /^Line 3/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("option", { name: /^Line 3/ })).toHaveAttribute("aria-selected", "true");
     expect(
       within(layer)
         .getAllByRole("button", { name: /^Line 3/ })
@@ -154,9 +141,7 @@ describe("a box inside a frame that picks on a click (review of #251)", () => {
     renderWithStrata(<Framed />);
     const box = screen.getByRole("button", { name: /^Line 1/ });
     await act(async () => {
-      box.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1 }),
-      );
+      box.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1 }));
       box.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, button: 0, pointerId: 1 }));
       await new Promise((r) => setTimeout(r, 350));
     });

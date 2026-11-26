@@ -58,7 +58,10 @@ export function VirtualList<T>({
 }) {
   const virtual = items.length >= virtualizeFrom;
   const rows = React.useMemo(() => items.map((item, index) => ({ id: itemKey(item), item, index })), [items, itemKey]);
-  const layoutOptions = React.useMemo(() => (rowHeight ? { rowHeight } : { estimatedRowHeight: estimateSize }), [rowHeight, estimateSize]);
+  const layoutOptions = React.useMemo(
+    () => (rowHeight ? { rowHeight } : { estimatedRowHeight: estimateSize }),
+    [rowHeight, estimateSize],
+  );
   // A bounded list (InfiniteList) is virtualised from its first row, so its scroll box and its
   // rows are never remounted as it grows past `virtualizeFrom`: a remount would reset the scroll
   // position in the middle of a scroll. The Virtualizer only draws what is visible, so a short
@@ -76,7 +79,12 @@ export function VirtualList<T>({
     >
       <Collection items={rows}>
         {(row) => (
-          <GridListItem id={row.id} textValue={row.id} data-index={row.index} className={cn("min-w-0 outline-offset-[-2px]", row.index > 0 && "border-t border-border")}>
+          <GridListItem
+            id={row.id}
+            textValue={row.id}
+            data-index={row.index}
+            className={cn("min-w-0 outline-offset-[-2px]", row.index > 0 && "border-t border-border")}
+          >
             {children(row.item, row.index)}
           </GridListItem>
         )}

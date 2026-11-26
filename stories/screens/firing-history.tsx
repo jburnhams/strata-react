@@ -22,7 +22,17 @@ import {
   type IconComponent,
   type Tone,
 } from "../../src";
-import { firedWork, firingTypes, firings, glazeNames, kilns, minuteToDate, type FiredWork, type Firing, type Outcome } from "../fixtures/kiln";
+import {
+  firedWork,
+  firingTypes,
+  firings,
+  glazeNames,
+  kilns,
+  minuteToDate,
+  type FiredWork,
+  type Firing,
+  type Outcome,
+} from "../fixtures/kiln";
 import { api, type FiringPage } from "../mocks/handlers";
 
 const nav = [
@@ -41,7 +51,12 @@ const outcomes: Record<Outcome, { tone: Tone; icon: IconComponent; label: string
 const firingName = (f: Firing) => `${firingTypes[f.type].label} in ${kilns[f.kiln].name.split(",")[0]}`;
 
 const columns: Column<Firing>[] = [
-  { key: "ended", header: "Ended", cell: (f) => format.shortDay.format(minuteToDate(f.endedMin)), className: "whitespace-nowrap" },
+  {
+    key: "ended",
+    header: "Ended",
+    cell: (f) => format.shortDay.format(minuteToDate(f.endedMin)),
+    className: "whitespace-nowrap",
+  },
   { key: "firing", header: "Firing", cell: firingName, truncate: true },
   { key: "pieces", header: "Pieces", cell: (f) => format.integer(f.pieces), numeric: true },
   { key: "peak", header: "Peak", cell: (f) => format.celsius(f.peakC), numeric: true },
@@ -64,13 +79,20 @@ function WorkSkeleton() {
 
 /** Whose work was in one firing. Its own request, made when the firing's row (or Disclosure) opens. */
 export function FiringWork({ firing }: { firing: Firing }) {
-  const load = useLoad({ queryKey: ["firings", firing.id, "work"], queryFn: () => fetchJson<FiredWork[]>(api.firingWork(firing.id)) });
+  const load = useLoad({
+    queryKey: ["firings", firing.id, "work"],
+    queryFn: () => fetchJson<FiredWork[]>(api.firingWork(firing.id)),
+  });
   return (
     <DataView
       state={load}
       isEmpty={(work) => work.length === 0}
       skeleton={<WorkSkeleton />}
-      empty={<p className="type-body-sm text-muted-foreground">Nothing was recorded in this firing. Test firings are logged empty.</p>}
+      empty={
+        <p className="type-body-sm text-muted-foreground">
+          Nothing was recorded in this firing. Test firings are logged empty.
+        </p>
+      }
     >
       {(work) => (
         <ul aria-label={`Work in ${firingName(firing)}`} className="grid max-w-xl type-body-sm">
@@ -106,7 +128,10 @@ export function FiringHistoryScreen() {
   // The finding is counted from the fixture here so the header does not wait on eight detail
   // requests; a real API would return the count with the firings.
   const shown = load.status === "ready" ? load.data : firings.slice(0, 8);
-  const flawed = shown.flatMap(firedWork).filter((w) => w.outcome !== "whole").reduce((n, w) => n + w.pieces, 0);
+  const flawed = shown
+    .flatMap(firedWork)
+    .filter((w) => w.outcome !== "whole")
+    .reduce((n, w) => n + w.pieces, 0);
 
   return (
     <AppShell product="Back Lane Clay" nav={nav}>
@@ -120,7 +145,9 @@ export function FiringHistoryScreen() {
           state={load}
           isEmpty={(f) => f.length === 0}
           skeleton={<TableSkeleton rows={8} columns={5} />}
-          empty={<EmptyState title="No firings yet">Each firing is logged here when its kiln cools below 200 °C.</EmptyState>}
+          empty={
+            <EmptyState title="No firings yet">Each firing is logged here when its kiln cools below 200 °C.</EmptyState>
+          }
         >
           {(rows) => (
             <DataTable
@@ -128,7 +155,11 @@ export function FiringHistoryScreen() {
               columns={columns}
               rows={rows}
               rowKey={(f) => f.id}
-              expansion={{ ...expanded, rowLabel: (f) => `Work in ${firingName(f)}, ${format.shortDay.format(minuteToDate(f.endedMin))}`, detail: (f) => <FiringWork firing={f} /> }}
+              expansion={{
+                ...expanded,
+                rowLabel: (f) => `Work in ${firingName(f)}, ${format.shortDay.format(minuteToDate(f.endedMin))}`,
+                detail: (f) => <FiringWork firing={f} />,
+              }}
             />
           )}
         </DataView>

@@ -3,14 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import {
-  ClipsProvider,
-  SayAgain,
-  clipsQueryKey,
-  useClips,
-  useSayOnShow,
-  createApi,
-} from "../../src";
+import { ClipsProvider, SayAgain, clipsQueryKey, useClips, useSayOnShow, createApi } from "../../src";
 import { installFakeSpeech, renderWithStrata } from "../../src/testing";
 import { server } from "../utils/server";
 
@@ -163,11 +156,7 @@ describe("ClipsProvider (#318)", () => {
     serve();
     function Keep() {
       const qc = useQueryClient();
-      return (
-        <button onClick={() => void qc.invalidateQueries({ queryKey: clipsQueryKey })}>
-          Recording kept
-        </button>
-      );
+      return <button onClick={() => void qc.invalidateQueries({ queryKey: clipsQueryKey })}>Recording kept</button>;
     }
     renderWithStrata(
       <ClipsProvider load={load}>

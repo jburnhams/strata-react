@@ -16,9 +16,22 @@ export const Alerts: Story = {
   render: () => (
     <div className="grid max-w-xl gap-3">
       <Alert tone="info">Readings from Kiln 2 are logged every five minutes.</Alert>
-      <Alert tone="success" title="Imported">12 pieces added to the glaze library.</Alert>
-      <Alert tone="warning" title="Kiln 2 is behind">Its last reading is 40 minutes old.</Alert>
-      <Alert tone="danger" title="Export failed" announce action={<Button size="sm" variant="default">Try again</Button>}>
+      <Alert tone="success" title="Imported">
+        12 pieces added to the glaze library.
+      </Alert>
+      <Alert tone="warning" title="Kiln 2 is behind">
+        Its last reading is 40 minutes old.
+      </Alert>
+      <Alert
+        tone="danger"
+        title="Export failed"
+        announce
+        action={
+          <Button size="sm" variant="default">
+            Try again
+          </Button>
+        }
+      >
         The disk is full. Free some space and try again.
       </Alert>
     </div>
@@ -35,26 +48,61 @@ function Pinned(content: ToastContentProps) {
 }
 
 export const ToastSuccess: Story = {
-  render: () => <Pinned title="Export finished" description="run.mp4, 2:31 at 1080p, is in your Downloads folder." tone="success" action={{ label: "Open file", onPress: () => {} }} />,
-  decorators: [(Story) => <div className="h-40"><Story /></div>],
+  render: () => (
+    <Pinned
+      title="Export finished"
+      description="run.mp4, 2:31 at 1080p, is in your Downloads folder."
+      tone="success"
+      action={{ label: "Open file", onPress: () => {} }}
+    />
+  ),
+  decorators: [
+    (Story) => (
+      <div className="h-40">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export const ToastWarning: Story = {
   render: () => <Pinned title="Kiln 2 is 40 min behind" tone="warning" />,
-  decorators: [(Story) => <div className="h-40"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="h-40">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** Phone width: the region moves to the top so it never covers the focused control. */
 export const ToastOnPhone: Story = {
   tags: ["visual-phone"],
   render: () => <Pinned title="3 pieces synced" description="Moonbeam, Ash and Slate are up to date." />,
-  decorators: [(Story) => <div className="h-40"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="h-40">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 const words = { running: "Exporting", finished: "Exported", failed: "Export failed" };
 
 export const ClientWorkRunning: Story = {
-  render: () => <JobStatus label="Export" running words={words} summary="Rendering frame 1,240 of 4,520." current={1240} total={4520} onCancel={() => {}} />,
+  render: () => (
+    <JobStatus
+      label="Export"
+      running
+      words={words}
+      summary="Rendering frame 1,240 of 4,520."
+      current={1240}
+      total={4520}
+      onCancel={() => {}}
+    />
+  ),
 };
 
 /** No total, so no bar: the turning mark and the sentence. */
@@ -63,11 +111,29 @@ export const ClientWorkIndeterminate: Story = {
 };
 
 export const ClientWorkCancelled: Story = {
-  render: () => <JobStatus label="Export" running={false} cancelled words={words} summary="Stopped at frame 1,240 of 4,520. Nothing was saved." onDismiss={() => {}} />,
+  render: () => (
+    <JobStatus
+      label="Export"
+      running={false}
+      cancelled
+      words={words}
+      summary="Stopped at frame 1,240 of 4,520. Nothing was saved."
+      onDismiss={() => {}}
+    />
+  ),
 };
 
 export const ClientWorkFailed: Story = {
-  render: () => <JobStatus label="Export" running={false} failed words={words} summary="The disk is full. Free some space and try again." onDismiss={() => {}} />,
+  render: () => (
+    <JobStatus
+      label="Export"
+      running={false}
+      failed
+      words={words}
+      summary="The disk is full. Free some space and try again."
+      onDismiss={() => {}}
+    />
+  ),
 };
 
 export const ClientWorkFailedItems: Story = {
@@ -77,7 +143,10 @@ export const ClientWorkFailedItems: Story = {
       running={false}
       words={{ ...words, failed: "Exported with failures" }}
       summary="Exported 3 of 5 clips."
-      failures={[{ key: "a", label: "Intro.mov", reason: "Format not supported." }, { key: "b", label: "Outro.mov", reason: "File changed during export." }]}
+      failures={[
+        { key: "a", label: "Intro.mov", reason: "Format not supported." },
+        { key: "b", label: "Outro.mov", reason: "File changed during export." },
+      ]}
       onDismiss={() => {}}
     />
   ),
@@ -98,7 +167,9 @@ export const Working: Story = {
     return (
       <div className="grid max-w-xl gap-3">
         {work.phase === "idle" ? (
-          <Button variant="default" onPress={() => void work.start()}>Export clip</Button>
+          <Button variant="default" onPress={() => void work.start()}>
+            Export clip
+          </Button>
         ) : (
           <JobStatus
             label="Export"
@@ -106,7 +177,13 @@ export const Working: Story = {
             cancelled={work.phase === "cancelled"}
             failed={work.phase === "failed"}
             words={words}
-            summary={work.phase === "running" ? `Rendering ${work.current ?? 0} of 5.` : work.phase === "cancelled" ? "Stopped." : "Exported 5 of 5."}
+            summary={
+              work.phase === "running"
+                ? `Rendering ${work.current ?? 0} of 5.`
+                : work.phase === "cancelled"
+                  ? "Stopped."
+                  : "Exported 5 of 5."
+            }
             current={work.current}
             total={work.total}
             onCancel={work.cancel}

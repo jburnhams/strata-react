@@ -54,10 +54,16 @@ export function resolveShotUrl(path: string, baseUrl: string): string {
 }
 
 /** Converts a request the page made into a Fetch `Request` MSW can match. */
-export function toFetchRequest(request: Pick<PlaywrightRequest, "url" | "method" | "headers" | "postDataBuffer">): Request {
+export function toFetchRequest(
+  request: Pick<PlaywrightRequest, "url" | "method" | "headers" | "postDataBuffer">,
+): Request {
   const method = request.method();
   const body = method === "GET" || method === "HEAD" ? undefined : (request.postDataBuffer() ?? undefined);
-  return new Request(request.url(), { method, headers: request.headers(), body: body ? new Uint8Array(body) : undefined });
+  return new Request(request.url(), {
+    method,
+    headers: request.headers(),
+    body: body ? new Uint8Array(body) : undefined,
+  });
 }
 
 async function answerWithHandlers(
@@ -80,9 +86,15 @@ async function answerWithHandlers(
       await route.fulfill({ status: response.status, headers, body: Buffer.from(await response.arrayBuffer()) });
       return;
     }
-    if (!response && unhandled === "error" && ["fetch", "xhr", "eventsource", "websocket"].includes(request.resourceType())) {
+    if (
+      !response &&
+      unhandled === "error" &&
+      ["fetch", "xhr", "eventsource", "websocket"].includes(request.resourceType())
+    ) {
       const url = new URL(request.url());
-      problems.push(`no handler for ${request.method()} ${url.origin === origin ? "" : url.origin}${url.pathname}${url.search}`);
+      problems.push(
+        `no handler for ${request.method()} ${url.origin === origin ? "" : url.origin}${url.pathname}${url.search}`,
+      );
     }
     await route.continue();
   });
@@ -123,7 +135,13 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
       );
     }
     if (shot.handlers?.length || options.onUnhandledRequest === "error") {
-      await answerWithHandlers(context, shot.handlers ?? [], options.baseUrl, options.onUnhandledRequest ?? "bypass", problems);
+      await answerWithHandlers(
+        context,
+        shot.handlers ?? [],
+        options.baseUrl,
+        options.onUnhandledRequest ?? "bypass",
+        problems,
+      );
     }
     const page = await context.newPage();
     page.on("pageerror", (e) => problems.push(e.message));
@@ -133,7 +151,10 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
       const type = r.request().resourceType();
       if (type !== "script" && type !== "stylesheet") return;
       const html = (r.headers()["content-type"] ?? "").includes("text/html");
-      if (r.status() >= 400 || html) problems.push(`${type} ${new URL(r.url()).pathname} ${html ? "came back as HTML (a fallback page)" : `failed with ${r.status()}`}`);
+      if (r.status() >= 400 || html)
+        problems.push(
+          `${type} ${new URL(r.url()).pathname} ${html ? "came back as HTML (a fallback page)" : `failed with ${r.status()}`}`,
+        );
     });
     // Error responses a state serves on purpose (4xx/5xx) are logged by Chromium; not a fault.
     page.on("console", (m) => {
@@ -141,9 +162,13 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
     });
     await page.goto(resolveShotUrl(shot.path, options.baseUrl), { waitUntil: "load" });
     await page.addStyleTag({ content: freeze });
-    await page.waitForFunction((root) => (document.querySelector(root)?.childElementCount ?? 0) > 0, shot.root, { timeout: 15_000 }).catch(() => {
-      throw new Error(`${shot.root} stayed empty for 15s`);
-    });
+    await page
+      .waitForFunction((root) => (document.querySelector(root)?.childElementCount ?? 0) > 0, shot.root, {
+        timeout: 15_000,
+      })
+      .catch(() => {
+        throw new Error(`${shot.root} stayed empty for 15s`);
+      });
     if (shot.waitFor) await page.locator(shot.waitFor).first().waitFor({ state: "visible", timeout: 15_000 });
     await settle(page);
     // Only a whole-page shot: a component's shot is of its own box, and scrolling a story moved virtualised lists on (their shots got shorter).
@@ -181,7 +206,8 @@ export async function capture(browser: Browser, shot: Shot, options: CaptureOpti
 async function stable(page: Page, take: () => Promise<Buffer>): Promise<Buffer> {
   // Two frames through requestAnimationFrame make the compositor present what the DOM has before each shot; the wait
   // between shots doubles (100, 200, 400, 800 ms), so a compositor that lags more than the first gap still gets agreed on late.
-  const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  const frames = () =>
+    page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await frames();
   let last = await take();
   for (let i = 0; i < 4; i++) {
@@ -221,11 +247,17 @@ async function scrollThrough(page: Page, problems: string[]) {
     await page.waitForTimeout(100);
   }
   // Also for a page that fits the window: the loop above never ran its wait, and settle()'s network-idle wait is shorter.
-  await page.waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: PICTURES_WAIT_MS }).catch(() => undefined);
-  const late = await page.evaluate(() => [...document.images].filter((img) => !img.complete).map((img) => img.currentSrc || img.src));
+  await page
+    .waitForFunction(() => [...document.images].every((img) => img.complete), undefined, { timeout: PICTURES_WAIT_MS })
+    .catch(() => undefined);
+  const late = await page.evaluate(() =>
+    [...document.images].filter((img) => !img.complete).map((img) => img.currentSrc || img.src),
+  );
   if (late.length) {
     const shown = late.slice(0, 3).map((src) => new URL(src, "http://x").pathname);
-    problems.push(`${late.length} ${late.length === 1 ? "picture" : "pictures"} had not loaded after ${PICTURES_WAIT_MS / 1000}s (${shown.join(", ")}${late.length > 3 ? ", …" : ""})`);
+    problems.push(
+      `${late.length} ${late.length === 1 ? "picture" : "pictures"} had not loaded after ${PICTURES_WAIT_MS / 1000}s (${shown.join(", ")}${late.length > 3 ? ", …" : ""})`,
+    );
   }
   if (!grew) return;
   await page.setViewportSize(size);
@@ -238,7 +270,11 @@ async function settle(page: Page) {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   // A paused video shows its first frame once decoded; without this a shot is taken before or after, depending on the machine.
   await page
-    .waitForFunction(() => [...document.querySelectorAll("video")].every((v) => v.readyState >= 2 || v.error !== null), undefined, { timeout: 5_000 })
+    .waitForFunction(
+      () => [...document.querySelectorAll("video")].every((v) => v.readyState >= 2 || v.error !== null),
+      undefined,
+      { timeout: 5_000 },
+    )
     .catch(() => undefined);
   // Decoded is not painted: on a loaded runner Chromium can hold a decoded first frame back from the
   // compositor, and a shot then shows an empty cell for good (it stays empty for seconds; this was the
@@ -293,10 +329,21 @@ async function platformFonts(page: Page, pinned?: string): Promise<string[]> {
     const walk = (n: DomNode) => {
       if (n.nodeName === "SCRIPT" || n.nodeName === "STYLE" || n.nodeName === "HEAD") return;
       const own = n.children?.filter((c) => c.nodeType === 3 && c.nodeValue.trim()) ?? [];
-      if (n.nodeType === 1 && own.length) texts.push({ id: n.nodeId, name: n.nodeName.toLowerCase(), text: own.map((c) => c.nodeValue.trim()).join(" ") });
+      if (n.nodeType === 1 && own.length)
+        texts.push({
+          id: n.nodeId,
+          name: n.nodeName.toLowerCase(),
+          text: own.map((c) => c.nodeValue.trim()).join(" "),
+        });
       // Generated content (`::before { content: "⌘" }`) draws text too; it has no text child.
-      for (const p of n.pseudoElements ?? []) texts.push({ id: p.nodeId, name: `${n.nodeName.toLowerCase()}::${p.pseudoType ?? "pseudo"}`, text: "" });
-      for (const c of [...(n.children ?? []), ...(n.shadowRoots ?? []), ...(n.contentDocument ? [n.contentDocument] : [])]) walk(c);
+      for (const p of n.pseudoElements ?? [])
+        texts.push({ id: p.nodeId, name: `${n.nodeName.toLowerCase()}::${p.pseudoType ?? "pseudo"}`, text: "" });
+      for (const c of [
+        ...(n.children ?? []),
+        ...(n.shadowRoots ?? []),
+        ...(n.contentDocument ? [n.contentDocument] : []),
+      ])
+        walk(c);
     };
     walk(root as DomNode);
     const found = new Map<string, string>();
@@ -308,9 +355,14 @@ async function platformFonts(page: Page, pinned?: string): Promise<string[]> {
         const text = t.text.length > 30 ? `${t.text.slice(0, 29)}…` : t.text;
         // The CSS stack that fell through to the machine, so a `--font-mono` that names a face the app did not import is
         // recognisable as such (issue #136): the glyph or the whole stack was missing from the bundled faces.
-        const { computedStyle } = await cdp.send("CSS.getComputedStyleForNode", { nodeId: t.id }).catch(() => ({ computedStyle: [] }));
+        const { computedStyle } = await cdp
+          .send("CSS.getComputedStyleForNode", { nodeId: t.id })
+          .catch(() => ({ computedStyle: [] }));
         const stack = computedStyle.find((p) => p.name === "font-family")?.value;
-        found.set(f.familyName, `"${f.familyName}" in <${t.name}>${text ? ` "${text}"` : ""}${stack ? ` (font-family: ${stack})` : ""}`);
+        found.set(
+          f.familyName,
+          `"${f.familyName}" in <${t.name}>${text ? ` "${text}"` : ""}${stack ? ` (font-family: ${stack})` : ""}`,
+        );
       }
     }
     return [...found.values()];
@@ -356,7 +408,12 @@ function paintedBox({ root: selector, margin }: { root: string; margin: number }
   const rects: { left: number; top: number; right: number; bottom: number }[] = [];
   // Overlays (dialogs, popovers, tooltips, menus) are portalled to the body, outside the root, so
   // the walk covers the root and every other element the body holds besides scripts and styles.
-  const roots: Element[] = [root, ...[...document.body.children].filter((c) => !c.contains(root) && !["SCRIPT", "STYLE", "LINK", "TEMPLATE"].includes(c.tagName))];
+  const roots: Element[] = [
+    root,
+    ...[...document.body.children].filter(
+      (c) => !c.contains(root) && !["SCRIPT", "STYLE", "LINK", "TEMPLATE"].includes(c.tagName),
+    ),
+  ];
   const nodes: Node[] = [];
   for (const r of roots) {
     const walker = document.createTreeWalker(r, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
@@ -384,7 +441,13 @@ function paintedBox({ root: selector, margin }: { root: string; margin: number }
   if (!rects.length) return null;
   const x0 = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.left)) + scrollX - margin));
   const y0 = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.top)) + scrollY - margin));
-  const x1 = Math.min(document.documentElement.scrollWidth, Math.ceil(Math.max(...rects.map((r) => r.right)) + scrollX + margin));
-  const y1 = Math.min(document.documentElement.scrollHeight, Math.ceil(Math.max(...rects.map((r) => r.bottom)) + scrollY + margin));
+  const x1 = Math.min(
+    document.documentElement.scrollWidth,
+    Math.ceil(Math.max(...rects.map((r) => r.right)) + scrollX + margin),
+  );
+  const y1 = Math.min(
+    document.documentElement.scrollHeight,
+    Math.ceil(Math.max(...rects.map((r) => r.bottom)) + scrollY + margin),
+  );
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }

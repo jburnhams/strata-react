@@ -40,11 +40,22 @@ export type FullscreenFrameProps = {
 
 /** Whether this browser can show an element full screen. False in jsdom and on iPhone, where the modal fallback is used. */
 export function canFullscreen(): boolean {
-  return typeof document !== "undefined" && document.fullscreenEnabled === true && typeof Element.prototype.requestFullscreen === "function";
+  return (
+    typeof document !== "undefined" &&
+    document.fullscreenEnabled === true &&
+    typeof Element.prototype.requestFullscreen === "function"
+  );
 }
 
 /** Shows its children full screen while `active`: the browser's Fullscreen API where there is one, a window-filling modal where there is not. */
-export function FullscreenFrame({ label, active, onActiveChange, modal: allowModal = true, children, className }: FullscreenFrameProps) {
+export function FullscreenFrame({
+  label,
+  active,
+  onActiveChange,
+  modal: allowModal = true,
+  children,
+  className,
+}: FullscreenFrameProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [native, setNative] = React.useState(false);
   const [refused, setRefused] = React.useState(false);
@@ -86,7 +97,10 @@ export function FullscreenFrame({ label, active, onActiveChange, modal: allowMod
   // The modal is the answer where the browser cannot, or has refused. While a request is in flight the content stays in place.
   const modal = allowModal && active && !native && (!canFullscreen() || refused);
   const outer = useUNSAFE_PortalContext();
-  const getContainer = React.useCallback(() => (native && ref.current ? ref.current : (outer.getContainer?.() ?? document.body)), [native, outer]);
+  const getContainer = React.useCallback(
+    () => (native && ref.current ? ref.current : (outer.getContainer?.() ?? document.body)),
+    [native, outer],
+  );
   const inner = (
     <div ref={ref} className={cn(active && "flex h-full min-h-0 flex-col bg-background p-4", className)}>
       <UNSAFE_PortalProvider getContainer={getContainer}>{children}</UNSAFE_PortalProvider>
@@ -94,7 +108,12 @@ export function FullscreenFrame({ label, active, onActiveChange, modal: allowMod
   );
   if (!modal) return inner;
   return (
-    <ModalOverlay isOpen onOpenChange={(o) => !o && onActiveChange(false)} isDismissable className="layer-overlay fixed inset-0 scrim">
+    <ModalOverlay
+      isOpen
+      onOpenChange={(o) => !o && onActiveChange(false)}
+      isDismissable
+      className="layer-overlay fixed inset-0 scrim"
+    >
       <Modal className={cn("h-full w-full outline-none", overlaySurface, "rounded-none")}>
         <AriaDialog aria-label={label} className="h-full outline-none">
           {inner}

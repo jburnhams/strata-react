@@ -42,9 +42,7 @@ function Harness({
         open={open}
         onOpenChange={setOpen}
         missing="This photo could not be loaded."
-        details={(item) => (
-          <PropertyList label="Photo details" items={[{ term: "Name", value: item.label }]} />
-        )}
+        details={(item) => <PropertyList label="Photo details" items={[{ term: "Name", value: item.label }]} />}
         ticked={ticked}
         onCompare={onCompare}
       />
@@ -182,9 +180,7 @@ describe("Lightbox for a book (issue #239)", () => {
           onOpenChange={url.onOpenChange}
           missing="This page could not be loaded."
           strip
-          overlay={(item, natural) => (
-            <i data-testid="layer">{`${item.id} ${natural ? natural.join("x") : "?"}`}</i>
-          )}
+          overlay={(item, natural) => <i data-testid="layer">{`${item.id} ${natural ? natural.join("x") : "?"}`}</i>}
           actions={(item) => <Button size="sm">Edit {item.label}</Button>}
         />
       </>

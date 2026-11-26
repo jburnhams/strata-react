@@ -38,13 +38,7 @@ describe("SecretField", () => {
     renderWithStrata(
       <form aria-label="Settings" onSubmit={submitted}>
         <Field label="Map API key">
-          <SecretField
-            noun="API key"
-            isSet
-            setAt="2026-11-12T14:02:00Z"
-            onChange={onChange}
-            name="mapKey"
-          />
+          <SecretField noun="API key" isSet setAt="2026-11-12T14:02:00Z" onChange={onChange} name="mapKey" />
         </Field>
         <button type="submit">Save settings</button>
       </form>,
@@ -72,10 +66,7 @@ describe("SecretField", () => {
 
   it("saves through AsyncButton, then leaves no value in the DOM, and a refusal keeps the entry", async () => {
     const user = userEvent.setup();
-    const onSave = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("That key was refused."))
-      .mockResolvedValue(undefined);
+    const onSave = vi.fn().mockRejectedValueOnce(new Error("That key was refused.")).mockResolvedValue(undefined);
     function Saving() {
       const [isSet, setIsSet] = React.useState(false);
       return (
@@ -105,13 +96,7 @@ describe("SecretField", () => {
   it("remove asks first, names what stops working, and Cancel is safe", async () => {
     const user = userEvent.setup();
     const onRemove = vi.fn();
-    renderWithStrata(
-      <Host
-        isSet
-        onRemove={onRemove}
-        consequence="Map labels stop loading until a new key is set."
-      />,
-    );
+    renderWithStrata(<Host isSet onRemove={onRemove} consequence="Map labels stop loading until a new key is set." />);
     await user.click(screen.getByRole("button", { name: "Remove API key" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("Map labels stop loading until a new key is set.");

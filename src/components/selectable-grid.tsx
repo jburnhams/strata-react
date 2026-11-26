@@ -1,11 +1,18 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
-import { Checkbox as AriaCheckbox, GridLayout, GridList, GridListItem, Virtualizer, type Selection } from "react-aria-components";
+import {
+  Checkbox as AriaCheckbox,
+  GridLayout,
+  GridList,
+  GridListItem,
+  Virtualizer,
+  type Selection,
+} from "react-aria-components";
 import { Check, ChevronDown } from "lucide-react";
 import { Checkbox, useShiftNote } from "./checkbox";
 import type { RowSelection } from "./data-table";
 import { useSelectRows } from "./selection";
-import { GroupedGridLayout, groupKey, isGroupKey, } from "../lib/grouped-grid-layout";
+import { GroupedGridLayout, groupKey, isGroupKey } from "../lib/grouped-grid-layout";
 import { aspectClass, tileLayoutOptions, tileWidth, type TileAspect, type TileSize } from "./tile-grid";
 import { Button } from "./button";
 import { isTypingTarget } from "./hotkeys";
@@ -190,7 +197,11 @@ export function SelectableGrid<T>({
 
   // Zoom. The scroll position is kept as a share of the content across the change (applied in a
   // layout effect, after the new tiles have their sizes), so the picture in view stays in view.
-  const keep = React.useRef<{ share: number | null; key: string | null; offset: number }>({ share: null, key: null, offset: 0 });
+  const keep = React.useRef<{ share: number | null; key: string | null; offset: number }>({
+    share: null,
+    key: null,
+    offset: 0,
+  });
   const pointerAt = React.useRef<{ x: number; y: number } | null>(null);
   const scrollBox = () => outer.current?.querySelector<HTMLElement>("[data-strata-scroll]") ?? null;
   const zoom = (next: number) => {
@@ -201,7 +212,10 @@ export function SelectableGrid<T>({
     // The tile to hold in place: the one under the pointer if it is over the grid, else the focused one.
     const p = pointerAt.current;
     const under = p ? document.elementFromPoint?.(p.x, p.y)?.closest<HTMLElement>("[data-key]") : null;
-    const anchor = under && outer.current?.contains(under) ? under : (document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-key]") ?? null;
+    const anchor =
+      under && outer.current?.contains(under)
+        ? under
+        : ((document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-key]") ?? null);
     keep.current = {
       share: box && box.scrollHeight > 0 ? box.scrollTop / box.scrollHeight : null,
       key: anchor && !isGroupKey(anchor.getAttribute("data-key")) ? anchor.getAttribute("data-key") : null,
@@ -244,7 +258,8 @@ export function SelectableGrid<T>({
     const el = outer.current;
     if (!el || !onTileSizeChange) return;
     const distance = (t: TouchList) => Math.hypot(t[0]!.clientX - t[1]!.clientX, t[0]!.clientY - t[1]!.clientY);
-    const onStart = (e: TouchEvent) => void (pinch.current = e.touches.length === 2 ? { distance: distance(e.touches), px } : null);
+    const onStart = (e: TouchEvent) =>
+      void (pinch.current = e.touches.length === 2 ? { distance: distance(e.touches), px } : null);
     const onMove = (e: TouchEvent) => {
       const start = pinch.current;
       if (!start || e.touches.length !== 2 || start.distance === 0) return;
@@ -302,7 +317,10 @@ export function SelectableGrid<T>({
         seen.set(key, { l: box.left - o.x, r: box.right - o.x, t: box.top - o.y, b: box.bottom - o.y });
       }
       const cur = { x: pointer.x - o.x, y: pointer.y - o.y };
-      const l = Math.min(start.x, cur.x), r = Math.max(start.x, cur.x), t = Math.min(start.y, cur.y), b = Math.max(start.y, cur.y);
+      const l = Math.min(start.x, cur.x),
+        r = Math.max(start.x, cur.x),
+        t = Math.min(start.y, cur.y),
+        b = Math.max(start.y, cur.y);
       const chosen = new Set(base);
       for (const [key, box] of seen) if (box.l < r && box.r > l && box.t < b && box.b > t) chosen.add(key);
       selection.onChange(chosen);
@@ -312,7 +330,12 @@ export function SelectableGrid<T>({
     const tick = () => {
       const r = scroller.getBoundingClientRect();
       const edge = 40;
-      const delta = pointer.y < r.top + edge ? -(r.top + edge - pointer.y) : pointer.y > r.bottom - edge ? pointer.y - (r.bottom - edge) : 0;
+      const delta =
+        pointer.y < r.top + edge
+          ? -(r.top + edge - pointer.y)
+          : pointer.y > r.bottom - edge
+            ? pointer.y - (r.bottom - edge)
+            : 0;
       if (delta) scroller.scrollTop += Math.max(-24, Math.min(24, delta / 2));
       update();
       frame = requestAnimationFrame(tick);
@@ -349,7 +372,8 @@ export function SelectableGrid<T>({
   const shift = useShiftNote();
   // The row last pressed (React Aria marks each row with `data-key`), to anchor a range it extended itself.
   const pressed = React.useRef<string | null>(null);
-  const notePress = (e: React.SyntheticEvent) => void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
+  const notePress = (e: React.SyntheticEvent) =>
+    void (pressed.current = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key") ?? null);
   const changeSelection = (next: Selection) => {
     if (next !== "all") {
       const nextShown = new Set([...next].map(String).filter((k) => shownKeys.has(k)));
@@ -362,7 +386,10 @@ export function SelectableGrid<T>({
       select.setAnchor(pressed.current);
     }
     const outside = [...selection.selected].filter((k) => !shownKeys.has(k));
-    const picked = next === "all" ? rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey) : [...next].map(String).filter((k) => shownKeys.has(k));
+    const picked =
+      next === "all"
+        ? rows.filter((r) => selection.isSelectable?.(r) ?? true).map(rowKey)
+        : [...next].map(String).filter((k) => shownKeys.has(k));
     selection.onChange(new Set([...outside, ...picked]));
   };
 
@@ -370,7 +397,10 @@ export function SelectableGrid<T>({
   const layoutOptions = React.useMemo(() => {
     if (aspect !== "natural") return tileLayoutOptions(px, aspect);
     const aspects = new Map(rows.map((r) => [rowKey(r), Math.max(0.1, naturalAspect?.(r) ?? 1)]));
-    return { ...tileLayoutOptions(px, "square"), justify: { aspects, rowHeight: px, padding: 14, chrome: hasDetail ? 40 : 14 } };
+    return {
+      ...tileLayoutOptions(px, "square"),
+      justify: { aspects, rowHeight: px, padding: 14, chrome: hasDetail ? 40 : 14 },
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [px, aspect, rows, hasDetail]);
   const byKey = React.useMemo(() => new Map(rows.map((r) => [rowKey(r), r])), [rows, rowKey]);
@@ -398,7 +428,13 @@ export function SelectableGrid<T>({
     }
     selection.onChange(next);
   };
-  const foldGroup = (key: string) => setFolded((f) => { const n = new Set(f); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  const foldGroup = (key: string) =>
+    setFolded((f) => {
+      const n = new Set(f);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
 
   const tile = (row: T) => {
     const key = rowKey(row);
@@ -426,12 +462,26 @@ export function SelectableGrid<T>({
       >
         <span className="relative block">
           <span
-            className={cn("block overflow-hidden rounded-control bg-muted *:size-full", fit === "contain" ? "*:object-contain" : "*:object-cover", !natural && ratio === null && aspectClass[aspect as TileAspect])}
-            style={natural ? { aspectRatio: Math.max(0.1, naturalAspect?.(row) ?? 1) } : ratio !== null ? { aspectRatio: ratio } : undefined}
+            className={cn(
+              "block overflow-hidden rounded-control bg-muted *:size-full",
+              fit === "contain" ? "*:object-contain" : "*:object-cover",
+              !natural && ratio === null && aspectClass[aspect as TileAspect],
+            )}
+            style={
+              natural
+                ? { aspectRatio: Math.max(0.1, naturalAspect?.(row) ?? 1) }
+                : ratio !== null
+                  ? { aspectRatio: ratio }
+                  : undefined
+            }
           >
             {renderImage(row)}
           </span>
-          {second != null && <span className="absolute right-1.5 bottom-1.5 rounded-control bg-background/90 px-1.5 type-caption text-foreground tabular-nums">{second}</span>}
+          {second != null && (
+            <span className="absolute right-1.5 bottom-1.5 rounded-control bg-background/90 px-1.5 type-caption text-foreground tabular-nums">
+              {second}
+            </span>
+          )}
         </span>
         {selectionMode === "multiple" && <TileBox label={`Select ${name}`} />}
         {corner != null && <span className="absolute top-3 right-3">{corner}</span>}
@@ -448,11 +498,31 @@ export function SelectableGrid<T>({
     const heading = groupHeading ? groupHeading(g.key, g.rows) : g.key;
     const isFolded = folded.has(g.key);
     return (
-      <GridListItem key={groupKey(g.key)} id={groupKey(g.key)} textValue={heading} onAction={() => foldGroup(g.key)} className="flex min-w-0 items-center gap-2 bg-background outline-offset-[-2px]">
-        <Button size="sm" variant="ghost" aria-expanded={!isFolded} aria-label={`${isFolded ? "Unfold" : "Fold"} ${heading}`} onPress={() => foldGroup(g.key)}>
+      <GridListItem
+        key={groupKey(g.key)}
+        id={groupKey(g.key)}
+        textValue={heading}
+        onAction={() => foldGroup(g.key)}
+        className="flex min-w-0 items-center gap-2 bg-background outline-offset-[-2px]"
+      >
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={!isFolded}
+          aria-label={`${isFolded ? "Unfold" : "Fold"} ${heading}`}
+          onPress={() => foldGroup(g.key)}
+        >
           <ChevronDown aria-hidden className={cn("transition-state", isFolded && "-rotate-90")} />
         </Button>
-        {selectionMode === "multiple" && <Checkbox label={`Select ${heading}`} hideLabel checked={groupChecked(g.rows)} disabled={selectableIn(g.rows).length === 0} onCheckedChange={() => toggleGroup(g.rows)} />}
+        {selectionMode === "multiple" && (
+          <Checkbox
+            label={`Select ${heading}`}
+            hideLabel
+            checked={groupChecked(g.rows)}
+            disabled={selectableIn(g.rows).length === 0}
+            onCheckedChange={() => toggleGroup(g.rows)}
+          />
+        )}
         <h3 className="type-label">{heading}</h3>
         <span className="type-caption text-muted-foreground tabular-nums">{g.rows.length}</span>
       </GridListItem>
@@ -472,7 +542,9 @@ export function SelectableGrid<T>({
       disabledKeys={groups ? [...disabledKeys, ...groups.map((g) => groupKey(g.key))] : disabledKeys}
       data-strata-scroll=""
       className={cn("min-w-0 outline-none", virtual ? "overflow-y-auto" : "grid gap-3")}
-      style={virtual ? { height: maxHeight } : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}
+      style={
+        virtual ? { height: maxHeight } : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }
+      }
     >
       {groups ? groups.map((g) => [header(g), ...(folded.has(g.key) ? [] : g.rows.map(tile))]) : rows.map(tile)}
     </GridList>
@@ -493,18 +565,27 @@ export function SelectableGrid<T>({
         notePress(e);
         // Space on a group's heading chooses its tiles (React Aria would do nothing: it is not selectable).
         const onHeader = (e.target as HTMLElement).closest("[data-key]")?.getAttribute("data-key");
-        if (e.key === " " && groups && isGroupKey(onHeader) && (e.target as HTMLElement).getAttribute("data-key") === onHeader && selectionMode === "multiple") {
+        if (
+          e.key === " " &&
+          groups &&
+          isGroupKey(onHeader) &&
+          (e.target as HTMLElement).getAttribute("data-key") === onHeader &&
+          selectionMode === "multiple"
+        ) {
           toggleGroup(groups.find((g) => groupKey(g.key) === onHeader)?.rows ?? []);
           e.preventDefault();
           e.stopPropagation();
         }
-
       }}
       onKeyDown={(e) => {
         if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
         if (e.key === "+" || e.key === "=") zoom(px * 1.25);
         else if (e.key === "-" || e.key === "_") zoom(px / 1.25);
-        else if (e.key === "Escape" && selectionMode !== "none" && [...selection.selected].some((k) => shownKeys.has(k))) {
+        else if (
+          e.key === "Escape" &&
+          selectionMode !== "none" &&
+          [...selection.selected].some((k) => shownKeys.has(k))
+        ) {
           selection.onChange(new Set([...selection.selected].filter((k) => !shownKeys.has(k))));
         } else return;
         e.preventDefault();
@@ -512,11 +593,24 @@ export function SelectableGrid<T>({
     >
       {selectionMode === "multiple" && (
         <div className="flex flex-wrap items-center gap-3">
-          <Checkbox label="Select all shown" checked={select.all.checked} disabled={select.all.disabled} onCheckedChange={select.all.toggle} />
+          <Checkbox
+            label="Select all shown"
+            checked={select.all.checked}
+            disabled={select.all.disabled}
+            onCheckedChange={select.all.toggle}
+          />
           {hidden > 0 && (
             <>
-              <span role="status" className="type-body-sm text-muted-foreground">{hidden === 1 ? "1 chosen is hidden by the filter" : `${hidden} chosen are hidden by the filter`}</span>
-              <Button size="sm" variant="ghost" onPress={() => selection.onChange(new Set([...selection.selected].filter((k) => shownKeys.has(k))))}>Clear hidden</Button>
+              <span role="status" className="type-body-sm text-muted-foreground">
+                {hidden === 1 ? "1 chosen is hidden by the filter" : `${hidden} chosen are hidden by the filter`}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={() => selection.onChange(new Set([...selection.selected].filter((k) => shownKeys.has(k))))}
+              >
+                Clear hidden
+              </Button>
             </>
           )}
         </div>
@@ -525,7 +619,12 @@ export function SelectableGrid<T>({
         <div
           aria-hidden
           className="pointer-events-none fixed z-50 border border-primary bg-primary/10"
-          style={{ left: Math.min(marquee.x0, marquee.x1), top: Math.min(marquee.y0, marquee.y1), width: Math.abs(marquee.x1 - marquee.x0), height: Math.abs(marquee.y1 - marquee.y0) }}
+          style={{
+            left: Math.min(marquee.x0, marquee.x1),
+            top: Math.min(marquee.y0, marquee.y1),
+            width: Math.abs(marquee.x1 - marquee.x0),
+            height: Math.abs(marquee.y1 - marquee.y0),
+          }}
         />
       )}
       {virtual ? (
@@ -546,7 +645,13 @@ function TileBox({ label }: { label: string }) {
   // alone, so it labels itself.
   const id = React.useId();
   return (
-    <AriaCheckbox slot="selection" id={id} aria-labelledby={id} aria-label={label} className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background">
+    <AriaCheckbox
+      slot="selection"
+      id={id}
+      aria-labelledby={id}
+      aria-label={label}
+      className="absolute top-3 left-3 grid size-7 place-items-center rounded-control bg-background"
+    >
       {({ isSelected }) => (
         <span
           aria-hidden

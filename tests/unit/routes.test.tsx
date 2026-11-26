@@ -2,14 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import {
-  Navigate,
-  Outlet,
-  redirect,
-  useLoaderData,
-  useRouteError,
-  type RouteObject,
-} from "react-router";
+import { Navigate, Outlet, redirect, useLoaderData, useRouteError, type RouteObject } from "react-router";
 import { AppShell, PageHeader, fetchJson, useColorScheme } from "../../src";
 import { renderRoutes } from "../../src/testing";
 import { bookingsServerError } from "../../stories/mocks/handlers";
@@ -83,11 +76,7 @@ describe("renderRoutes", () => {
   });
 
   it("runs a loader against the MSW server", async () => {
-    server.use(
-      http.get("/api/members", () =>
-        HttpResponse.json([{ name: "Tom Ellery" }, { name: "Asha Patel" }]),
-      ),
-    );
+    server.use(http.get("/api/members", () => HttpResponse.json([{ name: "Tom Ellery" }, { name: "Asha Patel" }])));
     renderRoutes(routes, { route: "/members" });
     expect(await screen.findByRole("heading", { name: "Members" })).toBeInTheDocument();
     const main = screen.getByRole("main");
@@ -100,9 +89,7 @@ describe("renderRoutes", () => {
 
   it("shows the route's error element when the loader fails", async () => {
     server.use(
-      http.get("/api/members", () =>
-        HttpResponse.json({}, { status: 503, statusText: "Service Unavailable" }),
-      ),
+      http.get("/api/members", () => HttpResponse.json({}, { status: 503, statusText: "Service Unavailable" })),
     );
     renderRoutes(routes, { route: "/members" });
     expect(await screen.findByRole("alert")).toHaveTextContent("The members list did not load");
@@ -151,10 +138,7 @@ describe("renderRoutes on the kiln app's own routes", () => {
   it("reads the sort from the URL under the basename", async () => {
     renderRoutes(kilnRoutes, { basename, route: "/kiln/?sort=pieces.desc" });
     const table = await screen.findByRole("grid", { name: /Work in the kilns/ });
-    expect(within(table).getByRole("columnheader", { name: /Pieces/ })).toHaveAttribute(
-      "aria-sort",
-      "descending",
-    );
+    expect(within(table).getByRole("columnheader", { name: /Pieces/ })).toHaveAttribute("aria-sort", "descending");
   });
 
   it("shows the app's error when the bookings fail", async () => {

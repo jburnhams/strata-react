@@ -19,7 +19,17 @@ export const VIEWPORT_HEIGHT = "max(16rem, calc(100svh - 14rem))";
 export const MIN_FIT = 120;
 
 /** The tallest each row of frames may be so that all of `chrome` and `rows` rows fit in `space` pixels. Pure, so it is tested without a layout. */
-export function fitFrames({ space, chrome, rows, min = MIN_FIT }: { space: number; chrome: number; rows: number; min?: number }): number {
+export function fitFrames({
+  space,
+  chrome,
+  rows,
+  min = MIN_FIT,
+}: {
+  space: number;
+  chrome: number;
+  rows: number;
+  min?: number;
+}): number {
   return Math.max(min, Math.floor((space - chrome) / Math.max(1, rows)));
 }
 
@@ -38,7 +48,10 @@ export function frameCap(maxHeight: string | undefined, fit: number | null, full
  * rows of frames (side by side is one row; below `sm` it is two) and floored at `MIN_FIT`. Frames are found by
  * `data-viewport-frame`, so an app never queries for them. Null until measured, or when `enabled` is false.
  */
-export function useFitHeight(root: React.RefObject<HTMLElement | null>, { enabled, full, reserve = 0 }: { enabled: boolean; full: boolean; reserve?: number }): number | null {
+export function useFitHeight(
+  root: React.RefObject<HTMLElement | null>,
+  { enabled, full, reserve = 0 }: { enabled: boolean; full: boolean; reserve?: number },
+): number | null {
   const [fit, setFit] = React.useState<number | null>(null);
   React.useLayoutEffect(() => {
     if (!enabled) {
@@ -48,7 +61,9 @@ export function useFitHeight(root: React.RefObject<HTMLElement | null>, { enable
     const el = root.current;
     if (!el) return;
     const measure = () => {
-      const frames = [...el.querySelectorAll<HTMLElement>("[data-viewport-frame]")].map((f) => f.getBoundingClientRect());
+      const frames = [...el.querySelectorAll<HTMLElement>("[data-viewport-frame]")].map((f) =>
+        f.getBoundingClientRect(),
+      );
       if (!frames.length) return;
       const top = el.getBoundingClientRect().top;
       const rows: { top: number; height: number }[] = [];
@@ -112,9 +127,15 @@ export type PickWords = {
 };
 
 /** What a pair's frames do with a click (issue #201): the same answer as the keys, only where a click is unambiguous. Blind: only a candidate's `label` is ever said. */
-export function makePicker(a: Candidate<unknown>, b: Candidate<unknown>, onPick: (side: "a" | "b") => void, words?: PickWords) {
+export function makePicker(
+  a: Candidate<unknown>,
+  b: Candidate<unknown>,
+  onPick: (side: "a" | "b") => void,
+  words?: PickWords,
+) {
   const choose = words?.choose ?? ((label: string) => `Click to choose ${label}`);
-  const unavailable = words?.unavailable ?? ((view: string) => `A click does not choose in ${view}: use the keys or the buttons.`);
+  const unavailable =
+    words?.unavailable ?? ((view: string) => `A click does not choose in ${view}: use the keys or the buttons.`);
   const answer = (zone: { value: string }) => onPick(zone.value === "a" ? "a" : "b");
   // The pair on screen: a click still waiting for a double click is dropped if another pair has come up (ids are never drawn).
   const token = `${a.id}|${b.id}`;
@@ -128,7 +149,10 @@ export function makePicker(a: Candidate<unknown>, b: Candidate<unknown>, onPick:
     split(divider: number): FramePick {
       const cut = divider / 100;
       return {
-        zoneAt: (x) => (x < cut ? { value: "a", from: 0, to: cut, hint: choose(a.label) } : { value: "b", from: cut, to: 1, hint: choose(b.label) }),
+        zoneAt: (x) =>
+          x < cut
+            ? { value: "a", from: 0, to: cut, hint: choose(a.label) }
+            : { value: "b", from: cut, to: 1, hint: choose(b.label) },
         onPick: answer,
         token,
         describe: `${choose(a.label)} on the left, ${choose(b.label)} on the right`,
@@ -149,13 +173,31 @@ export function Caption({ c, blind }: { c: Candidate<unknown>; blind: boolean })
 }
 
 /** One picture inside a frame: a skeleton while it loads, the product's words if it fails. */
-export function Picture({ c, blind, missing, onNatural, imgRef, pixelated }: { c: Candidate; blind: boolean; missing: string; onNatural?: (w: number, h: number) => void; imgRef?: React.Ref<HTMLImageElement>; pixelated?: boolean }) {
+export function Picture({
+  c,
+  blind,
+  missing,
+  onNatural,
+  imgRef,
+  pixelated,
+}: {
+  c: Candidate;
+  blind: boolean;
+  missing: string;
+  onNatural?: (w: number, h: number) => void;
+  imgRef?: React.Ref<HTMLImageElement>;
+  pixelated?: boolean;
+}) {
   const [state, setState] = React.useState<"loading" | "ready" | "failed">("loading");
   React.useEffect(() => setState("loading"), [c.media.src]);
   const alt = blind ? c.label : c.media.alt;
   if (state === "failed")
     return (
-      <div role="img" aria-label={`${alt}: ${missing}`} className="absolute inset-0 grid place-content-center justify-items-center gap-2 text-muted-foreground">
+      <div
+        role="img"
+        aria-label={`${alt}: ${missing}`}
+        className="absolute inset-0 grid place-content-center justify-items-center gap-2 text-muted-foreground"
+      >
         <ImageOff aria-hidden className="size-6" />
         <span className="type-body-sm">{missing}</span>
       </div>
@@ -172,7 +214,8 @@ export function Picture({ c, blind, missing, onNatural, imgRef, pixelated }: { c
         onLoad={(e) => {
           setState("ready");
           // A picture that loads with no size (an SVG without one, jsdom) says nothing: 0 would make the frame's aspect NaN.
-          if (e.currentTarget.naturalWidth && e.currentTarget.naturalHeight) onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
+          if (e.currentTarget.naturalWidth && e.currentTarget.naturalHeight)
+            onNatural?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
         }}
         onError={() => setState("failed")}
         className="absolute inset-0 size-full object-contain"
@@ -180,7 +223,6 @@ export function Picture({ c, blind, missing, onNatural, imgRef, pixelated }: { c
     </>
   );
 }
-
 
 type ZoomProps = {
   viewport: Viewport;
@@ -209,7 +251,11 @@ export function useZoom({ viewport, setViewport, frame, natural }: ZoomProps) {
 }
 
 /** The shortcuts for zoom and full screen, to join a screen's own list. */
-export function zoomShortcuts(zoom: ReturnType<typeof useZoom>, full: boolean, setFull: (f: boolean) => void): Shortcut[] {
+export function zoomShortcuts(
+  zoom: ReturnType<typeof useZoom>,
+  full: boolean,
+  setFull: (f: boolean) => void,
+): Shortcut[] {
   return [
     { keys: ["+", "="], label: "Zoom in", run: () => zoom.by(1.5), repeat: true },
     { keys: ["-"], label: "Zoom out", run: () => zoom.by(1 / 1.5), repeat: true },
@@ -219,21 +265,39 @@ export function zoomShortcuts(zoom: ReturnType<typeof useZoom>, full: boolean, s
 }
 
 /** Zoom out, in, fit, 1:1 and the zoom now, for inside a `Toolbar`. */
-export function ZoomControls({ viewport, zoom, natural }: { viewport: Viewport; zoom: ReturnType<typeof useZoom>; natural: readonly [number, number] | null }) {
+export function ZoomControls({
+  viewport,
+  zoom,
+  natural,
+}: {
+  viewport: Viewport;
+  zoom: ReturnType<typeof useZoom>;
+  natural: readonly [number, number] | null;
+}) {
   return (
     <>
       <IconButton icon={ZoomOut} label="Zoom out" onPress={() => zoom.by(1 / 1.5)} disabled={viewport.scale <= 1} />
       <IconButton icon={ZoomIn} label="Zoom in" onPress={() => zoom.by(1.5)} />
       <IconButton icon={Scan} label="Fit" onPress={zoom.fit} disabled={viewport.scale === 1} />
-      <Button size="sm" variant="ghost" onPress={zoom.actual} disabled={!natural}>1:1</Button>
-      <span aria-live="off" className="type-caption tabular-nums text-muted-foreground">{viewport.scale === 1 ? "Fit" : `${viewport.scale.toFixed(1)}×`}</span>
+      <Button size="sm" variant="ghost" onPress={zoom.actual} disabled={!natural}>
+        1:1
+      </Button>
+      <span aria-live="off" className="type-caption tabular-nums text-muted-foreground">
+        {viewport.scale === 1 ? "Fit" : `${viewport.scale.toFixed(1)}×`}
+      </span>
     </>
   );
 }
 
 /** The full-screen button, for inside a `Toolbar`. */
 export function FullscreenButton({ full, setFull }: { full: boolean; setFull: (f: boolean) => void }) {
-  return <IconButton icon={full ? Minimize : Maximize} label={full ? "Leave full screen" : "Full screen"} onPress={() => setFull(!full)} />;
+  return (
+    <IconButton
+      icon={full ? Minimize : Maximize}
+      label={full ? "Leave full screen" : "Full screen"}
+      onPress={() => setFull(!full)}
+    />
+  );
 }
 
 // Width of an element, kept current, for "is this shown larger than its pixels".
@@ -252,4 +316,3 @@ export function useWidth(ref: React.RefObject<HTMLElement | null>) {
   });
   return width;
 }
-

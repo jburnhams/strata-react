@@ -118,8 +118,7 @@ describe("peer contract", () => {
   const deps = new Set(Object.keys(pkg.dependencies));
   // A specifier has no spaces, so a string that only ends in "from" ("Play from", FilmStrip's verb) is not read as one.
   const specifier = /(?:\bfrom|\bimport)\s*\(?\s*"([^"\s]+)"/g;
-  const packageOf = (id: string) =>
-    id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0];
+  const packageOf = (id: string) => (id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
 
   function packagesReached(entry: string) {
     const seen = new Set<string>();
@@ -143,12 +142,10 @@ describe("peer contract", () => {
 
   it("lets the main entry reach only dependencies and required peers", () => {
     const reached = packagesReached("index.js");
-    for (const p of reached)
-      expect(deps.has(p) || required.has(p), `strata-react imports ${p}`).toBe(true);
+    for (const p of reached) expect(deps.has(p) || required.has(p), `strata-react imports ${p}`).toBe(true);
     // The router and the query client are imported by the barrel itself, which is why they are
     // required peers and not optional ones (react-dom and tailwindcss are the app's, not imported).
-    for (const p of ["react", "react-router", "@tanstack/react-query"])
-      expect(reached.has(p), p).toBe(true);
+    for (const p of ["react", "react-router", "@tanstack/react-query"]) expect(reached.has(p), p).toBe(true);
   });
 
   it("declares every package any entry imports", () => {
@@ -163,16 +160,9 @@ describe("peer contract", () => {
     const reached = (key: string) => packagesReached(entries.find(([k]) => k === key)![1]);
     expect([...reached("./map")].filter((p) => optional.has(p))).toEqual(["leaflet"]);
     expect([...reached("./hls")].filter((p) => optional.has(p))).toEqual(["hls.js"]);
-    expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual([
-      "@testing-library/react",
-    ]);
-    expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual([
-      "msw",
-      "playwright",
-    ]);
-    expect([...reached("./api-types")].filter((p) => optional.has(p))).toEqual([
-      "openapi-typescript",
-    ]);
+    expect([...reached("./testing")].filter((p) => optional.has(p))).toEqual(["@testing-library/react"]);
+    expect([...reached("./visual")].filter((p) => optional.has(p)).sort()).toEqual(["msw", "playwright"]);
+    expect([...reached("./api-types")].filter((p) => optional.has(p))).toEqual(["openapi-typescript"]);
   });
 });
 
@@ -187,9 +177,7 @@ describe("strata.css in an app", () => {
     // An app's own palette (what a product built before the default look brings), used with the bare contract.
     writeFileSync(
       join(app, "theme.css"),
-      ownTheme
-        ? readFileSync(join(root, "tests/integration/fixtures/own-theme.generated.css"), "utf8")
-        : "",
+      ownTheme ? readFileSync(join(root, "tests/integration/fixtures/own-theme.generated.css"), "utf8") : "",
     );
     writeFileSync(
       join(app, "page.tsx"),
@@ -252,9 +240,7 @@ describe("strata.css in an app", () => {
     const bare = await compileApp("strata.bare.css");
     expect(bare).toContain("--radius-control: 4px;");
     expect(bare).toContain("--radius-surface: 6px;");
-    expect(bare).toMatch(
-      /--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/,
-    );
+    expect(bare).toMatch(/--font-sans:\s*"Geist Variable",\s*ui-sans-serif,\s*system-ui,\s*sans-serif/);
     expect(bare).not.toContain("Instrument Sans");
     const bareOwn = await compileApp(
       "strata.bare.css",
@@ -266,10 +252,7 @@ describe("strata.css in an app", () => {
 
   it("brings the reading serif only when reading.css is imported", async () => {
     expect(
-      await compileApp(
-        "strata.css",
-        `@import "strata-react/reading.css";\n@source inline("font-reading");\n`,
-      ),
+      await compileApp("strata.css", `@import "strata-react/reading.css";\n@source inline("font-reading");\n`),
     ).toContain("Source Serif 4 Variable");
     expect(await compileApp("strata.css")).not.toContain("Source Serif 4");
   });
@@ -303,9 +286,7 @@ describe("strata.css in an app", () => {
       expect(migrating, cls).toContain(cls);
     // The stock font sizes really are there, not only the class names.
     expect(migrating).toMatch(/\.text-sm\s*{[^}]*font-size:/);
-    await expect(compileApp("strata.css", own)).rejects.toThrow(
-      /Cannot apply unknown utility class/,
-    );
+    await expect(compileApp("strata.css", own)).rejects.toThrow(/Cannot apply unknown utility class/);
   });
 
   it("makes strata.migrate.css from strata.bare.css and nothing else", () => {
@@ -330,24 +311,17 @@ describe("strata.css in an app", () => {
     const app = mkdtempSync(join(tmpdir(), "strata-stock-"));
     try {
       mkdirSync(join(app, "src"));
-      writeFileSync(
-        join(app, "src/screen.tsx"),
-        `<p className="text-sm bg-stone-100 bg-primary" />`,
-      );
-      const out = execFileSync(
-        process.execPath,
-        [join(root, "bin/strata-stock-classes.js"), join(app, "src")],
-        { encoding: "utf8" },
-      );
+      writeFileSync(join(app, "src/screen.tsx"), `<p className="text-sm bg-stone-100 bg-primary" />`);
+      const out = execFileSync(process.execPath, [join(root, "bin/strata-stock-classes.js"), join(app, "src")], {
+        encoding: "utf8",
+      });
       expect(out).toContain("screen.tsx:1  text-sm  (text size)");
       expect(out).toContain("screen.tsx:1  bg-stone-100  (colour)");
       expect(out).not.toContain("bg-primary  (");
       expect(() =>
-        execFileSync(
-          process.execPath,
-          [join(root, "bin/strata-stock-classes.js"), "--fail", join(app, "src")],
-          { stdio: "pipe" },
-        ),
+        execFileSync(process.execPath, [join(root, "bin/strata-stock-classes.js"), "--fail", join(app, "src")], {
+          stdio: "pipe",
+        }),
       ).toThrow();
     } finally {
       rmSync(app, { recursive: true, force: true });
@@ -356,8 +330,7 @@ describe("strata.css in an app", () => {
 
   it("removes Tailwind's stock palette, sizes, radii and shadows", async () => {
     const css = await compileApp();
-    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg"])
-      expect(css, cls).not.toContain(cls);
+    for (const cls of [".bg-indigo-500", ".text-sm", ".rounded-xl", ".shadow-lg"]) expect(css, cls).not.toContain(cls);
     expect(css).toContain(".gap-4");
   });
 });

@@ -16,10 +16,18 @@ http://localhost:8360/api/openapi.json) or a JSON file the server's CLI wrote, s
 `;
 
 /** Runs the command; the exit code. */
-export async function main(argv: readonly string[], out: (text: string) => void = (t) => console.log(t), fetcher: typeof fetch = fetch): Promise<number> {
+export async function main(
+  argv: readonly string[],
+  out: (text: string) => void = (t) => console.log(t),
+  fetcher: typeof fetch = fetch,
+): Promise<number> {
   let parsed;
   try {
-    parsed = parseArgs({ args: [...argv], options: { output: { type: "string", short: "o" }, check: { type: "boolean" }, help: { type: "boolean" } }, allowPositionals: true });
+    parsed = parseArgs({
+      args: [...argv],
+      options: { output: { type: "string", short: "o" }, check: { type: "boolean" }, help: { type: "boolean" } },
+      allowPositionals: true,
+    });
   } catch (e) {
     out(`${(e as Error).message}\n\n${usage}`);
     return 2;
@@ -42,7 +50,9 @@ export async function main(argv: readonly string[], out: (text: string) => void 
         out(`${output} matches the schema.`);
         return 0;
       }
-      out(`${output} ${current === null ? "does not exist" : "no longer matches the schema"}. Regenerate it: strata-api-types ${positionals[0]} -o ${output}`);
+      out(
+        `${output} ${current === null ? "does not exist" : "no longer matches the schema"}. Regenerate it: strata-api-types ${positionals[0]} -o ${output}`,
+      );
       return 1;
     }
     await writeFile(output, next);

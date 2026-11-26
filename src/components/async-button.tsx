@@ -49,15 +49,26 @@ export function AsyncButton({
   const errorLabel = labels.error ?? "Try again";
   const current = { idle: labels.idle, pending: labels.pending, done: labels.done, error: errorLabel }[phase];
   const Icon = { idle: null, pending: LoaderCircle, done: Check, error: CircleAlert }[phase];
-  const announcement = phase === "done" ? labels.done : phase === "error" ? (error ? `${error} ${errorLabel}` : errorLabel) : "";
+  const announcement =
+    phase === "done" ? labels.done : phase === "error" ? (error ? `${error} ${errorLabel}` : errorLabel) : "";
 
   return (
     <>
-      <Button {...props} data-phase={phase} disabled={disabled || phase === "pending"} aria-disabled={phase === "pending" || undefined} aria-busy={phase === "pending" || undefined}>
+      <Button
+        {...props}
+        data-phase={phase}
+        disabled={disabled || phase === "pending"}
+        aria-disabled={phase === "pending" || undefined}
+        aria-busy={phase === "pending" || undefined}
+      >
         {Icon && <Icon aria-hidden className={phase === "pending" ? "motion-safe:animate-spin" : undefined} />}
         <span className="grid">
           {[labels.idle, labels.pending, labels.done, errorLabel].map((l) => (
-            <span key={l} aria-hidden={l !== current} className={l === current ? "[grid-area:1/1]" : "invisible [grid-area:1/1]"}>
+            <span
+              key={l}
+              aria-hidden={l !== current}
+              className={l === current ? "[grid-area:1/1]" : "invisible [grid-area:1/1]"}
+            >
               {l}
             </span>
           ))}
@@ -143,7 +154,12 @@ export function useAsyncAction<A extends unknown[]>(
     } catch (thrown) {
       if (!mounted.current) return;
       unreported.current = { thrown };
-      setState({ phase: "error", error: latest.current.describeError(thrown), thrown, fieldErrors: fieldErrorsOf(thrown) });
+      setState({
+        phase: "error",
+        error: latest.current.describeError(thrown),
+        thrown,
+        fieldErrors: fieldErrorsOf(thrown),
+      });
     }
   }, []);
   // onError and onInvalid run after their render commits, not inside run: there the button is
@@ -167,7 +183,14 @@ export function useAsyncAction<A extends unknown[]>(
       }),
     [],
   );
-  return { phase: state.phase, run, error: state.error, thrown: state.thrown, fieldErrors: state.fieldErrors, clearFieldError };
+  return {
+    phase: state.phase,
+    run,
+    error: state.error,
+    thrown: state.thrown,
+    fieldErrors: state.fieldErrors,
+    clearFieldError,
+  };
 }
 
 type ActionState = { phase: Phase; error: string | undefined; thrown: unknown; fieldErrors: FieldErrors };

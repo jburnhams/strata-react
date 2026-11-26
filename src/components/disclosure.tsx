@@ -41,7 +41,15 @@ export type DisclosureProps = DisclosureOpenProps & {
 };
 
 /** Shows more of one thing in place: a button with `aria-expanded` around `summary`, and a body mounted only while open (so a request inside it runs on first open). Controlled with `open`/`onOpenChange` or `useExpanded`, or uncontrolled with `defaultOpen`. */
-export function Disclosure({ summary, children, actions, open, defaultOpen = false, onOpenChange, className }: DisclosureProps) {
+export function Disclosure({
+  summary,
+  children,
+  actions,
+  open,
+  defaultOpen = false,
+  onOpenChange,
+  className,
+}: DisclosureProps) {
   const [own, setOwn] = React.useState(defaultOpen);
   const isOpen = open ?? own;
   const bodyId = React.useId();
@@ -75,7 +83,9 @@ export function Disclosure({ summary, children, actions, open, defaultOpen = fal
 
 /** The disclosure chevron: points right when closed, down when open. Shared with `DataTable`'s row toggle. */
 export function Chevron({ open, className }: { open: boolean; className?: string }) {
-  return <ChevronRight aria-hidden className={cn("size-4 shrink-0 text-muted-foreground", open && "rotate-90", className)} />;
+  return (
+    <ChevronRight aria-hidden className={cn("size-4 shrink-0 text-muted-foreground", open && "rotate-90", className)} />
+  );
 }
 
 /** Which of many disclosures are open, by key: spread into `DataTable`'s `expansion`, or read with `isOpen`/`setOpen` for a list of `Disclosure`s. */

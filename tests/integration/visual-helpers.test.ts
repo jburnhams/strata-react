@@ -4,13 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Browser } from "playwright";
-import {
-  capture,
-  dropFiles,
-  serveStatic,
-  DROPPED_FILE_MODIFIED,
-  type StaticServer,
-} from "../../src/visual";
+import { capture, dropFiles, serveStatic, DROPPED_FILE_MODIFIED, type StaticServer } from "../../src/visual";
 import type { Shot } from "../../src/visual";
 
 // Two helpers from issue #136, run in real Chromium against a throwaway page: the theme a shot
@@ -111,8 +105,6 @@ describe("dropFiles", () => {
       }),
       { baseUrl: server.url, checkFonts: false },
     );
-    expect(dropped).toBe(
-      `clip.mp4|video/mp4|4|${DROPPED_FILE_MODIFIED};notes.txt|text/plain|5|1700000000000`,
-    );
+    expect(dropped).toBe(`clip.mp4|video/mp4|4|${DROPPED_FILE_MODIFIED};notes.txt|text/plain|5|1700000000000`);
   }, 60_000);
 });

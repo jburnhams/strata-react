@@ -1,14 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  KeysLegend,
-  ShortcutEditor,
-  checkKey,
-  useHotkeys,
-  useRebindableShortcuts,
-  type Shortcut,
-} from "../../src";
+import { KeysLegend, ShortcutEditor, checkKey, useHotkeys, useRebindableShortcuts, type Shortcut } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #361: rebind the keys useHotkeys runs and KeysLegend shows, from one list.
@@ -22,13 +15,7 @@ const defaults = (): Shortcut[] => [
 ];
 const stable = defaults();
 
-function Host({
-  storageKey,
-  onChange,
-}: {
-  storageKey?: string;
-  onChange?: (o: Record<string, string[]>) => void;
-}) {
+function Host({ storageKey, onChange }: { storageKey?: string; onChange?: (o: Record<string, string[]>) => void }) {
   const rebinding = useRebindableShortcuts(stable, { storageKey, onChange });
   useHotkeys(rebinding.shortcuts);
   return (
@@ -39,8 +26,7 @@ function Host({
     </>
   );
 }
-const change = (name: string) =>
-  userEvent.click(screen.getByRole("button", { name: `Change ${name}` }));
+const change = (name: string) => userEvent.click(screen.getByRole("button", { name: `Change ${name}` }));
 
 describe("checkKey", () => {
   it("refuses a chord, naming a browser one, and Tab; names a conflict; takes a free key", () => {

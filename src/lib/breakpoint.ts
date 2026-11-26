@@ -22,7 +22,9 @@ export function useNarrowerThan(active: boolean): Set<Breakpoint> {
   const [below, setBelow] = React.useState<Set<Breakpoint>>(() => new Set());
   React.useEffect(() => {
     if (!active || typeof matchMedia !== "function") return;
-    const queries = (["sm", "md", "lg"] as const).map((name) => [name, matchMedia(`(width < ${width(name)})`)] as const);
+    const queries = (["sm", "md", "lg"] as const).map(
+      (name) => [name, matchMedia(`(width < ${width(name)})`)] as const,
+    );
     const read = () => setBelow(new Set(queries.filter(([, q]) => q.matches).map(([name]) => name)));
     read();
     for (const [, q] of queries) q.addEventListener("change", read);

@@ -58,7 +58,15 @@ export type TimelineClock = {
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /** A playhead the app owns, in the shape `Transport`, `SeekBar` and `transportShortcuts` take. */
-export function useTimeline({ duration, rate = 1, frame = 1 / 30, loop = false, startAt = "start", group, keys = true }: TimelineClockOptions): TimelineClock {
+export function useTimeline({
+  duration,
+  rate = 1,
+  frame = 1 / 30,
+  loop = false,
+  startAt = "start",
+  group,
+  keys = true,
+}: TimelineClockOptions): TimelineClock {
   const length = Number.isFinite(duration) && duration > 0 ? duration : 0;
   // `null` until the clock is used, so a clock that starts at the end follows a duration that arrives late.
   const [at, setAt] = React.useState<number | null>(null);
@@ -68,7 +76,9 @@ export function useTimeline({ duration, rate = 1, frame = 1 / 30, loop = false, 
   live.current = { time, length, rate, loop };
 
   // The group: a member that says `play` when started and can be paused from outside.
-  const member = React.useRef<(Omit<GroupMember, "paused" | "pause"> & { paused: boolean; pause: () => void; start(): void }) | null>(null);
+  const member = React.useRef<
+    (Omit<GroupMember, "paused" | "pause"> & { paused: boolean; pause: () => void; start(): void }) | null
+  >(null);
   if (!member.current) {
     const listeners = new Set<() => void>();
     const m = {
@@ -129,6 +139,23 @@ export function useTimeline({ duration, rate = 1, frame = 1 / 30, loop = false, 
   }, [playing]);
 
   const owner: KeyOwner = useKeyOwner(keys, playing);
-  const regionProps = React.useMemo(() => ({ onFocusCapture: owner.claim, onPointerDownCapture: owner.claim }), [owner.claim]);
-  return { time, duration: length, playing, ended: !playing && length > 0 && time >= length && !loop, rate, frame, play, pause, toggle, seek, step: (count) => seek(live.current.time + count * frame), ownsKeys: owner.owns, regionProps };
+  const regionProps = React.useMemo(
+    () => ({ onFocusCapture: owner.claim, onPointerDownCapture: owner.claim }),
+    [owner.claim],
+  );
+  return {
+    time,
+    duration: length,
+    playing,
+    ended: !playing && length > 0 && time >= length && !loop,
+    rate,
+    frame,
+    play,
+    pause,
+    toggle,
+    seek,
+    step: (count) => seek(live.current.time + count * frame),
+    ownsKeys: owner.owns,
+    regionProps,
+  };
 }

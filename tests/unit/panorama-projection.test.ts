@@ -93,18 +93,18 @@ describe("unproject", () => {
     expect(d.pitch).toBeCloseTo(90, 6);
   });
   it("wraps the heading it returns", () => {
-    expect(
-      Math.abs(unproject({ yaw: 179, pitch: 0, fov: 90 }, size, 700, 225).yaw),
-    ).toBeLessThanOrEqual(180);
+    expect(Math.abs(unproject({ yaw: 179, pitch: 0, fov: 90 }, size, 700, 225).yaw)).toBeLessThanOrEqual(180);
     expect(unproject({ yaw: 179, pitch: 0, fov: 90 }, size, 700, 225).yaw).toBeLessThan(0);
   });
 });
 
 describe("limits and words", () => {
   it("clamps pitch, field of view, and wraps the heading", () => {
-    expect(
-      clampView({ yaw: 200, pitch: 100, fov: 5 }, { maxPitch: 80, minFov: 20, maxFov: 120 }),
-    ).toEqual({ yaw: -160, pitch: 80, fov: 20 });
+    expect(clampView({ yaw: 200, pitch: 100, fov: 5 }, { maxPitch: 80, minFov: 20, maxFov: 120 })).toEqual({
+      yaw: -160,
+      pitch: 80,
+      fov: 20,
+    });
     expect(clampView({ yaw: 0, pitch: -100, fov: 300 })).toEqual({ yaw: 0, pitch: -85, fov: 120 });
   });
   it("says where it looks", () => {
@@ -116,9 +116,7 @@ describe("limits and words", () => {
     expect(describeView({ yaw: 190, pitch: 0 })).toBe("Looking 170° left");
   });
   it("converts a drag in pixels to degrees: narrower fields turn less per pixel", () => {
-    expect(degreesPerPixel({ ...view, fov: 40 }, size)).toBeLessThan(
-      degreesPerPixel({ ...view, fov: 100 }, size),
-    );
+    expect(degreesPerPixel({ ...view, fov: 40 }, size)).toBeLessThan(degreesPerPixel({ ...view, fov: 100 }, size));
   });
 });
 

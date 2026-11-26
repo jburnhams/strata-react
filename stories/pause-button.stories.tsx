@@ -17,7 +17,11 @@ const poll = (over: Partial<Poll>): Poll => {
   return made;
 };
 
-const meta = { title: "Status and figures/PauseButton", component: PauseButton, args: { poll: poll({}) } } satisfies Meta<typeof PauseButton>;
+const meta = {
+  title: "Status and figures/PauseButton",
+  component: PauseButton,
+  args: { poll: poll({}) },
+} satisfies Meta<typeof PauseButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -29,5 +29,13 @@ export function SayAgain({ text, parts, verb = "Say", className, ...options }: S
   // Inside a `ClipsProvider` the recordings of `text` are found for the caller (issue #318); `parts` still wins.
   const saying = parts?.length ? parts : clips.parts(text);
   if (options.muted || !canSay(saying)) return null;
-  return <IconButton icon={Volume2} label={`${verb}: ${text}`} aria-pressed={speaking || undefined} onPress={() => say(saying)} className={className} />;
+  return (
+    <IconButton
+      icon={Volume2}
+      label={`${verb}: ${text}`}
+      aria-pressed={speaking || undefined}
+      onPress={() => say(saying)}
+      className={className}
+    />
+  );
 }

@@ -34,13 +34,23 @@ export function readingOrder(boxes: readonly Rect[] & readonly { id: string }[])
  * `BoxOverlay` draws it, so the same numbers agree. `margin` is the share of the box added on every
  * side so the box is not touching the frame (default 0.25).
  */
-export function zoomToBox(box: Rect, of: { w: number; h: number }, frame: { width: number; height: number }, margin = 0.25): Viewport {
+export function zoomToBox(
+  box: Rect,
+  of: { w: number; h: number },
+  frame: { width: number; height: number },
+  margin = 0.25,
+): Viewport {
   const s = Math.min(frame.width / of.w, frame.height / of.h);
   const ox = (frame.width - of.w * s) / 2;
   const oy = (frame.height - of.h * s) / 2;
   const mx = box.w * margin;
   const my = box.h * margin;
-  const shares: ShareBox = [(ox + (box.x - mx) * s) / frame.width, (oy + (box.y - my) * s) / frame.height, ((box.w + 2 * mx) * s) / frame.width, ((box.h + 2 * my) * s) / frame.height];
+  const shares: ShareBox = [
+    (ox + (box.x - mx) * s) / frame.width,
+    (oy + (box.y - my) * s) / frame.height,
+    ((box.w + 2 * mx) * s) / frame.width,
+    ((box.h + 2 * my) * s) / frame.height,
+  ];
   return boxViewport(shares, frame);
 }
 
@@ -55,7 +65,10 @@ export type PictureRegion = { of: { w: number; h: number }; box: Rect; pad?: num
  * is shown by a server crop that pads. No canvas and no second request: the browser draws the one
  * picture, which a list of faces from the same photo shares from its cache.
  */
-export function regionStyle({ of, box, pad = 1.6 }: PictureRegion, aspect: number): { left: string; top: string; width: string; height: string } {
+export function regionStyle(
+  { of, box, pad = 1.6 }: PictureRegion,
+  aspect: number,
+): { left: string; top: string; width: string; height: string } {
   let cw = Math.max(box.w * pad, 1);
   let ch = Math.max(box.h * pad, 1);
   if (cw / ch < aspect) cw = ch * aspect;

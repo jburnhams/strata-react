@@ -1,9 +1,21 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AsyncButton, Button, ChoiceGroup, Field, Input, NativeSelect, Textarea, fetchJson, useAsyncAction } from "../src";
+import {
+  AsyncButton,
+  Button,
+  ChoiceGroup,
+  Field,
+  Input,
+  NativeSelect,
+  Textarea,
+  fetchJson,
+  useAsyncAction,
+} from "../src";
 import { api, inviteInvalid, inviteTaken } from "./mocks/handlers";
 
-const meta = { title: "Form/Field", component: Field, args: { label: "Pieces", children: null } } satisfies Meta<typeof Field>;
+const meta = { title: "Form/Field", component: Field, args: { label: "Pieces", children: null } } satisfies Meta<
+  typeof Field
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -64,7 +76,11 @@ const inviteLabels = { idle: "Invite", pending: "Inviting…", done: "Invited" }
 export const WithAction: Story = {
   render: () => (
     <div className="grid max-w-lg gap-8">
-      <Field label="Invite by email" hint="They get a link to set a password." action={<Button variant="default">Invite</Button>}>
+      <Field
+        label="Invite by email"
+        hint="They get a link to set a password."
+        action={<Button variant="default">Invite</Button>}
+      >
         <Input type="email" name="email" defaultValue="ada@example.org" />
       </Field>
       <Field
@@ -128,7 +144,15 @@ function InviteForm() {
 }
 
 /** Submit it empty, then with any address: the server's reason appears under the field. */
-export const WithActionInteractive: Story = { tags: ["no-visual"], beforeEach: ({ msw }) => msw.use(inviteTaken), render: () => <InviteForm /> };
+export const WithActionInteractive: Story = {
+  tags: ["no-visual"],
+  beforeEach: ({ msw }) => msw.use(inviteTaken),
+  render: () => <InviteForm />,
+};
 
 /** As above, but the server's 422 names the field: its message goes under the input. */
-export const WithActionServerValidation: Story = { tags: ["no-visual"], beforeEach: ({ msw }) => msw.use(inviteInvalid), render: () => <InviteForm /> };
+export const WithActionServerValidation: Story = {
+  tags: ["no-visual"],
+  beforeEach: ({ msw }) => msw.use(inviteInvalid),
+  render: () => <InviteForm />,
+};

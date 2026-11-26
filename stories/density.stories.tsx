@@ -1,7 +1,18 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Lock, Trash2, Volume2 } from "lucide-react";
-import { Button, Density, Dialog, Input, Menu, NativeSelect, NumberField, Toggle, Toolbar, type MenuEntry } from "../src";
+import {
+  Button,
+  Density,
+  Dialog,
+  Input,
+  Menu,
+  NativeSelect,
+  NumberField,
+  Toggle,
+  Toolbar,
+  type MenuEntry,
+} from "../src";
 
 // Density is how much a tool screen packs in (issue #117, from strata-vid). An app chooses it once,
 // on the page (`ThemeProvider density` or `<Density page>`), which reaches the overlays that portal
@@ -28,7 +39,16 @@ function TrackHeader({ label }: { label: string }) {
         <Toggle label="Mute" icon={Volume2} iconOnly size="sm" />
         <Toggle label="Lock" icon={Lock} iconOnly size="sm" defaultPressed />
         <Button size="sm">Apply</Button>
-        <NumberField aria-label={`Volume, ${label}`} value={volume} onChange={setVolume} min={0} max={100} unit="%" size="sm" className="w-24" />
+        <NumberField
+          aria-label={`Volume, ${label}`}
+          value={volume}
+          onChange={setVolume}
+          min={0}
+          max={100}
+          unit="%"
+          size="sm"
+          className="w-24"
+        />
         <NativeSelect aria-label={`Rate, ${label}`} size="sm" className="w-28" defaultValue="1">
           <option value="1">1×</option>
           <option value="2">2×</option>
@@ -85,7 +105,16 @@ export const CompactDialog: Story = {
         <p className="type-heading">Kiln schedule</p>
         <p className="type-body text-muted-foreground">Fridays, out on Saturday after 10:00.</p>
       </div>
-      <Dialog title="Export video" open description="Renders the whole project." actions={(close) => <Button variant="default" onPress={close}>Export</Button>}>
+      <Dialog
+        title="Export video"
+        open
+        description="Renders the whole project."
+        actions={(close) => (
+          <Button variant="default" onPress={close}>
+            Export
+          </Button>
+        )}
+      >
         <p className="type-body">moonbeam.mp4, 2:31 at 1080p.</p>
       </Dialog>
     </Density>

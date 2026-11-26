@@ -1,8 +1,28 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
 import { Check, X } from "lucide-react";
-import { Button, MediaGroup, MediaPlayer, PlayWindowButton, TranscriptView, Waveform, useMediaElement, type MarkKind, type TranscriptGroup, type TranscriptViewProps, type WaveformProps } from "../src";
-import { longTalk, talkGroups, talkLength, trackDuration, trackMarks, trackPeaks, trackSpans } from "./fixtures/listening";
+import {
+  Button,
+  MediaGroup,
+  MediaPlayer,
+  PlayWindowButton,
+  TranscriptView,
+  Waveform,
+  useMediaElement,
+  type MarkKind,
+  type TranscriptGroup,
+  type TranscriptViewProps,
+  type WaveformProps,
+} from "../src";
+import {
+  longTalk,
+  talkGroups,
+  talkLength,
+  trackDuration,
+  trackMarks,
+  trackPeaks,
+  trackSpans,
+} from "./fixtures/listening";
 import { silentWav } from "./fixtures/media";
 
 // Issues #180 (a window of a file, one player at a time), #185 (Waveform), #186 (TranscriptView) and
@@ -20,7 +40,16 @@ function Track(props: Partial<WaveformProps> & { start?: number }) {
   const [time, setTime] = React.useState(props.start ?? 30);
   return (
     <div className="max-w-4xl">
-      <Waveform label="Waveform of the demo track" duration={trackDuration} peaks={trackPeaks} marks={trackMarks} spans={trackSpans} {...(props as object)} time={time} onSeek={setTime} />
+      <Waveform
+        label="Waveform of the demo track"
+        duration={trackDuration}
+        peaks={trackPeaks}
+        marks={trackMarks}
+        spans={trackSpans}
+        {...(props as object)}
+        time={time}
+        onSeek={setTime}
+      />
     </div>
   );
 }
@@ -35,7 +64,13 @@ export const WithRange: Story = { render: () => <Track range={[20, 36]} /> };
 export const Zoomed: Story = { render: () => <Track defaultView={[24, 44]} start={34} /> };
 
 const spectrogram = (() => {
-  const cells = Array.from({ length: 90 }, (_, x) => Array.from({ length: 24 }, (_, y) => `<rect x="${x * 10}" y="${y * 5}" width="10" height="5" fill="hsl(${240 - y * 6} 40% ${30 + 40 * Math.abs(Math.sin(x / 6 + y / 3)) * (x > 52 ? 1 : 0.5)}%)"/>`).join("")).join("");
+  const cells = Array.from({ length: 90 }, (_, x) =>
+    Array.from(
+      { length: 24 },
+      (_, y) =>
+        `<rect x="${x * 10}" y="${y * 5}" width="10" height="5" fill="hsl(${240 - y * 6} 40% ${30 + 40 * Math.abs(Math.sin(x / 6 + y / 3)) * (x > 52 ? 1 : 0.5)}%)"/>`,
+    ).join(""),
+  ).join("");
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="900" height="120" preserveAspectRatio="none">${cells}</svg>`)}`;
 })();
 
@@ -52,7 +87,13 @@ export const Decoded: Story = {
     const [time, setTime] = React.useState(0);
     return (
       <div className="max-w-4xl">
-        <Waveform label="Waveform of the three-second tone" source="/api/clips/a.wav" time={time} onSeek={setTime} buckets={300} />
+        <Waveform
+          label="Waveform of the three-second tone"
+          source="/api/clips/a.wav"
+          time={time}
+          onSeek={setTime}
+          buckets={300}
+        />
       </div>
     );
   },
@@ -97,7 +138,13 @@ export const WindowedPlayer: Story = {
     return (
       <div className="grid max-w-2xl gap-6">
         <MediaPlayer label="Phrase 3" src={src} window={{ start: 12, end: 15 }} controls="strata" />
-        <MediaPlayer label="Phrase 3 in the whole file" src={src} window={{ start: 12, end: 15 }} showFull controls="strata" />
+        <MediaPlayer
+          label="Phrase 3 in the whole file"
+          src={src}
+          window={{ start: 12, end: 15 }}
+          showFull
+          controls="strata"
+        />
       </div>
     );
   },
@@ -125,7 +172,14 @@ export const OneAtATime: Story = {
 function Talk(props: Partial<TranscriptViewProps>) {
   return (
     <div className="max-w-2xl">
-      <TranscriptView label="Transcript of the evening" groups={talkGroups} time={5.6} onSeek={() => {}} modeLabels={{ french: "Français" }} {...props} />
+      <TranscriptView
+        label="Transcript of the evening"
+        groups={talkGroups}
+        time={5.6}
+        onSeek={() => {}}
+        modeLabels={{ french: "Français" }}
+        {...props}
+      />
     </div>
   );
 }
@@ -163,7 +217,9 @@ function TranscriptWithPlayer() {
           media.seek(t);
           void media.play();
         }}
-        renderPlay={(p) => <PlayWindowButton media={media} window={{ start: p.start, end: p.end }} label={`Play phrase ${p.id}`} />}
+        renderPlay={(p) => (
+          <PlayWindowButton media={media} window={{ start: p.start, end: p.end }} label={`Play phrase ${p.id}`} />
+        )}
         modeLabels={{ french: "Français" }}
       />
     </div>
@@ -171,8 +227,11 @@ function TranscriptWithPlayer() {
 }
 
 /** With a player: the heard word moves as it plays, a word plays from there, each phrase has its own play button, and scrolling away shows Jump to now. Skipped by the visual suite. */
-export const TranscriptWithPlayer_: Story = { name: "Transcript with a player", tags: ["no-visual"], render: () => <TranscriptWithPlayer /> };
-
+export const TranscriptWithPlayer_: Story = {
+  name: "Transcript with a player",
+  tags: ["no-visual"],
+  render: () => <TranscriptWithPlayer />,
+};
 
 // --- Transcript: doubt, marks, correction, card (issue #223)
 
@@ -184,13 +243,23 @@ const doubtfulTalk: TranscriptGroup[] = talkGroups.map((g, gi) => ({
   ...g,
   phrases: g.phrases.map((p, pi) => ({
     ...p,
-    words: p.words.map((w, wi) => ((gi + pi) % 2 === 0 && wi === 2 ? { ...w, confidence: 0.32 } : gi === 1 && pi === 1 && wi === 4 ? { ...w, doubtful: true } : w)),
+    words: p.words.map((w, wi) =>
+      (gi + pi) % 2 === 0 && wi === 2
+        ? { ...w, confidence: 0.32 }
+        : gi === 1 && pi === 1 && wi === 4
+          ? { ...w, doubtful: true }
+          : w,
+    ),
     state: gi === 1 && pi === 2 ? notSung : undefined,
   })),
 }));
 
 /** Doubtful words are dotted-underlined and named for a screen reader, their phrase says "Doubtful", a phrase can carry its own mark ("Not sung"), and the controls count both. */
-export const TranscriptDoubtAndMarks: Story = { render: () => <Talk groups={doubtfulTalk} states={[notSung, notLyric]} onPhraseState={() => {}} time={0} follow={false} /> };
+export const TranscriptDoubtAndMarks: Story = {
+  render: () => (
+    <Talk groups={doubtfulTalk} states={[notSung, notLyric]} onPhraseState={() => {}} time={0} follow={false} />
+  ),
+};
 
 /** "Only doubtful" leaves the phrases that need a look, with their clip headings. */
 export const TranscriptOnlyDoubtful: Story = {
@@ -201,7 +270,20 @@ export const TranscriptOnlyDoubtful: Story = {
         <Button size="sm" className="justify-self-start" onClick={() => setOnly((o) => !o)}>
           {only ? "Show the whole transcript" : "Show only doubtful"}
         </Button>
-        <Talk groups={only ? doubtfulTalk.map((g) => ({ ...g, phrases: g.phrases.filter((p) => p.words.some((w) => w.doubtful || (w.confidence ?? 1) < 0.6)) })).filter((g) => g.phrases.length) : doubtfulTalk} time={0} follow={false} />
+        <Talk
+          groups={
+            only
+              ? doubtfulTalk
+                  .map((g) => ({
+                    ...g,
+                    phrases: g.phrases.filter((p) => p.words.some((w) => w.doubtful || (w.confidence ?? 1) < 0.6)),
+                  }))
+                  .filter((g) => g.phrases.length)
+              : doubtfulTalk
+          }
+          time={0}
+          follow={false}
+        />
       </div>
     );
   },
@@ -209,20 +291,26 @@ export const TranscriptOnlyDoubtful: Story = {
 
 function CorrectingTalk() {
   const [groups, setGroups] = React.useState(doubtfulTalk);
-  const change = (id: string, f: (p: TranscriptGroup["phrases"][number]) => TranscriptGroup["phrases"][number]) => setGroups((gs) => gs.map((g) => ({ ...g, phrases: g.phrases.map((p) => (p.id === id ? f(p) : p)) })));
+  const change = (id: string, f: (p: TranscriptGroup["phrases"][number]) => TranscriptGroup["phrases"][number]) =>
+    setGroups((gs) => gs.map((g) => ({ ...g, phrases: g.phrases.map((p) => (p.id === id ? f(p) : p)) })));
   return (
     <Talk
       groups={groups}
       states={[notSung, notLyric]}
       time={0}
       follow={false}
-      onPhraseState={(id, state) => change(id, (p) => ({ ...p, state: [notSung, notLyric].find((s) => s.id === state) }))}
+      onPhraseState={(id, state) =>
+        change(id, (p) => ({ ...p, state: [notSung, notLyric].find((s) => s.id === state) }))
+      }
       onEdit={(id, text) =>
         change(id, (p) => {
           const parts = text.split(/\s+/);
           // The app keeps the timings: spread the words over the phrase, and the doubt is settled by a person.
           const step = (p.end - p.start) / parts.length;
-          return { ...p, words: parts.map((t, i) => ({ text: t, start: p.start + i * step, end: p.start + (i + 1) * step })) };
+          return {
+            ...p,
+            words: parts.map((t, i) => ({ text: t, start: p.start + i * step, end: p.start + (i + 1) * step })),
+          };
         })
       }
       renderCard={(p) => (
@@ -240,7 +328,11 @@ function CorrectingTalk() {
 }
 
 /** Correcting by hand: focus a row and press Enter or F2 for its text, Ctrl+Enter saves, Escape cancels; the menu at the end of a row marks it; hover or focus a phrase for its card. Skipped by the visual suite. */
-export const TranscriptCorrecting: Story = { name: "Transcript, correcting", tags: ["no-visual"], render: () => <CorrectingTalk /> };
+export const TranscriptCorrecting: Story = {
+  name: "Transcript, correcting",
+  tags: ["no-visual"],
+  render: () => <CorrectingTalk />,
+};
 
 // A review transcript with no player (issue #260): no time and no seek, words selected and marked
 // "must use" or "never use", and a dotted underline where a person corrected a word.
@@ -252,18 +344,33 @@ const reviewGroups: TranscriptGroup[] = talkGroups.map((g, gi) => ({
   ...g,
   phrases: g.phrases.map((p, pi) => ({
     ...p,
-    words: p.words.map((w, wi) => (gi === 0 && pi === 1 && wi === 1 ? { ...w, correction: { original: "mourning", by: "Ada" } } : w)),
+    words: p.words.map((w, wi) =>
+      gi === 0 && pi === 1 && wi === 1 ? { ...w, correction: { original: "mourning", by: "Ada" } } : w,
+    ),
   })),
 }));
 function ReviewTranscript() {
-  const [marks, setMarks] = React.useState<Record<string, string | undefined>>({ "t0:0": "use", "t0:1": "use", "t2:2": "never" });
+  const [marks, setMarks] = React.useState<Record<string, string | undefined>>({
+    "t0:0": "use",
+    "t0:1": "use",
+    "t2:2": "never",
+  });
   return (
     <TranscriptView
       label="Whole-race transcript"
       groups={reviewGroups}
-      marking={{ kinds: reviewKinds, marks, clearKeys: ["w"], onMark: (ids, kind) => setMarks((m) => ({ ...m, ...Object.fromEntries(ids.map((id) => [id, kind ?? undefined])) })) }}
+      marking={{
+        kinds: reviewKinds,
+        marks,
+        clearKeys: ["w"],
+        onMark: (ids, kind) =>
+          setMarks((m) => ({ ...m, ...Object.fromEntries(ids.map((id) => [id, kind ?? undefined])) })),
+      }}
       onCorrectionPress={() => {}}
     />
   );
 }
-export const TranscriptReviewMarking: Story = { name: "Transcript, review with marking", render: () => <ReviewTranscript /> };
+export const TranscriptReviewMarking: Story = {
+  name: "Transcript, review with marking",
+  render: () => <ReviewTranscript />,
+};

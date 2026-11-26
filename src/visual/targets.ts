@@ -5,7 +5,17 @@
 // (`review--empty--phone--dark.png`) because a person reviews baselines by file name in a diff.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { viewports, type AppTarget, type Route, type RouteState, type Shot, type StorybookTarget, type Theme, type Viewport, type ViewportChoice } from "./types";
+import {
+  viewports,
+  type AppTarget,
+  type Route,
+  type RouteState,
+  type Shot,
+  type StorybookTarget,
+  type Theme,
+  type Viewport,
+  type ViewportChoice,
+} from "./types";
 
 /** The light and dark themes, the default for every target. */
 export const defaultThemes: readonly Theme[] = ["light", "dark"];
@@ -27,14 +37,20 @@ interface IndexEntry {
  * viewport: `visual-phone` 390×844, `visual-wide` 1440×900, otherwise 1024 wide; `no-visual`
  * skips the story. A story's own tag beats its file's, since Storybook merges both.
  */
-export function storybookShots(target: StorybookTarget & { dir: string }, themes: readonly Theme[] = defaultThemes): Shot[] {
-  const index = JSON.parse(readFileSync(join(target.dir, "index.json"), "utf8")) as { entries: Record<string, IndexEntry> };
+export function storybookShots(
+  target: StorybookTarget & { dir: string },
+  themes: readonly Theme[] = defaultThemes,
+): Shot[] {
+  const index = JSON.parse(readFileSync(join(target.dir, "index.json"), "utf8")) as {
+    entries: Record<string, IndexEntry>;
+  };
   const global = target.themeGlobal ?? "theme";
   return Object.values(index.entries)
     .filter((e) => e.type === "story" && !e.tags?.includes("no-visual"))
     .flatMap((story) => {
       const tag = ["visual-phone", "visual-wide"].find((t) => story.tags?.includes(t));
-      const viewport = tag === "visual-phone" ? viewports.phone : tag === "visual-wide" ? viewports.wide : storyViewport;
+      const viewport =
+        tag === "visual-phone" ? viewports.phone : tag === "visual-wide" ? viewports.wide : storyViewport;
       return themes.map((theme) => ({
         name: `${story.id}--${theme}`,
         path: `iframe.html?id=${story.id}&viewMode=story&globals=${global}:${theme}`,
@@ -56,7 +72,8 @@ function viewportName(v: ViewportChoice): string {
 function viewportSize(v: ViewportChoice): Viewport {
   if (typeof v !== "string") return { width: v.width, height: v.height };
   const size = viewports[v];
-  if (!size) throw new Error(`unknown viewport "${String(v)}": use ${Object.keys(viewports).join(", ")} or { width, height }`);
+  if (!size)
+    throw new Error(`unknown viewport "${String(v)}": use ${Object.keys(viewports).join(", ")} or { width, height }`);
   return { ...size };
 }
 
@@ -72,12 +89,15 @@ function stateOf(value: readonly unknown[] | RouteState): RouteState {
 export function routeShots(app: AppTarget, themes: readonly Theme[] = defaultThemes): Shot[] {
   const shots: Shot[] = [];
   for (const route of app.routes as readonly Route[]) {
-    if (!slug.test(route.name)) throw new Error(`route name "${route.name}" must be lower-case letters, digits and dashes`);
+    if (!slug.test(route.name))
+      throw new Error(`route name "${route.name}" must be lower-case letters, digits and dashes`);
     const states = Object.entries(route.states ?? { default: [] });
-    if (!states.length) throw new Error(`route "${route.name}" has an empty states object: leave it out for one default state`);
+    if (!states.length)
+      throw new Error(`route "${route.name}" has an empty states object: leave it out for one default state`);
     const chosen = route.viewports ?? app.viewports ?? ["wide"];
     for (const [stateName, value] of states) {
-      if (!slug.test(stateName)) throw new Error(`state "${stateName}" of route "${route.name}" must be lower-case letters, digits and dashes`);
+      if (!slug.test(stateName))
+        throw new Error(`state "${stateName}" of route "${route.name}" must be lower-case letters, digits and dashes`);
       const state = stateOf(value);
       const setups = [route.setup, state.setup].filter((s) => s !== undefined);
       for (const v of chosen) {
@@ -92,7 +112,11 @@ export function routeShots(app: AppTarget, themes: readonly Theme[] = defaultThe
             waitFor: state.waitFor ?? route.waitFor,
             handlers: [...(state.handlers ?? []), ...(app.handlers ?? [])],
             darkClass: app.darkClass ?? "dark",
-            setup: setups.length ? async (page, shot) => { for (const s of setups) await s(page, shot); } : undefined,
+            setup: setups.length
+              ? async (page, shot) => {
+                  for (const s of setups) await s(page, shot);
+                }
+              : undefined,
           });
         }
       }

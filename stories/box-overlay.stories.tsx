@@ -24,7 +24,10 @@ function PageWithLines({ chosen = null }: { chosen?: string | null }) {
           state={state}
           onChoose={(box) => {
             const r = frame.current?.getBoundingClientRect();
-            if (r) view.setViewport(zoomToBox(box, { w: PAGE_SIZE[0], h: PAGE_SIZE[1] }, { width: r.width, height: r.height }));
+            if (r)
+              view.setViewport(
+                zoomToBox(box, { w: PAGE_SIZE[0], h: PAGE_SIZE[1] }, { width: r.width, height: r.height }),
+              );
           }}
         />
       </ViewportFrame>
@@ -33,7 +36,12 @@ function PageWithLines({ chosen = null }: { chosen?: string | null }) {
   );
 }
 
-const meta = { title: "Data/BoxOverlay", component: PageWithLines, parameters: { layout: "padded" }, tags: ["visual-wide"] } satisfies Meta<typeof PageWithLines>;
+const meta = {
+  title: "Data/BoxOverlay",
+  component: PageWithLines,
+  parameters: { layout: "padded" },
+  tags: ["visual-wide"],
+} satisfies Meta<typeof PageWithLines>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -42,4 +50,3 @@ export const Lines: Story = {};
 
 /** One line chosen: its box is filled and heavier, and the list holds it selected. */
 export const OneChosen: Story = { args: { chosen: "p7-l6" } };
-

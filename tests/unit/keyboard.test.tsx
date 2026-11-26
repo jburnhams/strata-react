@@ -134,8 +134,7 @@ function Queue({ initial }: { initial?: string }) {
   );
 }
 
-const current = () =>
-  screen.getAllByRole("listitem").find((li) => li.getAttribute("aria-current") === "true");
+const current = () => screen.getAllByRole("listitem").find((li) => li.getAttribute("aria-current") === "true");
 
 describe("useActiveItem and ActiveList", () => {
   it("starts on the first item, a single tab stop marked aria-current", () => {

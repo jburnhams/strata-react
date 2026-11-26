@@ -69,7 +69,13 @@ export type Point = { x: number; y: number };
 
 /** Shading tones for `spans`: the role's subtle fill. */
 export type SpanTone = "neutral" | "info" | "success" | "warning" | "danger";
-const TONE_FILL: Record<SpanTone, string> = { neutral: "var(--muted)", info: "var(--info-subtle)", success: "var(--success-subtle)", warning: "var(--warning-subtle)", danger: "var(--danger-subtle)" };
+const TONE_FILL: Record<SpanTone, string> = {
+  neutral: "var(--muted)",
+  info: "var(--info-subtle)",
+  success: "var(--success-subtle)",
+  warning: "var(--warning-subtle)",
+  danger: "var(--danger-subtle)",
+};
 
 /** A stretch of x shaded behind the line (stops, usable footage, a chosen stretch). */
 export type ChartSpan = { from: number; to: number; label: string; tone?: SpanTone };
@@ -212,7 +218,8 @@ const linearScale = (values: number[], pin: { min?: number; max?: number }): YSc
 /** The 1, 2, 5 × 10ⁿ values in `[lo, hi]`. */
 function decadeTicks(lo: number, hi: number, mantissas = [1, 2, 5]) {
   const out: number[] = [];
-  for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)) + 1; e++) for (const m of mantissas) out.push(Number((m * 10 ** e).toPrecision(12)));
+  for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)) + 1; e++)
+    for (const m of mantissas) out.push(Number((m * 10 ** e).toPrecision(12)));
   return out;
 }
 
@@ -233,7 +240,8 @@ export function logScale(values: number[], pin: { min?: number; max?: number } =
   let max = pinMax ?? Math.min(...grid.filter((t) => t >= dMax * (1 - 1e-9)));
   if (!(max > min)) max = min * 10;
   let ticks = decadeTicks(min, max).filter((t) => t >= min * (1 - 1e-9) && t <= max * (1 + 1e-9));
-  if (ticks.length > 7) ticks = decadeTicks(min, max, [1]).filter((t) => t >= min * (1 - 1e-9) && t <= max * (1 + 1e-9));
+  if (ticks.length > 7)
+    ticks = decadeTicks(min, max, [1]).filter((t) => t >= min * (1 - 1e-9) && t <= max * (1 + 1e-9));
   if (ticks.length > 7) {
     const k = Math.ceil(ticks.length / 6);
     ticks = ticks.filter((_, i) => i % k === 0);
@@ -252,7 +260,8 @@ function rangeLimits(series: readonly Point[], range: LineChartProps["range"], l
     const a = range.low[i];
     const b = range.high[i];
     // On a log axis a bound at or below zero has no place, so that reading has no range (as the line leaves such a reading undrawn).
-    if (Number.isFinite(a) && Number.isFinite(b) && (!log || (a > 0 && b > 0))) out.push({ x: series[i].x, low: Math.min(a, b), high: Math.max(a, b) });
+    if (Number.isFinite(a) && Number.isFinite(b) && (!log || (a > 0 && b > 0)))
+      out.push({ x: series[i].x, low: Math.min(a, b), high: Math.max(a, b) });
   }
   return out.sort((p, q) => p.x - q.x);
 }
@@ -294,7 +303,9 @@ export function fitTicks(ticks: number[], scale: (x: number) => number, widthOf:
   const sorted = [...ticks].sort((a, b) => a - b);
   for (let k = 1; k < sorted.length; k++) {
     const kept = sorted.filter((_, i) => i % k === 0);
-    const fits = kept.every((t, i) => i === 0 || scale(t) - scale(kept[i - 1]) >= (widthOf(t) + widthOf(kept[i - 1])) / 2 + gap);
+    const fits = kept.every(
+      (t, i) => i === 0 || scale(t) - scale(kept[i - 1]) >= (widthOf(t) + widthOf(kept[i - 1])) / 2 + gap,
+    );
     if (fits) return kept;
   }
   return sorted.slice(0, 1);
@@ -342,7 +353,14 @@ export function LineChart({
   const mapping = typeof cursorProp === "object" ? cursorProp : undefined;
   const gradientId = `heat-${React.useId().replace(/[^\w-]/g, "")}`;
   const limits = React.useMemo(() => rangeLimits(series, range, yMode === "log"), [series, range, yMode]);
-  const all = [...series, ...(planned ?? []), ...limits.flatMap((l) => [{ x: l.x, y: l.low }, { x: l.x, y: l.high }])];
+  const all = [
+    ...series,
+    ...(planned ?? []),
+    ...limits.flatMap((l) => [
+      { x: l.x, y: l.low },
+      { x: l.x, y: l.high },
+    ]),
+  ];
   const xMin = xDomain ? xDomain[0] : Math.min(...all.map((p) => p.x));
   const xMax = xDomain ? xDomain[1] : Math.max(...all.map((p) => p.x));
   const log = yMode === "log";
@@ -374,8 +392,14 @@ export function LineChart({
   };
   // Fit against where the labels are drawn, so pulling an end label in cannot make it collide.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const tickList = React.useMemo(() => (typeof xTicks === "function" ? xTicks({ min: xMin, max: xMax }) : xTicks), [xTicks, xMin, xMax]);
-  const shownXTicks = React.useMemo(() => (xAxis === "none" ? [] : fitTicks(tickList, xLabelAt, xLabelWidth)), [tickList, width, xMin, xMax, formatX, xAxis]);
+  const tickList = React.useMemo(
+    () => (typeof xTicks === "function" ? xTicks({ min: xMin, max: xMax }) : xTicks),
+    [xTicks, xMin, xMax],
+  );
+  const shownXTicks = React.useMemo(
+    () => (xAxis === "none" ? [] : fitTicks(tickList, xLabelAt, xLabelWidth)),
+    [tickList, width, xMin, xMax, formatX, xAxis],
+  );
   // A reading a log axis cannot place breaks the line instead of drawing a false point.
   const path = (pts: Point[]) => {
     let pen = false;
@@ -398,7 +422,8 @@ export function LineChart({
   const peakShown = !log || peak.y > 0;
   const stops = colourScale ? [...colourScale].sort((a, b) => a.at - b.at) : [];
   /** The colour a value lands on: the highest stop at or below it. Used for the labelled points. */
-  const colourAt = (y: number) => (stops.length ? [...stops].reverse().find((s) => s.at <= y)?.colour ?? stops[0].colour : colour);
+  const colourAt = (y: number) =>
+    stops.length ? ([...stops].reverse().find((s) => s.at <= y)?.colour ?? stops[0].colour) : colour;
   const stroke = stops.length ? `url(#${gradientId})` : colour;
 
   // The plot itself, memoised: moving `current` or a pointer readout redraws only the overlay below.
@@ -407,74 +432,164 @@ export function LineChart({
     () => (
       <>
         {stops.length > 0 && (
-              // A vertical gradient in chart space, so a colour sits at a temperature, not at a
-              // point along the line: the line is the same red wherever it crosses 600 °C.
-              <defs>
-                <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={sy(y.min)} y2={sy(y.max)}>
-                  {stops.map((s) => (
-                    <stop key={s.at} offset={Math.min(1, Math.max(0, s.at > 0 || !log ? y.at(s.at) : 0))} stopColor={s.colour} />
-                  ))}
-                </linearGradient>
-              </defs>
-            )}
-            {spans?.map((sp) => {
-              const [a, b] = [Math.max(sx(Math.min(sp.from, sp.to)), pad.left), Math.min(sx(Math.max(sp.from, sp.to)), pad.left + w)];
-              return b > a ? <rect key={`${sp.from}-${sp.to}-${sp.label}`} x={a} y={pad.top} width={b - a} height={h} fill={TONE_FILL[sp.tone ?? "neutral"]} /> : null;
-            })}
-            {band && band.below > y.min && (
-              <g>
-                <rect x={pad.left} y={Math.min(sy(y.min), sy(Math.min(band.below, y.max)))} width={w} height={Math.abs(sy(y.min) - sy(Math.min(band.below, y.max)))} fill="var(--success-subtle)" />
-                <text x={pad.left + 8} y={Math.min(sy(y.min), sy(Math.min(band.below, y.max))) + 16} className="fill-success type-caption">
-                  {band.label}
-                </text>
-              </g>
-            )}
-            {y.ticks.map((t) => (
-              <g key={t}>
-                <line x1={pad.left} x2={pad.left + w} y1={sy(t)} y2={sy(t)} stroke="var(--border)" strokeWidth={1} />
-                <text x={pad.left - 8} y={sy(t)} dy="0.32em" textAnchor="end" className="fill-muted-foreground type-caption tabular-nums">
-                  {formatY(t)}
-                </text>
-              </g>
-            ))}
-            {shownXTicks.map((t) => (
-              <text key={t} x={xLabelAt(t)} y={height - 8} textAnchor="middle" className="fill-muted-foreground type-caption tabular-nums">
-                {formatX(t)}
-              </text>
-            ))}
-            {planned && (
-              <path d={path(planned)} fill="none" stroke="var(--muted-foreground)" strokeWidth={1.5} strokeDasharray="4 4" />
-            )}
-            {limits.length > 1 && (
-              // The extremes as one flat translucent area in the line's own colour, behind the line.
-              <path d={rangePath(limits, sx, sy)} fill={colour} fillOpacity={0.18} stroke="none" data-chart-range="" />
-            )}
-            {area && series.length > 1 && (
-              // One flat pale tint, never a gradient: the area is the meaning, so it is a plain fill.
-              <path d={`${path(series)}L${sx(series[series.length - 1].x).toFixed(1)},${sy(y.min).toFixed(1)}L${sx(series[0].x).toFixed(1)},${sy(y.min).toFixed(1)}Z`} fill={colour} fillOpacity={0.12} stroke="none" />
-            )}
-            <path d={path(series)} fill="none" stroke={stroke} strokeWidth={stops.length ? 2.5 : 2} strokeLinejoin="round" strokeLinecap="round" />
-            {/* Direct labels instead of a legend and a tooltip. */}
-            {peakShown && (
-              <>
-                <circle cx={sx(peak.x)} cy={sy(peak.y)} r={3} fill={colourAt(peak.y)} />
-                <text x={sx(peak.x) + 8} y={sy(peak.y) - 8} className="fill-foreground type-caption tabular-nums">
-                  {formatY(peak.y)} peak
-                </text>
-              </>
-            )}
-            {showEnd && (!log || last.y > 0) && (
-              <>
-                <line x1={sx(last.x)} x2={sx(last.x)} y1={pad.top} y2={pad.top + h} stroke="var(--foreground)" strokeWidth={1} />
-                <circle cx={sx(last.x)} cy={sy(last.y)} r={3.5} fill={colourAt(last.y)} />
-                <text x={sx(last.x) - 8} y={sy(last.y) - 10} textAnchor="end" className="fill-foreground type-label tabular-nums">
-                  {formatY(last.y)} now
-                </text>
-              </>
-            )}
+          // A vertical gradient in chart space, so a colour sits at a temperature, not at a
+          // point along the line: the line is the same red wherever it crosses 600 °C.
+          <defs>
+            <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={sy(y.min)} y2={sy(y.max)}>
+              {stops.map((s) => (
+                <stop
+                  key={s.at}
+                  offset={Math.min(1, Math.max(0, s.at > 0 || !log ? y.at(s.at) : 0))}
+                  stopColor={s.colour}
+                />
+              ))}
+            </linearGradient>
+          </defs>
+        )}
+        {spans?.map((sp) => {
+          const [a, b] = [
+            Math.max(sx(Math.min(sp.from, sp.to)), pad.left),
+            Math.min(sx(Math.max(sp.from, sp.to)), pad.left + w),
+          ];
+          return b > a ? (
+            <rect
+              key={`${sp.from}-${sp.to}-${sp.label}`}
+              x={a}
+              y={pad.top}
+              width={b - a}
+              height={h}
+              fill={TONE_FILL[sp.tone ?? "neutral"]}
+            />
+          ) : null;
+        })}
+        {band && band.below > y.min && (
+          <g>
+            <rect
+              x={pad.left}
+              y={Math.min(sy(y.min), sy(Math.min(band.below, y.max)))}
+              width={w}
+              height={Math.abs(sy(y.min) - sy(Math.min(band.below, y.max)))}
+              fill="var(--success-subtle)"
+            />
+            <text
+              x={pad.left + 8}
+              y={Math.min(sy(y.min), sy(Math.min(band.below, y.max))) + 16}
+              className="fill-success type-caption"
+            >
+              {band.label}
+            </text>
+          </g>
+        )}
+        {y.ticks.map((t) => (
+          <g key={t}>
+            <line x1={pad.left} x2={pad.left + w} y1={sy(t)} y2={sy(t)} stroke="var(--border)" strokeWidth={1} />
+            <text
+              x={pad.left - 8}
+              y={sy(t)}
+              dy="0.32em"
+              textAnchor="end"
+              className="fill-muted-foreground type-caption tabular-nums"
+            >
+              {formatY(t)}
+            </text>
+          </g>
+        ))}
+        {shownXTicks.map((t) => (
+          <text
+            key={t}
+            x={xLabelAt(t)}
+            y={height - 8}
+            textAnchor="middle"
+            className="fill-muted-foreground type-caption tabular-nums"
+          >
+            {formatX(t)}
+          </text>
+        ))}
+        {planned && (
+          <path
+            d={path(planned)}
+            fill="none"
+            stroke="var(--muted-foreground)"
+            strokeWidth={1.5}
+            strokeDasharray="4 4"
+          />
+        )}
+        {limits.length > 1 && (
+          // The extremes as one flat translucent area in the line's own colour, behind the line.
+          <path d={rangePath(limits, sx, sy)} fill={colour} fillOpacity={0.18} stroke="none" data-chart-range="" />
+        )}
+        {area && series.length > 1 && (
+          // One flat pale tint, never a gradient: the area is the meaning, so it is a plain fill.
+          <path
+            d={`${path(series)}L${sx(series[series.length - 1].x).toFixed(1)},${sy(y.min).toFixed(1)}L${sx(series[0].x).toFixed(1)},${sy(y.min).toFixed(1)}Z`}
+            fill={colour}
+            fillOpacity={0.12}
+            stroke="none"
+          />
+        )}
+        <path
+          d={path(series)}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={stops.length ? 2.5 : 2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {/* Direct labels instead of a legend and a tooltip. */}
+        {peakShown && (
+          <>
+            <circle cx={sx(peak.x)} cy={sy(peak.y)} r={3} fill={colourAt(peak.y)} />
+            <text x={sx(peak.x) + 8} y={sy(peak.y) - 8} className="fill-foreground type-caption tabular-nums">
+              {formatY(peak.y)} peak
+            </text>
+          </>
+        )}
+        {showEnd && (!log || last.y > 0) && (
+          <>
+            <line
+              x1={sx(last.x)}
+              x2={sx(last.x)}
+              y1={pad.top}
+              y2={pad.top + h}
+              stroke="var(--foreground)"
+              strokeWidth={1}
+            />
+            <circle cx={sx(last.x)} cy={sy(last.y)} r={3.5} fill={colourAt(last.y)} />
+            <text
+              x={sx(last.x) - 8}
+              y={sy(last.y) - 10}
+              textAnchor="end"
+              className="fill-foreground type-label tabular-nums"
+            >
+              {formatY(last.y)} now
+            </text>
+          </>
+        )}
       </>
     ),
-    [width, height, series, limits, planned, band, tickList, xMin, xMax, yMode, yInvert, xAxis, spans, yMin, yMax, colour, colourScale, formatX, formatY, area, showEnd],
+    [
+      width,
+      height,
+      series,
+      limits,
+      planned,
+      band,
+      tickList,
+      xMin,
+      xMax,
+      yMode,
+      yInvert,
+      xAxis,
+      spans,
+      yMin,
+      yMax,
+      colour,
+      colourScale,
+      formatX,
+      formatY,
+      area,
+      showEnd,
+    ],
   );
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -529,11 +644,15 @@ export function LineChart({
   const [hover, setHover] = React.useState<number | null>(null);
   const [kbd, setKbd] = React.useState<number | null>(null);
   const [focused, setFocused] = React.useState(false);
-  const readoutText = (pt: Point) => (typeof readout === "function" ? readout(pt) : `${formatX(pt.x)}: ${formatY(pt.y)}${range ? ` (${rangeText(limits, pt.x, formatY, " to ")})` : ""}`);
+  const readoutText = (pt: Point) =>
+    typeof readout === "function"
+      ? readout(pt)
+      : `${formatX(pt.x)}: ${formatY(pt.y)}${range ? ` (${rangeText(limits, pt.x, formatY, " to ")})` : ""}`;
   const nearest = (px: number) => {
     const target = xMin + ((px - pad.left) / (w || 1)) * (xMax - xMin || 1);
     let best = 0;
-    for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].x - target) < Math.abs(sorted[best].x - target)) best = i;
+    for (let i = 1; i < sorted.length; i++)
+      if (Math.abs(sorted[i].x - target) < Math.abs(sorted[best].x - target)) best = i;
     return best;
   };
   /** The value of the line at x, read between the two readings either side (flat beyond the ends). */
@@ -583,7 +702,10 @@ export function LineChart({
     setHover(null); // the key takes over from a pointer left resting on the plot
     setKbd(next);
   };
-  const flip = (px: number, text: string) => (px + labelWidth(text) + 16 > width ? { x: px - 8, anchor: "end" as const } : { x: px + 8, anchor: "start" as const });
+  const flip = (px: number, text: string) =>
+    px + labelWidth(text) + 16 > width
+      ? { x: px - 8, anchor: "end" as const }
+      : { x: px + 8, anchor: "start" as const };
 
   return (
     <figure className={cn("grid min-w-0 gap-2", className)}>
@@ -593,13 +715,34 @@ export function LineChart({
             {plot}
             {currentAt && (
               <g aria-hidden>
-                <line x1={sx(currentAt.x)} x2={sx(currentAt.x)} y1={pad.top} y2={pad.top + h} stroke="var(--primary)" strokeWidth={1.5} />
-                <circle cx={sx(currentAt.x)} cy={sy(currentAt.y)} r={4} fill="var(--background)" stroke="var(--primary)" strokeWidth={2} />
+                <line
+                  x1={sx(currentAt.x)}
+                  x2={sx(currentAt.x)}
+                  y1={pad.top}
+                  y2={pad.top + h}
+                  stroke="var(--primary)"
+                  strokeWidth={1.5}
+                />
+                <circle
+                  cx={sx(currentAt.x)}
+                  cy={sy(currentAt.y)}
+                  r={4}
+                  fill="var(--background)"
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                />
                 {(() => {
-                  const text = formatCurrent ? formatCurrent(currentAt) : `${formatX(currentAt.x)}: ${formatY(currentAt.y)}`;
+                  const text = formatCurrent
+                    ? formatCurrent(currentAt)
+                    : `${formatX(currentAt.x)}: ${formatY(currentAt.y)}`;
                   const at = flip(sx(currentAt.x), text);
                   return (
-                    <text x={at.x} y={pad.top + 12} textAnchor={at.anchor} className="fill-foreground type-caption tabular-nums">
+                    <text
+                      x={at.x}
+                      y={pad.top + 12}
+                      textAnchor={at.anchor}
+                      className="fill-foreground type-caption tabular-nums"
+                    >
                       {text}
                     </text>
                   );
@@ -608,13 +751,36 @@ export function LineChart({
             )}
             {otherAt && (!log || otherAt.y > 0) && (
               <g aria-hidden>
-                <line x1={sx(otherAt.x)} x2={sx(otherAt.x)} y1={pad.top} y2={pad.top + h} stroke="var(--muted-foreground)" strokeWidth={1} strokeDasharray="2 3" />
-                <circle cx={sx(otherAt.x)} cy={sy(otherAt.y)} r={4} fill="var(--background)" stroke="var(--foreground)" strokeWidth={2} />
+                <line
+                  x1={sx(otherAt.x)}
+                  x2={sx(otherAt.x)}
+                  y1={pad.top}
+                  y2={pad.top + h}
+                  stroke="var(--muted-foreground)"
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                />
+                <circle
+                  cx={sx(otherAt.x)}
+                  cy={sy(otherAt.y)}
+                  r={4}
+                  fill="var(--background)"
+                  stroke="var(--foreground)"
+                  strokeWidth={2}
+                />
                 {(() => {
                   const text = `${formatX(otherAt.x)}: ${formatY(otherAt.y)}`;
                   const at = flip(sx(otherAt.x), text);
                   return (
-                    <text x={at.x} y={sy(otherAt.y) - 10} textAnchor={at.anchor} className="fill-foreground type-caption tabular-nums" paintOrder="stroke" stroke="var(--background)" strokeWidth={3}>
+                    <text
+                      x={at.x}
+                      y={sy(otherAt.y) - 10}
+                      textAnchor={at.anchor}
+                      className="fill-foreground type-caption tabular-nums"
+                      paintOrder="stroke"
+                      stroke="var(--background)"
+                      strokeWidth={3}
+                    >
                       {text}
                     </text>
                   );
@@ -623,13 +789,29 @@ export function LineChart({
             )}
             {active && (
               <g aria-hidden>
-                <line x1={sx(active.x)} x2={sx(active.x)} y1={pad.top} y2={pad.top + h} stroke="var(--muted-foreground)" strokeWidth={1} strokeDasharray="2 3" />
+                <line
+                  x1={sx(active.x)}
+                  x2={sx(active.x)}
+                  y1={pad.top}
+                  y2={pad.top + h}
+                  stroke="var(--muted-foreground)"
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                />
                 <circle cx={sx(active.x)} cy={sy(active.y)} r={4} fill="var(--foreground)" />
                 {(() => {
                   const text = readoutText(active);
                   const at = flip(sx(active.x), text);
                   return (
-                    <text x={at.x} y={sy(active.y) - 10} textAnchor={at.anchor} className="fill-foreground type-label tabular-nums" paintOrder="stroke" stroke="var(--background)" strokeWidth={3}>
+                    <text
+                      x={at.x}
+                      y={sy(active.y) - 10}
+                      textAnchor={at.anchor}
+                      className="fill-foreground type-label tabular-nums"
+                      paintOrder="stroke"
+                      stroke="var(--background)"
+                      strokeWidth={3}
+                    >
                       {text}
                     </text>
                   );
@@ -698,11 +880,25 @@ export function LineChart({
             {sp.label}
           </span>
         ))}
-        {undrawn > 0 && <span>{undrawn === 1 ? "1 reading at or below zero is not drawn" : `${undrawn} readings at or below zero are not drawn`}</span>}
+        {undrawn > 0 && (
+          <span>
+            {undrawn === 1
+              ? "1 reading at or below zero is not drawn"
+              : `${undrawn} readings at or below zero are not drawn`}
+          </span>
+        )}
         {planned && plannedLabel && (
           <span className="inline-flex items-center gap-2">
             <svg width="16" height="2" aria-hidden>
-              <line x1="0" x2="16" y1="1" y2="1" stroke="var(--muted-foreground)" strokeWidth={1.5} strokeDasharray="4 4" />
+              <line
+                x1="0"
+                x2="16"
+                y1="1"
+                y2="1"
+                stroke="var(--muted-foreground)"
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+              />
             </svg>
             {plannedLabel}
           </span>
@@ -712,7 +908,6 @@ export function LineChart({
     </figure>
   );
 }
-
 
 type MarkButtonsProps = {
   marks: readonly ChartMark[];
@@ -789,7 +984,19 @@ type ReadingSliderProps = {
 };
 
 /** The slider over the plot: React Aria's hooks, snapped to the readings, with the reading as its spoken value. */
-function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyDownCapture, onHover, onFocusChange, domain, box }: ReadingSliderProps) {
+function ReadingSlider({
+  label,
+  sorted,
+  selected,
+  text,
+  onSelect,
+  onPick,
+  onKeyDownCapture,
+  onHover,
+  onFocusChange,
+  domain,
+  box,
+}: ReadingSliderProps) {
   const track = React.useRef<HTMLDivElement>(null);
   const input = React.useRef<HTMLInputElement>(null);
   const lo = domain[0];
@@ -801,7 +1008,11 @@ function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyD
   };
   const spoken = React.useMemo(() => {
     const say = (x: number) => text(sorted[indexAt(x)]);
-    return { format: say, formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`, resolvedOptions: () => ({ locale: "en-US" }) } as unknown as Intl.NumberFormat;
+    return {
+      format: say,
+      formatRange: (a: number, b: number) => `${say(a)} to ${say(b)}`,
+      resolvedOptions: () => ({ locale: "en-US" }),
+    } as unknown as Intl.NumberFormat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorted, text]);
   const state = useSliderState({
@@ -814,7 +1025,10 @@ function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyD
     numberFormatter: spoken,
   });
   const { groupProps, trackProps } = useSlider({ "aria-label": label }, state, track);
-  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: track, inputRef: input, "aria-label": label }, state);
+  const { thumbProps, inputProps } = useSliderThumb(
+    { index: 0, trackRef: track, inputRef: input, "aria-label": label },
+    state,
+  );
   const { focusProps, isFocusVisible } = useFocusRing();
   return (
     <div {...groupProps} className="absolute" style={box}>
@@ -823,13 +1037,19 @@ function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyD
         ref={track}
         onPointerMove={(e) => onHover(e.clientX - e.currentTarget.getBoundingClientRect().left + box.left)}
         onPointerLeave={() => onHover(null)}
-        className={cn("relative size-full cursor-crosshair touch-none", isFocusVisible && "outline-2 outline-offset-2 outline-ring")}
+        className={cn(
+          "relative size-full cursor-crosshair touch-none",
+          isFocusVisible && "outline-2 outline-offset-2 outline-ring",
+        )}
       >
         <div {...thumbProps} className="absolute inset-y-0 w-0" style={{ left: `${state.getThumbPercent(0) * 100}%` }}>
           <VisuallyHidden>
             <input
               ref={input}
-              {...mergeProps(inputProps, focusProps, { onFocus: () => onFocusChange(true), onBlur: () => onFocusChange(false) })}
+              {...mergeProps(inputProps, focusProps, {
+                onFocus: () => onFocusChange(true),
+                onBlur: () => onFocusChange(false),
+              })}
               aria-labelledby={undefined}
               onKeyDownCapture={(e) => {
                 onKeyDownCapture(e);
@@ -843,9 +1063,11 @@ function ReadingSlider({ label, sorted, selected, text, onSelect, onPick, onKeyD
   );
 }
 
-
 /** One chart of a `LineChartGroup`: the props that differ per chart. The group owns the x axis, the cursor, `current` and `onPick`. */
-export type GroupedChart = Omit<LineChartProps, "formatX" | "xLabel" | "xTicks" | "xDomain" | "xAxis" | "current" | "onPick" | "cursor" | "readout" | "label"> & {
+export type GroupedChart = Omit<
+  LineChartProps,
+  "formatX" | "xLabel" | "xTicks" | "xDomain" | "xAxis" | "current" | "onPick" | "cursor" | "readout" | "label"
+> & {
   /** Names this chart in the group's reading and its own accessible name. Default `seriesLabel`. */
   label?: string;
 };
@@ -874,11 +1096,25 @@ export type LineChartGroupProps = {
  * together, and announced as one sentence, politely, at most once a second). Inside a `CursorScope`
  * already, it joins that scope (a map beside the charts moves with them); otherwise it makes its own.
  */
-export function LineChartGroup({ label, charts, formatX, xLabel, xTicks, spans, marks, onMarkSelect, renderMarkCard, current, onPick, className }: LineChartGroupProps) {
+export function LineChartGroup({
+  label,
+  charts,
+  formatX,
+  xLabel,
+  xTicks,
+  spans,
+  marks,
+  onMarkSelect,
+  renderMarkCard,
+  current,
+  onPick,
+  className,
+}: LineChartGroupProps) {
   const inScope = useSharedCursor() !== null;
   const xs = charts.flatMap((c) => [...c.series, ...(c.planned ?? [])].map((p) => p.x));
   const domain: [number, number] = [Math.min(...xs), Math.max(...xs)];
-  const say = (x: number) => `${formatX(x)}: ${charts.map((c) => `${c.label ?? c.seriesLabel} ${c.formatY(valueAt(c.series, x))}`).join(", ")}`;
+  const say = (x: number) =>
+    `${formatX(x)}: ${charts.map((c) => `${c.label ?? c.seriesLabel} ${c.formatY(valueAt(c.series, x))}`).join(", ")}`;
   const stack = (
     <div role="group" aria-label={label} className={cn("grid min-w-0 gap-1", className)}>
       {charts.map((c, i) => (

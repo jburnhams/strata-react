@@ -36,15 +36,7 @@ function load(durationA: number, durationB: number) {
 }
 function Harness(props: Partial<React.ComponentProps<typeof CompareAudio>>) {
   return (
-    <CompareAudio
-      label="Pair 1, two clips"
-      a={a}
-      b={b}
-      blind
-      missing="Clip not found"
-      measure={measure}
-      {...props}
-    />
+    <CompareAudio label="Pair 1, two clips" a={a} b={b} blind missing="Clip not found" measure={measure} {...props} />
   );
 }
 
@@ -109,9 +101,7 @@ describe("CompareAudio", () => {
   it("matches loudness by turning the louder clip down, and says so by label", async () => {
     renderWithStrata(<Harness />);
     load(10, 10);
-    expect(
-      await screen.findByText("A is louder than B, so it is turned down by 3.0 dB."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("A is louder than B, so it is turned down by 3.0 dB.")).toBeInTheDocument();
     // The volume is applied in an effect after the render that drew the line, which may run a tick later.
     await waitFor(() => expect(audioOf("A").volume).toBeCloseTo(10 ** (-3 / 20), 3));
     expect(audioOf("B").volume).toBe(1);
@@ -128,9 +118,7 @@ describe("CompareAudio", () => {
 
   it("says so when the levels cannot be measured, and plays them as they are", async () => {
     renderWithStrata(<Harness measure={async () => Promise.reject(new Error("no"))} />);
-    expect(
-      await screen.findByText("Could not measure the levels, so the clips are not matched."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Could not measure the levels, so the clips are not matched.")).toBeInTheDocument();
     expect(audioOf("A").volume).toBe(1);
   });
 
@@ -223,8 +211,7 @@ describe("CompareAudio", () => {
 
   it("never writes the id or the note of a blind pair, and shows them when it is not blind", () => {
     const { container, rerender } = renderWithStrata(<Harness />);
-    for (const secret of ["model-x", "model-y", "secret-note"])
-      expect(container.innerHTML).not.toContain(secret);
+    for (const secret of ["model-x", "model-y", "secret-note"]) expect(container.innerHTML).not.toContain(secret);
     rerender(<Harness blind={false} />);
     expect(screen.getByText("A: secret-note")).toBeInTheDocument();
   });
@@ -238,10 +225,7 @@ describe("CompareAudio", () => {
   it("takes extra shortcuts into the one legend, and the vote bar into its footer", async () => {
     let pressed = 0;
     renderWithStrata(
-      <Harness
-        extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]}
-        footer={<p>Vote bar</p>}
-      />,
+      <Harness extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]} footer={<p>Vote bar</p>} />,
     );
     await userEvent.keyboard("a");
     expect(pressed).toBe(1);
@@ -260,9 +244,7 @@ describe("PairJudge around CompareAudio", () => {
         empty={<p>None</p>}
         onAnswer={(x) => answers.push(x.answer)}
         pending={false}
-        view={(slot, p) => (
-          <CompareAudio {...p} {...slot} blind missing="Clip not found" measure={measure} />
-        )}
+        view={(slot, p) => <CompareAudio {...p} {...slot} blind missing="Clip not found" measure={measure} />}
       />,
     );
     await userEvent.keyboard("b");

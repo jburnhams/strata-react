@@ -64,9 +64,7 @@ function Pages() {
   });
   return (
     <>
-      <p data-testid="ids">
-        {load.status === "ready" ? load.data.map((i) => i.id).join(",") : load.status}
-      </p>
+      <p data-testid="ids">{load.status === "ready" ? load.data.map((i) => i.id).join(",") : load.status}</p>
       <button disabled={!load.more.hasMore} onClick={load.more.loadMore}>
         More
       </button>

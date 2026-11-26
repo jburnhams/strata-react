@@ -50,12 +50,7 @@ describe("PairVote", () => {
     await userEvent.click(screen.getByRole("button", { name: "Prefer B" }));
     await userEvent.click(screen.getByRole("button", { name: "About the same" }));
     await userEvent.click(screen.getByRole("button", { name: "Can't tell" }));
-    expect(answers).toEqual([
-      { answer: "a" },
-      { answer: "b" },
-      { answer: "tie" },
-      { answer: "skip" },
-    ]);
+    expect(answers).toEqual([{ answer: "a" }, { answer: "b" }, { answer: "tie" }, { answer: "skip" }]);
   });
 
   it("answers from the keyboard, and shows the keys in Compare's one legend", async () => {
@@ -98,10 +93,7 @@ describe("PairVote", () => {
   it("flags a pair with a reason", async () => {
     const answers: PairAnswer[] = [];
     renderWithStrata(
-      <Harness
-        flagReasons={["Picture missing", "Not the same scene"]}
-        onAnswer={(x) => answers.push(x)}
-      />,
+      <Harness flagReasons={["Picture missing", "Not the same scene"]} onAnswer={(x) => answers.push(x)} />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Flag this pair" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Not the same scene" }));
@@ -115,9 +107,7 @@ describe("PairVote", () => {
     rerender(<Harness pair={{ status: "ready", data: null }} />);
     expect(screen.getByText("Nothing left to judge")).toBeInTheDocument();
     rerender(<Harness pair={{ status: "error", message: "The pairs did not load.", retry }} />);
-    await userEvent.click(
-      within(screen.getByRole("alert")).getByRole("button", { name: "Try again" }),
-    );
+    await userEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Try again" }));
     expect(retry).toHaveBeenCalled();
   });
 
@@ -146,10 +136,7 @@ describe("PairVote", () => {
       }),
     ).toBeInTheDocument();
     rerender(
-      <Harness
-        pair={{ status: "ready", data: null }}
-        last={{ text: "You preferred A.", onUndo: () => undefined }}
-      />,
+      <Harness pair={{ status: "ready", data: null }} last={{ text: "You preferred A.", onUndo: () => undefined }} />,
     );
     expect(container.querySelectorAll("button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();

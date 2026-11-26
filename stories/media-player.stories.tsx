@@ -1,6 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Button, MediaContents, MediaPlayer, SpanStrip, SPEECH_RATES, useMediaElement, SeekBar, TimeReadout, type MediaElementState, type MediaSource, type MediaSpanData, type SpanKind } from "../src";
+import {
+  Button,
+  MediaContents,
+  MediaPlayer,
+  SpanStrip,
+  SPEECH_RATES,
+  useMediaElement,
+  SeekBar,
+  TimeReadout,
+  type MediaElementState,
+  type MediaSource,
+  type MediaSpanData,
+  type SpanKind,
+} from "../src";
 import { silentWav } from "./fixtures/media";
 import clipSrc from "./fixtures/video/a.webm?url";
 
@@ -11,13 +24,19 @@ import clipSrc from "./fixtures/video/a.webm?url";
 
 const useWav = (seconds: number) => React.useMemo(() => silentWav(seconds), [seconds]);
 
-const meta = { title: "Actions/Media player", component: MediaPlayer, parameters: { layout: "padded" } } satisfies Meta<typeof MediaPlayer>;
+const meta = { title: "Actions/Media player", component: MediaPlayer, parameters: { layout: "padded" } } satisfies Meta<
+  typeof MediaPlayer
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 function One(props: Partial<React.ComponentProps<typeof MediaPlayer>>) {
   const src = useWav(245);
-  return <div className="max-w-3xl"><MediaPlayer label="Kiln walk-through recording" src={src} controls="strata" {...props} /></div>;
+  return (
+    <div className="max-w-3xl">
+      <MediaPlayer label="Kiln walk-through recording" src={src} controls="strata" {...props} />
+    </div>
+  );
 }
 
 /** One file with Strata's controls: seek bar and time, play, speed, volume. The element is hidden; the browser's own bar is `controls="native"`. */
@@ -32,7 +51,11 @@ const titles = ["Loading the kiln", "Reading the cones", "Cooling down"];
 function Book({ index }: { index?: number }) {
   const urls = [useWav(chapterLengths[0]), useWav(chapterLengths[1]), useWav(chapterLengths[2])];
   const sources: MediaSource[] = urls.map((src, i) => ({ src, title: titles[i], duration: chapterLengths[i] }));
-  return <div className="max-w-3xl"><MediaPlayer label="A potter's year" sources={sources} index={index} controls="strata" /></div>;
+  return (
+    <div className="max-w-3xl">
+      <MediaPlayer label="A potter's year" sources={sources} index={index} controls="strata" />
+    </div>
+  );
 }
 
 /** Chapters: the seek bar spans the whole book with a mark at each chapter; ending moves to the next and keeps playing on the same element. */
@@ -42,10 +65,21 @@ export const Chapters: Story = { args: { label: "x" }, render: () => <Book /> };
 export const ThirdChapter: Story = { args: { label: "x" }, render: () => <Book index={2} /> };
 
 /** The browser's own controls: lock screen and headset, AirPlay and Cast, picture in picture. The hook still reads the element. Skipped by the visual suite: the bar is the browser's own and draws differently in each. */
-export const NativeControls: Story = { tags: ["no-visual"], args: { label: "x" }, render: () => <One controls="native" /> };
+export const NativeControls: Story = {
+  tags: ["no-visual"],
+  args: { label: "x" },
+  render: () => <One controls="native" />,
+};
 
 /** A file that will not load says so in words, with Try again. */
-export const CouldNotLoad: Story = { args: { label: "x" }, render: () => <div className="max-w-3xl"><MediaPlayer label="Firing log, 4 November" src="media/does-not-exist.mp3" controls="strata" /></div> };
+export const CouldNotLoad: Story = {
+  args: { label: "x" },
+  render: () => (
+    <div className="max-w-3xl">
+      <MediaPlayer label="Firing log, 4 November" src="media/does-not-exist.mp3" controls="strata" />
+    </div>
+  ),
+};
 
 /** Phone width: the controls wrap, and `controls="auto"` would hand a touch device the browser's bar. */
 export const Phone: Story = { ...OneFile, tags: ["visual-phone"] };
@@ -61,7 +95,9 @@ function Reader() {
         <SeekBar time={media.time} duration={media.duration} onSeek={media.seek} label="Our own seek bar" />
         <TimeReadout time={media.time} duration={media.duration} />
       </div>
-      <p className="type-body-sm text-muted-foreground">{media.playing ? "Playing" : "Not playing"}: the browser draws its bar, the app reads the same element.</p>
+      <p className="type-body-sm text-muted-foreground">
+        {media.playing ? "Playing" : "Not playing"}: the browser draws its bar, the app reads the same element.
+      </p>
     </div>
   );
 }
@@ -93,19 +129,44 @@ const colourKinds: Record<string, SpanKind> = {
   intro: { label: "Intro", colour: "--seg-intro" },
   filler: { label: "Filler", colour: "--seg-filler" },
 };
-const colourSpans: MediaSpanData[] = [{ start: 0, end: 12, kind: "intro" }, { start: 40, end: 70, kind: "sponsor" }, { start: 120, end: 150, kind: "filler" }];
+const colourSpans: MediaSpanData[] = [
+  { start: 0, end: 12, kind: "intro" },
+  { start: 40, end: 70, kind: "sponsor" },
+  { start: 120, end: 150, kind: "filler" },
+];
 // The app's theme names these; here, three of the fixture theme's own roles.
-const segmentColours = { "--seg-sponsor": "var(--color-heat-orange)", "--seg-intro": "var(--color-heat-cherry)", "--seg-filler": "var(--color-heat-yellow)" } as React.CSSProperties;
+const segmentColours = {
+  "--seg-sponsor": "var(--color-heat-orange)",
+  "--seg-intro": "var(--color-heat-cherry)",
+  "--seg-filler": "var(--color-heat-yellow)",
+} as React.CSSProperties;
 
 /** A kind names a colour of the app's theme (`colour: "--seg-sponsor"`) instead of one of the five tones; each range also carries `data-kind`. The name and times stay the carrier. */
-export const SpanColours: Story = { args: { label: "x" }, render: () => <div style={segmentColours}><One spans={colourSpans} spanKinds={colourKinds} /></div> };
+export const SpanColours: Story = {
+  args: { label: "x" },
+  render: () => (
+    <div style={segmentColours}>
+      <One spans={colourSpans} spanKinds={colourKinds} />
+    </div>
+  ),
+};
 
 /** Under the browser's own controls (a touch device, or `controls="native"`) the seek bar is the browser's and cannot draw the spans, so a thin strip under the picture does, named as the bar's ranges are. Shown here on its own. */
 export const SpanStripUnderNativeControls: Story = {
   args: { label: "x" },
   render: () => (
     <div className="grid max-w-3xl gap-2" style={segmentColours}>
-      <SpanStrip label="Marked parts of Episode 4" duration={245} spans={colourSpans.map((s) => ({ start: s.start, end: s.end, label: colourKinds[s.kind].label, kind: s.kind, colour: colourKinds[s.kind].colour }))} />
+      <SpanStrip
+        label="Marked parts of Episode 4"
+        duration={245}
+        spans={colourSpans.map((s) => ({
+          start: s.start,
+          end: s.end,
+          label: colourKinds[s.kind].label,
+          kind: s.kind,
+          colour: colourKinds[s.kind].colour,
+        }))}
+      />
     </div>
   ),
 };
@@ -119,7 +180,17 @@ export const SpanBehaviours: Story = {
   args: { label: "x" },
   render: () => (
     <div className="max-w-3xl">
-      <MediaPlayer label="Episode 4" kind="video" src={clipSrc} controls="strata" spans={[{ start: 0, end: 1, kind: "intro" }, { start: 1.2, end: 1.8, kind: "recap" }]} spanKinds={spanKinds} />
+      <MediaPlayer
+        label="Episode 4"
+        kind="video"
+        src={clipSrc}
+        controls="strata"
+        spans={[
+          { start: 0, end: 1, kind: "intro" },
+          { start: 1.2, end: 1.8, kind: "recap" },
+        ]}
+        spanKinds={spanKinds}
+      />
     </div>
   ),
 };
@@ -133,8 +204,16 @@ export const OverlayAndState: Story = {
     return (
       <div className="grid max-w-3xl gap-2">
         <MediaPlayer
-          label="Kiln cam" kind="video" src={clipSrc} controls="strata" mediaRef={state}
-          overlay={(m) => <p className="absolute top-3 left-3 rounded-control bg-background px-2 py-1 type-caption tabular-nums">{m.time.toFixed(1)} s</p>}
+          label="Kiln cam"
+          kind="video"
+          src={clipSrc}
+          controls="strata"
+          mediaRef={state}
+          overlay={(m) => (
+            <p className="absolute top-3 left-3 rounded-control bg-background px-2 py-1 type-caption tabular-nums">
+              {m.time.toFixed(1)} s
+            </p>
+          )}
         />
         <Button onClick={() => state.current?.seek(1)}>Jump to 1 s</Button>
       </div>
@@ -158,7 +237,15 @@ export const FileChapters: Story = {
     return (
       <div className="grid max-w-3xl gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <One marks={firingMarks} mediaRef={player} onTimeUpdate={(t) => setTime(Math.floor(t))} />
-        <MediaContents label="Parts of the walk-through" items={firingParts} time={time} onSeek={(t) => { setTime(t); player.current?.seek(t); }} />
+        <MediaContents
+          label="Parts of the walk-through"
+          items={firingParts}
+          time={time}
+          onSeek={(t) => {
+            setTime(t);
+            player.current?.seek(t);
+          }}
+        />
       </div>
     );
   },
@@ -181,7 +268,11 @@ export const ScenesAndChapters: Story = {
 /** A file with no marks skips by time (10 s and 1 min, or the app's `skip`), and a video with a frame rate (`fps`) gets Back one frame and Forward one frame beside Play. */
 export const FrameSteps: Story = {
   args: { label: "x" },
-  render: () => <div className="max-w-3xl"><MediaPlayer label="Kiln cam" kind="video" src={clipSrc} fps={25} controls="strata" /></div>,
+  render: () => (
+    <div className="max-w-3xl">
+      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} fps={25} controls="strata" />
+    </div>
+  ),
 };
 
 /** A video that follows the reader (issue #387): play it, then scroll down; once it is off the top of the screen the picture floats in the corner with its own seek bar, Play, Back to the player and Close. */
@@ -190,9 +281,18 @@ export const Floating: Story = {
   args: { label: "x" },
   render: () => (
     <div className="grid max-w-3xl gap-6">
-      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" float marks={[{ time: 1, label: "The door opens" }]} />
+      <MediaPlayer
+        label="Kiln cam"
+        kind="video"
+        src={clipSrc}
+        controls="strata"
+        float
+        marks={[{ time: 1, label: "The door opens" }]}
+      />
       {Array.from({ length: 30 }, (_, i) => (
-        <p key={i} className="type-body text-muted-foreground">Notes on the firing, part {i + 1}. Scroll on with the video playing and it stays in sight in the corner.</p>
+        <p key={i} className="type-body text-muted-foreground">
+          Notes on the firing, part {i + 1}. Scroll on with the video playing and it stays in sight in the corner.
+        </p>
       ))}
     </div>
   ),
@@ -202,7 +302,11 @@ export const Floating: Story = {
 export const VideoPhone: Story = {
   tags: ["visual-phone"],
   args: { label: "x" },
-  render: () => <div className="w-80"><MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" /></div>,
+  render: () => (
+    <div className="w-80">
+      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" />
+    </div>
+  ),
 };
 
 /** What is playing across the top of a video (issue #329): the title and who made it, each a link, and their picture (here none, so a letter). Shown while paused and for 3 s after the pointer moves, a key is pressed or playing starts; hidden with the controls. */
@@ -210,7 +314,13 @@ export const Heading: Story = {
   args: { label: "x" },
   render: () => (
     <div className="max-w-3xl">
-      <MediaPlayer label="Kiln cam" kind="video" src={clipSrc} controls="strata" heading={{ title: "Glazing a celadon bowl", to: "/", subtitle: "Kiln room", subtitleTo: "/", avatar: null }} />
+      <MediaPlayer
+        label="Kiln cam"
+        kind="video"
+        src={clipSrc}
+        controls="strata"
+        heading={{ title: "Glazing a celadon bowl", to: "/", subtitle: "Kiln room", subtitleTo: "/", avatar: null }}
+      />
     </div>
   ),
 };

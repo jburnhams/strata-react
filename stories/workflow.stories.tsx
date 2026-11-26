@@ -1,5 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataView, JobStatus, JobsTable, Skeleton, WorkflowSteps, fetchJson, useWorkflowRun, type WorkflowStepsProps } from "../src";
+import {
+  DataView,
+  JobStatus,
+  JobsTable,
+  Skeleton,
+  WorkflowSteps,
+  fetchJson,
+  useWorkflowRun,
+  type WorkflowStepsProps,
+} from "../src";
 import { describeJob, firingRuns, studioJobs, workflowNow, type StageRun, type WorkflowRun } from "./fixtures/workflow";
 import { api } from "./mocks/handlers";
 
@@ -38,7 +47,9 @@ export const Failed: Story = { args: { stages: firingRuns.failed.stages } };
 /** Every stage done; the inspection was passed by the studio's policy. */
 export const Done: Story = { args: { stages: firingRuns.done.stages } };
 /** The studio's own words for the states. */
-export const OwnWords: Story = { args: { stages: firingRuns.done.stages, words: { approved: "Passed", done: "Finished" } } };
+export const OwnWords: Story = {
+  args: { stages: firingRuns.done.stages, words: { approved: "Passed", done: "Finished" } },
+};
 /** On a phone: the word wraps under a long title. */
 export const NeedsReviewPhone: Story = { args: { stages: firingRuns.waiting.stages }, tags: ["visual-phone"] };
 
@@ -83,6 +94,15 @@ export const FromTheApi: Story = { render: () => <FromApi />, tags: ["no-visual"
 
 /** The queue's jobs (`GET /api/jobs`): each state as a word, Cancel or Run again where it applies. */
 export const Jobs: Story = {
-  render: () => <JobsTable caption="Studio jobs" jobs={studioJobs} describe={describeJob} now={workflowNow} onCancel={resolve} onRetry={resolve} />,
+  render: () => (
+    <JobsTable
+      caption="Studio jobs"
+      jobs={studioJobs}
+      describe={describeJob}
+      now={workflowNow}
+      onCancel={resolve}
+      onRetry={resolve}
+    />
+  ),
   tags: ["visual-wide"],
 };

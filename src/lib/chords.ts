@@ -38,7 +38,11 @@ export function parseChord(chord: string, platform: Platform = detectPlatform())
 const symbol = (key: string) => key.length === 1 && key.toUpperCase() === key.toLowerCase();
 
 /** Whether a key event is this chord. Exact on Ctrl, Meta and Alt; Shift is exact for letters and named keys. */
-export function matchesChord(e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">, chord: string, platform: Platform = detectPlatform()): boolean {
+export function matchesChord(
+  e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">,
+  chord: string,
+  platform: Platform = detectPlatform(),
+): boolean {
   const c = parseChord(chord, platform);
   if (e.ctrlKey !== c.ctrl || e.metaKey !== c.meta || e.altKey !== c.alt) return false;
   if (!symbol(c.key) && e.shiftKey !== c.shift) return false;
@@ -66,15 +70,37 @@ const NAMES: Record<string, { mac: string; other: string }> = {
 export function formatChord(chord: string, platform: Platform = detectPlatform()): string {
   const c = parseChord(chord, platform);
   const key = NAMES[c.key]?.[platform] ?? (c.key.length === 1 ? c.key.toUpperCase() : c.key);
-  if (platform === "mac") return `${c.ctrl ? "⌃" : ""}${c.alt ? "⌥" : ""}${c.shift ? "⇧" : ""}${c.meta ? "⌘" : ""}${key}`;
+  if (platform === "mac")
+    return `${c.ctrl ? "⌃" : ""}${c.alt ? "⌥" : ""}${c.shift ? "⇧" : ""}${c.meta ? "⌘" : ""}${key}`;
   return [c.ctrl && "Ctrl", c.meta && "Meta", c.alt && "Alt", c.shift && "Shift", key].filter(Boolean).join("+");
 }
 
 // Chords the browser or the OS uses for itself. An app takes one over only on purpose (`claim` on
 // the command): silently stealing Ctrl+S from a person who wanted the browser's own is a choice.
 const RESERVED = [
-  "Mod+S", "Mod+P", "Mod+F", "Mod+G", "Mod+O", "Mod+N", "Mod+T", "Mod+W", "Mod+R", "Mod+L", "Mod+D", "Mod+Q", "Mod+H",
-  "Mod+J", "Mod+U", "Mod+Shift+T", "Mod+Shift+N", "Mod+Shift+W", "Alt+ArrowLeft", "Alt+ArrowRight", "F5", "F11", "F12",
+  "Mod+S",
+  "Mod+P",
+  "Mod+F",
+  "Mod+G",
+  "Mod+O",
+  "Mod+N",
+  "Mod+T",
+  "Mod+W",
+  "Mod+R",
+  "Mod+L",
+  "Mod+D",
+  "Mod+Q",
+  "Mod+H",
+  "Mod+J",
+  "Mod+U",
+  "Mod+Shift+T",
+  "Mod+Shift+N",
+  "Mod+Shift+W",
+  "Alt+ArrowLeft",
+  "Alt+ArrowRight",
+  "F5",
+  "F11",
+  "F12",
 ];
 
 /** Whether the browser uses this chord for itself, so a command may take it only with `claim`. */
@@ -82,6 +108,12 @@ export function isReservedChord(chord: string, platform: Platform = detectPlatfo
   const c = parseChord(chord, platform);
   return RESERVED.some((r) => {
     const p = parseChord(r, platform);
-    return p.ctrl === c.ctrl && p.meta === c.meta && p.alt === c.alt && p.shift === c.shift && p.key.toLowerCase() === c.key.toLowerCase();
+    return (
+      p.ctrl === c.ctrl &&
+      p.meta === c.meta &&
+      p.alt === c.alt &&
+      p.shift === c.shift &&
+      p.key.toLowerCase() === c.key.toLowerCase()
+    );
   });
 }

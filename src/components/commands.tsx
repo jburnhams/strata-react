@@ -72,7 +72,11 @@ export type Command = {
 };
 
 /** What goes in a menu: a command, a separator, a titled group, or a submenu. */
-export type MenuEntry = Command | "separator" | { group: string; items: Command[] } | { submenu: string; items: MenuEntry[] };
+export type MenuEntry =
+  | Command
+  | "separator"
+  | { group: string; items: Command[] }
+  | { submenu: string; items: MenuEntry[] };
 
 /** The text of a command's label, whether it is a string or a function. */
 export const labelOf = (c: Command) => (typeof c.label === "function" ? c.label() : c.label);
@@ -126,11 +130,14 @@ function warnOnClashes(commands: readonly Command[], platform: Platform) {
     for (const k of c.keys ?? []) {
       const shown = formatChord(k, platform);
       const other = seen.get(shown);
-      if (other && other !== c.id) console.warn(`strata-react: "${shown}" is bound to both "${other}" and "${c.id}"; the first wins.`);
+      if (other && other !== c.id)
+        console.warn(`strata-react: "${shown}" is bound to both "${other}" and "${c.id}"; the first wins.`);
       else seen.set(shown, c.id);
     }
     if (c.keys?.some((k) => isReservedChord(k, platform)) && !c.claim) {
-      console.warn(`strata-react: "${c.id}" uses a chord the browser keeps for itself; add \`claim: true\` to take it over.`);
+      console.warn(
+        `strata-react: "${c.id}" uses a chord the browser keeps for itself; add \`claim: true\` to take it over.`,
+      );
     }
   }
 }
@@ -155,7 +162,13 @@ export function CommandLegend({
   const where = platform ?? detectPlatform();
   const shown = commands.filter((c) => c.keys?.length);
   return (
-    <dl aria-label={label} className={cn("flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground pointer-coarse:hidden", className)}>
+    <dl
+      aria-label={label}
+      className={cn(
+        "flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground pointer-coarse:hidden",
+        className,
+      )}
+    >
       {shown.map((c) => (
         <div key={c.id} className={cn("flex items-center gap-1.5", isDisabled(c) && "opacity-50")}>
           <dt>
@@ -191,13 +204,25 @@ function Item({ command, platform }: { command: Command; platform: Platform }) {
       {({ isSelected, selectionMode }) => (
         <>
           {selectionMode !== "none" ? (
-            <span aria-hidden className="grid size-4 shrink-0 place-items-center">{isSelected && <Check className="size-4" />}</span>
+            <span aria-hidden className="grid size-4 shrink-0 place-items-center">
+              {isSelected && <Check className="size-4" />}
+            </span>
           ) : (
             Icon && <Icon aria-hidden className="size-4 shrink-0" />
           )}
-          <Text slot="label" className="min-w-0 flex-1 truncate">{labelOf(command)}</Text>
-          {shortcut && <Keyboard className="ml-6 shrink-0 font-mono type-caption text-muted-foreground"><KeyText>{shortcut}</KeyText></Keyboard>}
-          {reason && <Text slot="description" className="w-full pl-6 type-caption text-muted-foreground">{reason}</Text>}
+          <Text slot="label" className="min-w-0 flex-1 truncate">
+            {labelOf(command)}
+          </Text>
+          {shortcut && (
+            <Keyboard className="ml-6 shrink-0 font-mono type-caption text-muted-foreground">
+              <KeyText>{shortcut}</KeyText>
+            </Keyboard>
+          )}
+          {reason && (
+            <Text slot="description" className="w-full pl-6 type-caption text-muted-foreground">
+              {reason}
+            </Text>
+          )}
         </>
       )}
     </MenuItem>
@@ -219,14 +244,18 @@ function Entries({ entries, platform }: { entries: readonly MenuEntry[]; platfor
               selectedKeys={checkable ? entry.items.filter((c) => c.checked).map((c) => c.id) : undefined}
             >
               <Header className="px-2 pt-1 type-caption text-muted-foreground">{entry.group}</Header>
-              {entry.items.map((c) => <Item key={c.id} command={c} platform={platform} />)}
+              {entry.items.map((c) => (
+                <Item key={c.id} command={c} platform={platform} />
+              ))}
             </MenuSection>
           );
         }
         return (
           <SubmenuTrigger key={`sub-${entry.submenu}`}>
             <MenuItem textValue={entry.submenu} className={itemClass}>
-              <Text slot="label" className="min-w-0 flex-1 truncate">{entry.submenu}</Text>
+              <Text slot="label" className="min-w-0 flex-1 truncate">
+                {entry.submenu}
+              </Text>
               <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             </MenuItem>
             <AriaPopover offset={0} crossOffset={-4} className={cn("layer-overlay min-w-48 p-1", overlaySurface)}>
@@ -316,7 +345,14 @@ export function ContextMenu({ label, items, children, platform, disabled }: Cont
       {at && (
         <span ref={anchor} aria-hidden style={{ position: "fixed", left: at.x, top: at.y, width: 0, height: 0 }} />
       )}
-      <AriaPopover triggerRef={anchor} isOpen={at !== null} onOpenChange={(o) => !o && setAt(null)} placement="bottom start" offset={0} className={surface}>
+      <AriaPopover
+        triggerRef={anchor}
+        isOpen={at !== null}
+        onOpenChange={(o) => !o && setAt(null)}
+        placement="bottom start"
+        offset={0}
+        className={surface}
+      >
         <AriaMenu aria-label={label} autoFocus="first" onAction={() => setAt(null)} className="outline-none">
           <Entries entries={items} platform={where} />
         </AriaMenu>
@@ -344,7 +380,14 @@ function flatten(entries: readonly MenuEntry[]): Command[] {
 }
 
 /** A searchable list of every command, opened by a chord (default Mod+K). Choosing one closes it and runs it; an unavailable command is shown with its reason and does nothing. */
-export function CommandMenu({ commands, open, onOpenChange, shortcut = "Mod+K", label = "Search commands", platform }: CommandMenuProps) {
+export function CommandMenu({
+  commands,
+  open,
+  onOpenChange,
+  shortcut = "Mod+K",
+  label = "Search commands",
+  platform,
+}: CommandMenuProps) {
   const where = platform ?? detectPlatform();
   const [own, setOwn] = React.useState(false);
   const isOpen = open ?? own;
@@ -367,25 +410,39 @@ export function CommandMenu({ commands, open, onOpenChange, shortcut = "Mod+K", 
   const { contains } = useFilter({ sensitivity: "base" });
   const all = flatten(commands);
   return (
-    <ModalOverlay isOpen={isOpen} onOpenChange={set} isDismissable className="layer-overlay fixed inset-0 grid justify-items-center overflow-hidden scrim p-4 pt-24">
+    <ModalOverlay
+      isOpen={isOpen}
+      onOpenChange={set}
+      isDismissable
+      className="layer-overlay fixed inset-0 grid justify-items-center overflow-hidden scrim p-4 pt-24"
+    >
       <Modal className={cn("flex max-h-full w-full max-w-lg flex-col self-start outline-none", overlaySurface)}>
         <AriaDialog aria-label={label} className="flex min-h-0 flex-col outline-none">
           <Autocomplete filter={contains}>
             <SearchField aria-label={label} autoFocus className="flex items-center gap-2 border-b border-border px-3">
               <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-              <AriaInput placeholder={label} className="h-(--control-h) min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-muted-foreground" />
+              <AriaInput
+                placeholder={label}
+                className="h-(--control-h) min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-muted-foreground"
+              />
             </SearchField>
             <AriaMenu
               aria-label="Commands"
               className="min-h-0 overflow-y-auto overscroll-contain p-1 outline-none"
-              renderEmptyState={() => <p className="px-3 py-4 type-body-sm text-muted-foreground">No command matches.</p>}
+              renderEmptyState={() => (
+                <p className="px-3 py-4 type-body-sm text-muted-foreground">No command matches.</p>
+              )}
               onAction={() => set(false)}
             >
-              {all.map((c) => <Item key={c.id} command={c} platform={where} />)}
+              {all.map((c) => (
+                <Item key={c.id} command={c} platform={where} />
+              ))}
             </AriaMenu>
           </Autocomplete>
         </AriaDialog>
-        <Heading slot="title" className="sr-only">{label}</Heading>
+        <Heading slot="title" className="sr-only">
+          {label}
+        </Heading>
       </Modal>
     </ModalOverlay>
   );

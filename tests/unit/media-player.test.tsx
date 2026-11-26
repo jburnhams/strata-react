@@ -3,13 +3,7 @@ import { act, fireEvent, render, renderHook, screen, within } from "@testing-lib
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { useLocation } from "react-router";
-import {
-  MediaPlayer,
-  SeekBar,
-  useMediaElement,
-  usePlayerWarnings,
-  type MediaSource,
-} from "../../src";
+import { MediaPlayer, SeekBar, useMediaElement, usePlayerWarnings, type MediaSource } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 import { installFakeIntersectionObserver, renderWithStrata } from "../../src/testing";
 import { box } from "../../src/testing/layout";
@@ -155,9 +149,7 @@ describe("MediaPlayer", () => {
 
   it("leaves the keys alone when asked", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Interview" src="/a.mp3" controls="strata" shortcuts={false} />,
-    );
+    const { container } = render(<MediaPlayer label="Interview" src="/a.mp3" controls="strata" shortcuts={false} />);
     await user.keyboard(" ");
     expect(audio(container).paused).toBe(true);
   });
@@ -176,8 +168,7 @@ describe("MediaPlayer", () => {
           <MediaPlayer label="Second" src="/b.mp3" controls="strata" />
         </div>,
       );
-    const el = (container: HTMLElement, i: number) =>
-      container.querySelectorAll("audio")[i] as HTMLAudioElement;
+    const el = (container: HTMLElement, i: number) => container.querySelectorAll("audio")[i] as HTMLAudioElement;
 
     it("warns once in development that several players share the keys", () => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -234,9 +225,7 @@ describe("MediaPlayer", () => {
           name: /^play/i,
         }),
       );
-      await user.click(
-        within(screen.getByRole("group", { name: "Third" })).getByRole("slider", { name: /seek/i }),
-      );
+      await user.click(within(screen.getByRole("group", { name: "Third" })).getByRole("slider", { name: /seek/i }));
       await user.keyboard(" ");
       expect(el(container, 0).paused).toBe(true);
     });
@@ -332,9 +321,7 @@ describe("MediaPlayer", () => {
   describe("a sequence", () => {
     it("moves to the next source when one ends, on the same element, and keeps playing", async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MediaPlayer label="Book" sources={chapters} controls="strata" />,
-      );
+      const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
       const el = audio(container);
       act(() => media.loaded(el, 600));
       await user.click(screen.getByRole("button", { name: "Play" }));
@@ -349,13 +336,7 @@ describe("MediaPlayer", () => {
     it("does not advance when autoAdvance is off, and says the last source ended", () => {
       let ended = 0;
       const { container } = render(
-        <MediaPlayer
-          label="Book"
-          sources={chapters}
-          controls="strata"
-          autoAdvance={false}
-          onEnded={() => ended++}
-        />,
+        <MediaPlayer label="Book" sources={chapters} controls="strata" autoAdvance={false} onEnded={() => ended++} />,
       );
       act(() => media.loaded(audio(container), 600));
       act(() => media.end(audio(container)));
@@ -364,9 +345,7 @@ describe("MediaPlayer", () => {
     });
 
     it("spans the whole sequence on the seek bar when every source has a duration, with marks at the chapters", () => {
-      const { container } = render(
-        <MediaPlayer label="Book" sources={chapters} controls="strata" />,
-      );
+      const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
       act(() => media.loaded(audio(container), 600));
       expect(screen.getByRole("slider", { name: "Seek in Book" })).toHaveAttribute("max", "1800");
       expect(screen.getByRole("button", { name: /Chapter two, / })).toBeInTheDocument();
@@ -379,9 +358,7 @@ describe("MediaPlayer", () => {
         { time: 0, label: "Morning" },
         { time: 600, label: "Dinner" },
       ];
-      const { container } = render(
-        <MediaPlayer label="Tape" src="/tape.mp4" marks={marks} controls="strata" />,
-      );
+      const { container } = render(<MediaPlayer label="Tape" src="/tape.mp4" marks={marks} controls="strata" />);
       const el = audio(container) ?? (container.querySelector("video") as HTMLMediaElement);
       act(() => media.loaded(el, 1200));
       await user.click(screen.getByRole("button", { name: /^Dinner, / }));
@@ -400,9 +377,7 @@ describe("MediaPlayer", () => {
           controls="strata"
         />,
       );
-      act(() =>
-        media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 2),
-      );
+      act(() => media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 2));
       expect(screen.getByRole("button", { name: /^Morning, / })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /^Dinner, / })).toBeNull();
     });
@@ -418,21 +393,14 @@ describe("MediaPlayer", () => {
           controls="strata"
         />,
       );
-      act(() =>
-        media.loaded(
-          audio(container) ?? (container.querySelector("video") as HTMLMediaElement),
-          1200,
-        ),
-      );
+      act(() => media.loaded(audio(container) ?? (container.querySelector("video") as HTMLMediaElement), 1200));
       expect(screen.queryByRole("button", { name: /^Dinner, / })).toBeNull();
       expect(screen.getByRole("button", { name: /^Window starts, / })).toBeInTheDocument();
     });
 
     it("seeks into another source by changing it, and carries on playing from there", async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MediaPlayer label="Book" sources={chapters} controls="strata" />,
-      );
+      const { container } = render(<MediaPlayer label="Book" sources={chapters} controls="strata" />);
       const el = audio(container);
       act(() => media.loaded(el, 600));
       await user.click(screen.getByRole("button", { name: "Play" }));
@@ -446,14 +414,7 @@ describe("MediaPlayer", () => {
     it("steps with Previous and Next chapter, disabled at the ends", async () => {
       const user = userEvent.setup();
       let at = -1;
-      render(
-        <MediaPlayer
-          label="Book"
-          sources={chapters}
-          controls="strata"
-          onIndexChange={(i) => (at = i)}
-        />,
-      );
+      render(<MediaPlayer label="Book" sources={chapters} controls="strata" onIndexChange={(i) => (at = i)} />);
       expect(screen.getByRole("button", { name: "Previous chapter" })).toBeDisabled();
       await user.click(screen.getByRole("button", { name: "Next chapter" }));
       expect(at).toBe(1);
@@ -477,8 +438,7 @@ describe("MediaPlayer", () => {
     const handlers = new Map<string, unknown>();
     const mediaSession = {
       metadata: null as unknown,
-      setActionHandler: (a: string, h: unknown) =>
-        void (h ? handlers.set(a, h) : handlers.delete(a)),
+      setActionHandler: (a: string, h: unknown) => void (h ? handlers.set(a, h) : handlers.delete(a)),
     };
     Object.defineProperty(navigator, "mediaSession", { configurable: true, value: mediaSession });
     (globalThis as unknown as { MediaMetadata: unknown }).MediaMetadata = FakeMetadata;
@@ -496,13 +456,7 @@ describe("MediaPlayer", () => {
         artist: "Someone",
         album: "A book",
       });
-      expect([...handlers.keys()].sort()).toEqual([
-        "nexttrack",
-        "pause",
-        "play",
-        "seekbackward",
-        "seekforward",
-      ]);
+      expect([...handlers.keys()].sort()).toEqual(["nexttrack", "pause", "play", "seekbackward", "seekforward"]);
       unmount();
       expect(mediaSession.metadata).toBeNull();
       expect(handlers.size).toBe(0);
@@ -520,9 +474,7 @@ it("shows independent player warnings in windowed mode and expires them on the c
     const { rerender } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" />);
     const message = { title: "Playback details unavailable", timeout: 900 };
     act(() => result.current.warn(message));
-    rerender(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />,
-    );
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
     const warning = screen.getByText(message.title);
     act(() => vi.advanceTimersByTime(899));
     expect(warning.closest("[data-leaving]")).toBeNull();
@@ -532,45 +484,40 @@ it("shows independent player warnings in windowed mode and expires them on the c
     expect(warning).not.toBeInTheDocument();
 
     act(() => result.current.warn(message));
-    rerender(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />,
-    );
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" warning={result.current.warning} />);
     expect(screen.getByText(message.title)).toBeVisible();
   } finally {
     vi.useRealTimers();
   }
 });
 
-it.each(["Dismiss playback warning", "Try again"])(
-  "does not show an expired warning again after %s",
-  (button) => {
-    vi.useFakeTimers();
-    try {
-      const retry = vi.fn();
-      render(
-        <MediaPlayer
-          label="Tour"
-          kind="video"
-          src="/a.mp4"
-          warning={{
-            key: 1,
-            title: "Playback details unavailable",
-            timeout: 900,
-            action: { label: "Try again", onPress: retry },
-          }}
-        />,
-      );
-      fireEvent.click(screen.getByRole("button", { name: button }));
-      expect(retry).toHaveBeenCalledTimes(button === "Try again" ? 1 : 0);
-      act(() => vi.advanceTimersByTime(250));
-      expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
-      act(() => vi.advanceTimersByTime(650));
-      expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
-  },
-);
+it.each(["Dismiss playback warning", "Try again"])("does not show an expired warning again after %s", (button) => {
+  vi.useFakeTimers();
+  try {
+    const retry = vi.fn();
+    render(
+      <MediaPlayer
+        label="Tour"
+        kind="video"
+        src="/a.mp4"
+        warning={{
+          key: 1,
+          title: "Playback details unavailable",
+          timeout: 900,
+          action: { label: "Try again", onPress: retry },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: button }));
+    expect(retry).toHaveBeenCalledTimes(button === "Try again" ? 1 : 0);
+    act(() => vi.advanceTimersByTime(250));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(650));
+    expect(screen.queryByText("Playback details unavailable")).not.toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
 
 describe("MediaPlayer full screen", () => {
   it("offers Full screen on a video by default, and F toggles it, without mounting the video again", async () => {
@@ -614,9 +561,7 @@ describe("MediaPlayer full screen", () => {
       vi.useFakeTimers();
       try {
         const controls = screen.getByText("Reading playback details").parentElement!;
-        expect(
-          within(controls).getByRole("button", { name: "Leave full screen" }),
-        ).toBeInTheDocument();
+        expect(within(controls).getByRole("button", { name: "Leave full screen" })).toBeInTheDocument();
         const el = video!;
         act(() => media.loaded(el, 60));
         act(() => void el.play());
@@ -658,16 +603,12 @@ describe("MediaPlayer full screen", () => {
   });
 
   it("has none without the Fullscreen API, on audio, with fullscreen={false}, or with the browser's own controls", () => {
-    const { unmount } = render(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />,
-    );
+    const { unmount } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
     unmount();
     const { rerender } = render(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" />);
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
-    rerender(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" fullscreen={false} />,
-    );
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" fullscreen={false} />);
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
     rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="native" />);
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument();
@@ -679,9 +620,7 @@ describe("MediaPlayer on the picture", () => {
 
   it("plays and pauses on a click, and leaves playback as it was on a double click", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />,
-    );
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
     act(() => media.loaded(videoOf(container), 60));
     await user.click(videoOf(container));
     expect(videoOf(container).paused).toBe(false);
@@ -693,9 +632,7 @@ describe("MediaPlayer on the picture", () => {
 
   it("sets the volume with the wheel only while the player has focus", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />,
-    );
+    const { container } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" />);
     act(() => media.loaded(videoOf(container), 60));
     const wheel = (deltaY: number) => {
       const e = new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true });
@@ -720,20 +657,15 @@ describe("MediaPlayer heading (issue #329)", () => {
     subtitleTo: "/makers/kiln-room",
     avatar: null,
   };
-  const band = () =>
-    screen.getByText("Glazing a celadon bowl").closest("[class*='picture-shade']") as HTMLElement;
+  const band = () => screen.getByText("Glazing a celadon bowl").closest("[class*='picture-shade']") as HTMLElement;
 
   it("names what is playing and whose it is, with links to each, over a video", () => {
-    renderWithStrata(
-      <MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={heading} />,
-    );
-    expect(screen.getByRole("link", { name: "Glazing a celadon bowl" })).toHaveAttribute(
-      "href",
-      "/watch/7",
-    );
-    expect(
-      screen.getAllByRole("link", { name: "Kiln room" }).map((a) => a.getAttribute("href")),
-    ).toEqual(["/makers/kiln-room", "/makers/kiln-room"]);
+    renderWithStrata(<MediaPlayer label="Tour" kind="video" src="/a.mp4" controls="strata" heading={heading} />);
+    expect(screen.getByRole("link", { name: "Glazing a celadon bowl" })).toHaveAttribute("href", "/watch/7");
+    expect(screen.getAllByRole("link", { name: "Kiln room" }).map((a) => a.getAttribute("href"))).toEqual([
+      "/makers/kiln-room",
+      "/makers/kiln-room",
+    ]);
     // No picture: the subtitle's first letter.
     expect(within(band()).getByText("K")).toBeInTheDocument();
     expect(band()).toHaveAttribute("data-shown");
@@ -772,9 +704,7 @@ describe("MediaPlayer heading (issue #329)", () => {
     expect(screen.getByText("Only words").tagName).toBe("P");
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     unmount();
-    renderWithStrata(
-      <MediaPlayer label="Tour" src="/a.mp3" controls="strata" heading={{ title: "Only words" }} />,
-    );
+    renderWithStrata(<MediaPlayer label="Tour" src="/a.mp3" controls="strata" heading={{ title: "Only words" }} />);
     expect(screen.queryByText("Only words")).not.toBeInTheDocument();
   });
 
@@ -855,9 +785,7 @@ describe("skip and frame buttons (#387)", () => {
 
   it("skips 10 s and 1 min in a file with no marks, and draws no frame buttons without a frame rate", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" />,
-    );
+    const { container } = render(<MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" />);
     const el = video(container);
     act(() => media.loaded(el, 300));
     expect(playback().getByRole("button", { name: "Back 10 s" })).toBeDisabled();
@@ -870,20 +798,12 @@ describe("skip and frame buttons (#387)", () => {
 
   it("takes the app's steps, and draws none with skip={false}", () => {
     const { container, rerender } = render(
-      <MediaPlayer
-        label="Clip"
-        kind="video"
-        src="/clip.mp4"
-        controls="strata"
-        skip={{ small: 5, large: 30 }}
-      />,
+      <MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" skip={{ small: 5, large: 30 }} />,
     );
     act(() => media.loaded(video(container), 300));
     expect(playback().getByRole("button", { name: "Forward 5 s" })).toBeInTheDocument();
     expect(playback().getByRole("button", { name: "Forward 30 s" })).toBeInTheDocument();
-    rerender(
-      <MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" skip={false} />,
-    );
+    rerender(<MediaPlayer label="Clip" kind="video" src="/clip.mp4" controls="strata" skip={false} />);
     expect(
       playback()
         .getAllByRole("button")
@@ -902,9 +822,7 @@ describe("skip and frame buttons (#387)", () => {
 
   it("steps one frame with the buttons and the , and . keys, pausing first", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />,
-    );
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />);
     const el = video(container);
     act(() => media.loaded(el, 60));
     await user.click(playback().getByRole("button", { name: "Play" }));
@@ -920,9 +838,7 @@ describe("skip and frame buttons (#387)", () => {
 
   it("steps from where the video is, not from the last time drawn", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />,
-    );
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />);
     const el = video(container);
     act(() => media.loaded(el, 60));
     act(() => media.tick(el, 2));
@@ -930,8 +846,7 @@ describe("skip and frame buttons (#387)", () => {
     Object.defineProperty(el, "currentTime", {
       configurable: true,
       get: () => 2.24,
-      set: (v: number) =>
-        Object.defineProperty(el, "currentTime", { configurable: true, value: v, writable: true }),
+      set: (v: number) => Object.defineProperty(el, "currentTime", { configurable: true, value: v, writable: true }),
     });
     await user.click(playback().getByRole("button", { name: "Forward one frame" }));
     expect(el.currentTime).toBeCloseTo(57.5 / 25);
@@ -942,8 +857,7 @@ describe("a player that floats when scrolled past (#387)", () => {
   let io: ReturnType<typeof installFakeIntersectionObserver>;
   beforeEach(() => void (io = installFakeIntersectionObserver()));
   afterEach(() => io.uninstall());
-  const end = (container: HTMLElement) =>
-    container.querySelector("[data-player-end]") as HTMLElement;
+  const end = (container: HTMLElement) => container.querySelector("[data-player-end]") as HTMLElement;
   const scrollPast = (container: HTMLElement, gone: boolean) => {
     const el = end(container);
     el.getBoundingClientRect = () => box(0, gone ? -50 : 400, 0, 0);
@@ -952,9 +866,7 @@ describe("a player that floats when scrolled past (#387)", () => {
 
   it("moves the same video to the corner once it has played and gone off the top, and back when scrolled to", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />,
-    );
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
     const el = container.querySelector("video")!;
     act(() => media.loaded(el, 600));
     scrollPast(container, true);
@@ -976,9 +888,7 @@ describe("a player that floats when scrolled past (#387)", () => {
 
   it("stays in place after Close until the player is scrolled back to", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />,
-    );
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
     act(() => media.loaded(container.querySelector("video")!, 600));
     await user.click(screen.getByRole("button", { name: "Play" }));
     scrollPast(container, true);
@@ -995,9 +905,7 @@ describe("a player that floats when scrolled past (#387)", () => {
     const saved = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
     Element.prototype.scrollIntoView = scrolled;
     try {
-      const { container } = render(
-        <MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />,
-      );
+      const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" controls="strata" float />);
       act(() => media.loaded(container.querySelector("video")!, 600));
       await user.click(screen.getByRole("button", { name: "Play" }));
       scrollPast(container, true);
@@ -1011,9 +919,7 @@ describe("a player that floats when scrolled past (#387)", () => {
   });
 
   it("does nothing for audio, or without float", () => {
-    const { container } = render(
-      <MediaPlayer label="Talk" src="/talk.mp3" controls="strata" float />,
-    );
+    const { container } = render(<MediaPlayer label="Talk" src="/talk.mp3" controls="strata" float />);
     expect(end(container)).toBeNull();
   });
 });

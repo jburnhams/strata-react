@@ -91,7 +91,10 @@ export type OutboxOptions = {
 /** A queue of writes kept on the device and sent when the server can take them. */
 export type Outbox = {
   /** Queues a write and tries to send the queue. `id` defaults to a random one; give the write's own id (an event id) so a refusal can be matched. */
-  add(request: OutboxRequest & { id?: string; after?: string; label?: string }): { id: string; delivered: Promise<Delivery> };
+  add(request: OutboxRequest & { id?: string; after?: string; label?: string }): {
+    id: string;
+    delivered: Promise<Delivery>;
+  };
   /** Sends what waits, oldest first, until one fails. Resolves when this pass ends. */
   flush(): Promise<void>;
   snapshot(): OutboxSnapshot;
@@ -111,7 +114,12 @@ const REFUSED_KEPT = 50; // a list a person reads, not a log: the oldest refusal
 
 /** Whether a failure is the server's answer for good (refused) rather than for now (waiting). */
 export function isRefusal(error: unknown): error is HttpError {
-  return error instanceof HttpError && error.status >= 400 && error.status < 500 && ![401, 403, 408, 425, 429].includes(error.status);
+  return (
+    error instanceof HttpError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![401, 403, 408, 425, 429].includes(error.status)
+  );
 }
 
 function problemOf(error: unknown): string {
@@ -143,7 +151,8 @@ function randomId(): string {
 export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs = 60000 }: OutboxOptions): Outbox {
   const key = `strata:outbox:${name}`;
   const store = storage === undefined ? defaultStorage() : storage; // no window (SSR) is no storage: the probe throws
-  const post = send ?? ((item: OutboxItem) => fetchJson(withBase(item.path, appBase()), { method: item.method, json: item.json }));
+  const post =
+    send ?? ((item: OutboxItem) => fetchJson(withBase(item.path, appBase()), { method: item.method, json: item.json }));
   let memory: Kept = { items: [], refused: [] };
   let persisted = store !== null;
   let sending = false;
@@ -165,7 +174,10 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
     if (!persisted || !store) return memory;
     try {
       const raw = JSON.parse(store.getItem(key) ?? "null") as Partial<Kept> | null;
-      return { items: Array.isArray(raw?.items) ? raw.items : [], refused: Array.isArray(raw?.refused) ? raw.refused : [] };
+      return {
+        items: Array.isArray(raw?.items) ? raw.items : [],
+        refused: Array.isArray(raw?.refused) ? raw.refused : [],
+      };
     } catch {
       return memory;
     }
@@ -203,7 +215,9 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
 
   const refuse = (kept: Kept, item: OutboxItem, reason: string): Kept => ({
     items: kept.items.filter((x) => x.id !== item.id),
-    refused: [...kept.refused, { id: item.id, label: item.label, reason, at: new Date().toISOString() }].slice(-REFUSED_KEPT),
+    refused: [...kept.refused, { id: item.id, label: item.label, reason, at: new Date().toISOString() }].slice(
+      -REFUSED_KEPT,
+    ),
   });
 
   const pass = async () => {
@@ -286,7 +300,14 @@ export function createOutbox({ name, send, storage, retryMs = 2000, maxRetryMs =
     snapshot() {
       if (!snap) {
         const kept = read();
-        snap = { waiting: kept.items.length, sending, problem: kept.items.length ? problem : null, retryAt: kept.items.length ? retryAt : null, refused: kept.refused, persisted };
+        snap = {
+          waiting: kept.items.length,
+          sending,
+          problem: kept.items.length ? problem : null,
+          retryAt: kept.items.length ? retryAt : null,
+          refused: kept.refused,
+          persisted,
+        };
       }
       return snap;
     },

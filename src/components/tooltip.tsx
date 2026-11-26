@@ -38,10 +38,15 @@ export function Tooltip({ label, hint, children, side = "top", delay = 500, open
       <AriaTooltip
         placement={side}
         offset={6}
-        className={cn("layer-tip enter-overlay max-w-xs rounded-control bg-foreground px-2 py-1 type-caption text-background", className)}
+        className={cn(
+          "layer-tip enter-overlay max-w-xs rounded-control bg-foreground px-2 py-1 type-caption text-background",
+          className,
+        )}
       >
         {label}
-        {hint != null && <span className="ml-2 opacity-70">{typeof hint === "string" ? <KeyText>{hint}</KeyText> : hint}</span>}
+        {hint != null && (
+          <span className="ml-2 opacity-70">{typeof hint === "string" ? <KeyText>{hint}</KeyText> : hint}</span>
+        )}
       </AriaTooltip>
     </TooltipTrigger>
   );

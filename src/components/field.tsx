@@ -19,7 +19,13 @@ import { controlHeight, type ControlSize } from "../lib/control";
 // button is not described by them. Field messages for a form come from `useAsyncAction`'s
 // `fieldErrors` (its `validate`, or the server's 422), so no `problem` state is kept by hand.
 
-type FieldState = { id: string; label: string; describedBy?: string; invalid: boolean; report: (message: string | undefined) => void };
+type FieldState = {
+  id: string;
+  label: string;
+  describedBy?: string;
+  invalid: boolean;
+  report: (message: string | undefined) => void;
+};
 const FieldContext = React.createContext<FieldState | null>(null);
 
 // A control that checks what was typed (a number field, a colour field) reports its own message to
@@ -104,7 +110,12 @@ const control =
   "w-full min-w-0 rounded-control border border-input bg-background px-3 type-body text-foreground transition-state placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 aria-invalid:border-danger";
 
 /** A text input that picks up its id and descriptions from the surrounding `Field`. `size="sm"` is --control-h-sm; the native `size` (a width in characters) is not passed on. */
-export function Input({ className, id, size = "default", ...props }: Omit<React.ComponentProps<"input">, "size"> & { size?: ControlSize }) {
+export function Input({
+  className,
+  id,
+  size = "default",
+  ...props
+}: Omit<React.ComponentProps<"input">, "size"> & { size?: ControlSize }) {
   return <input {...useField(id)} className={cn(control, controlHeight[size], className)} {...props} />;
 }
 
@@ -125,7 +136,7 @@ type PlainSelectProps = Omit<React.ComponentProps<"select">, "size"> & { size?: 
 
 /** Props of `NativeSelect`: a native select's own, or (with `param`) a choice held in the URL. */
 export type NativeSelectProps =
-  | PlainSelectProps & { param?: undefined; paramDefault?: undefined }
+  | (PlainSelectProps & { param?: undefined; paramDefault?: undefined })
   | (Omit<PlainSelectProps, "value" | "defaultValue" | "onChange"> & {
       /** The search parameter that holds the choice (`?mode=…`), so it can be linked and survives a reload. */
       param: string;
@@ -148,10 +159,19 @@ function optionValues(children: React.ReactNode): string[] {
   });
 }
 
-function ParamSelect({ param, paramDefault, onChange, children, ...props }: Extract<NativeSelectProps, { param: string }>) {
+function ParamSelect({
+  param,
+  paramDefault,
+  onChange,
+  children,
+  ...props
+}: Extract<NativeSelectProps, { param: string }>) {
   // An unknown value in the URL reads as the default: the select shows an option that exists.
   const options = optionValues(children);
-  const [value, setValue] = useSearchParam(param, { default: paramDefault, parse: (raw) => options.length === 0 || options.includes(raw) });
+  const [value, setValue] = useSearchParam(param, {
+    default: paramDefault,
+    parse: (raw) => options.length === 0 || options.includes(raw),
+  });
   return (
     <PlainSelect
       {...props}
@@ -195,8 +215,21 @@ export type ChoiceGroupProps = {
 );
 
 function ParamChoiceGroup({ param, choices, onChange, ...props }: Extract<ChoiceGroupProps, { param: string }>) {
-  const [value, setValue] = useSearchParam(param, { default: choices[0]?.value ?? "", parse: (raw) => choices.some((c) => c.value === raw) });
-  return <ChoiceGroupView {...props} choices={choices} value={value} onChange={(next) => { setValue(next); onChange?.(next); }} />;
+  const [value, setValue] = useSearchParam(param, {
+    default: choices[0]?.value ?? "",
+    parse: (raw) => choices.some((c) => c.value === raw),
+  });
+  return (
+    <ChoiceGroupView
+      {...props}
+      choices={choices}
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onChange?.(next);
+      }}
+    />
+  );
 }
 
 function ChoiceGroupView({
@@ -216,10 +249,20 @@ function ChoiceGroupView({
 }) {
   const errorId = React.useId();
   return (
-    <RadioGroup name={name} value={value} onChange={onChange} aria-describedby={error ? errorId : undefined} className="grid gap-2">
+    <RadioGroup
+      name={name}
+      value={value}
+      onChange={onChange}
+      aria-describedby={error ? errorId : undefined}
+      className="grid gap-2"
+    >
       <Label className="mb-1.5 type-label text-foreground">{legend}</Label>
       {choices.map((c) => (
-        <Radio key={c.value} value={c.value} className="group flex min-h-(--control-h-sm) cursor-pointer items-start gap-3 py-1">
+        <Radio
+          key={c.value}
+          value={c.value}
+          className="group flex min-h-(--control-h-sm) cursor-pointer items-start gap-3 py-1"
+        >
           <span
             aria-hidden
             className="mt-1 grid size-4 shrink-0 place-items-center rounded-pill border border-input bg-background transition-state group-selected:border-primary group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"

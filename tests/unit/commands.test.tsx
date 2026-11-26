@@ -48,9 +48,7 @@ describe("chords", () => {
   it("matches Mod to Meta on macOS and Alt letters by physical key", () => {
     const base = { code: "", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false };
     expect(matchesChord({ ...base, key: "z", metaKey: true }, "Mod+Z", "mac")).toBe(true);
-    expect(matchesChord({ ...base, key: "Ω", code: "KeyZ", altKey: true }, "Alt+Z", "mac")).toBe(
-      true,
-    );
+    expect(matchesChord({ ...base, key: "Ω", code: "KeyZ", altKey: true }, "Alt+Z", "mac")).toBe(true);
   });
 
   it("ignores Shift for a symbol key such as ?", () => {
@@ -89,13 +87,7 @@ function editor(over: Partial<Record<string, Partial<Command>>> = {}) {
   return { commands, log };
 }
 
-function Keys({
-  commands,
-  platform = "other" as const,
-}: {
-  commands: Command[];
-  platform?: "mac" | "other";
-}) {
+function Keys({ commands, platform = "other" as const }: { commands: Command[]; platform?: "mac" | "other" }) {
   useCommands(commands, { platform });
   return <input aria-label="Name" />;
 }
@@ -176,22 +168,11 @@ describe("one list, every surface", () => {
     commands[4],
   ];
 
-  function Surfaces({
-    commands,
-    platform = "other" as const,
-  }: {
-    commands: Command[];
-    platform?: "mac" | "other";
-  }) {
+  function Surfaces({ commands, platform = "other" as const }: { commands: Command[]; platform?: "mac" | "other" }) {
     useCommands(commands, { platform });
     return (
       <>
-        <Menu
-          label="Edit"
-          trigger={<Button>Edit</Button>}
-          items={entries(commands)}
-          platform={platform}
-        />
+        <Menu label="Edit" trigger={<Button>Edit</Button>} items={entries(commands)} platform={platform} />
         <CommandLegend commands={commands} platform={platform} />
       </>
     );
@@ -233,9 +214,9 @@ describe("one list, every surface", () => {
     const { commands } = editor();
     render(<Surfaces commands={commands} platform="mac" />);
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    expect(
-      within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ }),
-    ).toHaveTextContent("Command Z");
+    expect(within(await screen.findByRole("menu")).getByRole("menuitem", { name: /Undo move clip/ })).toHaveTextContent(
+      "Command Z",
+    );
     expect(commandShortcut(commands[1], "mac")).toBe("⇧⌘Z");
   });
 });
@@ -244,14 +225,7 @@ describe("Menu", () => {
   it("opens by keyboard, runs an item with Enter, returns focus to the trigger on Escape", async () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
-    render(
-      <Menu
-        label="Edit"
-        trigger={<Button>Edit</Button>}
-        items={[commands[0], commands[2]]}
-        platform="other"
-      />,
-    );
+    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[0], commands[2]]} platform="other" />);
     const trigger = screen.getByRole("button", { name: "Edit" });
     trigger.focus();
     await user.keyboard("{Enter}");
@@ -292,9 +266,7 @@ describe("Menu", () => {
   it("says why an item is unavailable and does not run it", async () => {
     const user = userEvent.setup();
     const { commands, log } = editor();
-    render(
-      <Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[1]]} platform="other" />,
-    );
+    render(<Menu label="Edit" trigger={<Button>Edit</Button>} items={[commands[1]]} platform="other" />);
     await user.click(screen.getByRole("button", { name: "Edit" }));
     const item = await screen.findByRole("menuitem", { name: /Redo/ });
     expect(item).toHaveAttribute("aria-disabled", "true");
@@ -306,9 +278,7 @@ describe("Menu", () => {
   it("marks a destructive item with an icon as well as colour", async () => {
     const user = userEvent.setup();
     const { commands } = editor();
-    render(
-      <Menu label="Clip" trigger={<Button>Clip</Button>} items={[commands[4]]} platform="other" />,
-    );
+    render(<Menu label="Clip" trigger={<Button>Clip</Button>} items={[commands[4]]} platform="other" />);
     await user.click(screen.getByRole("button", { name: "Clip" }));
     const item = await screen.findByRole("menuitem", { name: /Delete clip/ });
     expect(item.querySelector("svg")).not.toBeNull();
@@ -445,9 +415,7 @@ describe("CommandMenu", () => {
     const { commands } = editor();
     render(<CommandMenu commands={commands} open platform="other" />);
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("menuitem", { name: /Redo/ })).toHaveTextContent(
-      "Nothing to redo",
-    );
+    expect(within(dialog).getByRole("menuitem", { name: /Redo/ })).toHaveTextContent("Nothing to redo");
     await user.type(within(dialog).getByRole("searchbox"), "zzzz");
     expect(await within(dialog).findByText("No command matches.")).toBeInTheDocument();
   });
@@ -457,15 +425,7 @@ describe("CommandMenu", () => {
     const { commands } = editor();
     function Harness() {
       const [open, setOpen] = useState(true);
-      return (
-        <CommandMenu
-          commands={commands}
-          open={open}
-          onOpenChange={setOpen}
-          shortcut={null}
-          platform="other"
-        />
-      );
+      return <CommandMenu commands={commands} open={open} onOpenChange={setOpen} shortcut={null} platform="other" />;
     }
     render(<Harness />);
     await screen.findByRole("dialog");

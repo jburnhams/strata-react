@@ -5,7 +5,18 @@ import { Button } from "../components/button";
 import { useInView } from "../lib/in-view";
 import { useSettledStatus, useViewPointers, useWheelZoom } from "../lib/viewer-input";
 import { cn } from "../lib/utils";
-import { clampCamera, describeCamera, dolly, frameFor, pan, turn, walk, type CameraLimits, type OrbitCamera, type SceneFrame } from "./camera";
+import {
+  clampCamera,
+  describeCamera,
+  dolly,
+  frameFor,
+  pan,
+  turn,
+  walk,
+  type CameraLimits,
+  type OrbitCamera,
+  type SceneFrame,
+} from "./camera";
 
 // A frame for a 3D scene the app draws itself, that a person orbits, pans and zooms (issue #370, from the
 // Quake 2 explorer, which drew maps and models with its own camera code and controls). `PanoramaViewer`
@@ -48,9 +59,21 @@ export type OrbitCameraState = {
 };
 
 /** A camera the app holds: `{ target, distance, yaw, pitch }` to start from, and the limits it is kept inside. Give `camera` and `setCamera` to `SceneViewport`. */
-export function useOrbitCamera(initial: Partial<OrbitCamera> = {}, limits: Partial<CameraLimits> = {}): OrbitCameraState {
+export function useOrbitCamera(
+  initial: Partial<OrbitCamera> = {},
+  limits: Partial<CameraLimits> = {},
+): OrbitCameraState {
   const home = React.useMemo<OrbitCamera>(
-    () => clampCamera({ target: initial.target ?? [0, 0, 0], distance: initial.distance ?? 5, yaw: initial.yaw ?? 0, pitch: initial.pitch ?? 20 }, limits),
+    () =>
+      clampCamera(
+        {
+          target: initial.target ?? [0, 0, 0],
+          distance: initial.distance ?? 5,
+          yaw: initial.yaw ?? 0,
+          pitch: initial.pitch ?? 20,
+        },
+        limits,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -100,10 +123,39 @@ const RESET_MS = 300;
 const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** A sized, focusable canvas for a 3D scene the app draws: orbit by drag, pan by right drag or Shift, zoom by Ctrl/Cmd+wheel or pinch, keys, a Reset button, a fly mode, a lost context restored, and the camera in words. */
-export function SceneViewport({ label, camera, onCameraChange, home, render, mode = "orbit", fov = 60, near = 0.1, far = 10_000, limits, flySpeed = 5, time = 0, continuous = false, aspect = "16/9", handle, className }: SceneViewportProps) {
+export function SceneViewport({
+  label,
+  camera,
+  onCameraChange,
+  home,
+  render,
+  mode = "orbit",
+  fov = 60,
+  near = 0.1,
+  far = 10_000,
+  limits,
+  flySpeed = 5,
+  time = 0,
+  continuous = false,
+  aspect = "16/9",
+  handle,
+  className,
+}: SceneViewportProps) {
   const first = React.useRef(camera);
   const target = home ?? first.current;
-  const live = React.useRef({ camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target, time });
+  const live = React.useRef({
+    camera,
+    onCameraChange,
+    render,
+    mode,
+    fov,
+    near,
+    far,
+    limits,
+    flySpeed,
+    home: target,
+    time,
+  });
   live.current = { camera, onCameraChange, render, mode, fov, near, far, limits, flySpeed, home: target, time };
   const change = React.useCallback((next: OrbitCamera) => {
     live.current.onCameraChange(clampCamera(next, live.current.limits));
@@ -157,7 +209,10 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
     }
     ctx.viewport(0, 0, w, h);
     const l = live.current;
-    l.render(ctx, frameFor(l.camera, w, h, { fov: l.fov, near: l.near, far: l.far, context: context.current, time: l.time }));
+    l.render(
+      ctx,
+      frameFor(l.camera, w, h, { fov: l.fov, near: l.near, far: l.far, context: context.current, time: l.time }),
+    );
     if (again) frameHandle.current = requestAnimationFrame(paint);
   }, []);
   const schedule = React.useCallback(() => {
@@ -208,7 +263,11 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
       // The short way round in yaw.
       const dyaw = ((((to.yaw - from.yaw + 180) % 360) + 360) % 360) - 180;
       change({
-        target: [mix(from.target[0], to.target[0]), mix(from.target[1], to.target[1]), mix(from.target[2], to.target[2])],
+        target: [
+          mix(from.target[0], to.target[0]),
+          mix(from.target[1], to.target[1]),
+          mix(from.target[2], to.target[2]),
+        ],
         distance: mix(from.distance, to.distance),
         yaw: from.yaw + dyaw * e,
         pitch: mix(from.pitch, to.pitch),
@@ -255,8 +314,16 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
     const l = live.current;
     const k = new Set(keys);
     const stride = l.flySpeed * seconds * (fast ? 3 : 1);
-    const axis = (plus: string[], minus: string[]) => (plus.some((x) => k.has(x)) ? 1 : 0) - (minus.some((x) => k.has(x)) ? 1 : 0);
-    change(walk(l.camera, axis(["w", "ArrowUp"], ["s", "ArrowDown"]) * stride, axis(["d", "ArrowRight"], ["a", "ArrowLeft"]) * stride, axis(["e"], ["q"]) * stride));
+    const axis = (plus: string[], minus: string[]) =>
+      (plus.some((x) => k.has(x)) ? 1 : 0) - (minus.some((x) => k.has(x)) ? 1 : 0);
+    change(
+      walk(
+        l.camera,
+        axis(["w", "ArrowUp"], ["s", "ArrowDown"]) * stride,
+        axis(["d", "ArrowRight"], ["a", "ArrowLeft"]) * stride,
+        axis(["e"], ["q"]) * stride,
+      ),
+    );
   };
   const startFly = (shift: boolean) => {
     if (flyLoop.current) return;
@@ -280,8 +347,10 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
         held.current.add(key);
         startFly(e.shiftKey);
       }
-    } else if (key === "+" || key === "=") change(l.mode === "orbit" ? dolly(l.camera, 0.8) : walk(l.camera, l.flySpeed * 0.5, 0, 0));
-    else if (key === "-" || key === "_") change(l.mode === "orbit" ? dolly(l.camera, 1.25) : walk(l.camera, -l.flySpeed * 0.5, 0, 0));
+    } else if (key === "+" || key === "=")
+      change(l.mode === "orbit" ? dolly(l.camera, 0.8) : walk(l.camera, l.flySpeed * 0.5, 0, 0));
+    else if (key === "-" || key === "_")
+      change(l.mode === "orbit" ? dolly(l.camera, 1.25) : walk(l.camera, -l.flySpeed * 0.5, 0, 0));
     else if (l.mode === "orbit" && key.startsWith("Arrow")) {
       const step = e.shiftKey ? 30 : 10; // pixels' worth, so keys and the pointer agree
       const dx = key === "ArrowRight" ? step : key === "ArrowLeft" ? -step : 0;

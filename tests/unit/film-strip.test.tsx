@@ -81,39 +81,16 @@ describe("FilmStrip", () => {
 
   it("marks the frame being watched only while the time is inside the span", () => {
     const { rerender } = renderWithStrata(
-      <FilmStrip
-        label="Scene"
-        frames={frames.slice(0, 3)}
-        span={[600, 630]}
-        time={615}
-        onSeek={() => {}}
-      />,
+      <FilmStrip label="Scene" frames={frames.slice(0, 3)} span={[600, 630]} time={615} onSeek={() => {}} />,
     );
-    expect(screen.getByRole("button", { name: "Play from 10:10" })).toHaveAttribute(
-      "aria-current",
-      "time",
-    );
-    expect(screen.getByRole("button", { name: "Play from 10:00" })).not.toHaveAttribute(
-      "aria-current",
-    );
-    rerender(
-      <FilmStrip
-        label="Scene"
-        frames={frames.slice(0, 3)}
-        span={[600, 630]}
-        time={640}
-        onSeek={() => {}}
-      />,
-    );
+    expect(screen.getByRole("button", { name: "Play from 10:10" })).toHaveAttribute("aria-current", "time");
+    expect(screen.getByRole("button", { name: "Play from 10:00" })).not.toHaveAttribute("aria-current");
+    rerender(<FilmStrip label="Scene" frames={frames.slice(0, 3)} span={[600, 630]} time={640} onSeek={() => {}} />);
     expect(screen.queryByRole("button", { current: "time" })).toBeNull();
   });
 
   it("says when a stretch has no frames at all, in the product's words", () => {
-    renderWithStrata(
-      <FilmStrip label="Frames of scene 9" frames={[]} missing="No thumbnails yet" />,
-    );
-    expect(
-      screen.getByRole("img", { name: "Frames of scene 9: No thumbnails yet" }),
-    ).toBeInTheDocument();
+    renderWithStrata(<FilmStrip label="Frames of scene 9" frames={[]} missing="No thumbnails yet" />);
+    expect(screen.getByRole("img", { name: "Frames of scene 9: No thumbnails yet" })).toBeInTheDocument();
   });
 });

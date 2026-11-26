@@ -14,8 +14,7 @@ import { renderWithStrata } from "../../src/testing";
 
 const accept = [".gpx", "video/*", "audio/*"];
 const acceptLabel = "a video, an audio file or a GPX track";
-const file = (name: string, type = "", bytes = 10) =>
-  new File([new Uint8Array(bytes)], name, { type });
+const file = (name: string, type = "", bytes = 10) => new File([new Uint8Array(bytes)], name, { type });
 
 function Library(props: Partial<FileIntakeOptions>) {
   const intake = useFileIntake({ accept, acceptLabel, ...props });
@@ -32,8 +31,7 @@ function Library(props: Partial<FileIntakeOptions>) {
 }
 
 /** The drop target is the zone's own element; its named button is React Aria's hidden one for assistive technology. */
-const zoneOf = () =>
-  screen.getByRole("button", { name: "Drag files here" }).closest<HTMLElement>("[data-rac]")!;
+const zoneOf = () => screen.getByRole("button", { name: "Drag files here" }).closest<HTMLElement>("[data-rac]")!;
 
 function drop(target: HTMLElement, files: File[]) {
   const items = files.map((f) => ({
@@ -86,21 +84,14 @@ describe("file intake", () => {
     await waitFor(() => expect(screen.getAllByText("Added")).toHaveLength(2));
     expect(seen).toEqual(["a.mp4", "ride.gpx"]);
     expect(screen.getByText("Not added")).toBeInTheDocument();
-    expect(
-      screen.getByText(`notes.txt is not a type this accepts. Add ${acceptLabel}.`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(`notes.txt is not a type this accepts. Add ${acceptLabel}.`)).toBeInTheDocument();
   });
 
   it("rejects a file over the size limit with its size in the reason", async () => {
     const user = userEvent.setup();
     const { container } = renderWithStrata(<Library maxBytes={5 * 1024 * 1024} />);
-    await user.upload(
-      container.querySelector('input[type="file"]')!,
-      file("big.mp4", "video/mp4", 6 * 1024 * 1024),
-    );
-    expect(
-      await screen.findByText("big.mp4 is 6.0 MB, over the 5.0 MB limit."),
-    ).toBeInTheDocument();
+    await user.upload(container.querySelector('input[type="file"]')!, file("big.mp4", "video/mp4", 6 * 1024 * 1024));
+    expect(await screen.findByText("big.mp4 is 6.0 MB, over the 5.0 MB limit.")).toBeInTheDocument();
   });
 
   it("runs the app's own check and shows its reason in the product's words", async () => {
@@ -118,9 +109,7 @@ describe("file intake", () => {
       file("old.avi", "video/x-msvideo"),
       file("new.mp4", "video/mp4"),
     ]);
-    expect(
-      await screen.findByText(/old.avi is not a video this browser can play/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/old.avi is not a video this browser can play/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Added")).toBeInTheDocument());
   });
 
@@ -141,19 +130,13 @@ describe("file intake", () => {
     const { container } = renderWithStrata(
       <Library
         process={() => {
-          if (++calls === 1)
-            throw new Error("run-02.mp4 could not be read. Check the file and try again.");
+          if (++calls === 1) throw new Error("run-02.mp4 could not be read. Check the file and try again.");
         }}
       />,
     );
-    await user.upload(
-      container.querySelector('input[type="file"]')!,
-      file("run-02.mp4", "video/mp4"),
-    );
+    await user.upload(container.querySelector('input[type="file"]')!, file("run-02.mp4", "video/mp4"));
     expect(await screen.findByText("Failed")).toBeInTheDocument();
-    expect(
-      screen.getByText("run-02.mp4 could not be read. Check the file and try again."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("run-02.mp4 could not be read. Check the file and try again.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Try again run-02.mp4" }));
     await waitFor(() => expect(screen.getByText("Added")).toBeInTheDocument());
     expect(calls).toBe(2);
@@ -162,9 +145,7 @@ describe("file intake", () => {
   it("takes one file at a time when asked, naming the extra", async () => {
     renderWithStrata(<Library multiple={false} />);
     drop(zoneOf(), [file("a.mp4", "video/mp4"), file("b.mp4", "video/mp4")]);
-    expect(
-      await screen.findByText("b.mp4 was not added: this takes one file at a time."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("b.mp4 was not added: this takes one file at a time.")).toBeInTheDocument();
     expect(screen.getByText("Added")).toBeInTheDocument();
   });
 
@@ -189,14 +170,8 @@ describe("file intake", () => {
 
   it("announces one summary when a batch finishes, not one per file", async () => {
     renderWithStrata(<Library />);
-    drop(zoneOf(), [
-      file("a.mp4", "video/mp4"),
-      file("b.mp4", "video/mp4"),
-      file("c.txt", "text/plain"),
-    ]);
-    await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent("2 added, 1 not added"),
-    );
+    drop(zoneOf(), [file("a.mp4", "video/mp4"), file("b.mp4", "video/mp4"), file("c.txt", "text/plain")]);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("2 added, 1 not added"));
   });
 
   it("dismisses finished rows", async () => {
@@ -215,10 +190,8 @@ describe("a check that fails to run", () => {
     const { container } = renderWithStrata(
       <Library
         check={(f) => {
-          if (f.name === "bad.mp4" && ++calls === 1)
-            throw new Error("bad.mp4 could not be checked. Try again.");
-          if (f.name === "later.mp4")
-            return Promise.reject(new Error("later.mp4 could not be checked. Try again."));
+          if (f.name === "bad.mp4" && ++calls === 1) throw new Error("bad.mp4 could not be checked. Try again.");
+          if (f.name === "later.mp4") return Promise.reject(new Error("later.mp4 could not be checked. Try again."));
           return null;
         }}
       />,
@@ -239,10 +212,7 @@ describe("a check that fails to run", () => {
     let release!: (v: null) => void;
     let processed = 0;
     const { container, unmount } = renderWithStrata(
-      <Library
-        check={() => new Promise<null>((r) => (release = r))}
-        process={() => void processed++}
-      />,
+      <Library check={() => new Promise<null>((r) => (release = r))} process={() => void processed++} />,
     );
     await user.upload(container.querySelector('input[type="file"]')!, file("a.mp4", "video/mp4"));
     unmount();
@@ -275,9 +245,7 @@ describe("MissingFile", () => {
   it("is a status word and a named relink that hands back the chosen file", async () => {
     const user = userEvent.setup();
     const onRelink = vi.fn();
-    const { container } = renderWithStrata(
-      <MissingFile name="run-02.mp4" accept={accept} onRelink={onRelink} />,
-    );
+    const { container } = renderWithStrata(<MissingFile name="run-02.mp4" accept={accept} onRelink={onRelink} />);
     expect(screen.getByText("File missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Relink run-02.mp4" })).toBeInTheDocument();
     const f = file("run-02.mp4", "video/mp4");

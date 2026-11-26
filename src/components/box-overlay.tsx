@@ -60,8 +60,20 @@ export function useBoxes(initial: string | null = null): BoxesState {
   return React.useMemo(() => ({ active, pointed, source, choose, point }), [active, pointed, source, choose]);
 }
 
-const STROKE: Record<BoxTone, string> = { neutral: "var(--foreground)", info: "var(--info)", success: "var(--success)", warning: "var(--warning)", danger: "var(--danger)" };
-const FILL: Record<BoxTone, string> = { neutral: "var(--muted)", info: "var(--info-subtle)", success: "var(--success-subtle)", warning: "var(--warning-subtle)", danger: "var(--danger-subtle)" };
+const STROKE: Record<BoxTone, string> = {
+  neutral: "var(--foreground)",
+  info: "var(--info)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--danger)",
+};
+const FILL: Record<BoxTone, string> = {
+  neutral: "var(--muted)",
+  info: "var(--info-subtle)",
+  success: "var(--success-subtle)",
+  warning: "var(--warning-subtle)",
+  danger: "var(--danger-subtle)",
+};
 
 export type BoxOverlayProps = {
   /** Names the layer: "Lines the reader found". */
@@ -86,7 +98,16 @@ export function BoxOverlay({ label, of, boxes, state, onChoose, fillLit = true }
 
   const move = (id: string, e: React.KeyboardEvent) => {
     const i = order.indexOf(id);
-    const to = e.key === "ArrowRight" || e.key === "ArrowDown" ? i + 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? i - 1 : e.key === "Home" ? 0 : e.key === "End" ? order.length - 1 : null;
+    const to =
+      e.key === "ArrowRight" || e.key === "ArrowDown"
+        ? i + 1
+        : e.key === "ArrowLeft" || e.key === "ArrowUp"
+          ? i - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? order.length - 1
+              : null;
     if (to !== null) {
       e.preventDefault();
       e.stopPropagation(); // the frame pans on arrows when zoomed; with a box focused they mean the next box
@@ -105,9 +126,19 @@ export function BoxOverlay({ label, of, boxes, state, onChoose, fillLit = true }
   };
 
   // Drawn in reading order, the one pointed or active last so its heavier outline is on top.
-  const drawn = [...order, ...[state.pointed, state.active].filter((id): id is string => id !== null && order.includes(id))];
+  const drawn = [
+    ...order,
+    ...[state.pointed, state.active].filter((id): id is string => id !== null && order.includes(id)),
+  ];
   return (
-    <svg ref={group} role="group" aria-label={label} viewBox={`0 0 ${of.w} ${of.h}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 size-full overflow-visible">
+    <svg
+      ref={group}
+      role="group"
+      aria-label={label}
+      viewBox={`0 0 ${of.w} ${of.h}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="absolute inset-0 size-full overflow-visible"
+    >
       {drawn.map((id, n) => {
         const b = byId.get(id)!;
         const tone = b.tone ?? "neutral";
@@ -199,7 +230,9 @@ export function BoxList({ label, boxes, state, renderBox, className }: BoxListPr
               "selected:bg-surface-sunken selected:font-medium hover:bg-surface-sunken",
               state.pointed === id && "bg-surface-sunken",
             )}
-            style={{ borderLeftColor: (b.tone ?? "neutral") === "neutral" ? "transparent" : STROKE[b.tone ?? "neutral"] }}
+            style={{
+              borderLeftColor: (b.tone ?? "neutral") === "neutral" ? "transparent" : STROKE[b.tone ?? "neutral"],
+            }}
           >
             {renderBox ? renderBox(b) : b.label}
           </ListBoxItem>

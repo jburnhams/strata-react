@@ -60,9 +60,7 @@ describe("DragSource", () => {
     const user = userEvent.setup();
     const drops: TimelineDrop[] = [];
     const ends: boolean[] = [];
-    renderWithStrata(
-      <Screen onDrop={(d) => drops.push(d)} onDragEnd={(dropped) => ends.push(dropped)} />,
-    );
+    renderWithStrata(<Screen onDrop={(d) => drops.push(d)} onDragEnd={(dropped) => ends.push(dropped)} />);
     screen.getByRole("button", { name: "Drag run-02.mp4" }).focus();
     await user.keyboard("{Enter}");
     await waitFor(() => expect(announced()).toMatch(/Started dragging/));
@@ -100,12 +98,7 @@ describe("FileDropZone and an in-app drag", () => {
       <DragSource label="run-02.mp4" items={() => [drag]}>
         <button type="button">Select run-02.mp4</button>
       </DragSource>
-      <FileDropZone
-        title="Drag more files here"
-        acceptLabel="a video"
-        onFiles={() => {}}
-        refuseTypes={refuseTypes}
-      >
+      <FileDropZone title="Drag more files here" acceptLabel="a video" onFiles={() => {}} refuseTypes={refuseTypes}>
         <FileButton accept={["video/*"]} onFiles={() => {}}>
           Add files
         </FileButton>
@@ -147,9 +140,7 @@ describe("FileDropZone and an in-app drag", () => {
 describe("refusesDrag", () => {
   const set = (...types: string[]) => ({ has: (t: string) => types.includes(t) });
   it("refuses a drag that carries a listed type, and not a drag of files", () => {
-    expect(
-      refusesDrag(set("application/x-strata-drag", "text/plain"), ["application/x-strata-drag"]),
-    ).toBe(true);
+    expect(refusesDrag(set("application/x-strata-drag", "text/plain"), ["application/x-strata-drag"])).toBe(true);
     expect(refusesDrag(set("video/mp4"), ["application/x-strata-drag", "text/plain"])).toBe(false);
     expect(refusesDrag(set("application/octet-stream"), ["application/x-strata-drag"])).toBe(false);
   });

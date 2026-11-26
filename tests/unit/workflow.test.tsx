@@ -67,9 +67,7 @@ describe("WorkflowSteps", () => {
     expect(expectOneFilledButton()).toBe(button);
     await user.click(button);
     expect(approved).toEqual(["inspect"]);
-    expect(
-      await screen.findByRole("button", { name: "Approve: Inspect the pieces" }),
-    ).toHaveTextContent("Approved");
+    expect(await screen.findByRole("button", { name: "Approve: Inspect the pieces" })).toHaveTextContent("Approved");
   });
 
   it("names a failed stage's error and offers Try again; says who approved a gate", async () => {
@@ -136,11 +134,7 @@ describe("useWorkflowRun", () => {
   it("polls while the run's job is going and stops when it ends", async () => {
     const answers = [firingRuns.running, firingRuns.running, firingRuns.waiting];
     let reads = 0;
-    server.use(
-      http.get(api.firingRun, () =>
-        HttpResponse.json(answers[Math.min(reads++, answers.length - 1)]),
-      ),
-    );
+    server.use(http.get(api.firingRun, () => HttpResponse.json(answers[Math.min(reads++, answers.length - 1)])));
     renderWithStrata(<Firing />);
     expect(await screen.findByLabelText("Running")).toHaveTextContent("true");
     await waitFor(() => expect(screen.getByLabelText("Running")).toHaveTextContent("false"));
@@ -163,12 +157,7 @@ function Jobs() {
     queryFn: () => fetchJson<{ items: Task[] }>(api.jobs),
   });
   return (
-    <DataView
-      state={load}
-      skeleton={<p>Loading</p>}
-      isEmpty={(p) => p.items.length === 0}
-      empty={<p>No jobs</p>}
-    >
+    <DataView state={load} skeleton={<p>Loading</p>} isEmpty={(p) => p.items.length === 0} empty={<p>No jobs</p>}>
       {(p) => (
         <JobsTable
           caption="Jobs"
@@ -204,9 +193,7 @@ describe("JobsTable", () => {
       "Done",
     ]);
     expect(within(rows[0]!).getByText("Tile 3 of 12")).toBeInTheDocument();
-    expect(
-      within(rows[2]!).getByText("OSError: the camera on shelf 2 did not answer"),
-    ).toBeInTheDocument();
+    expect(within(rows[2]!).getByText("OSError: the camera on shelf 2 did not answer")).toBeInTheDocument();
     expect(within(rows[4]!).queryByRole("button")).toBeNull();
     expect(within(rows[3]!).getByText(/hour ago/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel Test glaze celadon" }));
@@ -270,9 +257,7 @@ describe("WorkflowSummary (#373)", () => {
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(screen.getByText("Inspect the pieces")).toBeInTheDocument();
     unmount();
-    renderWithStrata(
-      <WorkflowSummary stages={firingRuns.running.stages} running words={{ running: "Firing" }} />,
-    );
+    renderWithStrata(<WorkflowSummary stages={firingRuns.running.stages} running words={{ running: "Firing" }} />);
     expect(screen.getByText("Firing")).toBeInTheDocument();
     expect(screen.getByText("Fire to cone 6, step 2 of 4")).toBeInTheDocument();
   });

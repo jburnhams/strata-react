@@ -95,8 +95,7 @@ describe("a rendered map", () => {
     expect(red).toBeGreaterThan(500); // the route is drawn
     // Fitted with 24px of padding: no route pixel touches the edge.
     for (let x = 0; x < png.width; x++)
-      for (const y of [0, png.height - 1])
-        expect(png.data[(y * png.width + x) * 4 + 1]).toBeGreaterThan(80);
+      for (const y of [0, png.height - 1]) expect(png.data[(y * png.width + x) * 4 + 1]).toBeGreaterThan(80);
   }, 30_000);
 
   it("colours by value: two steps put two colours on the picture", async () => {

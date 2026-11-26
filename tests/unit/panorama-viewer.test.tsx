@@ -29,20 +29,14 @@ afterEach(() => {
 
 // The picture loads after the render (a microtask), so its state update lands in the next act; a frame is a timer after that.
 const frames = async () => {
-  for (let i = 0; i < 3; i++)
-    await act(async () => void (await new Promise((r) => setTimeout(r, 15))));
+  for (let i = 0; i < 3; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 15))));
 };
 const group = () => screen.getByRole("group", { name: "360 view of the room" });
 const deg = (rad: number) => (rad * 180) / Math.PI;
 
 function Host(props: Partial<PanoramaViewerProps> & { onView?: (v: PanoramaView) => void }) {
   return (
-    <PanoramaViewer
-      label="360 view of the room"
-      image="/room.jpg"
-      onViewChange={props.onView}
-      {...(props as object)}
-    />
+    <PanoramaViewer label="360 view of the room" image="/room.jpg" onViewChange={props.onView} {...(props as object)} />
   );
 }
 
@@ -141,9 +135,7 @@ describe("a video the app owns", () => {
 describe("controls", () => {
   it("pans with the arrow keys, more with Shift, and keeps inside maxPitch", () => {
     const onView = vi.fn();
-    renderWithStrata(
-      <Host onView={onView} defaultView={{ yaw: 0, pitch: 0, fov: 90 }} maxPitch={30} />,
-    );
+    renderWithStrata(<Host onView={onView} defaultView={{ yaw: 0, pitch: 0, fov: 90 }} maxPitch={30} />);
     fireEvent.keyDown(group(), { key: "ArrowRight" });
     expect(onView).toHaveBeenLastCalledWith({ yaw: 7.5, pitch: 0, fov: 90 });
     fireEvent.keyDown(group(), { key: "ArrowLeft", shiftKey: true });
@@ -154,14 +146,7 @@ describe("controls", () => {
 
   it("zooms with + and -, within the limits, and goes home with 0", () => {
     const onView = vi.fn();
-    renderWithStrata(
-      <Host
-        onView={onView}
-        defaultView={{ yaw: 20, pitch: 5, fov: 90 }}
-        minFov={30}
-        maxFov={100}
-      />,
-    );
+    renderWithStrata(<Host onView={onView} defaultView={{ yaw: 20, pitch: 5, fov: 90 }} minFov={30} maxFov={100} />);
     fireEvent.keyDown(group(), { key: "+" });
     expect(onView.mock.lastCall![0].fov).toBeCloseTo(72);
     for (let i = 0; i < 6; i++) fireEvent.keyDown(group(), { key: "+" });
@@ -196,9 +181,7 @@ describe("controls", () => {
   it("drags the picture with the pointer: dragging right turns the view left; a small move is a click", () => {
     const onView = vi.fn();
     const onPick = vi.fn();
-    renderWithStrata(
-      <Host onView={onView} onPick={onPick} defaultView={{ yaw: 0, pitch: 0, fov: 90 }} />,
-    );
+    renderWithStrata(<Host onView={onView} onPick={onPick} defaultView={{ yaw: 0, pitch: 0, fov: 90 }} />);
     const el = group();
     fireEvent.pointerDown(el, { pointerId: 1, clientX: 300, clientY: 200, button: 0 });
     fireEvent.pointerMove(el, { pointerId: 1, clientX: 340, clientY: 200 });
@@ -272,9 +255,7 @@ describe("overlay", () => {
       if (at) seen.push({ x: at.x, y: at.y });
       return at ? <span data-testid="marker" style={{ left: at.x, top: at.y }} /> : null;
     };
-    const { rerender } = renderWithStrata(
-      <Host view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={overlay} />,
-    );
+    const { rerender } = renderWithStrata(<Host view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={overlay} />);
     const size = { width: 640, height: 280 }; // the layout shim's box
     const expected = project({ yaw: 0, pitch: 0, fov: 90 }, size, 30, 0)!;
     expect(seen.at(-1)!.x).toBeCloseTo(expected.x, 4);
@@ -284,10 +265,7 @@ describe("overlay", () => {
   it("gives nothing for a direction behind the camera", () => {
     let behind: unknown = "unset";
     renderWithStrata(
-      <Host
-        view={{ yaw: 0, pitch: 0, fov: 90 }}
-        overlay={({ project: p }) => ((behind = p(180, 0)), null)}
-      />,
+      <Host view={{ yaw: 0, pitch: 0, fov: 90 }} overlay={({ project: p }) => ((behind = p(180, 0)), null)} />,
     );
     expect(behind).toBeNull();
   });

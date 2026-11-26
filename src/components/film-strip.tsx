@@ -70,7 +70,11 @@ export function pickEvenly<T>(items: readonly T[], n: number): T[] {
 }
 
 /** The index of the frame showing `time`: the last at or before it, or -1 outside `span`. */
-export function frameAt(frames: readonly FilmFrame[], time: number | undefined, span: readonly [number, number]): number {
+export function frameAt(
+  frames: readonly FilmFrame[],
+  time: number | undefined,
+  span: readonly [number, number],
+): number {
   if (time === undefined || frames.length === 0 || time < span[0] || time >= span[1]) return -1;
   let found = 0;
   for (let i = 0; i < frames.length; i++) if (frames[i].time <= time) found = i;
@@ -78,7 +82,18 @@ export function frameAt(frames: readonly FilmFrame[], time: number | undefined, 
 }
 
 /** A row of frames from a stretch of video that fits its width, each with its time; pressing one seeks when `onSeek` is given, and the frame at `time` is marked. */
-export function FilmStrip({ label, frames, span, time, onSeek, aspect = "4/3", frameWidth = 96, missing = "No picture", seekVerb = "Play from", className }: FilmStripProps) {
+export function FilmStrip({
+  label,
+  frames,
+  span,
+  time,
+  onSeek,
+  aspect = "4/3",
+  frameWidth = 96,
+  missing = "No picture",
+  seekVerb = "Play from",
+  className,
+}: FilmStripProps) {
   const box = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(0);
   React.useLayoutEffect(() => {
@@ -106,8 +121,17 @@ export function FilmStrip({ label, frames, span, time, onSeek, aspect = "4/3", f
     return { f, k: n ? `${f.time}#${n}` : String(f.time) };
   });
   const picture = (f: FilmFrame, i: number) => (
-    <Thumbnail src={f.src} alt={onSeek ? "" : `Frame at ${format.runningTime(f.time)}`} missing={missing} aspect={aspect} className={cn("w-full", i === current && "ring-2 ring-primary ring-offset-1 ring-offset-background")}>
-      <span aria-hidden className="absolute bottom-0.5 right-0.5 rounded-control bg-background/80 px-1 type-caption tabular-nums text-foreground">
+    <Thumbnail
+      src={f.src}
+      alt={onSeek ? "" : `Frame at ${format.runningTime(f.time)}`}
+      missing={missing}
+      aspect={aspect}
+      className={cn("w-full", i === current && "ring-2 ring-primary ring-offset-1 ring-offset-background")}
+    >
+      <span
+        aria-hidden
+        className="absolute bottom-0.5 right-0.5 rounded-control bg-background/80 px-1 type-caption tabular-nums text-foreground"
+      >
         {format.runningTime(f.time)}
       </span>
     </Thumbnail>

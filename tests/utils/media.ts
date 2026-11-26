@@ -20,11 +20,39 @@ export type FakeMedia = {
   uninstall: () => void;
 };
 
-type State = { duration: number; time: number; paused: boolean; ended: boolean; error: { code: number } | null; volume: number; muted: boolean; rate: number; defaultRate: number; ready: number; network: number };
+type State = {
+  duration: number;
+  time: number;
+  paused: boolean;
+  ended: boolean;
+  error: { code: number } | null;
+  volume: number;
+  muted: boolean;
+  rate: number;
+  defaultRate: number;
+  ready: number;
+  network: number;
+};
 const states = new WeakMap<HTMLMediaElement, State>();
 const stateOf = (el: HTMLMediaElement): State => {
   let s = states.get(el);
-  if (!s) states.set(el, (s = { duration: NaN, time: 0, paused: true, ended: false, error: null, volume: 1, muted: false, rate: 1, defaultRate: 1, ready: 0, network: 0 }));
+  if (!s)
+    states.set(
+      el,
+      (s = {
+        duration: NaN,
+        time: 0,
+        paused: true,
+        ended: false,
+        error: null,
+        volume: 1,
+        muted: false,
+        rate: 1,
+        defaultRate: 1,
+        ready: 0,
+        network: 0,
+      }),
+    );
   return s;
 };
 
@@ -38,27 +66,102 @@ export function installFakeMedia(): FakeMedia {
   const fake = { plays: 0, loads: 0, refuse: false } as { plays: number; loads: number; refuse: boolean };
   const fire = (el: HTMLMediaElement, ...types: string[]) => types.forEach((t) => el.dispatchEvent(new Event(t)));
 
-  define("duration", { get(this: HTMLMediaElement) { return stateOf(this).duration; } });
-  define("currentTime", {
-    get(this: HTMLMediaElement) { return stateOf(this).time; },
-    set(this: HTMLMediaElement, v: number) { const st = stateOf(this); st.time = v; st.ended = false; fire(this, "seeking", "seeked", "timeupdate"); },
+  define("duration", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).duration;
+    },
   });
-  define("paused", { get(this: HTMLMediaElement) { return stateOf(this).paused; } });
-  define("ended", { get(this: HTMLMediaElement) { return stateOf(this).ended; } });
-  define("error", { get(this: HTMLMediaElement) { return stateOf(this).error; } });
-  define("readyState", { get(this: HTMLMediaElement) { return stateOf(this).ready; } });
-  define("networkState", { get(this: HTMLMediaElement) { return stateOf(this).network; } });
-  define("buffered", { get(this: HTMLMediaElement) { const s = stateOf(this); return { length: s.ready ? 1 : 0, start: () => 0, end: () => Math.min(s.duration, s.time + 30) }; } });
-  define("volume", { get(this: HTMLMediaElement) { return stateOf(this).volume; }, set(this: HTMLMediaElement, v: number) { stateOf(this).volume = v; fire(this, "volumechange"); } });
-  define("muted", { get(this: HTMLMediaElement) { return stateOf(this).muted; }, set(this: HTMLMediaElement, v: boolean) { stateOf(this).muted = v; fire(this, "volumechange"); } });
-  define("playbackRate", { get(this: HTMLMediaElement) { return stateOf(this).rate; }, set(this: HTMLMediaElement, v: number) { stateOf(this).rate = v; fire(this, "ratechange"); } });
-  define("defaultPlaybackRate", { get(this: HTMLMediaElement) { return stateOf(this).defaultRate; }, set(this: HTMLMediaElement, v: number) { stateOf(this).defaultRate = v; } });
+  define("currentTime", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).time;
+    },
+    set(this: HTMLMediaElement, v: number) {
+      const st = stateOf(this);
+      st.time = v;
+      st.ended = false;
+      fire(this, "seeking", "seeked", "timeupdate");
+    },
+  });
+  define("paused", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).paused;
+    },
+  });
+  define("ended", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).ended;
+    },
+  });
+  define("error", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).error;
+    },
+  });
+  define("readyState", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).ready;
+    },
+  });
+  define("networkState", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).network;
+    },
+  });
+  define("buffered", {
+    get(this: HTMLMediaElement) {
+      const s = stateOf(this);
+      return { length: s.ready ? 1 : 0, start: () => 0, end: () => Math.min(s.duration, s.time + 30) };
+    },
+  });
+  define("volume", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).volume;
+    },
+    set(this: HTMLMediaElement, v: number) {
+      stateOf(this).volume = v;
+      fire(this, "volumechange");
+    },
+  });
+  define("muted", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).muted;
+    },
+    set(this: HTMLMediaElement, v: boolean) {
+      stateOf(this).muted = v;
+      fire(this, "volumechange");
+    },
+  });
+  define("playbackRate", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).rate;
+    },
+    set(this: HTMLMediaElement, v: number) {
+      stateOf(this).rate = v;
+      fire(this, "ratechange");
+    },
+  });
+  define("defaultPlaybackRate", {
+    get(this: HTMLMediaElement) {
+      return stateOf(this).defaultRate;
+    },
+    set(this: HTMLMediaElement, v: number) {
+      stateOf(this).defaultRate = v;
+    },
+  });
   define("load", {
     value(this: HTMLMediaElement) {
       fake.loads++;
       const s = stateOf(this);
       // The load algorithm resets the rate to the default, as a browser does.
-      Object.assign(s, { duration: NaN, time: 0, ended: false, error: null, ready: 0, network: 2, rate: s.defaultRate });
+      Object.assign(s, {
+        duration: NaN,
+        time: 0,
+        ended: false,
+        error: null,
+        ready: 0,
+        network: 2,
+        rate: s.defaultRate,
+      });
       fire(this, "emptied", "loadstart");
     },
   });
@@ -67,7 +170,12 @@ export function installFakeMedia(): FakeMedia {
       fake.plays++;
       if (fake.refuse) {
         fake.refuse = false;
-        return Promise.reject(new DOMException("play() failed because the user didn't interact with the document first.", "NotAllowedError"));
+        return Promise.reject(
+          new DOMException(
+            "play() failed because the user didn't interact with the document first.",
+            "NotAllowedError",
+          ),
+        );
       }
       const s = stateOf(this);
       if (s.ended) Object.assign(s, { ended: false, time: 0 });
@@ -108,8 +216,12 @@ export function installFakeMedia(): FakeMedia {
       fire(el, "error");
     },
     refuseNextPlay: () => void (fake.refuse = true),
-    get plays() { return fake.plays; },
-    get loads() { return fake.loads; },
+    get plays() {
+      return fake.plays;
+    },
+    get loads() {
+      return fake.loads;
+    },
     uninstall() {
       for (const [name, d] of saved) {
         if (d) Object.defineProperty(proto, name, d);

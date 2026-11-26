@@ -9,8 +9,7 @@ import { renderWithStrata } from "../../src/testing";
 // `reveal` writes into the URL.
 
 type N = { id: string; name: string; file?: boolean };
-const ready = <T,>(data: T[]) =>
-  ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
+const ready = <T,>(data: T[]) => ({ status: "ready", data, refreshing: false }) as unknown as Load<readonly T[]>;
 const roots: N[] = [
   { id: "textures", name: "textures" },
   { id: "readme.txt", name: "readme.txt", file: true },
@@ -92,9 +91,7 @@ describe("branchPress", () => {
 
 describe("reveal and the URL", () => {
   it("writes the ancestors into the open param", async () => {
-    renderWithStrata(
-      <Host onSelect={() => {}} reveal={["textures", "textures/clip.wal"]} param="open" />,
-    );
+    renderWithStrata(<Host onSelect={() => {}} reveal={["textures", "textures/clip.wal"]} param="open" />);
     expect(await screen.findByRole("row", { name: /clip\.wal/ })).toBeInTheDocument();
     expect(screen.getByLabelText("open")).toHaveTextContent("textures");
   });

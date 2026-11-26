@@ -1,6 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { Alert, Button, InputLevel, ListeningLevel, MediaPlayer, MicrophoneContext, TakeLevel, format, useAutoRecorder, useRecorder, type AutoTake, type Recording } from "../src";
+import {
+  Alert,
+  Button,
+  InputLevel,
+  ListeningLevel,
+  MediaPlayer,
+  MicrophoneContext,
+  TakeLevel,
+  format,
+  useAutoRecorder,
+  useRecorder,
+  type AutoTake,
+  type Recording,
+} from "../src";
 import { fakeMicrophone, speechScript } from "../src/testing/microphone";
 
 // Recording speech (from strata-voice's studio): the live level while a take runs, the verdict on a
@@ -9,7 +22,17 @@ import { fakeMicrophone, speechScript } from "../src/testing/microphone";
 // records, so it is tagged `no-visual`. The hands-free booth (`useAutoRecorder`) is the same: its level's three
 // resting states are baselines, and the booth itself listens to a fake speaker reading with gaps.
 
-const meta = { title: "Actions/Recording", parameters: { layout: "padded" }, decorators: [(Story) => <div className="grid max-w-xl gap-4"><Story /></div>] } satisfies Meta;
+const meta = {
+  title: "Actions/Recording",
+  parameters: { layout: "padded" },
+  decorators: [
+    (Story) => (
+      <div className="grid max-w-xl gap-4">
+        <Story />
+      </div>
+    ),
+  ],
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -56,7 +79,9 @@ function Booth({ maxSeconds }: { maxSeconds: number }) {
           </Button>
         )}
       </div>
-      {recorder.state.phase === "recording" && <InputLevel level={recorder.state.level} seconds={recorder.state.seconds} maxSeconds={maxSeconds} />}
+      {recorder.state.phase === "recording" && (
+        <InputLevel level={recorder.state.level} seconds={recorder.state.seconds} maxSeconds={maxSeconds} />
+      )}
       {recorder.state.phase === "failed" && (
         <Alert tone="danger" title="Nothing was recorded" announce>
           {recorder.state.reason}
@@ -86,7 +111,11 @@ export const Live: Story = {
 export const Refused: Story = {
   tags: ["no-visual"],
   render: () => (
-    <MicrophoneContext.Provider value={fakeMicrophone({ refuse: "The browser was not allowed to use the microphone. Allow it from the address bar, then try again." })}>
+    <MicrophoneContext.Provider
+      value={fakeMicrophone({
+        refuse: "The browser was not allowed to use the microphone. Allow it from the address bar, then try again.",
+      })}
+    >
       <Booth maxSeconds={20} />
     </MicrophoneContext.Provider>
   ),
@@ -97,24 +126,43 @@ export const ThisDevice: Story = { tags: ["no-visual"], render: () => <Booth max
 
 /** Hands-free, between takes: the level, and the room's quiet the next take must rise above. */
 export const ListeningForSpeech: Story = {
-  render: () => <ListeningLevel state={{ phase: "listening", level: -52, noise: -63, speaking: false, seconds: 0, paused: false }} maxSeconds={60} />,
+  render: () => (
+    <ListeningLevel
+      state={{ phase: "listening", level: -52, noise: -63, speaking: false, seconds: 0, paused: false }}
+      maxSeconds={60}
+    />
+  ),
 };
 
 /** Hands-free, hearing a take: how long it has run against the longest take. */
 export const ListeningHearingYou: Story = {
-  render: () => <ListeningLevel state={{ phase: "listening", level: -11, noise: -63, speaking: true, seconds: 2.4, paused: false }} maxSeconds={60} />,
+  render: () => (
+    <ListeningLevel
+      state={{ phase: "listening", level: -11, noise: -63, speaking: true, seconds: 2.4, paused: false }}
+      maxSeconds={60}
+    />
+  ),
 };
 
 /** Hands-free and paused: the microphone is open, so the level still moves, but nothing is kept. */
 export const ListeningPaused: Story = {
-  render: () => <ListeningLevel state={{ phase: "listening", level: -40, noise: -63, speaking: false, seconds: 0, paused: true }} maxSeconds={60} />,
+  render: () => (
+    <ListeningLevel
+      state={{ phase: "listening", level: -40, noise: -63, speaking: false, seconds: 0, paused: true }}
+      maxSeconds={60}
+    />
+  ),
 };
 
 function HandsFreeBooth({ maxSeconds }: { maxSeconds: number }) {
   const [paused, setPaused] = React.useState(false);
   const [takes, setTakes] = React.useState<{ n: number; take: AutoTake }[]>([]);
   // The newest five, each numbered from the first.
-  const recorder = useAutoRecorder({ maxSeconds, paused, onTake: (take) => setTakes((all) => [{ n: (all[0]?.n ?? 0) + 1, take }, ...all].slice(0, 5)) });
+  const recorder = useAutoRecorder({
+    maxSeconds,
+    paused,
+    onTake: (take) => setTakes((all) => [{ n: (all[0]?.n ?? 0) + 1, take }, ...all].slice(0, 5)),
+  });
   return (
     <>
       <div className="flex gap-3">
@@ -138,7 +186,11 @@ function HandsFreeBooth({ maxSeconds }: { maxSeconds: number }) {
         </Alert>
       )}
       {takes.map(({ n, take }) => (
-        <TakeLevel key={n} peak={take.peak} lead={`Take ${n}: ${format.runningTime(take.seconds)}${take.cut ? ", cut at the longest" : ""}`} />
+        <TakeLevel
+          key={n}
+          peak={take.peak}
+          lead={`Take ${n}: ${format.runningTime(take.seconds)}${take.cut ? ", cut at the longest" : ""}`}
+        />
       ))}
     </>
   );
@@ -148,7 +200,9 @@ function HandsFreeBooth({ maxSeconds }: { maxSeconds: number }) {
 export const HandsFree: Story = {
   tags: ["no-visual"],
   render: () => (
-    <MicrophoneContext.Provider value={fakeMicrophone({ speed: 1, loop: true, script: speechScript(1, { speak: 2, gap: 2 }) })}>
+    <MicrophoneContext.Provider
+      value={fakeMicrophone({ speed: 1, loop: true, script: speechScript(1, { speak: 2, gap: 2 }) })}
+    >
       <HandsFreeBooth maxSeconds={20} />
     </MicrophoneContext.Provider>
   ),

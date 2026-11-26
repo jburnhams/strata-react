@@ -2,14 +2,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  MediaPlayer,
-  PlayerNotice,
-  SeekBar,
-  SpanStrip,
-  type MediaProgress,
-  type SourceAttacher,
-} from "../../src";
+import { MediaPlayer, PlayerNotice, SeekBar, SpanStrip, type MediaProgress, type SourceAttacher } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // Issues #270, #271 and #272: spans in an app's own colours and under the browser's controls, a start time with
@@ -37,13 +30,7 @@ describe("progress (#272)", () => {
   it("counts each second once: a seek counts nothing and going back over a part adds nothing", async () => {
     const reports: MediaProgress[] = [];
     const { el, user } = await play(
-      <MediaPlayer
-        label="Ep"
-        kind="video"
-        src="/a.mp4"
-        controls="strata"
-        onProgress={(r) => reports.push(r)}
-      />,
+      <MediaPlayer label="Ep" kind="video" src="/a.mp4" controls="strata" onProgress={(r) => reports.push(r)} />,
     );
     run(el, 0, 10);
     act(() => void (el.currentTime = 50)); // a seek: nothing for 10 to 50
@@ -57,13 +44,7 @@ describe("progress (#272)", () => {
   it("reports every 15 s of playing, and not again while nothing has changed", async () => {
     const onProgress = vi.fn();
     const { el, user } = await play(
-      <MediaPlayer
-        label="Ep"
-        kind="video"
-        src="/a.mp4"
-        controls="strata"
-        onProgress={onProgress}
-      />,
+      <MediaPlayer label="Ep" kind="video" src="/a.mp4" controls="strata" onProgress={onProgress} />,
     );
     run(el, 0, 14);
     expect(onProgress).not.toHaveBeenCalled();
@@ -82,27 +63,17 @@ describe("progress (#272)", () => {
   it("reports at the end, when the page is hidden and when the player goes", async () => {
     const onProgress = vi.fn();
     const { el, unmount } = await play(
-      <MediaPlayer
-        label="Ep"
-        kind="video"
-        src="/a.mp4"
-        controls="strata"
-        onProgress={onProgress}
-      />,
+      <MediaPlayer label="Ep" kind="video" src="/a.mp4" controls="strata" onProgress={onProgress} />,
       20,
     );
     run(el, 0, 4);
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
     Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    expect(onProgress).toHaveBeenLastCalledWith(
-      expect.objectContaining({ position: 4, watched: 4 }),
-    );
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({ position: 4, watched: 4 }));
     run(el, 4, 6);
     unmount();
-    expect(onProgress).toHaveBeenLastCalledWith(
-      expect.objectContaining({ position: 6, watched: 6 }),
-    );
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({ position: 6, watched: 6 }));
   });
 
   it("counts a span the player skipped as watched", async () => {
@@ -121,9 +92,7 @@ describe("progress (#272)", () => {
     run(el, 0, 4);
     act(() => media.tick(el, 5)); // reaches the intro: skipped to 12
     await user.click(screen.getByRole("button", { name: "Pause" }));
-    expect(onProgress).toHaveBeenLastCalledWith(
-      expect.objectContaining({ position: 12, watched: 12 }),
-    ); // 0 to 5 played, 5 to 12 skipped
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({ position: 12, watched: 12 })); // 0 to 5 played, 5 to 12 skipped
   });
 
   it("starts again for another file, after reporting the first", async () => {
@@ -133,25 +102,11 @@ describe("progress (#272)", () => {
       { src: "/2.mp4", title: "Two" },
     ];
     const { el, rerender } = await play(
-      <MediaPlayer
-        label="Ep"
-        kind="video"
-        sources={sources}
-        index={0}
-        controls="strata"
-        onProgress={onProgress}
-      />,
+      <MediaPlayer label="Ep" kind="video" sources={sources} index={0} controls="strata" onProgress={onProgress} />,
     );
     run(el, 0, 6);
     rerender(
-      <MediaPlayer
-        label="Ep"
-        kind="video"
-        sources={sources}
-        index={1}
-        controls="strata"
-        onProgress={onProgress}
-      />,
+      <MediaPlayer label="Ep" kind="video" sources={sources} index={1} controls="strata" onProgress={onProgress} />,
     );
     expect(onProgress).toHaveBeenLastCalledWith({
       position: 6,
@@ -232,9 +187,7 @@ describe("skips across files and StrictMode", () => {
 describe("start (#271)", () => {
   it("seeks a plain src once the metadata is in, and says so with Start over", async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MediaPlayer label="Ep" kind="video" src="/a.mp4" controls="strata" start={125} />,
-    );
+    const { container } = render(<MediaPlayer label="Ep" kind="video" src="/a.mp4" controls="strata" start={125} />);
     act(() => media.loaded(video(container), 300));
     expect(video(container).currentTime).toBe(125);
     const text = screen.getByText("Picked up at 2:05");
@@ -250,9 +203,7 @@ describe("start (#271)", () => {
       starts.push(context.startAt);
       return { detach: () => undefined, reload: () => undefined };
     };
-    const { rerender } = render(
-      <MediaPlayer label="Ep" kind="video" src="/a.m3u8" attach={attach} start={42} />,
-    );
+    const { rerender } = render(<MediaPlayer label="Ep" kind="video" src="/a.m3u8" attach={attach} start={42} />);
     rerender(<MediaPlayer label="Ep" kind="video" src="/b.m3u8" attach={attach} start={42} />);
     expect(starts).toEqual([42, 0]);
   });
@@ -333,10 +284,7 @@ describe("span colour and the strip (#270)", () => {
       />,
     );
     act(() => media.loaded(video(container), 100));
-    expect(screen.getByRole("img", { name: "Sponsor, 0:05 to 0:09" })).toHaveAttribute(
-      "data-kind",
-      "sponsor",
-    );
+    expect(screen.getByRole("img", { name: "Sponsor, 0:05 to 0:09" })).toHaveAttribute("data-kind", "sponsor");
   });
 
   it("draws a strip of the spans under the browser's own controls, named like the bar's", () => {

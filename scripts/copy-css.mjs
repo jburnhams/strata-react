@@ -22,7 +22,8 @@ console.log("dist/strata.bare.css written");
 const geist = /\/\* strata:geist-begin \*\/[\s\S]*?\/\* strata:geist-end \*\/\n?/;
 if (!geist.test(bare)) throw new Error("src/styles/strata.bare.css lost its strata:geist markers");
 const imports = [...theme.matchAll(/^@import [^;]+;\n/gm)].map((m) => m[0]);
-if (imports.length === 0) throw new Error("src/styles/theme.css has no @import lines: the default faces would not be bundled");
+if (imports.length === 0)
+  throw new Error("src/styles/theme.css has no @import lines: the default faces would not be bundled");
 const head = bare.match(/^\/\*[\s\S]*?\*\/\n/)[0];
 const body = bare.slice(head.length).replace(geist, "");
 const palettes = readFileSync(`${root}src/styles/palettes.css`, "utf8");
@@ -35,7 +36,8 @@ writeFileSync(`${root}dist/reading.css`, readFileSync(`${root}src/styles/reading
 console.log("dist/reading.css written");
 
 const strict = /\/\* strata:strict-begin \*\/[\s\S]*?\/\* strata:strict-end \*\//;
-if (!strict.test(bare)) throw new Error("src/styles/strata.bare.css lost its strata:strict markers: strata.migrate.css cannot be made");
+if (!strict.test(bare))
+  throw new Error("src/styles/strata.bare.css lost its strata:strict markers: strata.migrate.css cannot be made");
 const migrate = bare.replace(
   strict,
   `/* MIGRATION MODE (strata.migrate.css): Tailwind's stock colours, sizes, radii, shadows and fonts are NOT cleared here, so an

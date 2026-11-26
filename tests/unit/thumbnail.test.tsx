@@ -21,9 +21,7 @@ describe("Thumbnail", () => {
   afterEach(() => io.uninstall());
 
   it("holds its shape with a skeleton and asks for the image only when it nears the screen", () => {
-    const { container } = render(
-      <Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" aspect="4/3" />,
-    );
+    const { container } = render(<Thumbnail src={photo} alt="Celadon bowl" missing="Photo not found" aspect="4/3" />);
     const box = container.firstElementChild as HTMLElement;
     expect(box.style.aspectRatio).toBe("4 / 3");
     expect(box).toHaveAttribute("aria-busy", "true");
@@ -58,9 +56,7 @@ describe("Thumbnail", () => {
     fireEvent.load(imgIn(box)!);
     expect(box).not.toHaveAttribute("aria-busy");
     // A different picture still waits for the screen.
-    const other = render(
-      <Thumbnail src="/api/photos/p-302.svg" alt="Tenmoku cup" missing="Photo not found" />,
-    );
+    const other = render(<Thumbnail src="/api/photos/p-302.svg" alt="Tenmoku cup" missing="Photo not found" />);
     expect(other.container.firstElementChild).toHaveAttribute("aria-busy", "true");
     expect(imgIn(other.container.firstElementChild as HTMLElement)).toBeNull();
   });
@@ -71,9 +67,9 @@ describe("Thumbnail", () => {
     );
     io.intersect(container.firstElementChild!);
     fireEvent.error(screen.getByRole("img", { name: "Copper red bottle" }));
-    expect(
-      screen.getByRole("img", { name: "Copper red bottle: Photo not found" }),
-    ).toHaveTextContent("Photo not found");
+    expect(screen.getByRole("img", { name: "Copper red bottle: Photo not found" })).toHaveTextContent(
+      "Photo not found",
+    );
     expect(container.querySelector("img")).toBeNull();
   });
 
@@ -110,9 +106,7 @@ describe("Thumbnail", () => {
       />,
     );
     fireEvent.error(screen.getByRole("img", { name: "Tenmoku tea bowl" }));
-    expect(
-      screen.getByRole("img", { name: "Tenmoku tea bowl: Photo not found" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Tenmoku tea bowl: Photo not found" })).toBeInTheDocument();
     rerender(
       <Thumbnail
         src={photo}
@@ -136,13 +130,9 @@ describe("Thumbnail", () => {
   });
 
   it("crops by default and fits with fit=contain", () => {
-    const { rerender } = render(
-      <Thumbnail src={photo} alt="Cobalt vase" missing="Photo not found" eager />,
-    );
+    const { rerender } = render(<Thumbnail src={photo} alt="Cobalt vase" missing="Photo not found" eager />);
     expect(screen.getByRole("img")).toHaveClass("object-cover");
-    rerender(
-      <Thumbnail src={photo} alt="Cobalt vase" missing="Photo not found" eager fit="contain" />,
-    );
+    rerender(<Thumbnail src={photo} alt="Cobalt vase" missing="Photo not found" eager fit="contain" />);
     expect(screen.getByRole("img")).toHaveClass("object-contain");
   });
 });
@@ -190,13 +180,7 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
 
   it("does not put the first source's srcSet on a fallback", () => {
     const { container } = render(
-      <Thumbnail
-        src={sizes}
-        srcSet="/maxres-2x.jpg 2x"
-        alt="Kiln cam"
-        missing="No picture"
-        eager
-      />,
+      <Thumbnail src={sizes} srcSet="/maxres-2x.jpg 2x" alt="Kiln cam" missing="No picture" eager />,
     );
     expect(imgIn(container)).toHaveAttribute("srcset", "/maxres-2x.jpg 2x");
     fireEvent.error(imgIn(container)!);
@@ -206,9 +190,7 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
 
   it("tells again when the same request fails again after another one loaded", () => {
     const onMissing = vi.fn();
-    const ui = (src: string) => (
-      <Thumbnail src={src} alt="Kiln cam" missing="No picture" eager onMissing={onMissing} />
-    );
+    const ui = (src: string) => <Thumbnail src={src} alt="Kiln cam" missing="No picture" eager onMissing={onMissing} />;
     const { container, rerender } = render(ui("/a.jpg"));
     fireEvent.error(imgIn(container)!);
     expect(onMissing).toHaveBeenCalledTimes(1);
@@ -220,9 +202,7 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
   });
 
   it("stops at the first source that loads", () => {
-    const { container } = render(
-      <Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />,
-    );
+    const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />);
     fireEvent.load(imgIn(container)!);
     expect(container.firstElementChild).not.toHaveAttribute("aria-busy");
     expect(imgIn(container)).toHaveAttribute("src", "/maxres.jpg");
@@ -234,9 +214,7 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
       seen.push([img.getAttribute("src"), index]);
       return index === 0 ? false : undefined;
     };
-    const { container } = render(
-      <Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager onLoad={reject} />,
-    );
+    const { container } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager onLoad={reject} />);
     fireEvent.load(imgIn(container)!);
     expect(imgIn(container)).toHaveAttribute("src", "/hq.jpg");
     fireEvent.load(imgIn(container)!);
@@ -266,18 +244,14 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
 
   it("does not call onMissing for a record with no picture at all", () => {
     const onMissing = vi.fn();
-    const { rerender } = render(
-      <Thumbnail src={null} alt="Kiln cam" missing="No picture" onMissing={onMissing} />,
-    );
+    const { rerender } = render(<Thumbnail src={null} alt="Kiln cam" missing="No picture" onMissing={onMissing} />);
     rerender(<Thumbnail src={[]} alt="Kiln cam" missing="No picture" onMissing={onMissing} />);
     expect(screen.getByRole("img", { name: "Kiln cam: No picture" })).toBeInTheDocument();
     expect(onMissing).not.toHaveBeenCalled();
   });
 
   it("starts the list again for a new item", () => {
-    const { container, rerender } = render(
-      <Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />,
-    );
+    const { container, rerender } = render(<Thumbnail src={sizes} alt="Kiln cam" missing="No picture" eager />);
     fireEvent.error(imgIn(container)!);
     fireEvent.error(imgIn(container)!);
     rerender(<Thumbnail src={["/other.jpg"]} alt="Kiln cam" missing="No picture" eager />);
@@ -285,9 +259,7 @@ describe("Thumbnail with sources to try, a way to reject a picture, and a word w
   });
 
   it("draws the missing state of a decorative avatar as presentation, not an unnamed image", () => {
-    const { container } = render(
-      <Thumbnail src="/gone.jpg" alt="" fallback={<span>N</span>} eager />,
-    );
+    const { container } = render(<Thumbnail src="/gone.jpg" alt="" fallback={<span>N</span>} eager />);
     fireEvent.error(imgIn(container)!);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(container.querySelector("[aria-hidden='true']")).toHaveTextContent("N");

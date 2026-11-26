@@ -95,14 +95,8 @@ function Harness({
 describe("Compare", () => {
   it("shows both pictures side by side, each in a zoomable frame with its name", () => {
     render(<Harness />);
-    expect(screen.getByRole("img", { name: "Celadon bowl, Lightroom final" })).toHaveAttribute(
-      "src",
-      "/img/1/left",
-    );
-    expect(screen.getByRole("img", { name: "Celadon bowl, auto2" })).toHaveAttribute(
-      "src",
-      "/img/1/right",
-    );
+    expect(screen.getByRole("img", { name: "Celadon bowl, Lightroom final" })).toHaveAttribute("src", "/img/1/left");
+    expect(screen.getByRole("img", { name: "Celadon bowl, auto2" })).toHaveAttribute("src", "/img/1/right");
     expect(screen.getByRole("group", { name: "Your final" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "auto2" })).toBeInTheDocument();
     expect(screen.getByText("Lightroom")).toBeInTheDocument();
@@ -113,8 +107,7 @@ describe("Compare", () => {
     expect(screen.getByRole("img", { name: "A" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "B" })).toBeInTheDocument();
     const html = container.ownerDocument.body.innerHTML;
-    for (const leak of ["lightroom-final", "auto2", "Lightroom", "14 s", "Celadon"])
-      expect(html).not.toContain(leak);
+    for (const leak of ["lightroom-final", "auto2", "Lightroom", "14 s", "Celadon"]) expect(html).not.toContain(leak);
   });
 
   it("names the flip key after the candidates' own labels, not A and B", () => {
@@ -177,14 +170,10 @@ describe("Compare", () => {
     render(<Harness />);
     await user.click(screen.getByRole("radio", { name: "Swipe" }));
     expect(screen.getAllByRole("img")).toHaveLength(2);
-    expect(
-      screen.getByRole("slider", { name: "Divider between Your final and auto2" }),
-    ).toHaveValue("50");
+    expect(screen.getByRole("slider", { name: "Divider between Your final and auto2" })).toHaveValue("50");
     await user.keyboard("3");
     expect(screen.getByRole("radio", { name: "Fade" })).toBeChecked();
-    expect(
-      screen.getByRole("slider", { name: "Blend from Your final to auto2" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Blend from Your final to auto2" })).toBeInTheDocument();
     await user.keyboard("1");
     expect(screen.getByRole("radio", { name: "Side by side" })).toBeChecked();
   });
@@ -198,9 +187,7 @@ describe("Compare", () => {
     await user.keyboard("{ArrowRight}");
     expect(divider).toHaveValue("51");
     const g = screen.getByRole("group", { name: "Your final over auto2" });
-    expect((g.firstElementChild as HTMLElement).style.transform).toMatch(
-      /translate\(0px(, 0px)?\) scale\(1\.5\)/,
-    );
+    expect((g.firstElementChild as HTMLElement).style.transform).toMatch(/translate\(0px(, 0px)?\) scale\(1\.5\)/);
   });
 
   it("cuts the swipe at the divider in frame coordinates, however far the pictures are zoomed", async () => {
@@ -232,9 +219,9 @@ describe("Compare", () => {
   it("says in the product's words that a picture failed and keeps the other side usable", () => {
     render(<Harness />);
     fireEvent.error(screen.getByRole("img", { name: "Celadon bowl, auto2" }));
-    expect(
-      screen.getByRole("img", { name: "Celadon bowl, auto2: Picture not found" }),
-    ).toHaveTextContent("Picture not found");
+    expect(screen.getByRole("img", { name: "Celadon bowl, auto2: Picture not found" })).toHaveTextContent(
+      "Picture not found",
+    );
     expect(screen.getByRole("img", { name: "Celadon bowl, Lightroom final" })).toBeInTheDocument();
   });
 
@@ -300,9 +287,7 @@ describe("Compare", () => {
       mode: "side" as const,
       onModeChange: () => undefined,
     };
-    const { rerender } = render(
-      <Compare {...props} a={side("/a1", [1600, 900])} b={side("/b1")} />,
-    );
+    const { rerender } = render(<Compare {...props} a={side("/a1", [1600, 900])} b={side("/b1")} />);
     expect(ratio("/a1")).toBeCloseTo(1.7778, 3);
     rerender(<Compare {...props} a={side("/a2", [1000, 1000])} b={side("/b2")} />);
     expect(ratio("/a2")).toBeCloseTo(1, 3);
@@ -321,14 +306,11 @@ describe("Compare", () => {
   it("opens the modal when the browser refuses full screen", async () => {
     const user = userEvent.setup();
     Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: true });
-    Element.prototype.requestFullscreen = () =>
-      Promise.reject(new TypeError("Permissions check failed"));
+    Element.prototype.requestFullscreen = () => Promise.reject(new TypeError("Permissions check failed"));
     try {
       render(<Harness />);
       await user.click(screen.getByRole("button", { name: "Full screen" }));
-      expect(
-        await screen.findByRole("dialog", { name: "Photo 1, two versions" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByRole("dialog", { name: "Photo 1, two versions" })).toBeInTheDocument();
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("dialog")).toBeNull();
     } finally {
@@ -369,8 +351,7 @@ describe("Compare", () => {
       // The same picture with a faint change (200 to 185 on five pixels): under the default tolerance, over a strict one.
       const faint = (src: string): Promise<Pixels> => {
         const p = grey(false);
-        if (src.endsWith("right"))
-          for (let i = 0; i < 5; i++) p.data.set([185, 185, 185, 255], i * 4);
+        if (src.endsWith("right")) for (let i = 0; i < 5; i++) p.data.set([185, 185, 185, 255], i * 4);
         return Promise.resolve(p);
       };
       render(<Harness start="difference" readPixels={faint} />);
@@ -397,9 +378,7 @@ describe("Compare", () => {
 
     it("says so in words when the pictures' pixels cannot be read, and the brightness view still works", async () => {
       const user = userEvent.setup();
-      render(
-        <Harness start="difference" readPixels={() => Promise.reject(new Error("tainted"))} />,
-      );
+      render(<Harness start="difference" readPixels={() => Promise.reject(new Error("tainted"))} />);
       await user.click(screen.getByRole("radio", { name: "Changed pixels" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Could not read these pictures to compare their pixels.",
@@ -453,13 +432,13 @@ describe("CompareGrid", () => {
     render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" />);
     await user.click(screen.getByRole("button", { name: "Zoom in" }));
     for (const name of ["A", "B", "C"])
-      expect(
-        (screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform,
-      ).toContain("scale(1.5)");
+      expect((screen.getByRole("group", { name }).firstElementChild as HTMLElement).style.transform).toContain(
+        "scale(1.5)",
+      );
     await user.keyboard("0");
-    expect(
-      (screen.getByRole("group", { name: "C" }).firstElementChild as HTMLElement).style.transform,
-    ).toContain("scale(1)");
+    expect((screen.getByRole("group", { name: "C" }).firstElementChild as HTMLElement).style.transform).toContain(
+      "scale(1)",
+    );
   });
 
   it("draws the caller's actions under each tile", async () => {
@@ -479,23 +458,14 @@ describe("CompareGrid", () => {
   });
 
   it("when blind, names tiles by label only and never writes an id, note or alt", () => {
-    const { container } = render(
-      <CompareGrid label="Three versions" items={items} blind missing="Gone" />,
-    );
+    const { container } = render(<CompareGrid label="Three versions" items={items} blind missing="Gone" />);
     expect(screen.getByRole("img", { name: "B" })).toBeInTheDocument();
     const html = container.ownerDocument.body.innerHTML;
     for (const leak of ["secret-", "note one", "alt one"]) expect(html).not.toContain(leak);
   });
 
   it("says in words which picture failed and keeps the others", () => {
-    render(
-      <CompareGrid
-        label="Three versions"
-        items={items}
-        blind={false}
-        missing="Picture not found"
-      />,
-    );
+    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Picture not found" />);
     fireEvent.error(screen.getByRole("img", { name: "alt two" }));
     expect(screen.getByRole("img", { name: "alt two: Picture not found" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "alt one" })).toBeInTheDocument();

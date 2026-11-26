@@ -3,13 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithStrata } from "../../src/testing";
-import {
-  CompareVideo,
-  PairJudge,
-  type Candidate,
-  type VideoMedia,
-  type VideoMode,
-} from "../../src";
+import { CompareVideo, PairJudge, type Candidate, type VideoMedia, type VideoMode } from "../../src";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
 // jsdom has no media engine: tests/utils/media.ts plays the browser's decoder (and `stall` a
@@ -20,12 +14,7 @@ let media: FakeMedia;
 beforeEach(() => void (media = installFakeMedia()));
 afterEach(() => media.uninstall());
 
-const clip = (
-  id: string,
-  label: string,
-  size: [number, number],
-  note?: string,
-): Candidate<VideoMedia> => ({
+const clip = (id: string, label: string, size: [number, number], note?: string): Candidate<VideoMedia> => ({
   id,
   label,
   note,
@@ -204,16 +193,10 @@ describe("CompareVideo", () => {
 
   it("keeps a loop the app holds, so it survives a change of pair", async () => {
     const seen: unknown[] = [];
-    const { rerender } = renderWithStrata(
-      <Harness loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />,
-    );
+    const { rerender } = renderWithStrata(<Harness loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />);
     expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
     rerender(
-      <Harness
-        a={clip("x2", "A", [1440, 1080])}
-        loop={{ start: 1, end: 3 }}
-        onLoopChange={(l) => seen.push(l)}
-      />,
+      <Harness a={clip("x2", "A", [1440, 1080])} loop={{ start: 1, end: 3 }} onLoopChange={(l) => seen.push(l)} />,
     );
     expect(screen.getByText("Looping 0:00:01:00 to 0:00:03:00")).toBeInTheDocument();
     await userEvent.keyboard("c");
@@ -288,10 +271,7 @@ describe("CompareVideo", () => {
   it("zooms both together", async () => {
     renderWithStrata(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: "Zoom in" }));
-    const [fa, fb] = [
-      screen.getByRole("group", { name: "Frame A" }),
-      screen.getByRole("group", { name: "Frame B" }),
-    ];
+    const [fa, fb] = [screen.getByRole("group", { name: "Frame A" }), screen.getByRole("group", { name: "Frame B" })];
     expect(fa.firstElementChild).toHaveStyle({
       transform: fb.firstElementChild!.getAttribute("style")!.match(/transform: ([^;]+)/)![1],
     });
@@ -321,9 +301,7 @@ describe("CompareVideo", () => {
       toJSON: () => ({}),
     });
     try {
-      renderWithStrata(
-        <Harness a={clip("x", "A", [1440, 1080])} b={clip("y", "B", [720, 540])} initial="fade" />,
-      );
+      renderWithStrata(<Harness a={clip("x", "A", [1440, 1080])} b={clip("y", "B", [720, 540])} initial="fade" />);
       expect(el("A").style.imageRendering).toBe(""); // 1000 px for 1440 px of picture: smaller than its pixels
       expect(el("B").style.imageRendering).toBe("pixelated"); // 1000 px for 720 px: enlarged
     } finally {
@@ -333,8 +311,7 @@ describe("CompareVideo", () => {
 
   it("never writes the id or the note of a blind pair, and shows the note when it is not blind", () => {
     const { container, rerender } = renderWithStrata(<Harness />);
-    for (const secret of ["model-x", "model-y", "secret-note"])
-      expect(container.innerHTML).not.toContain(secret);
+    for (const secret of ["model-x", "model-y", "secret-note"]) expect(container.innerHTML).not.toContain(secret);
     rerender(<Harness blind={false} />);
     expect(screen.getByText("secret-note")).toBeInTheDocument();
   });
@@ -348,10 +325,7 @@ describe("CompareVideo", () => {
   it("takes the answer keys and the vote bar, as pictures do", async () => {
     let pressed = 0;
     renderWithStrata(
-      <Harness
-        extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]}
-        footer={<p>Vote bar</p>}
-      />,
+      <Harness extraShortcuts={[{ keys: ["a"], label: "Prefer A", run: () => pressed++ }]} footer={<p>Vote bar</p>} />,
     );
     await userEvent.keyboard("a");
     expect(pressed).toBe(1);

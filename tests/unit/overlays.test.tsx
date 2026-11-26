@@ -149,30 +149,25 @@ describe("controlled dialogs without a trigger (issue #116)", () => {
   it.each([
     ["Dialog", false],
     ["AlertDialog", true],
-  ])(
-    "%s mounts, opens, closes and returns focus without a console warning",
-    async (_name, alert) => {
-      const user = userEvent.setup();
-      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-      const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      try {
-        render(<Driven alert={alert} />);
-        const opener = screen.getByRole("button", { name: "Open from a command" });
-        await user.click(opener);
-        const dialog = await screen.findByRole(alert ? "alertdialog" : "dialog");
-        expect(dialog.contains(document.activeElement)).toBe(true);
-        await user.keyboard("{Escape}");
-        await waitFor(() =>
-          expect(screen.queryByRole(alert ? "alertdialog" : "dialog")).toBeNull(),
-        );
-        await waitFor(() => expect(opener).toHaveFocus());
-        expect([...logged.mock.calls, ...warned.mock.calls]).toEqual([]);
-      } finally {
-        logged.mockRestore();
-        warned.mockRestore();
-      }
-    },
-  );
+  ])("%s mounts, opens, closes and returns focus without a console warning", async (_name, alert) => {
+    const user = userEvent.setup();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      render(<Driven alert={alert} />);
+      const opener = screen.getByRole("button", { name: "Open from a command" });
+      await user.click(opener);
+      const dialog = await screen.findByRole(alert ? "alertdialog" : "dialog");
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole(alert ? "alertdialog" : "dialog")).toBeNull());
+      await waitFor(() => expect(opener).toHaveFocus());
+      expect([...logged.mock.calls, ...warned.mock.calls]).toEqual([]);
+    } finally {
+      logged.mockRestore();
+      warned.mockRestore();
+    }
+  });
 });
 
 describe("AlertDialog", () => {
@@ -221,9 +216,7 @@ describe("AlertDialog", () => {
 
   it("stays open with the server's reason when an async confirm fails, over real HTTP via MSW", async () => {
     server.use(
-      http.delete("/api/firings", () =>
-        HttpResponse.json({ detail: "Firing 2 is running." }, { status: 409 }),
-      ),
+      http.delete("/api/firings", () => HttpResponse.json({ detail: "Firing 2 is running." }, { status: 409 })),
     );
     const user = userEvent.setup();
     const { fetchJson } = await import("../../src");
@@ -257,9 +250,7 @@ describe("overlay descriptions and height", () => {
     expect(dialog).toHaveAccessibleDescription("Their bookings go too.");
     expect(dialog.parentElement).toHaveClass("max-h-full");
     expect(screen.getByText("Their bookings go too.").closest(".overflow-y-auto")).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Delete 3 firings" }).closest(".overflow-y-auto"),
-    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Delete 3 firings" }).closest(".overflow-y-auto")).toBeNull();
   });
 });
 

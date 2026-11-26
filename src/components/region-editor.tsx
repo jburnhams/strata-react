@@ -2,7 +2,24 @@ import * as React from "react";
 import { Columns2, Play, RotateCcw, RotateCw, Square } from "lucide-react";
 import { cn } from "../lib/utils";
 import { format } from "../lib/format";
-import { HANDLES, drawRect, gutterOf, joinRects, lerpRect, moveGutter, moveRect, normaliseAngle, resizeRect, sameRect, splitRect, turnRect, turnedSize, type Easing, type Handle, type Rect } from "../lib/region";
+import {
+  HANDLES,
+  drawRect,
+  gutterOf,
+  joinRects,
+  lerpRect,
+  moveGutter,
+  moveRect,
+  normaliseAngle,
+  resizeRect,
+  sameRect,
+  splitRect,
+  turnRect,
+  turnedSize,
+  type Easing,
+  type Handle,
+  type Rect,
+} from "../lib/region";
 import { Button } from "./button";
 import { NumberField, Slider } from "./value-controls";
 import { PropertyRow } from "./inspector";
@@ -68,7 +85,16 @@ const TONE: Record<RegionTone, { edge: string; fill: string }> = {
   danger: { edge: "var(--danger)", fill: "var(--danger-subtle)" },
 };
 
-const CURSOR: Record<Handle, string> = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize" };
+const CURSOR: Record<Handle, string> = {
+  n: "ns-resize",
+  s: "ns-resize",
+  e: "ew-resize",
+  w: "ew-resize",
+  ne: "nesw-resize",
+  sw: "nesw-resize",
+  nw: "nwse-resize",
+  se: "nwse-resize",
+};
 const HANDLE_AT: Record<Handle, string> = {
   nw: "left-0 top-0 -translate-x-1/2 -translate-y-1/2",
   n: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2",
@@ -129,7 +155,8 @@ export type RegionEditorProps = {
 
 const round = (n: number) => format.integer(Math.round(n));
 /** A window said in words. */
-export const describeRegion = (r: EditableRegion) => `${r.label}: ${round(r.w)} wide by ${round(r.h)} high, ${round(r.x)} across and ${round(r.y)} down`;
+export const describeRegion = (r: EditableRegion) =>
+  `${r.label}: ${round(r.w)} wide by ${round(r.h)} high, ${round(r.x)} across and ${round(r.y)} down`;
 
 type Draft = { id: string; rect: Rect } | null;
 type Gesture =
@@ -139,8 +166,30 @@ type Gesture =
 
 /** Draw and move one or two named windows on a picture, with pointer, keyboard and numbers kept in step; aspect and bounds hold through all three; two windows make a from/to move with a Watch preview. */
 export function RegionEditor({
-  label, children, size, regions, onChange, selectedId, onSelectedChange, aspect, min, bounds, step, onDraw, mode = "single",
-  onPreview, duration = 1500, easing = "ease-in-out", fields = true, unit = "px", defaults, angle = 0, onAngleChange, guide, spreadLabels = { one: "Page", left: "Left page", right: "Right page" }, className,
+  label,
+  children,
+  size,
+  regions,
+  onChange,
+  selectedId,
+  onSelectedChange,
+  aspect,
+  min,
+  bounds,
+  step,
+  onDraw,
+  mode = "single",
+  onPreview,
+  duration = 1500,
+  easing = "ease-in-out",
+  fields = true,
+  unit = "px",
+  defaults,
+  angle = 0,
+  onAngleChange,
+  guide,
+  spreadLabels = { one: "Page", left: "Left page", right: "Right page" },
+  className,
 }: RegionEditorProps) {
   const [w, h] = angle ? turnedSize(size, angle) : size;
   const limits = React.useMemo(
@@ -206,7 +255,11 @@ export function RegionEditor({
     else {
       const dx = at.x - g.from.x;
       const dy = at.y - g.from.y;
-      setDraft({ id: g.id, rect: g.kind === "move" ? moveRect(g.start, dx, dy, limits.bounds) : resizeRect(g.start, g.handle, dx, dy, limits) });
+      setDraft({
+        id: g.id,
+        rect:
+          g.kind === "move" ? moveRect(g.start, dx, dy, limits.bounds) : resizeRect(g.start, g.handle, dx, dy, limits),
+      });
     }
   };
   const onUp = () => {
@@ -249,7 +302,9 @@ export function RegionEditor({
     if (!dir || e.altKey || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
     e.stopPropagation(); // a zoomed ViewportFrame around the editor pans on arrows; these keys edit the region instead
-    const next = e.shiftKey ? resizeRect(now, dir[0] ? "e" : "s", dir[0] * stride, dir[1] * stride, limits) : moveRect(now, dir[0] * stride, dir[1] * stride, limits.bounds);
+    const next = e.shiftKey
+      ? resizeRect(now, dir[0] ? "e" : "s", dir[0] * stride, dir[1] * stride, limits)
+      : moveRect(now, dir[0] * stride, dir[1] * stride, limits.bounds);
     setDraft({ id: r.id, rect: next });
     say({ ...r, ...next });
   };
@@ -271,20 +326,29 @@ export function RegionEditor({
   const [gutterDraft, setGutterDraft] = React.useState<number | null>(null);
   const pair = spread && regions.length === 2 ? ([rectOf(regions[0]), rectOf(regions[1])] as const) : null;
   const gutter = pair ? (gutterDraft === null ? gutterOf(pair[0], pair[1]) : gutterDraft) : 0;
-  const gutterRects = (at: number): [Rect, Rect] | null => (pair ? moveGutter(pair[0], pair[1], at - gutterOf(pair[0], pair[1]), limits) : null);
+  const gutterRects = (at: number): [Rect, Rect] | null =>
+    pair ? moveGutter(pair[0], pair[1], at - gutterOf(pair[0], pair[1]), limits) : null;
   const keepGutter = (at: number) => {
     const moved = gutterRects(at);
     setGutterDraft(null);
     if (moved && regions.length === 2) {
-      onChange([{ ...regions[0], ...moved[0] }, { ...regions[1], ...moved[1] }]);
-      setSaid(`Gutter at ${round(gutterOf(moved[0], moved[1]))}: ${spreadLabels.left} ${round(moved[0].w)} wide, ${spreadLabels.right} ${round(moved[1].w)} wide`);
+      onChange([
+        { ...regions[0], ...moved[0] },
+        { ...regions[1], ...moved[1] },
+      ]);
+      setSaid(
+        `Gutter at ${round(gutterOf(moved[0], moved[1]))}: ${spreadLabels.left} ${round(moved[0].w)} wide, ${spreadLabels.right} ${round(moved[1].w)} wide`,
+      );
     }
   };
   const split = () => {
     const only = regions[0];
     if (!only) return;
     const [l, r] = splitRect(rectOf(only));
-    onChange([{ ...only, ...l, label: spreadLabels.left }, { ...only, ...r, id: `${only.id}-right`, label: spreadLabels.right, tone: "info" }]);
+    onChange([
+      { ...only, ...l, label: spreadLabels.left },
+      { ...only, ...r, id: `${only.id}-right`, label: spreadLabels.right, tone: "info" },
+    ]);
     setSaid(`Split into ${spreadLabels.left} and ${spreadLabels.right}`);
   };
   const join = () => {
@@ -302,7 +366,16 @@ export function RegionEditor({
   const setSide = (key: "x" | "y" | "w" | "h", value: number | null) => {
     if (!chosen || value === null) return;
     const cur = rectOf(chosen);
-    const next = key === "x" || key === "y" ? moveRect(cur, key === "x" ? value - cur.x : 0, key === "y" ? value - cur.y : 0, limits.bounds) : resizeRect(cur, key === "w" ? "e" : "s", key === "w" ? value - cur.w : 0, key === "h" ? value - cur.h : 0, limits);
+    const next =
+      key === "x" || key === "y"
+        ? moveRect(cur, key === "x" ? value - cur.x : 0, key === "y" ? value - cur.y : 0, limits.bounds)
+        : resizeRect(
+            cur,
+            key === "w" ? "e" : "s",
+            key === "w" ? value - cur.w : 0,
+            key === "h" ? value - cur.h : 0,
+            limits,
+          );
     keep(chosen.id, next);
     say({ ...chosen, ...next });
   };
@@ -340,23 +413,61 @@ export function RegionEditor({
     frame.current = requestAnimationFrame(tick);
   };
 
-  const pct = (r: Rect) => ({ left: `${(r.x / w) * 100}%`, top: `${(r.y / h) * 100}%`, width: `${(r.w / w) * 100}%`, height: `${(r.h / h) * 100}%` });
-  const modified = defaults ? !(defaults.length === regions.length && defaults.every((d, i) => regions[i] && sameRect(d, regions[i]!) && d.id === regions[i]!.id)) : false;
+  const pct = (r: Rect) => ({
+    left: `${(r.x / w) * 100}%`,
+    top: `${(r.y / h) * 100}%`,
+    width: `${(r.w / w) * 100}%`,
+    height: `${(r.h / h) * 100}%`,
+  });
+  const modified = defaults
+    ? !(
+        defaults.length === regions.length &&
+        defaults.every((d, i) => regions[i] && sameRect(d, regions[i]!) && d.id === regions[i]!.id)
+      )
+    : false;
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="relative overflow-hidden rounded-surface border border-border bg-surface-sunken" style={{ aspectRatio: `${w} / ${h}` }}>
+      <div
+        className="relative overflow-hidden rounded-surface border border-border bg-surface-sunken"
+        style={{ aspectRatio: `${w} / ${h}` }}
+      >
         {angle ? (
-          <div className="absolute" style={{ left: "50%", top: "50%", width: `${(size[0] / w) * 100}%`, height: `${(size[1] / h) * 100}%`, transform: `translate(-50%, -50%) rotate(${angle}deg)` }}>
+          <div
+            className="absolute"
+            style={{
+              left: "50%",
+              top: "50%",
+              width: `${(size[0] / w) * 100}%`,
+              height: `${(size[1] / h) * 100}%`,
+              transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+            }}
+          >
             {children}
           </div>
         ) : (
           children
         )}
         {guide && (
-          <svg aria-hidden data-guide className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 8 8" preserveAspectRatio="none">
+          <svg
+            aria-hidden
+            data-guide
+            className="pointer-events-none absolute inset-0 size-full"
+            viewBox="0 0 8 8"
+            preserveAspectRatio="none"
+          >
             {Array.from({ length: 7 }, (_, i) => (
-              <line key={i} x1="0" x2="8" y1={i + 1} y2={i + 1} stroke="var(--foreground)" strokeOpacity={0.35} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <line
+                key={i}
+                x1="0"
+                x2="8"
+                y1={i + 1}
+                y2={i + 1}
+                stroke="var(--foreground)"
+                strokeOpacity={0.35}
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
             ))}
           </svg>
         )}
@@ -376,13 +487,36 @@ export function RegionEditor({
           }}
         >
           {mode === "move" && from && to && (
-            <svg className="pointer-events-none absolute inset-0 size-full" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
+            <svg
+              className="pointer-events-none absolute inset-0 size-full"
+              viewBox={`0 0 ${w} ${h}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
               <defs>
-                <marker id={`${hintId}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <marker
+                  id={`${hintId}-arrow`}
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
                   <path d="M0 0 10 5 0 10z" fill="var(--foreground)" />
                 </marker>
               </defs>
-              <line x1={from.x + from.w / 2} y1={from.y + from.h / 2} x2={to.x + to.w / 2} y2={to.y + to.h / 2} stroke="var(--foreground)" strokeWidth={2} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" markerEnd={`url(#${hintId}-arrow)`} />
+              <line
+                x1={from.x + from.w / 2}
+                y1={from.y + from.h / 2}
+                x2={to.x + to.w / 2}
+                y2={to.y + to.h / 2}
+                stroke="var(--foreground)"
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                strokeDasharray="6 4"
+                markerEnd={`url(#${hintId}-arrow)`}
+              />
             </svg>
           )}
           {shown.map((r) => {
@@ -405,10 +539,21 @@ export function RegionEditor({
                 }}
                 onKeyDown={(e) => keys(e, r)}
                 onPointerDown={(e) => beginMove(e, r)}
-                className={cn("absolute cursor-move border-2 outline-offset-2 transition-state", active ? "z-10" : "opacity-90")}
-                style={{ ...pct(r), borderColor: tone.edge, backgroundColor: `color-mix(in oklab, ${tone.fill} 35%, transparent)`, borderStyle: active ? "solid" : "dashed" }}
+                className={cn(
+                  "absolute cursor-move border-2 outline-offset-2 transition-state",
+                  active ? "z-10" : "opacity-90",
+                )}
+                style={{
+                  ...pct(r),
+                  borderColor: tone.edge,
+                  backgroundColor: `color-mix(in oklab, ${tone.fill} 35%, transparent)`,
+                  borderStyle: active ? "solid" : "dashed",
+                }}
               >
-                <span className="pointer-events-none absolute left-0 top-0 max-w-full -translate-y-full truncate rounded-t-control px-1.5 type-caption" style={{ backgroundColor: tone.edge, color: "var(--background)" }}>
+                <span
+                  className="pointer-events-none absolute left-0 top-0 max-w-full -translate-y-full truncate rounded-t-control px-1.5 type-caption"
+                  style={{ backgroundColor: tone.edge, color: "var(--background)" }}
+                >
                   {r.label}
                 </span>
                 {active &&
@@ -459,29 +604,68 @@ export function RegionEditor({
                 keepGutter(gutterDraft);
               }}
               className="absolute z-20 -ml-2 w-4 cursor-col-resize touch-none outline-offset-2"
-              style={{ left: `${(gutter / w) * 100}%`, top: `${(Math.min(shown[0].y, shown[1].y) / h) * 100}%`, height: `${((Math.max(shown[0].y + shown[0].h, shown[1].y + shown[1].h) - Math.min(shown[0].y, shown[1].y)) / h) * 100}%` }}
+              style={{
+                left: `${(gutter / w) * 100}%`,
+                top: `${(Math.min(shown[0].y, shown[1].y) / h) * 100}%`,
+                height: `${((Math.max(shown[0].y + shown[0].h, shown[1].y + shown[1].h) - Math.min(shown[0].y, shown[1].y)) / h) * 100}%`,
+              }}
             >
               <span aria-hidden className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-foreground" />
-              <span aria-hidden className="absolute top-1/2 left-1/2 grid size-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-pill border-2 border-foreground bg-background">
+              <span
+                aria-hidden
+                className="absolute top-1/2 left-1/2 grid size-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-pill border-2 border-foreground bg-background"
+              >
                 <Columns2 className="size-3" />
               </span>
             </div>
           )}
-          {drawing && <div aria-hidden className="pointer-events-none absolute border-2 border-dashed border-foreground bg-foreground/10" style={pct(drawing)} />}
-          {watching && <div aria-hidden data-preview className="pointer-events-none absolute z-20 border-2 border-foreground bg-foreground/15" style={pct(watching)} />}
+          {drawing && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute border-2 border-dashed border-foreground bg-foreground/10"
+              style={pct(drawing)}
+            />
+          )}
+          {watching && (
+            <div
+              aria-hidden
+              data-preview
+              className="pointer-events-none absolute z-20 border-2 border-foreground bg-foreground/15"
+              style={pct(watching)}
+            />
+          )}
         </div>
       </div>
 
       <p id={hintId} className="type-caption text-muted-foreground">
-        {onDraw ? "Drag on the picture to draw a window. " : ""}Drag a window to move it, or its handles to resize. Keys: arrows move, Shift and arrows resize, Enter keeps, Escape undoes.
+        {onDraw ? "Drag on the picture to draw a window. " : ""}Drag a window to move it, or its handles to resize.
+        Keys: arrows move, Shift and arrows resize, Enter keeps, Escape undoes.
       </p>
 
       {onAngleChange && (
         <div role="group" aria-label="Turn the picture" className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onPress={() => turnTo(angle - 90)}><RotateCcw /> Turn left 90°</Button>
-          <Button size="sm" variant="outline" onPress={() => turnTo(angle + 90)}><RotateCw /> Turn right 90°</Button>
-          <Slider aria-label="Fine turn" className="min-w-48 flex-1" value={fine} onChange={(v) => turnTo(quarter + v)} min={-45} max={45} step={0.1} unit="°" editable />
-          {fine !== 0 && <Button size="sm" variant="ghost" onPress={() => turnTo(quarter)}>Level</Button>}
+          <Button size="sm" variant="outline" onPress={() => turnTo(angle - 90)}>
+            <RotateCcw /> Turn left 90°
+          </Button>
+          <Button size="sm" variant="outline" onPress={() => turnTo(angle + 90)}>
+            <RotateCw /> Turn right 90°
+          </Button>
+          <Slider
+            aria-label="Fine turn"
+            className="min-w-48 flex-1"
+            value={fine}
+            onChange={(v) => turnTo(quarter + v)}
+            min={-45}
+            max={45}
+            step={0.1}
+            unit="°"
+            editable
+          />
+          {fine !== 0 && (
+            <Button size="sm" variant="ghost" onPress={() => turnTo(quarter)}>
+              Level
+            </Button>
+          )}
         </div>
       )}
 
@@ -501,7 +685,15 @@ export function RegionEditor({
             </Button>
           )}
           {defaults && modified && (
-            <Button size="sm" variant="ghost" onPress={() => { stopWatch(); onChange(defaults); setSaid("Windows put back as they began"); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onPress={() => {
+                stopWatch();
+                onChange(defaults);
+                setSaid("Windows put back as they began");
+              }}
+            >
               Reset
             </Button>
           )}
@@ -509,15 +701,57 @@ export function RegionEditor({
       )}
 
       {fields && chosen && (
-        <div role="group" aria-label={`Position and size of ${chosen.label}`} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <PropertyRow label="Across"><NumberField value={Math.round(chosen.x)} onChange={(v) => setSide("x", v)} min={limits.bounds.x} max={limits.bounds.x + limits.bounds.w - chosen.w} unit={unit} size="sm" /></PropertyRow>
-          <PropertyRow label="Down"><NumberField value={Math.round(chosen.y)} onChange={(v) => setSide("y", v)} min={limits.bounds.y} max={limits.bounds.y + limits.bounds.h - chosen.h} unit={unit} size="sm" /></PropertyRow>
-          <PropertyRow label="Width"><NumberField value={Math.round(chosen.w)} onChange={(v) => setSide("w", v)} min={Math.ceil(limits.min.w)} max={Math.floor(limits.bounds.w)} unit={unit} size="sm" /></PropertyRow>
-          <PropertyRow label="Height"><NumberField value={Math.round(chosen.h)} onChange={(v) => setSide("h", v)} min={Math.ceil(limits.min.h)} max={Math.floor(limits.bounds.h)} unit={unit} size="sm" /></PropertyRow>
+        <div
+          role="group"
+          aria-label={`Position and size of ${chosen.label}`}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <PropertyRow label="Across">
+            <NumberField
+              value={Math.round(chosen.x)}
+              onChange={(v) => setSide("x", v)}
+              min={limits.bounds.x}
+              max={limits.bounds.x + limits.bounds.w - chosen.w}
+              unit={unit}
+              size="sm"
+            />
+          </PropertyRow>
+          <PropertyRow label="Down">
+            <NumberField
+              value={Math.round(chosen.y)}
+              onChange={(v) => setSide("y", v)}
+              min={limits.bounds.y}
+              max={limits.bounds.y + limits.bounds.h - chosen.h}
+              unit={unit}
+              size="sm"
+            />
+          </PropertyRow>
+          <PropertyRow label="Width">
+            <NumberField
+              value={Math.round(chosen.w)}
+              onChange={(v) => setSide("w", v)}
+              min={Math.ceil(limits.min.w)}
+              max={Math.floor(limits.bounds.w)}
+              unit={unit}
+              size="sm"
+            />
+          </PropertyRow>
+          <PropertyRow label="Height">
+            <NumberField
+              value={Math.round(chosen.h)}
+              onChange={(v) => setSide("h", v)}
+              min={Math.ceil(limits.min.h)}
+              max={Math.floor(limits.bounds.h)}
+              unit={unit}
+              size="sm"
+            />
+          </PropertyRow>
         </div>
       )}
 
-      <div role="status" aria-live="polite" className="sr-only">{said}</div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {said}
+      </div>
     </div>
   );
 }

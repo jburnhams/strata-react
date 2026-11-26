@@ -1,14 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { execFileSync } from "node:child_process";
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,8 +23,7 @@ beforeAll(() => {
   // dist/ under the other integration tests while they run.
   const target = join(app, "node_modules/strata-react");
   mkdirSync(target, { recursive: true });
-  for (const f of [...pkg.files, "package.json"])
-    cpSync(join(root, f), join(target, f), { recursive: true });
+  for (const f of [...pkg.files, "package.json"]) cpSync(join(root, f), join(target, f), { recursive: true });
   symlinkSync(join(root, "node_modules/tailwindcss"), join(app, "node_modules/tailwindcss"), "dir");
   // strata.css loads this plugin with @plugin; npm installs a dependency of strata-react beside it.
   symlinkSync(
@@ -52,10 +43,7 @@ beforeAll(() => {
   execFileSync("git", ["init", "-q"], { cwd: app });
   writeFileSync(join(app, ".gitignore"), "node_modules\n");
   mkdirSync(join(app, "src"));
-  writeFileSync(
-    join(app, "src/page.tsx"),
-    `export const Page = () => <main className="grid gap-4" />;`,
-  );
+  writeFileSync(join(app, "src/page.tsx"), `export const Page = () => <main className="grid gap-4" />;`);
 }, 60_000);
 
 afterAll(() => rmSync(app, { recursive: true, force: true }));
@@ -81,13 +69,7 @@ describe("strata-react installed from its tarball", () => {
     const css = await compileApp();
     expect(css).toContain(".grid");
     // Used only inside the built components, never by the app's page.
-    for (const cls of [
-      ".rounded-control",
-      ".press",
-      ".transition-state",
-      ".type-label",
-      ".h-\\(--control-h\\)",
-    ]) {
+    for (const cls of [".rounded-control", ".press", ".transition-state", ".type-label", ".h-\\(--control-h\\)"]) {
       expect(css, cls).toContain(cls);
     }
   });
@@ -96,9 +78,7 @@ describe("strata-react installed from its tarball", () => {
     const css = await compileApp();
     expect(css).toContain("var(--type-heading-font, inherit)");
     expect(css).toMatch(/\.type-figure\s*{[^}]*color:\s*var\(--figure-ink, inherit\)/);
-    expect(css).toMatch(
-      /\[data-part="pane"\][^{]*{[^}]*background-image:\s*var\(--surface-image, none\)/,
-    );
+    expect(css).toMatch(/\[data-part="pane"\][^{]*{[^}]*background-image:\s*var\(--surface-image, none\)/);
   });
 
   it("brings its default faces with it: Instrument Sans and JetBrains Mono @font-face rules and the role names, with no app install step and no theme file", async () => {
@@ -114,15 +94,11 @@ describe("strata-react installed from its tarball", () => {
   it("moves both control heights with density, and a coarse pointer still wins (issue #117)", async () => {
     const css = await compileApp();
     expect(css).toMatch(/\[data-density="default"\]\s*\{[^}]*--control-h:\s*2\.5rem/);
-    expect(css).toMatch(
-      /\[data-density="compact"\]\s*\{[^}]*--control-h:\s*2rem[^}]*--control-h-sm:\s*1\.75rem/,
-    );
+    expect(css).toMatch(/\[data-density="compact"\]\s*\{[^}]*--control-h:\s*2rem[^}]*--control-h-sm:\s*1\.75rem/);
     // The small icon button and the small control height are generated for components only.
     expect(css).toContain(".size-\\(--control-h-sm\\)");
     // After the density rules: a coarse pointer gives every density 44px targets.
-    expect(css.lastIndexOf("pointer: coarse")).toBeGreaterThan(
-      css.indexOf('[data-density="compact"]'),
-    );
+    expect(css.lastIndexOf("pointer: coarse")).toBeGreaterThan(css.indexOf('[data-density="compact"]'));
   });
 
   it("would miss them without the library's own @source line", async () => {

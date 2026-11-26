@@ -48,7 +48,12 @@ export function jobProgressText({ done, total, current }: JobProgress): string {
 }
 
 /** A job's three states as words, all required: "Syncing", "Finished", "Finished with failures". */
-export type JobWords = { running: string; finished: string; failed: string; /** Shown when `cancelled`. Default "Cancelled". */ cancelled?: string };
+export type JobWords = {
+  running: string;
+  finished: string;
+  failed: string;
+  /** Shown when `cancelled`. Default "Cancelled". */ cancelled?: string;
+};
 
 /** The job status's props. */
 export type JobStatusProps = {
@@ -107,10 +112,10 @@ export function JobStatus({
   const ended: { tone: Tone; icon: IconComponent; word: string } = cancelled
     ? { tone: "neutral", icon: Ban, word: words.cancelled ?? "Cancelled" }
     : failed
-    ? { tone: "danger", icon: CircleAlert, word: words.failed }
-    : failures.length
-      ? { tone: "warning", icon: TriangleAlert, word: words.failed }
-      : { tone: "success", icon: Check, word: words.finished };
+      ? { tone: "danger", icon: CircleAlert, word: words.failed }
+      : failures.length
+        ? { tone: "warning", icon: TriangleAlert, word: words.failed }
+        : { tone: "success", icon: Check, word: words.finished };
   const { tone, icon, word } = running ? { tone: "info" as const, icon: Spinner, word: words.running } : ended;
 
   const current = progress ? progress.done : currentProp;
@@ -142,7 +147,9 @@ export function JobStatus({
           </Button>
         )}
       </div>
-      {running && progress && <p className="type-caption text-muted-foreground tabular-nums">{jobProgressText(progress)}</p>}
+      {running && progress && (
+        <p className="type-caption text-muted-foreground tabular-nums">{jobProgressText(progress)}</p>
+      )}
       {bar && (
         <div
           role="progressbar"
@@ -153,7 +160,10 @@ export function JobStatus({
           aria-valuetext={`${format.integer(done)} of ${format.integer(total)}`}
           className="relative h-2 overflow-hidden rounded-pill bg-muted"
         >
-          <div className="absolute inset-y-0 left-0" style={{ width: `${(done / total) * 100}%`, background: "var(--chart-1)" }} />
+          <div
+            className="absolute inset-y-0 left-0"
+            style={{ width: `${(done / total) * 100}%`, background: "var(--chart-1)" }}
+          />
         </div>
       )}
       {!running && failures.length > 0 && (

@@ -25,7 +25,12 @@ with its committed baseline (Playwright Chromium + pixelmatch).
   --help                show this
 `;
 
-const configNames = ["strata-visual.config.ts", "strata-visual.config.mts", "strata-visual.config.js", "strata-visual.config.mjs"];
+const configNames = [
+  "strata-visual.config.ts",
+  "strata-visual.config.mts",
+  "strata-visual.config.js",
+  "strata-visual.config.mjs",
+];
 
 /** Loads a config file's default export. */
 export async function loadConfig(file: string): Promise<VisualConfig> {
@@ -68,7 +73,9 @@ export async function main(argv: readonly string[], cwd = process.cwd()): Promis
 
   let config: VisualConfig = {};
   let base = cwd;
-  const file = values.config ? resolve(cwd, values.config) : configNames.map((n) => resolve(cwd, n)).find((f) => existsSync(f));
+  const file = values.config
+    ? resolve(cwd, values.config)
+    : configNames.map((n) => resolve(cwd, n)).find((f) => existsSync(f));
   if (values.config && !existsSync(file!)) {
     console.error(`strata-visual: ${values.config} not found`);
     return 2;
@@ -77,7 +84,14 @@ export async function main(argv: readonly string[], cwd = process.cwd()): Promis
     config = await loadConfig(file);
     base = resolve(file, "..");
   }
-  if (values.storybook) config = { ...config, storybook: { ...(typeof config.storybook === "object" ? config.storybook : {}), dir: resolve(cwd, values.storybook) } };
+  if (values.storybook)
+    config = {
+      ...config,
+      storybook: {
+        ...(typeof config.storybook === "object" ? config.storybook : {}),
+        dir: resolve(cwd, values.storybook),
+      },
+    };
   if (values.baselines) config = { ...config, baselines: resolve(cwd, values.baselines) };
   if (values.output) config = { ...config, output: resolve(cwd, values.output) };
   if (values.concurrency) config = { ...config, concurrency: Number(values.concurrency) };

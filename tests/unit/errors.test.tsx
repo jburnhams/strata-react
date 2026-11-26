@@ -46,12 +46,8 @@ describe("fetchJson keeps an error response's body", () => {
     expect(e.status).toBe(400);
     expect(e.body).toEqual({ detail: "the data folder must be an absolute path" });
     expect(e.reason).toBe("the data folder must be an absolute path");
-    expect(describeActionError(e)).toBe(
-      "The request was refused: the data folder must be an absolute path.",
-    );
-    expect(describeHttpError(e)).toBe(
-      "The request was refused: the data folder must be an absolute path.",
-    );
+    expect(describeActionError(e)).toBe("The request was refused: the data folder must be an absolute path.");
+    expect(describeHttpError(e)).toBe("The request was refused: the data folder must be an absolute path.");
   });
 
   it("maps a 422's per-field messages by field name", async () => {
@@ -73,10 +69,7 @@ describe("fetchJson keeps an error response's body", () => {
             statusText: "Bad Gateway",
           }),
       ),
-      http.get(
-        "/api/empty",
-        () => new HttpResponse(null, { status: 404, statusText: "Not Found" }),
-      ),
+      http.get("/api/empty", () => new HttpResponse(null, { status: 404, statusText: "Not Found" })),
     );
     const html = (await caught(fetchJson("/api/html"))) as HttpError;
     expect(html).toBeInstanceOf(HttpError);
@@ -91,10 +84,7 @@ describe("fetchJson keeps an error response's body", () => {
   it("takes an API's own reading of its error bodies", async () => {
     server.use(
       http.get("/api/odd", () =>
-        HttpResponse.json(
-          { problem: { text: "quota spent" } },
-          { status: 429, statusText: "Too Many Requests" },
-        ),
+        HttpResponse.json({ problem: { text: "quota spent" } }, { status: 429, statusText: "Too Many Requests" }),
       ),
     );
     const e = (await caught(
@@ -129,8 +119,7 @@ describe("readErrorBody", () => {
 function InviteForm({ onInvalid }: { onInvalid?: () => void }) {
   const [email, setEmail] = React.useState("");
   const invite = useAsyncAction(
-    (address: string) =>
-      fetchJson(api.invites, { method: "POST", body: JSON.stringify({ email: address }) }),
+    (address: string) => fetchJson(api.invites, { method: "POST", body: JSON.stringify({ email: address }) }),
     {
       validate: (address) => ({
         email: address.trim() ? undefined : "Type the member's email address.",
@@ -149,8 +138,7 @@ function InviteForm({ onInvalid }: { onInvalid?: () => void }) {
         label="Invite by email"
         hint="They get a link to set a password."
         error={
-          invite.fieldErrors.email ??
-          (invite.phase === "error" && !invite.fieldErrors.email ? invite.error : undefined)
+          invite.fieldErrors.email ?? (invite.phase === "error" && !invite.fieldErrors.email ? invite.error : undefined)
         }
         action={
           <AsyncButton
@@ -182,9 +170,7 @@ describe("useAsyncAction's field messages", () => {
     await userEvent.click(button);
     const input = screen.getByLabelText("Invite by email");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAccessibleDescription(
-      "Type the member's email address. They get a link to set a password.",
-    );
+    expect(input).toHaveAccessibleDescription("Type the member's email address. They get a link to set a password.");
     expect(button).toHaveAttribute("data-phase", "idle");
     expect(invalid).toBe(1);
     await userEvent.type(input, "a");

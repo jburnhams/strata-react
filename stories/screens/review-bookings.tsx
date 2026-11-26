@@ -61,7 +61,9 @@ export function ReviewBookingsScreen({ initial }: { initial?: string }) {
         scope="Before loading, Thursday 5 November"
         finding={
           load.status === "ready" && queue.length > 0
-            ? { text: `${format.count(queue.length, "booking")} left to check, ${format.count(pieces, "piece")} in all.` }
+            ? {
+                text: `${format.count(queue.length, "booking")} left to check, ${format.count(pieces, "piece")} in all.`,
+              }
             : undefined
         }
       />

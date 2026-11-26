@@ -8,8 +8,18 @@ import bSrc from "./fixtures/video/b.webm?url";
 // scaled back up), B is 720×540 and sharp, so the story also shows candidates of different pixel
 // sizes drawn in one box. The files are in fixtures/video (VP9, 80 KB together).
 
-const a: Candidate<VideoMedia> = { id: "lanczos", label: "A", note: "Baseline, 360×270", media: { kind: "video", src: aSrc, width: 360, height: 270, fps: 25 } };
-const b: Candidate<VideoMedia> = { id: "seedvr2", label: "B", note: "SeedVR2, 720×540", media: { kind: "video", src: bSrc, width: 720, height: 540, fps: 25 } };
+const a: Candidate<VideoMedia> = {
+  id: "lanczos",
+  label: "A",
+  note: "Baseline, 360×270",
+  media: { kind: "video", src: aSrc, width: 360, height: 270, fps: 25 },
+};
+const b: Candidate<VideoMedia> = {
+  id: "seedvr2",
+  label: "B",
+  note: "SeedVR2, 720×540",
+  media: { kind: "video", src: bSrc, width: 720, height: 540, fps: 25 },
+};
 
 function Stateful(props: React.ComponentProps<typeof CompareVideo>) {
   const [mode, setMode] = React.useState<VideoMode>(props.mode);
@@ -24,7 +34,13 @@ function Stateful(props: React.ComponentProps<typeof CompareVideo>) {
 function OpenOn({ chip, children }: { chip: string; children: React.ReactNode }) {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const t = setTimeout(() => [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((e) => e.textContent === chip)?.click(), 50);
+    const t = setTimeout(
+      () =>
+        [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])]
+          .find((e) => e.textContent === chip)
+          ?.click(),
+      50,
+    );
     return () => clearTimeout(t);
   }, [chip]);
   return <div ref={ref}>{children}</div>;
@@ -33,7 +49,15 @@ function OpenOn({ chip, children }: { chip: string; children: React.ReactNode })
 const meta = {
   title: "Data/CompareVideo",
   component: CompareVideo,
-  args: { label: "Pair 3 of 12, two upscales of one clip", a, b, blind: true, missing: "Video not found", mode: "side", onModeChange: () => undefined },
+  args: {
+    label: "Pair 3 of 12, two upscales of one clip",
+    a,
+    b,
+    blind: true,
+    missing: "Video not found",
+    mode: "side",
+    onModeChange: () => undefined,
+  },
   render: (args) => <Stateful {...args} />,
 } satisfies Meta<typeof CompareVideo>;
 export default meta;
@@ -57,12 +81,26 @@ export const RealPixels: Story = { args: { mode: "swipe", pixelated: "always" } 
 
 /** The app names moments ("fast motion") and holds the loop, so the same two seconds replay for every pair; slow motion goes down to 0.1. */
 export const Moments: Story = {
-  args: { mode: "swipe", moments: [{ time: 0.6, label: "Fast motion" }, { time: 1.4, label: "Turning face" }], loop: { start: 0.4, end: 1.2 }, onLoopChange: () => undefined },
+  args: {
+    mode: "swipe",
+    moments: [
+      { time: 0.6, label: "Fast motion" },
+      { time: 1.4, label: "Turning face" },
+    ],
+    loop: { start: 0.4, end: 1.2 },
+    onLoopChange: () => undefined,
+  },
 };
 
 /** Regions on the shared clock: the same part of each side, enlarged with nearest-neighbour; the videos keep playing. Opens on the timecode. */
 export const Regions: Story = {
-  args: { mode: "swipe", regions: [{ id: "timecode", label: "Timecode", box: [0, 0, 240, 180], of: [720, 540] }, { id: "checker", label: "Checkerboard", box: [400, 260, 240, 180], of: [720, 540] }] },
+  args: {
+    mode: "swipe",
+    regions: [
+      { id: "timecode", label: "Timecode", box: [0, 0, 240, 180], of: [720, 540] },
+      { id: "checker", label: "Checkerboard", box: [400, 260, 240, 180], of: [720, 540] },
+    ],
+  },
   render: (args) => (
     <OpenOn chip="Timecode">
       <Stateful {...args} />
@@ -81,7 +119,16 @@ export const Judged: Story = {
         onAnswer={() => undefined}
         pending={false}
         progress="12 pairs left"
-        view={(slot, pair) => <CompareVideo {...pair} {...slot} blind missing="Video not found" mode="swipe" onModeChange={() => undefined} />}
+        view={(slot, pair) => (
+          <CompareVideo
+            {...pair}
+            {...slot}
+            blind
+            missing="Video not found"
+            mode="swipe"
+            onModeChange={() => undefined}
+          />
+        )}
       />
     </div>
   ),

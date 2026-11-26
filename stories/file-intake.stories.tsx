@@ -1,6 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { FileButton, FileDropZone, FileOutcomes, MissingFile, useFileIntake, type FileIntake, type FileOutcome } from "../src";
+import {
+  FileButton,
+  FileDropZone,
+  FileOutcomes,
+  MissingFile,
+  useFileIntake,
+  type FileIntake,
+  type FileOutcome,
+} from "../src";
 
 // Bringing files into the kiln room's photo library (issue #75): pick or drop, then one outcome per
 // file, inline. The stories with outcomes build the intake state by hand so each state is
@@ -10,7 +18,14 @@ const accept = ["image/*", ".csv"];
 const acceptLabel = "a photo or a firing log (CSV)";
 
 function fixed(outcomes: FileOutcome[]): FileIntake {
-  return { outcomes, add: () => {}, retry: () => {}, dismiss: () => {}, clear: () => {}, pending: outcomes.filter((o) => o.status === "processing").length };
+  return {
+    outcomes,
+    add: () => {},
+    retry: () => {},
+    dismiss: () => {},
+    clear: () => {},
+    pending: outcomes.filter((o) => o.status === "processing").length,
+  };
 }
 
 function Zone({ dragOver, children }: { dragOver?: boolean; children?: React.ReactNode }) {
@@ -56,8 +71,20 @@ export const MixedOutcomes: Story = {
         intake={fixed([
           { id: "1", name: "moonbeam-front.jpg", size: 1, status: "added" },
           { id: "2", name: "tea-jar.jpg", size: 1, status: "processing" },
-          { id: "3", name: "notes.txt", size: 1, status: "rejected", reason: `notes.txt is not a type this accepts. Add ${acceptLabel}.` },
-          { id: "4", name: "firing-0411.csv", size: 1, status: "failed", reason: "firing-0411.csv has no temperature column. Export it again with temperatures." },
+          {
+            id: "3",
+            name: "notes.txt",
+            size: 1,
+            status: "rejected",
+            reason: `notes.txt is not a type this accepts. Add ${acceptLabel}.`,
+          },
+          {
+            id: "4",
+            name: "firing-0411.csv",
+            size: 1,
+            status: "failed",
+            reason: "firing-0411.csv has no temperature column. Export it again with temperatures.",
+          },
         ])}
       />
     </Zone>
@@ -69,7 +96,11 @@ export const MissingWithRelink: Story = {
   render: () => (
     <div className="grid w-96 gap-2">
       <MissingFile name="moonbeam-front.jpg" accept={accept} onRelink={() => {}} />
-      <MissingFile name="firing-log-with-a-very-long-name-from-the-autumn-glaze-run.csv" accept={accept} onRelink={() => {}} />
+      <MissingFile
+        name="firing-log-with-a-very-long-name-from-the-autumn-glaze-run.csv"
+        accept={accept}
+        onRelink={() => {}}
+      />
     </div>
   ),
 };
@@ -96,7 +127,7 @@ function LiveLibrary() {
   const intake = useFileIntake({
     accept,
     acceptLabel,
-    process: (file) => new Promise<void>((resolve) => setTimeout(resolve, 600 + file.size % 400)),
+    process: (file) => new Promise<void>((resolve) => setTimeout(resolve, 600 + (file.size % 400))),
   });
   return (
     <div className="grid w-96 gap-4">

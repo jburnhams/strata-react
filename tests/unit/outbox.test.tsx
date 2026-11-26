@@ -8,10 +8,7 @@ import { server } from "../utils/server";
 // The outbox sends through the real fetchJson to MSW, which plays the server: up, down, refusing.
 type Seen = { id: string; body: unknown };
 
-function serve(
-  answer: (body: { id: string }) => Response | Promise<Response> = () =>
-    HttpResponse.json({ ok: true }),
-) {
+function serve(answer: (body: { id: string }) => Response | Promise<Response> = () => HttpResponse.json({ ok: true })) {
   const seen: Seen[] = [];
   server.use(
     http.post("/api/answers", async ({ request }) => {
@@ -193,11 +190,7 @@ describe("createOutbox", () => {
       JSON.stringify({ items: kept.items.filter((x) => x.id === "a"), refused }),
     );
     release();
-    expect(await Promise.all([a.delivered, b.delivered, c.delivered])).toEqual([
-      "sent",
-      "sent",
-      "refused",
-    ]);
+    expect(await Promise.all([a.delivered, b.delivered, c.delivered])).toEqual(["sent", "sent", "refused"]);
     expect(sent).toEqual(["a"]);
   });
 
@@ -299,9 +292,7 @@ describe("createOutbox, the edges", () => {
       value: {
         // Another tab holds the write lock until released; the send lock is free.
         request: (name: string, run: () => unknown) =>
-          name.endsWith(":write")
-            ? new Promise((resolve) => held.push(() => resolve(run())))
-            : Promise.resolve(run()),
+          name.endsWith(":write") ? new Promise((resolve) => held.push(() => resolve(run()))) : Promise.resolve(run()),
       },
     });
     try {
@@ -364,9 +355,7 @@ describe("createOutbox, the edges", () => {
     const kept = JSON.parse(raw) as { items: OutboxItem[] };
     kept.items.push({ ...answer("b"), queuedAt: new Date().toISOString() });
     window.localStorage.setItem("strata:outbox:e8", JSON.stringify(kept));
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "strata:outbox:e8", newValue: JSON.stringify(kept) }),
-    );
+    window.dispatchEvent(new StorageEvent("storage", { key: "strata:outbox:e8", newValue: JSON.stringify(kept) }));
     await vi.waitFor(() => expect(box.snapshot().waiting).toBe(0));
     stop();
     expect(seen.filter((x) => x.id === "b")).toHaveLength(1);
@@ -397,22 +386,14 @@ describe("OutboxStatus", () => {
   });
 
   it("lists refused writes with their reasons until dismissed", async () => {
-    serve(() =>
-      HttpResponse.json({ detail: "Already logged with other contents." }, { status: 409 }),
-    );
+    serve(() => HttpResponse.json({ detail: "Already logged with other contents." }, { status: 409 }));
     const box = createOutbox({ name: "s3" });
     await box.add(answer("a")).delivered;
     render(<OutboxStatus outbox={box} noun="answer" />);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "The server refused 1 answer; it will not be sent.",
-    );
-    expect(screen.getByRole("listitem")).toHaveTextContent(
-      "Answer a: Already logged with other contents.",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("The server refused 1 answer; it will not be sent.");
+    expect(screen.getByRole("listitem")).toHaveTextContent("Answer a: Already logged with other contents.");
     await act(() => box.add(answer("b")).delivered);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      /^The server refused 2\sanswers; they will not be sent\./,
-    );
+    expect(screen.getByRole("status")).toHaveTextContent(/^The server refused 2\sanswers; they will not be sent\./);
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("status")).toBeNull();
   });
@@ -430,8 +411,6 @@ describe("OutboxStatus", () => {
     const box = createOutbox({ name: "s4", storage: null, retryMs: 60_000 });
     await box.add(answer("a")).delivered;
     render(<OutboxStatus outbox={box} noun="answer" />);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "They are kept only while this page is open.",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("They are kept only while this page is open.");
   });
 });

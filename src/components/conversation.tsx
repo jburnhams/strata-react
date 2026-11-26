@@ -39,16 +39,28 @@ import { Thumbnail, type AspectRatio } from "./thumbnail";
 
 const LINK = "text-primary underline underline-offset-2 hover:no-underline";
 
-function renderInline(nodes: readonly Inline[], onOpen: ((id: string) => void) | undefined, keyBase = ""): React.ReactNode {
+function renderInline(
+  nodes: readonly Inline[],
+  onOpen: ((id: string) => void) | undefined,
+  keyBase = "",
+): React.ReactNode {
   return nodes.map((n, i) => {
     const key = `${keyBase}${i}`;
     switch (n.type) {
       case "text":
         return <React.Fragment key={key}>{n.text}</React.Fragment>;
       case "bold":
-        return <strong key={key} className="font-semibold">{renderInline(n.children, onOpen, `${key}.`)}</strong>;
+        return (
+          <strong key={key} className="font-semibold">
+            {renderInline(n.children, onOpen, `${key}.`)}
+          </strong>
+        );
       case "code":
-        return <code key={key} className="rounded-control bg-muted px-1 py-0.5 font-mono type-caption">{n.text}</code>;
+        return (
+          <code key={key} className="rounded-control bg-muted px-1 py-0.5 font-mono type-caption">
+            {n.text}
+          </code>
+        );
       case "link":
         return (
           <a key={key} href={n.href} target="_blank" rel="noopener noreferrer" className={LINK}>
@@ -57,11 +69,18 @@ function renderInline(nodes: readonly Inline[], onOpen: ((id: string) => void) |
         );
       case "entity":
         return onOpen ? (
-          <button key={key} type="button" onClick={() => onOpen(n.id)} className={cn(LINK, "cursor-pointer font-mono type-caption")}>
+          <button
+            key={key}
+            type="button"
+            onClick={() => onOpen(n.id)}
+            className={cn(LINK, "cursor-pointer font-mono type-caption")}
+          >
             {n.text}
           </button>
         ) : (
-          <code key={key} className="font-mono type-caption">{n.text}</code>
+          <code key={key} className="font-mono type-caption">
+            {n.text}
+          </code>
         );
     }
   });
@@ -72,9 +91,17 @@ function renderBlocks(blocks: readonly Block[], onOpen: ((id: string) => void) |
     b.type === "paragraph" ? (
       <p key={i}>{renderInline(b.children, onOpen)}</p>
     ) : b.ordered ? (
-      <ol key={i} className="list-decimal space-y-1 pl-5">{b.items.map((it, j) => <li key={j}>{renderInline(it, onOpen)}</li>)}</ol>
+      <ol key={i} className="list-decimal space-y-1 pl-5">
+        {b.items.map((it, j) => (
+          <li key={j}>{renderInline(it, onOpen)}</li>
+        ))}
+      </ol>
     ) : (
-      <ul key={i} className="list-disc space-y-1 pl-5">{b.items.map((it, j) => <li key={j}>{renderInline(it, onOpen)}</li>)}</ul>
+      <ul key={i} className="list-disc space-y-1 pl-5">
+        {b.items.map((it, j) => (
+          <li key={j}>{renderInline(it, onOpen)}</li>
+        ))}
+      </ul>
     ),
   );
 }
@@ -116,11 +143,7 @@ export type ConversationTurn = {
   lookedUp?: React.ReactNode;
   /** Pictures that are part of the answer, drawn under its text, always visible: lazy, each with its label as its name and caption, and a link to the full size when `href` is given. */
   images?: readonly ConversationImage[];
-} & (
-  | { state?: "done" }
-  | { state: "streaming" }
-  | { state: "failed"; error: string }
-);
+} & ({ state?: "done" } | { state: "streaming" } | { state: "failed"; error: string });
 
 export type ConversationProps = {
   /** Names the thread for assistive technology: "Questions about the kiln". */
@@ -145,7 +168,18 @@ export type ConversationProps = {
 const NEAR_BOTTOM = 24;
 
 /** A thread of turns: answers stream, finish or fail in place; the log follows only while the person is at the bottom (with Jump to latest), and a finished answer is announced once, politely. */
-export function Conversation({ label, turns, answerName, personName = "You", entities, onOpen, onRetry, empty, lookedUpLabel = "What it looked up", className }: ConversationProps) {
+export function Conversation({
+  label,
+  turns,
+  answerName,
+  personName = "You",
+  entities,
+  onOpen,
+  onRetry,
+  empty,
+  lookedUpLabel = "What it looked up",
+  className,
+}: ConversationProps) {
   const box = React.useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = React.useState(true);
   const following = React.useRef(true);
@@ -178,7 +212,11 @@ export function Conversation({ label, turns, answerName, personName = "You", ent
     for (const t of turns) {
       const before = states.current.get(t.id);
       if (t.role === "answer" && before === "streaming" && t.state !== "streaming") {
-        setAnnouncement(t.state === "failed" ? `${answerName} could not answer: ${t.error}` : `${answerName} answered: ${plainText(t.text).slice(0, 160)}`);
+        setAnnouncement(
+          t.state === "failed"
+            ? `${answerName} could not answer: ${t.error}`
+            : `${answerName} answered: ${plainText(t.text).slice(0, 160)}`,
+        );
       }
       states.current.set(t.id, t.state ?? "done");
     }
@@ -186,56 +224,107 @@ export function Conversation({ label, turns, answerName, personName = "You", ent
 
   return (
     <div className={cn("relative flex min-h-0 flex-col", className)}>
-      <div role="region" aria-label={label} ref={box} onScroll={onScroll} tabIndex={0} className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-surface p-1">
-        {turns.length === 0 ? (
-          empty
-        ) : (
-          turns.map((t) => (
-            <article key={t.id} aria-label={`${t.role === "person" ? personName : answerName}, ${format.clock(t.time)}`} aria-busy={t.state === "streaming"} className={cn("flex flex-col gap-1", t.role === "person" && "items-end")}>
-              <header className="flex items-baseline gap-2 type-caption text-muted-foreground">
-                <span className="type-label text-foreground">{t.role === "person" ? personName : answerName}</span>
-                <time dateTime={new Date(t.time).toISOString()}>{format.clock(t.time)}</time>
-              </header>
-              <div className={cn("max-w-prose rounded-surface px-3 py-2", t.role === "person" ? "bg-muted" : "border border-border")}>
-                {t.state === "streaming" && !t.text ? (
-                  <p className="type-body-sm text-muted-foreground">{answerName} is working on it…</p>
-                ) : (
-                  <RichText entities={entities} onOpen={onOpen}>{t.text}</RichText>
+      <div
+        role="region"
+        aria-label={label}
+        ref={box}
+        onScroll={onScroll}
+        tabIndex={0}
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-surface p-1"
+      >
+        {turns.length === 0
+          ? empty
+          : turns.map((t) => (
+              <article
+                key={t.id}
+                aria-label={`${t.role === "person" ? personName : answerName}, ${format.clock(t.time)}`}
+                aria-busy={t.state === "streaming"}
+                className={cn("flex flex-col gap-1", t.role === "person" && "items-end")}
+              >
+                <header className="flex items-baseline gap-2 type-caption text-muted-foreground">
+                  <span className="type-label text-foreground">{t.role === "person" ? personName : answerName}</span>
+                  <time dateTime={new Date(t.time).toISOString()}>{format.clock(t.time)}</time>
+                </header>
+                <div
+                  className={cn(
+                    "max-w-prose rounded-surface px-3 py-2",
+                    t.role === "person" ? "bg-muted" : "border border-border",
+                  )}
+                >
+                  {t.state === "streaming" && !t.text ? (
+                    <p className="type-body-sm text-muted-foreground">{answerName} is working on it…</p>
+                  ) : (
+                    <RichText entities={entities} onOpen={onOpen}>
+                      {t.text}
+                    </RichText>
+                  )}
+                  {t.images && t.images.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-2">
+                      {t.images.map((im, i) => {
+                        const pic = (
+                          <Thumbnail
+                            src={im.src}
+                            alt={im.label}
+                            missing="Picture not available"
+                            aspect={im.aspect ?? "16/9"}
+                            fit="contain"
+                            className="w-56 max-w-full rounded-control bg-muted"
+                          />
+                        );
+                        return (
+                          <li key={`${i}-${im.src}`} className="flex max-w-full flex-col gap-1">
+                            {im.href ? (
+                              <a
+                                href={im.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={`${im.label} (full size, opens in a new tab)`}
+                                className="rounded-control"
+                              >
+                                {pic}
+                              </a>
+                            ) : (
+                              pic
+                            )}
+                            <span className="type-caption text-muted-foreground">{im.label}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {t.state === "streaming" && t.text && (
+                    <p className="mt-1 type-caption text-muted-foreground">Still writing…</p>
+                  )}
+                  {t.state === "failed" && (
+                    <div className="mt-2 flex flex-wrap items-center gap-3 type-body-sm text-danger">
+                      <span>{t.error}</span>
+                      <Button size="sm" onClick={() => onRetry(t.id)}>
+                        Try again
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {t.lookedUp && t.state !== "streaming" && (
+                  <Disclosure summary={lookedUpLabel} className="max-w-prose type-body-sm">
+                    {t.lookedUp}
+                  </Disclosure>
                 )}
-                {t.images && t.images.length > 0 && (
-                  <ul className="mt-2 flex flex-wrap gap-2">
-                    {t.images.map((im, i) => {
-                      const pic = <Thumbnail src={im.src} alt={im.label} missing="Picture not available" aspect={im.aspect ?? "16/9"} fit="contain" className="w-56 max-w-full rounded-control bg-muted" />;
-                      return (
-                        <li key={`${i}-${im.src}`} className="flex max-w-full flex-col gap-1">
-                          {im.href ? <a href={im.href} target="_blank" rel="noreferrer" aria-label={`${im.label} (full size, opens in a new tab)`} className="rounded-control">{pic}</a> : pic}
-                          <span className="type-caption text-muted-foreground">{im.label}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {t.state === "streaming" && t.text && <p className="mt-1 type-caption text-muted-foreground">Still writing…</p>}
-                {t.state === "failed" && (
-                  <div className="mt-2 flex flex-wrap items-center gap-3 type-body-sm text-danger">
-                    <span>{t.error}</span>
-                    <Button size="sm" onClick={() => onRetry(t.id)}>Try again</Button>
-                  </div>
-                )}
-              </div>
-              {t.lookedUp && t.state !== "streaming" && (
-                <Disclosure summary={lookedUpLabel} className="max-w-prose type-body-sm">{t.lookedUp}</Disclosure>
-              )}
-            </article>
-          ))
-        )}
+              </article>
+            ))}
       </div>
       {!atBottom && (
-        <Button size="sm" variant="outline" onClick={toBottom} className="absolute bottom-2 left-1/2 -translate-x-1/2 shadow-overlay">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={toBottom}
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 shadow-overlay"
+        >
           <ArrowDown /> Jump to latest
         </Button>
       )}
-      <div role="status" aria-live="polite" className="sr-only">{announcement}</div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
     </div>
   );
 }
@@ -260,7 +349,17 @@ export type ComposerProps = {
 };
 
 /** The box a question is typed in: Enter sends, Shift+Enter is a new line, disabled with its reason while answering (and Stop), suggestions as buttons. */
-export function Composer({ label, onSend, answering = false, onStop, answeringReason, suggestions, sendLabel = "Send", disabled, className }: ComposerProps) {
+export function Composer({
+  label,
+  onSend,
+  answering = false,
+  onStop,
+  answeringReason,
+  suggestions,
+  sendLabel = "Send",
+  disabled,
+  className,
+}: ComposerProps) {
   const [text, setText] = React.useState("");
   const reasonId = React.useId();
   const send = (value: string) => {
@@ -275,7 +374,9 @@ export function Composer({ label, onSend, answering = false, onStop, answeringRe
       {suggestions && suggestions.length > 0 && !answering && (
         <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-2">
           {suggestions.map((s) => (
-            <Button key={s} size="sm" disabled={!!disabled} onClick={() => send(s)}>{s}</Button>
+            <Button key={s} size="sm" disabled={!!disabled} onClick={() => send(s)}>
+              {s}
+            </Button>
           ))}
         </div>
       )}
@@ -302,12 +403,20 @@ export function Composer({ label, onSend, answering = false, onStop, answeringRe
           className="min-h-0 flex-1 resize-none"
         />
         {answering ? (
-          <Button onClick={onStop}><Square /> Stop</Button>
+          <Button onClick={onStop}>
+            <Square /> Stop
+          </Button>
         ) : (
-          <Button type="submit" variant="default" disabled={!text.trim() || !!disabled}><Send /> {sendLabel}</Button>
+          <Button type="submit" variant="default" disabled={!text.trim() || !!disabled}>
+            <Send /> {sendLabel}
+          </Button>
         )}
       </form>
-      {reason && <p id={reasonId} className="type-caption text-muted-foreground">{reason}</p>}
+      {reason && (
+        <p id={reasonId} className="type-caption text-muted-foreground">
+          {reason}
+        </p>
+      )}
     </div>
   );
 }

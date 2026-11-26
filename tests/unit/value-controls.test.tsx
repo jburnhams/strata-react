@@ -9,9 +9,7 @@ function Controlled({
   initial,
   spy,
   ...props
-}: { initial: number | null; spy?: (v: number | null) => void } & Partial<
-  React.ComponentProps<typeof NumberField>
->) {
+}: { initial: number | null; spy?: (v: number | null) => void } & Partial<React.ComponentProps<typeof NumberField>>) {
   const [value, setValue] = React.useState<number | null>(initial);
   return (
     <Field label="Volume" hint="Up to 500%. Over 100% makes it louder.">
@@ -141,9 +139,7 @@ describe("NumberField", () => {
   it("uses the locale's digits and decimal mark, and reads them back", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
-    render(
-      <Controlled initial={1234.5} spy={spy} locale="de-DE" step={0.5} max={5000} unit="ms" />,
-    );
+    render(<Controlled initial={1234.5} spy={spy} locale="de-DE" step={0.5} max={5000} unit="ms" />);
     const input = screen.getByRole("textbox");
     expect(input).toHaveValue("1.234,5");
     await user.clear(input);
@@ -177,15 +173,7 @@ describe("Slider", () => {
   it("reports changes as rounded numbers and prints decimals in the locale", () => {
     const spy = vi.fn();
     render(
-      <Slider
-        aria-label="Tolerance"
-        value={0.0005}
-        onChange={spy}
-        min={0}
-        max={0.001}
-        step={0.0001}
-        locale="de-DE"
-      />,
+      <Slider aria-label="Tolerance" value={0.0005} onChange={spy} min={0} max={0.001} step={0.0001} locale="de-DE" />,
     );
     expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "0,0005");
     fireEvent.change(screen.getByRole("slider"), { target: { value: "0.0007" } });
@@ -208,9 +196,7 @@ describe("Slider", () => {
   it("with editable, an exact value can be typed beside it, and out-of-range is refused", async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
-    render(
-      <Slider aria-label="Opacity" value={40} onChange={spy} min={0} max={100} unit="%" editable />,
-    );
+    render(<Slider aria-label="Opacity" value={40} onChange={spy} min={0} max={100} unit="%" editable />);
     const number = screen.getByRole("textbox", { name: "Opacity, exact value" });
     await user.clear(number);
     await user.type(number, "150{Enter}");
@@ -313,23 +299,11 @@ describe("ColorField", () => {
 
   it("warns when the colour would be hard to see on what it is drawn on", () => {
     const { rerender } = render(
-      <ColorField
-        aria-label="Route"
-        value="#777777"
-        onChange={() => {}}
-        against="#808080"
-        againstLabel="the map"
-      />,
+      <ColorField aria-label="Route" value="#777777" onChange={() => {}} against="#808080" againstLabel="the map" />,
     );
     expect(screen.getByText(/Hard to see on the map/)).toBeInTheDocument();
     rerender(
-      <ColorField
-        aria-label="Route"
-        value="#000000"
-        onChange={() => {}}
-        against="#ffffff"
-        againstLabel="the map"
-      />,
+      <ColorField aria-label="Route" value="#000000" onChange={() => {}} against="#ffffff" againstLabel="the map" />,
     );
     expect(screen.queryByText(/Hard to see/)).toBeNull();
   });
@@ -337,9 +311,7 @@ describe("ColorField", () => {
 
 // Issue #224: nudge buttons, a suggestion, and a preview behind Apply.
 describe("NumberField nudge, suggestion and preview", () => {
-  function Clock(
-    props: Partial<React.ComponentProps<typeof NumberField>> & { spy?: (v: number | null) => void },
-  ) {
+  function Clock(props: Partial<React.ComponentProps<typeof NumberField>> & { spy?: (v: number | null) => void }) {
     const { spy, ...rest } = props;
     const [v, setV] = React.useState<number | null>(2);
     return (
@@ -361,20 +333,11 @@ describe("NumberField nudge, suggestion and preview", () => {
     );
   }
   const nudgeButtons = () =>
-    within(screen.getByRole("toolbar", { name: "Nudge Camera clock offset" })).getAllByRole(
-      "button",
-    );
+    within(screen.getByRole("toolbar", { name: "Nudge Camera clock offset" })).getAllByRole("button");
 
   it("draws −10 −1 −0.1 +0.1 +1 +10, each named with its unit", () => {
     render(<Clock />);
-    expect(nudgeButtons().map((b) => b.textContent)).toEqual([
-      "−10",
-      "−1",
-      "−0.1",
-      "+0.1",
-      "+1",
-      "+10",
-    ]);
+    expect(nudgeButtons().map((b) => b.textContent)).toEqual(["−10", "−1", "−0.1", "+0.1", "+1", "+10"]);
     expect(screen.getByRole("button", { name: "Subtract 1\u00a0s" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add 0.1\u00a0s" })).toBeInTheDocument();
   });
@@ -411,8 +374,7 @@ describe("NumberField nudge, suggestion and preview", () => {
     const user = userEvent.setup();
     render(<Clock />);
     await user.click(screen.getByRole("button", { name: "Add 10\u00a0s" }));
-    for (let i = 0; i < 5; i++)
-      await user.click(screen.getByRole("button", { name: "Add 10\u00a0s" }));
+    for (let i = 0; i < 5; i++) await user.click(screen.getByRole("button", { name: "Add 10\u00a0s" }));
     expect(screen.getByRole("textbox", { name: "Camera clock offset" })).toHaveValue("60");
     expect(screen.getByRole("button", { name: "Add 10\u00a0s" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Subtract 10\u00a0s" })).toBeEnabled();
@@ -422,10 +384,7 @@ describe("NumberField nudge, suggestion and preview", () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(
-      <Clock
-        spy={spy}
-        suggestion={{ value: 2.4, label: "+2.4 s", reason: "both saw you start running at 10:02" }}
-      />,
+      <Clock spy={spy} suggestion={{ value: 2.4, label: "+2.4 s", reason: "both saw you start running at 10:02" }} />,
     );
     expect(screen.getByText(/Suggested \+2\.4 s:/)).toBeInTheDocument();
     expect(screen.getByText(/both saw you start running at 10:02/)).toBeInTheDocument();
@@ -448,9 +407,7 @@ describe("NumberField nudge, suggestion and preview", () => {
             step={0.1}
             unit="s"
             nudge={[1]}
-            preview={(p) => (
-              <p>{`12 clips would move by ${p === null ? "–" : p - (saved ?? 0)} s`}</p>
-            )}
+            preview={(p) => <p>{`12 clips would move by ${p === null ? "–" : p - (saved ?? 0)} s`}</p>}
             onChange={async (n) => {
               await onApply(n);
               setSaved(n);
@@ -469,10 +426,7 @@ describe("NumberField nudge, suggestion and preview", () => {
       await user.click(screen.getByRole("button", { name: "Add 1\u00a0s" }));
       expect(onApply).not.toHaveBeenCalled(); // not per press
       expect(screen.getByText("12 clips would move by 2 s")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Apply" })).toHaveAttribute(
-        "data-variant",
-        "default",
-      );
+      expect(screen.getByRole("button", { name: "Apply" })).toHaveAttribute("data-variant", "default");
       await user.click(screen.getByRole("button", { name: "Apply" }));
       expect(onApply).toHaveBeenCalledTimes(1);
       expect(onApply).toHaveBeenCalledWith(4);

@@ -4,7 +4,15 @@ import { OutboxStatus, type Outbox, type OutboxSnapshot } from "../src";
 // An outbox held in one state, so each story (and its baseline) shows that state with a fixed clock time. The
 // real queue, its sending and its retries are tested in tests/unit/outbox.test.tsx.
 function held(state: Partial<OutboxSnapshot>): Outbox {
-  const snap: OutboxSnapshot = { waiting: 0, sending: false, problem: null, retryAt: null, refused: [], persisted: true, ...state };
+  const snap: OutboxSnapshot = {
+    waiting: 0,
+    sending: false,
+    problem: null,
+    retryAt: null,
+    refused: [],
+    persisted: true,
+    ...state,
+  };
   return {
     add: () => ({ id: "x", delivered: Promise.resolve("waiting") }),
     flush: () => Promise.resolve(),
@@ -45,7 +53,9 @@ export const InThisPageOnly: Story = {
 export const Refused: Story = {
   args: {
     outbox: held({
-      refused: [{ id: "a", label: "Kiln 2, Monday", reason: "Kiln 2 is already booked for Monday.", at: at.toISOString() }],
+      refused: [
+        { id: "a", label: "Kiln 2, Monday", reason: "Kiln 2 is already booked for Monday.", at: at.toISOString() },
+      ],
     }),
   },
 };

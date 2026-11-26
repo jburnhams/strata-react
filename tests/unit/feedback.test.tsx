@@ -56,19 +56,9 @@ describe("LineChart", () => {
   });
 
   it("puts gridlines on a step people write on a scale", () => {
-    render(
-      <LineChart
-        label="t"
-        series={series}
-        seriesLabel="s"
-        formatX={String}
-        formatY={String}
-        xTicks={[]}
-      />,
-    );
+    render(<LineChart label="t" series={series} seriesLabel="s" formatX={String} formatY={String} xTicks={[]} />);
     // max 900 → step 250 → 0, 250, 500, 750, 1000
-    for (const t of ["0", "250", "500", "750", "1000"])
-      expect(screen.getAllByText(t).length).toBeGreaterThan(0);
+    for (const t of ["0", "250", "500", "750", "1000"]) expect(screen.getAllByText(t).length).toBeGreaterThan(0);
   });
 });
 
@@ -104,14 +94,7 @@ describe("LineChart y-axis range", () => {
 
   it("autoscales a low reading to a scale that makes it look busy", () => {
     const { container } = render(
-      <LineChart
-        label="CPU"
-        series={cpu}
-        seriesLabel="CPU"
-        formatX={String}
-        formatY={(v) => `${v}%`}
-        xTicks={[]}
-      />,
+      <LineChart label="CPU" series={cpu} seriesLabel="CPU" formatX={String} formatY={(v) => `${v}%`} xTicks={[]} />,
     );
     expect(yLabels(container)).toEqual(["0%", "1%", "2%", "3%", "4%"]);
   });

@@ -9,7 +9,13 @@ const meta = {
   title: "Status and figures/ScheduleTable",
   component: ScheduleTable,
   args: { caption: "Scheduled jobs", rows: schedule, now: systemNow },
-  decorators: [(Story) => <div className="max-w-3xl"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-3xl">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof ScheduleTable>;
 export default meta;
 type Story = StoryObj<typeof meta>;

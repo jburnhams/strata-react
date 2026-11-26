@@ -172,7 +172,9 @@ export function LoadMore<T>({
     <div ref={box} className={className}>
       {hasMore && !error && <div ref={near.ref} aria-hidden className="h-px" />}
       {loadingMore ? (
-        <div aria-hidden className={cn(ruled && "border-t border-border")}>{drawLoading ? drawLoading(moreSkeleton) : moreSkeleton}</div>
+        <div aria-hidden className={cn(ruled && "border-t border-border")}>
+          {drawLoading ? drawLoading(moreSkeleton) : moreSkeleton}
+        </div>
       ) : error ? (
         <div role="alert">{drawError({ message: error, retry: loadByHand })}</div>
       ) : hasMore ? (
@@ -186,7 +188,9 @@ export function LoadMore<T>({
           </div>
         )
       ) : (
-        end && <div className={cn("py-3 type-body-sm text-muted-foreground", ruled && "border-t border-border")}>{end}</div>
+        end && (
+          <div className={cn("py-3 type-body-sm text-muted-foreground", ruled && "border-t border-border")}>{end}</div>
+        )
       )}
       <p role="status" className="sr-only">
         {loadingMore ? "Loading more" : ""}
@@ -271,19 +275,19 @@ export function InfiniteList<T>({
   }, [ready, hasMore, loadingMore, moreFailure, held, keepAtLeast, loadMore]);
   const footer = (
     <PendingFocus.Provider value={pendingFocus}>
-    <LoadMore
-      // A grid's cards have their own edges, so the row keeps a gap from them.
-      className={scroll === "page" ? "mt-4" : undefined}
-      state={state}
-      moreLabel={moreLabel}
-      moreSkeleton={moreSkeleton}
-      end={end}
-      rootMargin={rootMargin}
-      error={moreError}
-      more={moreRow}
-      loading={moreLoading}
-      ruled={ruled}
-    />
+      <LoadMore
+        // A grid's cards have their own edges, so the row keeps a gap from them.
+        className={scroll === "page" ? "mt-4" : undefined}
+        state={state}
+        moreLabel={moreLabel}
+        moreSkeleton={moreSkeleton}
+        end={end}
+        rootMargin={rootMargin}
+        error={moreError}
+        more={moreRow}
+        loading={moreLoading}
+        ruled={ruled}
+      />
     </PendingFocus.Provider>
   );
 

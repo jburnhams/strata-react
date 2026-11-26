@@ -38,9 +38,7 @@ describe("attachHls with the engine", () => {
   it("moves the engine to the new element when the player switches between audio and video", () => {
     const { Engine, log } = fakeHlsEngine();
     const attach = createHlsAttacher(Engine);
-    const { container, rerender } = render(
-      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={attach} />,
-    );
+    const { container, rerender } = render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={attach} />);
     rerender(<MediaPlayer label="Preview" kind="audio" src="/a.m3u8" attach={attach} />);
     expect(log.destroyed).toBe(1);
     expect(log.created).toHaveLength(2);
@@ -49,9 +47,7 @@ describe("attachHls with the engine", () => {
 
   it("quietly recovers a dropped connection and a decoder hiccup, three times, and resets once a segment loads", () => {
     const { Engine, log } = fakeHlsEngine();
-    render(
-      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />,
-    );
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
     const hls = log.created[0];
     act(() => hls.fail("networkError"));
     act(() => hls.fail("mediaError"));
@@ -67,9 +63,7 @@ describe("attachHls with the engine", () => {
 
   it("ignores errors that are not fatal", () => {
     const { Engine, log } = fakeHlsEngine();
-    render(
-      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />,
-    );
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
     act(() => log.created[0].fail("networkError", false));
     expect(log.created[0].startLoads).toBe(0);
     expect(screen.queryByText("Could not load this video")).not.toBeInTheDocument();
@@ -79,13 +73,7 @@ describe("attachHls with the engine", () => {
     const user = userEvent.setup();
     const { Engine, log } = fakeHlsEngine();
     const { container } = render(
-      <MediaPlayer
-        label="Preview"
-        kind="video"
-        src="/a.m3u8"
-        attach={createHlsAttacher(Engine)}
-        controls="strata"
-      />,
+      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} controls="strata" />,
     );
     act(() => media.loaded(video(container), 120));
     act(() => media.tick(video(container), 42));
@@ -102,9 +90,7 @@ describe("attachHls with the engine", () => {
   it("says so when the browser cannot play streams at all", () => {
     const { Engine, FakeHls } = fakeHlsEngine();
     FakeHls.supported = false;
-    render(
-      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />,
-    );
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
     expect(screen.getByText("This browser cannot play this kind of stream.")).toBeInTheDocument();
   });
 
@@ -115,12 +101,7 @@ describe("attachHls with the engine", () => {
     HTMLMediaElement.prototype.canPlayType = () => "maybe";
     try {
       const { container, unmount } = render(
-        <MediaPlayer
-          label="Preview"
-          kind="video"
-          src="/a.m3u8"
-          attach={createHlsAttacher(Engine)}
-        />,
+        <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />,
       );
       expect(log.created).toHaveLength(0);
       expect(video(container).getAttribute("src")).toBe("/a.m3u8");
@@ -137,14 +118,7 @@ describe("prefer", () => {
     HTMLMediaElement.prototype.canPlayType = () => "maybe";
     try {
       const a = fakeHlsEngine();
-      render(
-        <MediaPlayer
-          label="Preview"
-          kind="video"
-          src="/a.m3u8"
-          attach={createHlsAttacher(a.Engine)}
-        />,
-      );
+      render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(a.Engine)} />);
       expect(a.log.created).toHaveLength(1);
       const b = fakeHlsEngine();
       const { container } = render(
@@ -219,11 +193,7 @@ describe("a stream that is still being made", () => {
   it("without a whole length, the bar spans what exists and grows with it", () => {
     const { Engine } = fakeHlsEngine();
     const { container } = render(
-      <MediaPlayer
-        {...props}
-        sources={[{ src: "/film.m3u8", title: "Film" }]}
-        attach={createHlsAttacher(Engine)}
-      />,
+      <MediaPlayer {...props} sources={[{ src: "/film.m3u8", title: "Film" }]} attach={createHlsAttacher(Engine)} />,
     );
     act(() => media.loaded(video(container), Infinity));
     act(() => seekable(video(container), 45));
@@ -249,9 +219,7 @@ describe("a stream that is still being made", () => {
     await user.click(screen.getByRole("button", { name: "Play" }));
     act(() => media.end(el));
     expect(ended).toBe(0);
-    expect(
-      screen.getByText("Waiting for more to be made. It will carry on by itself."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Waiting for more to be made. It will carry on by itself.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pause" })).not.toBeInTheDocument();
     // More arrives: the duration grows and playback carries on from where it stopped.
     const plays = media.plays;
@@ -263,13 +231,7 @@ describe("a stream that is still being made", () => {
   it("a finished source ends as ever", () => {
     let ended = 0;
     const { container } = render(
-      <MediaPlayer
-        label="Preview"
-        kind="video"
-        src="/film.mp4"
-        onEnded={() => ended++}
-        controls="strata"
-      />,
+      <MediaPlayer label="Preview" kind="video" src="/film.mp4" onEnded={() => ended++} controls="strata" />,
     );
     act(() => media.loaded(video(container), 30));
     act(() => media.end(video(container)));
@@ -280,23 +242,13 @@ describe("a stream that is still being made", () => {
 describe("where an HLS stream starts, and what its failures say (issue #208)", () => {
   it("starts a growing source at its beginning, not at the newest part hls.js would choose", () => {
     const { Engine, log } = fakeHlsEngine();
-    render(
-      <MediaPlayer
-        label="Preview"
-        kind="video"
-        src="/a.m3u8"
-        attach={createHlsAttacher(Engine)}
-        growing={{}}
-      />,
-    );
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} growing={{}} />);
     expect(log.created[0].config.startPosition).toBe(0);
   });
 
   it("lets hls.js choose for a source that is not growing", () => {
     const { Engine, log } = fakeHlsEngine();
-    render(
-      <MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />,
-    );
+    render(<MediaPlayer label="Preview" kind="video" src="/a.m3u8" attach={createHlsAttacher(Engine)} />);
     expect(log.created[0].config.startPosition).toBe(-1);
   });
 

@@ -15,7 +15,15 @@ const start: SequenceItem[] = [
 // The seconds of footage each window's file holds: a window cannot be longer than it.
 const footage = [6, 9, 6, 10, 8];
 
-function Strip({ initial, grid, selected }: { initial: SequenceItem[]; grid?: number | readonly number[]; selected?: string[] }) {
+function Strip({
+  initial,
+  grid,
+  selected,
+}: {
+  initial: SequenceItem[];
+  grid?: number | readonly number[];
+  selected?: string[];
+}) {
   const [items, setItems] = React.useState(initial);
   const [chosen, setChosen] = React.useState<readonly string[]>(selected ?? []);
   const room = (i: number): CutRoom => {
@@ -39,13 +47,17 @@ function Strip({ initial, grid, selected }: { initial: SequenceItem[]; grid?: nu
         room={room}
         selected={chosen}
         onSelectRange={setChosen}
-        onCutChange={(_, __, c) => setItems((cur) => cur.map((w) => (w.id === c.before.id ? c.before : w.id === c.after.id ? c.after : w)))}
+        onCutChange={(_, __, c) =>
+          setItems((cur) => cur.map((w) => (w.id === c.before.id ? c.before : w.id === c.after.id ? c.after : w)))
+        }
       />
     </div>
   );
 }
 
-const meta = { title: "Data/SequenceTimeline", component: Strip, parameters: { layout: "padded" } } satisfies Meta<typeof Strip>;
+const meta = { title: "Data/SequenceTimeline", component: Strip, parameters: { layout: "padded" } } satisfies Meta<
+  typeof Strip
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

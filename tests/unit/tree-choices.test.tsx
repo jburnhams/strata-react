@@ -20,9 +20,7 @@ describe("choice rules", () => {
     expect(change.explicit).toEqual(new Set(["a"]));
     // Asking for the set without b (the surface cleared it) is refused: b stays.
     expect(change.refused).toBe(1);
-    expect(noteFor({ added: 3, dropped: 0, refused: 0 })).toBe(
-      "3 more chosen because they depend on it",
-    );
+    expect(noteFor({ added: 3, dropped: 0, refused: 0 })).toBe("3 more chosen because they depend on it");
   });
 });
 
@@ -61,9 +59,7 @@ function Host({
       <Tree
         label="Results"
         roots={roots}
-        useChildren={(n) =>
-          ({ status: "ready", data: STAGES.map((s) => stage(n.id, s)), refreshing: false }) as never
-        }
+        useChildren={(n) => ({ status: "ready", data: STAGES.map((s) => stage(n.id, s)), refreshing: false }) as never}
         nodeKey={(n) => n.id}
         nodeLabel={(n) => n.name}
         isBranch={(n) => n.branch}
@@ -71,9 +67,7 @@ function Host({
         emptyRow="No results"
         choices={choices}
       />
-      {summary && (
-        <p data-testid="summary">{choices.summary(["result", "results"], "will be forgotten")}</p>
-      )}
+      {summary && <p data-testid="summary">{choices.summary(["result", "results"], "will be forgotten")}</p>}
     </>
   );
 }
@@ -98,15 +92,11 @@ describe("Tree with choices", () => {
     const user = userEvent.setup();
     renderWithStrata(<Host initial={["c1/detect"]} summary />);
     const rowOf = (name: string, nth = 0) =>
-      screen.getAllByRole("row").filter((r) => new RegExp(`^${name}`).test(r.textContent ?? ""))[
-        nth
-      ];
+      screen.getAllByRole("row").filter((r) => new RegExp(`^${name}`).test(r.textContent ?? ""))[nth];
     expect(within(rowOf("track")).getByRole("checkbox")).toBeChecked();
     await user.click(within(rowOf("track")).getByRole("checkbox"));
     expect(within(rowOf("track")).getByRole("checkbox")).toBeChecked(); // refused
-    expect(
-      screen.getByText(/stays chosen because something chosen depends on it/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/stays chosen because something chosen depends on it/)).toBeInTheDocument();
     await user.click(within(rowOf("detect")).getByRole("checkbox"));
     expect(within(rowOf("track")).getByRole("checkbox")).not.toBeChecked();
     expect(screen.getByTestId("summary")).toHaveTextContent("No results chosen");
@@ -154,11 +144,9 @@ describe("Tree with choices", () => {
     const user = userEvent.setup();
     renderWithStrata(<Host />);
     await user.click(screen.getByRole("button", { name: "Select all shown" }));
-    for (const r of screen.getAllByRole("row"))
-      expect(within(r).getByRole("checkbox")).toBeChecked();
+    for (const r of screen.getAllByRole("row")) expect(within(r).getByRole("checkbox")).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Clear" }));
-    for (const r of screen.getAllByRole("row"))
-      expect(within(r).getByRole("checkbox")).not.toBeChecked();
+    for (const r of screen.getAllByRole("row")) expect(within(r).getByRole("checkbox")).not.toBeChecked();
   });
 });
 
@@ -197,9 +185,7 @@ describe("useSelection implies", () => {
     expect(screen.getByLabelText("b")).toBeChecked();
     expect(screen.getByText("because of a")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("1 more chosen because it depends on it");
-    expect(screen.getByTestId("sum")).toHaveTextContent(
-      /2\s+rows will change: 1 chosen, 1 that depend on them/,
-    );
+    expect(screen.getByTestId("sum")).toHaveTextContent(/2\s+rows will change: 1 chosen, 1 that depend on them/);
     await user.click(screen.getByLabelText("b"));
     expect(screen.getByLabelText("b")).toBeChecked();
     await user.click(screen.getByLabelText("a"));

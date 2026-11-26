@@ -28,9 +28,7 @@ const cam = (over: Partial<OrbitCamera> = {}): OrbitCamera => ({
 const near = (a: ArrayLike<number>, b: number[], digits = 5) =>
   b.forEach((v, i) => expect(a[i]).toBeCloseTo(v, digits));
 const apply = (m: Float32Array, p: number[]) =>
-  [0, 1, 2, 3].map(
-    (r) => m[r]! * p[0]! + m[4 + r]! * p[1]! + m[8 + r]! * p[2]! + m[12 + r]! * (p[3] ?? 1),
-  );
+  [0, 1, 2, 3].map((r) => m[r]! * p[0]! + m[4 + r]! * p[1]! + m[8 + r]! * p[2]! + m[12 + r]! * (p[3] ?? 1));
 
 describe("basis", () => {
   it("looks along +z with +x to the left of it at yaw 0, a right-handed world with y up", () => {
@@ -125,9 +123,7 @@ describe("clampCamera and describeCamera", () => {
     expect(describeCamera(cam({ yaw: 45, pitch: -30, target: [0, 2, 0] }))).toBe(
       "Looking at 0, 2, 0 from 10 away, turned 45° right, looking 30° down",
     );
-    expect(describeCamera(cam({ distance: 0, target: [1, 2, 3] }))).toBe(
-      "At 1, 2, 3, looking straight ahead",
-    );
+    expect(describeCamera(cam({ distance: 0, target: [1, 2, 3] }))).toBe("At 1, 2, 3, looking straight ahead");
   });
 });
 

@@ -40,7 +40,11 @@ export type TileAspect = "square" | "portrait" | "landscape";
 export type TileSize = "sm" | "md" | "lg";
 
 export const minWidth: Record<TileSize, number> = { sm: 96, md: 144, lg: 192 };
-export const aspectClass: Record<TileAspect, string> = { square: "aspect-square", portrait: "aspect-3/4", landscape: "aspect-4/3" };
+export const aspectClass: Record<TileAspect, string> = {
+  square: "aspect-square",
+  portrait: "aspect-3/4",
+  landscape: "aspect-4/3",
+};
 const aspectRatio: Record<TileAspect, number> = { square: 1, portrait: 4 / 3, landscape: 3 / 4 };
 const thumbnailAspect: Record<TileAspect, number> = { square: 1, portrait: 3 / 4, landscape: 4 / 3 };
 // gap-3, in px.
@@ -54,7 +58,8 @@ export const tileWidth = (size: TileSize | number): number => (typeof size === "
 /** `GridLayout` options for tiles of this size and aspect: they grow from the minimum width to fill the row, and each row is as tall as its tallest tile as measured. */
 export function tileLayoutOptions(tileSize: TileSize | number, aspect: TileAspect | number) {
   const w = tileWidth(tileSize);
-  if (typeof aspect === "number") return { minItemSize: new Size(w, Math.round(w / aspect) + TILE_CHROME), minSpace: new Size(GAP, GAP) };
+  if (typeof aspect === "number")
+    return { minItemSize: new Size(w, Math.round(w / aspect) + TILE_CHROME), minSpace: new Size(GAP, GAP) };
   return {
     minItemSize: new Size(w, Math.round(w * aspectRatio[aspect]) + TILE_CHROME),
     minSpace: new Size(GAP, GAP),
@@ -128,7 +133,11 @@ export function TileGrid<T>({
       data-strata-scroll=""
       onAction={onAction ? (key) => void (byKey.has(String(key)) && onAction(byKey.get(String(key)) as T)) : undefined}
       className={cn("min-w-0 outline-none", virtual ? "overflow-y-auto" : "grid gap-3")}
-      style={virtual ? { height: maxHeight } : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }}
+      style={
+        virtual
+          ? { height: maxHeight }
+          : { gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }
+      }
     >
       {items.map((item, index) => {
         const key = itemKey(item);
@@ -143,12 +152,19 @@ export function TileGrid<T>({
             data-index={index}
             className="group relative grid min-w-0 cursor-pointer gap-1.5 rounded-surface border border-transparent p-1.5 select-none outline-offset-2 transition-state hover:bg-surface-sunken"
           >
-            <span className={cn("block overflow-hidden rounded-control bg-muted *:size-full *:object-cover", aspectClass[aspect])}>
+            <span
+              className={cn(
+                "block overflow-hidden rounded-control bg-muted *:size-full *:object-cover",
+                aspectClass[aspect],
+              )}
+            >
               {renderImage(item)}
             </span>
             {corner != null && <span className="absolute top-3 right-3">{corner}</span>}
             {caption?.(item) != null && <span className="truncate type-label">{caption(item)}</span>}
-            {detail?.(item) != null && <span className="truncate type-body-sm text-muted-foreground">{detail(item)}</span>}
+            {detail?.(item) != null && (
+              <span className="truncate type-body-sm text-muted-foreground">{detail(item)}</span>
+            )}
           </GridListItem>
         );
       })}
@@ -171,9 +187,23 @@ export function TileGrid<T>({
 }
 
 /** The loading shape of a `TileGrid`: `count` picture boxes in the same grid at the same sizes, for a `DataView` skeleton, so nothing moves when the tiles arrive. */
-export function TileGridSkeleton({ count = 12, aspect = "square", tileSize = "md", className }: { count?: number; aspect?: TileAspect; tileSize?: TileSize; className?: string }) {
+export function TileGridSkeleton({
+  count = 12,
+  aspect = "square",
+  tileSize = "md",
+  className,
+}: {
+  count?: number;
+  aspect?: TileAspect;
+  tileSize?: TileSize;
+  className?: string;
+}) {
   return (
-    <div aria-hidden className={cn("grid min-w-0 gap-3", className)} style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }}>
+    <div
+      aria-hidden
+      className={cn("grid min-w-0 gap-3", className)}
+      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${minWidth[tileSize]}px, 100%), 1fr))` }}
+    >
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="grid gap-1.5 p-1.5">
           <ThumbnailSkeleton aspect={thumbnailAspect[aspect]} />
@@ -185,7 +215,19 @@ export function TileGridSkeleton({ count = 12, aspect = "square", tileSize = "md
 }
 
 /** The loading shape of a `SelectableGrid`: `count` picture boxes at the grid's tile size and shape, for a `DataView` skeleton. With `shapes` (widths over heights, cycled) the boxes are in rows at their own shapes, as `aspect="natural"` draws them. */
-export function SelectableGridSkeleton({ count = 24, aspect = "square", tileSize = "md", shapes, className }: { count?: number; aspect?: TileAspect | number; tileSize?: TileSize | number; shapes?: readonly number[]; className?: string }) {
+export function SelectableGridSkeleton({
+  count = 24,
+  aspect = "square",
+  tileSize = "md",
+  shapes,
+  className,
+}: {
+  count?: number;
+  aspect?: TileAspect | number;
+  tileSize?: TileSize | number;
+  shapes?: readonly number[];
+  className?: string;
+}) {
   const px = tileWidth(tileSize);
   if (shapes?.length) {
     return (
@@ -200,7 +242,11 @@ export function SelectableGridSkeleton({ count = 24, aspect = "square", tileSize
   }
   const ratio = typeof aspect === "number" ? aspect : thumbnailAspect[aspect];
   return (
-    <div aria-hidden className={cn("grid min-w-0 gap-3", className)} style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}>
+    <div
+      aria-hidden
+      className={cn("grid min-w-0 gap-3", className)}
+      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${px}px, 100%), 1fr))` }}
+    >
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="p-1.5">
           <ThumbnailSkeleton aspect={ratio} />

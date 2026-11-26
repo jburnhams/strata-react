@@ -58,12 +58,7 @@ function Player({ initialTime = 30 }: { initialTime?: number }) {
       >
         <TimeReadout time={time} duration={120} />
       </Transport>
-      <SeekBar
-        time={time}
-        duration={120}
-        onSeek={setTime}
-        marks={[{ time: 60, label: "Take 2" }]}
-      />
+      <SeekBar time={time} duration={120} onSeek={setTime} marks={[{ time: 60, label: "Take 2" }]} />
       <VolumeControl volume={volume} onVolumeChange={setVolume} />
       <RateChoice rate={rate} onRateChange={setRate} />
       <KeysLegend shortcuts={shortcuts} />
@@ -238,10 +233,7 @@ describe("RateChoice", () => {
     expect(trigger).toHaveTextContent("1×");
     expect(trigger).toHaveAttribute("aria-haspopup", "listbox");
     await user.click(trigger);
-    expect(await screen.findByRole("option", { name: "1×" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(await screen.findByRole("option", { name: "1×" })).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{Escape}");
     trigger.focus();
     await user.keyboard("{ArrowDown}");
@@ -291,16 +283,11 @@ describe("SeekBar marks (#387)", () => {
     );
     const dinner = screen.getByRole("button", { name: "Christmas dinner, 10:00" });
     expect(dinner).toHaveAttribute("data-kind", "chapter");
-    expect(screen.getByRole("button", { name: "The pudding, 10:40" })).toHaveAttribute(
-      "data-kind",
-      "scene",
-    );
+    expect(screen.getByRole("button", { name: "The pudding, 10:40" })).toHaveAttribute("data-kind", "scene");
     // React Aria opens on hover only after it has seen a real pointer.
     await user.click(document.body);
     await user.hover(dinner);
-    expect(await screen.findByRole("tooltip", {}, { timeout: 2000 })).toHaveTextContent(
-      "Christmas dinner10:00",
-    );
+    expect(await screen.findByRole("tooltip", {}, { timeout: 2000 })).toHaveTextContent("Christmas dinner10:00");
     await user.click(dinner);
     expect(seen).toEqual([600]);
   });

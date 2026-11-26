@@ -251,13 +251,16 @@ function nearestRoute(routes: readonly MapRoute[], at: LatLng): PickNearest | nu
   let best: PickNearest | null = null;
   for (const r of routes) {
     const s = geo.snap(r.points, at, alongOf(r.points));
-    if (s && (!best || s.offset < best.distanceM)) best = { routeId: r.id, index: s.index, distanceM: s.offset, alongM: s.metres, position: s.position };
+    if (s && (!best || s.offset < best.distanceM))
+      best = { routeId: r.id, index: s.index, distanceM: s.offset, alongM: s.metres, position: s.position };
   }
   return best;
 }
 
-const RESET_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>';
-const CROSS_ICON = '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke-linecap="round"><path d="M16 4v24M4 16h24" stroke="var(--background)" stroke-width="5"/><path d="M16 4v24M4 16h24" stroke="var(--foreground)" stroke-width="2"/></svg>';
+const RESET_ICON =
+  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>';
+const CROSS_ICON =
+  '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke-linecap="round"><path d="M16 4v24M4 16h24" stroke="var(--background)" stroke-width="5"/><path d="M16 4v24M4 16h24" stroke="var(--foreground)" stroke-width="2"/></svg>';
 
 /** Leaflet's control group gets a reset: fit the routes again. A link with a button role, as Leaflet's own zoom buttons are. */
 function resetControl(onReset: () => void): L.Control {
@@ -290,7 +293,8 @@ function resetControl(onReset: () => void): L.Control {
 function showRoutes(map: L.Map, routes: readonly MapRoute[], zoom: number | undefined) {
   const box = geo.bounds(routes.flatMap((r) => r.points));
   if (!box) return false;
-  if (zoom !== undefined) map.setView([(box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2], zoom, { animate: false });
+  if (zoom !== undefined)
+    map.setView([(box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2], zoom, { animate: false });
   else map.fitBounds([tuple(box[0]), tuple(box[1])], { padding: [24, 24], animate: false, maxZoom: 17 });
   return true;
 }
@@ -343,7 +347,6 @@ const arrowHtml = (bearing: number, colour: string, halo: string) =>
   `<path d="M6 17 L13 9 L20 17" fill="none" stroke="${halo}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>` +
   `<path d="M6 17 L13 9 L20 17" fill="none" stroke="${colour}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-
 // A tile layer that always covers the whole container. Leaflet 1.9.4 picks the tiles to load from
 // `floor(centre) ± size / 2` (`GridLayer._getTiledPixelBounds`) but places the map pane at
 // `round(centre - size / 2)`, so when the two differ by a pixel the last pixel column of the map has no
@@ -358,7 +361,9 @@ const arrowHtml = (bearing: number, colour: string, halo: string) =>
 export function coveringTiles(url: string, options: L.TileLayerOptions): L.TileLayer {
   const Covering = L.TileLayer.extend({
     _getTiledPixelBounds(this: L.TileLayer, centre: L.LatLng): L.Bounds {
-      const base = (L.GridLayer.prototype as unknown as { _getTiledPixelBounds(c: L.LatLng): L.Bounds })._getTiledPixelBounds.call(this, centre);
+      const base = (
+        L.GridLayer.prototype as unknown as { _getTiledPixelBounds(c: L.LatLng): L.Bounds }
+      )._getTiledPixelBounds.call(this, centre);
       return L.bounds(base.min!.subtract([1, 1]), base.max!.add([1, 1]));
     },
   });
@@ -406,8 +411,32 @@ export function RouteMap({
   const root = React.useRef<HTMLDivElement>(null);
   const [map, setMap] = React.useState<L.Map | null>(null);
   const summaryId = React.useId();
-  const latest = React.useRef({ onSelect, onViewChange, reportAppMoves, settle, picking, onPick, onPickCancel, routes, units, view, zoom });
-  latest.current = { onSelect, onViewChange, reportAppMoves, settle, picking, onPick, onPickCancel, routes, units, view, zoom };
+  const latest = React.useRef({
+    onSelect,
+    onViewChange,
+    reportAppMoves,
+    settle,
+    picking,
+    onPick,
+    onPickCancel,
+    routes,
+    units,
+    view,
+    zoom,
+  });
+  latest.current = {
+    onSelect,
+    onViewChange,
+    reportAppMoves,
+    settle,
+    picking,
+    onPick,
+    onPickCancel,
+    routes,
+    units,
+    view,
+    zoom,
+  };
   const [announced, setAnnounced] = React.useState("");
   // True once the map has a view (the first fit has happened): before that Leaflet cannot say what is near.
   const [ready, setReady] = React.useState(false);
@@ -425,7 +454,15 @@ export function RouteMap({
     installMapStyles();
     const el = host.current;
     if (!el) return;
-    const m = L.map(el, { scrollWheelZoom: scrollZoom, fadeAnimation: false, zoomAnimation: false, markerZoomAnimation: false, inertia: false, attributionControl: false, zoomSnap: 0.5 });
+    const m = L.map(el, {
+      scrollWheelZoom: scrollZoom,
+      fadeAnimation: false,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
+      inertia: false,
+      attributionControl: false,
+      zoomSnap: 0.5,
+    });
     L.control.attribution({ prefix: '<a href="https://leafletjs.com">Leaflet</a>' }).addTo(m);
     el.setAttribute("aria-roledescription", "map");
     // Leaflet follows the window, not its container; a pane that resizes (a Workspace split) needs the same.
@@ -456,7 +493,10 @@ export function RouteMap({
   }, [map, zoomed]);
 
   // Every position on the map, the single `position` first: what is spoken, drawn and followed.
-  const all = React.useMemo<MapPosition[]>(() => [...(position ? [{ id: SINGLE, at: position, label: positionLabel }] : []), ...(positions ?? [])], [position, positionLabel, positions]);
+  const all = React.useMemo<MapPosition[]>(
+    () => [...(position ? [{ id: SINGLE, at: position, label: positionLabel }] : []), ...(positions ?? [])],
+    [position, positionLabel, positions],
+  );
 
   // The text alternative: written from the data unless the app gives one. The position is in it, but
   // it is not a live region: a position that moves many times a second must not be announced.
@@ -472,14 +512,29 @@ export function RouteMap({
       let here = "";
       // A position tied to another route is not on this one; one tied to no route is described along each.
       for (const p of spoken) {
-        if (!p.at || !r.points.length || (p.routeId !== undefined && p.routeId !== r.id && routes.some((o) => o.id === p.routeId))) continue;
+        if (
+          !p.at ||
+          !r.points.length ||
+          (p.routeId !== undefined && p.routeId !== r.id && routes.some((o) => o.id === p.routeId))
+        )
+          continue;
         here += ` ${p.label}: ${format.distance(along[geo.nearest(r.points, p.at)] ?? 0, units)} along.`;
       }
       let range = "";
-      if (stops.length && r.values?.length) range = ` ${colourScaleLabel ?? "Value"} from ${formatValue(extent(r.values)[0])} to ${formatValue(extent(r.values)[1])}.`;
+      if (stops.length && r.values?.length)
+        range = ` ${colourScaleLabel ?? "Value"} from ${formatValue(extent(r.values)[0])} to ${formatValue(extent(r.values)[1])}.`;
       return `${r.label}: ${format.distance(total, units)}${shape}.${range}${here}`;
     });
-    const items = markers?.length ? ` ${markers.length === 1 ? "One marker" : `${markers.length} markers`}${markers.some((m) => m.selected) ? `, selected: ${markers.filter((m) => m.selected).map((m) => m.label).join(", ")}` : ""}.` : "";
+    const items = markers?.length
+      ? ` ${markers.length === 1 ? "One marker" : `${markers.length} markers`}${
+          markers.some((m) => m.selected)
+            ? `, selected: ${markers
+                .filter((m) => m.selected)
+                .map((m) => m.label)
+                .join(", ")}`
+            : ""
+        }.`
+      : "";
     return `Map with ${routes.length === 1 ? "one route" : `${routes.length} routes`}. ${parts.join(" ")}${items}`;
   }, [summary, routes, spoken, units, stops.length, colourScaleLabel, formatValue, markers]);
 
@@ -493,7 +548,13 @@ export function RouteMap({
   // Tiles: the light set, or the dark one in the dark scheme.
   React.useEffect(() => {
     if (!map) return;
-    const layer = coveringTiles(source.url, { attribution: source.attribution, subdomains: source.subdomains ?? "abc", minZoom: source.minZoom, maxZoom: source.maxZoom ?? 19, keepBuffer: 1 });
+    const layer = coveringTiles(source.url, {
+      attribution: source.attribution,
+      subdomains: source.subdomains ?? "abc",
+      minZoom: source.minZoom,
+      maxZoom: source.maxZoom ?? 19,
+      keepBuffer: 1,
+    });
     layer.addTo(map);
     return () => void layer.remove();
   }, [map, source.url, source.attribution, source.subdomains, source.minZoom, source.maxZoom]);
@@ -519,11 +580,23 @@ export function RouteMap({
       const selected = route.id === selectedId;
       const dim = selectedId !== null && !selected;
       const weight = (route.weight ?? 4) + (selected ? 2 : 0);
-      const style = { weight, opacity: dim ? 0.55 : 1, lineCap: "round" as const, lineJoin: "round" as const, interactive: selectable && !picking, bubblingMouseEvents: false };
+      const style = {
+        weight,
+        opacity: dim ? 0.55 : 1,
+        lineCap: "round" as const,
+        lineJoin: "round" as const,
+        interactive: selectable && !picking,
+        bubblingMouseEvents: false,
+      };
       const lines: L.Polyline[] = [];
       if (stops.length && route.values?.length) {
         for (const run of stepRuns(route.points, route.values, stepOf)) {
-          lines.push(L.polyline(route.points.slice(run.from, run.to + 1).map(tuple), { ...style, color: resolveColour(el, stops[run.step].colour) }));
+          lines.push(
+            L.polyline(route.points.slice(run.from, run.to + 1).map(tuple), {
+              ...style,
+              color: resolveColour(el, stops[run.step].colour),
+            }),
+          );
         }
       } else {
         lines.push(L.polyline(route.points.map(tuple), { ...style, color: base }));
@@ -533,13 +606,27 @@ export function RouteMap({
         line.on("click", () => latest.current.onSelect?.(route.id));
         line.addTo(group);
       }
-      const chevrons = route.arrows === undefined ? (single ? 5 : 0) : route.arrows === true ? 5 : route.arrows === false ? 0 : route.arrows;
+      const chevrons =
+        route.arrows === undefined
+          ? single
+            ? 5
+            : 0
+          : route.arrows === true
+            ? 5
+            : route.arrows === false
+              ? 0
+              : route.arrows;
       if (chevrons > 0) {
         for (const a of geo.arrows(route.points, chevrons)) {
           L.marker(tuple(a.position), {
             interactive: false,
             keyboard: false,
-            icon: L.divIcon({ className: "strata-map-arrow", iconSize: [26, 26], iconAnchor: [13, 13], html: arrowHtml(a.bearing, base, halo) }),
+            icon: L.divIcon({
+              className: "strata-map-arrow",
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
+              html: arrowHtml(a.bearing, base, halo),
+            }),
           }).addTo(group);
         }
       }
@@ -548,9 +635,18 @@ export function RouteMap({
         if (ends) {
           const success = resolveColour(el, "var(--success)");
           const danger = resolveColour(el, "var(--danger)");
-          const mark = (at: LatLng, text: string, options: L.CircleMarkerOptions) => L.circleMarker(tuple(at), { radius: 7, interactive: true, bubblingMouseEvents: false, ...options }).bindTooltip(text).addTo(group);
+          const mark = (at: LatLng, text: string, options: L.CircleMarkerOptions) =>
+            L.circleMarker(tuple(at), { radius: 7, interactive: true, bubblingMouseEvents: false, ...options })
+              .bindTooltip(text)
+              .addTo(group);
           // Shapes carry the meaning as well as colour: a filled start, a ringed finish, one of each for a loop.
-          if (ends.loop) mark(ends.start, `${route.label}: start and finish`, { color: danger, weight: 3, fillColor: success, fillOpacity: 1 });
+          if (ends.loop)
+            mark(ends.start, `${route.label}: start and finish`, {
+              color: danger,
+              weight: 3,
+              fillColor: success,
+              fillOpacity: 1,
+            });
           else {
             mark(ends.finish, `${route.label}: finish`, { color: danger, weight: 3, fillColor: halo, fillOpacity: 1 });
             mark(ends.start, `${route.label}: start`, { color: halo, weight: 2, fillColor: success, fillOpacity: 1 });
@@ -589,8 +685,10 @@ export function RouteMap({
       setReady(true);
       // A given view wins, then a set zoom (on the followed position, or the routes' middle), then the routes.
       silently(map, () => {
-        if (latest.current.view) map.setView(tuple(latest.current.view.center), latest.current.view.zoom, { animate: false });
-        else if (v.zoom !== undefined && v.centred && v.target) map.setView(tuple(v.target), v.zoom, { animate: false });
+        if (latest.current.view)
+          map.setView(tuple(latest.current.view.center), latest.current.view.zoom, { animate: false });
+        else if (v.zoom !== undefined && v.centred && v.target)
+          map.setView(tuple(v.target), v.zoom, { animate: false });
         else showRoutes(map, latest.current.routes, v.zoom);
       });
     };
@@ -603,7 +701,8 @@ export function RouteMap({
 
   // A zoom that changes after the first view (an animation) moves the zoom about the view's centre.
   React.useEffect(() => {
-    if (map && zoom !== undefined && fitted.current !== null && map.getZoom() !== zoom) silently(map, () => map.setZoom(zoom, { animate: false }));
+    if (map && zoom !== undefined && fitted.current !== null && map.getZoom() !== zoom)
+      silently(map, () => map.setZoom(zoom, { animate: false }));
   }, [map, zoom]);
 
   // The positions: one marker each, kept by id and moved with `setLatLng`. No route is touched.
@@ -617,11 +716,15 @@ export function RouteMap({
       seen.add(p.id);
       let entry = live.get(p.id);
       if (!entry) {
-        entry = { marker: L.circleMarker(tuple(p.at), { radius: 8, weight: 3, fillOpacity: 1, interactive: false }).addTo(map), style: "" };
+        entry = {
+          marker: L.circleMarker(tuple(p.at), { radius: 8, weight: 3, fillOpacity: 1, interactive: false }).addTo(map),
+          style: "",
+        };
         live.set(p.id, entry);
       } else entry.marker.setLatLng(tuple(p.at));
       const index = routes.findIndex((r) => r.id === p.routeId);
-      const spec = p.colour ?? (index >= 0 ? (routes[index].colour ?? PALETTE[index % PALETTE.length]) : "var(--primary)");
+      const spec =
+        p.colour ?? (index >= 0 ? (routes[index].colour ?? PALETTE[index % PALETTE.length]) : "var(--primary)");
       const style = `${scheme}|${spec}`;
       if (entry.style !== style) {
         entry.style = style;
@@ -638,7 +741,8 @@ export function RouteMap({
       // Before the first fit with no zoom set there is no zoom to hold; the fit places the view.
       const z = zoom ?? (fitted.current === null ? undefined : map.getZoom());
       if (z !== undefined) centre(map, target, z);
-    } else if (!map.getBounds().pad(-0.2).contains(tuple(target))) silently(map, () => map.panTo(tuple(target), { animate: false }));
+    } else if (!map.getBounds().pad(-0.2).contains(tuple(target)))
+      silently(map, () => map.panTo(tuple(target), { animate: false }));
   }, [map, all, routes, scheme, follow, target, zoom]);
 
   // The reset control: fit the routes again, as the person's own move (so it is reported).
@@ -661,7 +765,14 @@ export function RouteMap({
       timer = undefined;
       const b = map.getBounds();
       const c = map.getCenter();
-      latest.current.onViewChange?.({ bounds: [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]], zoom: map.getZoom(), center: [c.lat, c.lng] });
+      latest.current.onViewChange?.({
+        bounds: [
+          [b.getSouth(), b.getWest()],
+          [b.getNorth(), b.getEast()],
+        ],
+        zoom: map.getZoom(),
+        center: [c.lat, c.lng],
+      });
     };
     const moved = () => {
       if (!latest.current.onViewChange) return;
@@ -716,7 +827,10 @@ export function RouteMap({
   const ring = React.useRef<L.CircleMarker | null>(null);
   React.useEffect(() => {
     if (!map) return;
-    const at = otherAlong !== null && cursorRoute ? geo.pointAlong(cursorRoute.points, otherAlong, alongOf(cursorRoute.points)) : null;
+    const at =
+      otherAlong !== null && cursorRoute
+        ? geo.pointAlong(cursorRoute.points, otherAlong, alongOf(cursorRoute.points))
+        : null;
     if (!at) {
       ring.current?.remove();
       ring.current = null;
@@ -724,7 +838,13 @@ export function RouteMap({
     }
     if (!ring.current) {
       const el = map.getContainer();
-      ring.current = L.circleMarker(tuple(at), { radius: 9, weight: 3, fillOpacity: 0, interactive: false, color: resolveColour(el, "var(--foreground)") }).addTo(map);
+      ring.current = L.circleMarker(tuple(at), {
+        radius: 9,
+        weight: 3,
+        fillOpacity: 0,
+        interactive: false,
+        color: resolveColour(el, "var(--foreground)"),
+      }).addTo(map);
     } else ring.current.setLatLng(tuple(at));
   }, [map, otherAlong, cursorRoute]);
   React.useEffect(() => () => void (ring.current = null), [map]);
@@ -737,7 +857,10 @@ export function RouteMap({
     map.on("moveend zoomend resize", again);
     return () => void map.off("moveend zoomend resize", again);
   }, [map, markers?.length]);
-  const placed = React.useMemo(() => (map && ready && markers?.length ? placeMarkers(map, markers, routes) : []), [map, ready, markers, routes, tick]);
+  const placed = React.useMemo(
+    () => (map && ready && markers?.length ? placeMarkers(map, markers, routes) : []),
+    [map, ready, markers, routes, tick],
+  );
   // A stretch is its route's part drawn heavier, and a fanned marker has a leader line back to its true place.
   React.useEffect(() => {
     if (!map || !markers?.length) return;
@@ -751,10 +874,29 @@ export function RouteMap({
       const route = routes[index];
       const part = geo.slice(route.points, at.from, at.to, alongOf(route.points));
       if (part.length < 2) continue;
-      const colour = m.colour ?? (m.highlighted ? "var(--success)" : m.selected ? "var(--foreground)" : (route.colour ?? PALETTE[index % PALETTE.length]));
-      L.polyline(part.map(tuple), { color: resolveColour(el, colour), weight: (route.weight ?? 4) + (m.selected ? 5 : 3), opacity: m.selected ? 1 : 0.8, lineCap: "round", interactive: false }).addTo(group);
+      const colour =
+        m.colour ??
+        (m.highlighted
+          ? "var(--success)"
+          : m.selected
+            ? "var(--foreground)"
+            : (route.colour ?? PALETTE[index % PALETTE.length]));
+      L.polyline(part.map(tuple), {
+        color: resolveColour(el, colour),
+        weight: (route.weight ?? 4) + (m.selected ? 5 : 3),
+        opacity: m.selected ? 1 : 0.8,
+        lineCap: "round",
+        interactive: false,
+      }).addTo(group);
     }
-    for (const p of placed) if (p.fanned) L.polyline([tuple(p.at), tuple(p.shown)], { color: resolveColour(el, "var(--muted-foreground)"), weight: 1, dashArray: "2 3", interactive: false }).addTo(group);
+    for (const p of placed)
+      if (p.fanned)
+        L.polyline([tuple(p.at), tuple(p.shown)], {
+          color: resolveColour(el, "var(--muted-foreground)"),
+          weight: 1,
+          dashArray: "2 3",
+          interactive: false,
+        }).addTo(group);
     for (const { marker } of posMarkers.current.values()) marker.bringToFront();
     return () => void group.remove();
   }, [map, markers, routes, placed, scheme]);
@@ -765,17 +907,31 @@ export function RouteMap({
     const el = map.getContainer();
     el.classList.add("strata-map-picking");
     map.keyboard.disable();
-    setAnnounced("Choose a place on the map. Arrow keys move the crosshair, Shift for bigger steps, Enter chooses, Escape cancels.");
+    setAnnounced(
+      "Choose a place on the map. Arrow keys move the crosshair, Shift for bigger steps, Enter chooses, Escape cancels.",
+    );
     let cross: L.Marker | null = null;
     const showCross = (at: L.LatLng) => {
-      if (!cross) cross = L.marker(at, { interactive: false, keyboard: false, icon: L.divIcon({ className: "strata-map-crosshair", html: CROSS_ICON, iconSize: [32, 32], iconAnchor: [16, 16] }) }).addTo(map);
+      if (!cross)
+        cross = L.marker(at, {
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: "strata-map-crosshair",
+            html: CROSS_ICON,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          }),
+        }).addTo(map);
       else cross.setLatLng(at);
     };
     const choose = (ll: L.LatLng) => {
       const at: LatLng = [ll.lat, ll.lng];
       const nearest = nearestRoute(latest.current.routes, at);
       const route = nearest ? latest.current.routes.find((r) => r.id === nearest.routeId) : undefined;
-      setAnnounced(`Picked ${at[0].toFixed(5)}, ${at[1].toFixed(5)}.${nearest && route ? ` Nearest: ${route.label}, ${format.distance(nearest.alongM, latest.current.units)} along, ${format.distance(nearest.distanceM, latest.current.units)} from the route.` : ""}`);
+      setAnnounced(
+        `Picked ${at[0].toFixed(5)}, ${at[1].toFixed(5)}.${nearest && route ? ` Nearest: ${route.label}, ${format.distance(nearest.alongM, latest.current.units)} along, ${format.distance(nearest.distanceM, latest.current.units)} from the route.` : ""}`,
+      );
       latest.current.onPick?.(at, { nearest });
     };
     const onClick = (e: L.LeafletMouseEvent) => {
@@ -797,7 +953,12 @@ export function RouteMap({
         return;
       }
       const step = e.shiftKey ? 50 : 10;
-      const d = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[e.key];
+      const d = (
+        { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<
+          string,
+          [number, number]
+        >
+      )[e.key];
       if (!d) return;
       e.preventDefault();
       e.stopPropagation();
@@ -824,7 +985,14 @@ export function RouteMap({
   }, [map, picking]);
 
   return (
-    <div ref={root} data-dark-treatment={treated ? "" : undefined} className={cn("strata-map relative isolate aspect-video min-h-64 overflow-hidden rounded-surface border border-border", className)}>
+    <div
+      ref={root}
+      data-dark-treatment={treated ? "" : undefined}
+      className={cn(
+        "strata-map relative isolate aspect-video min-h-64 overflow-hidden rounded-surface border border-border",
+        className,
+      )}
+    >
       <div ref={host} className="size-full" />
       <p id={summaryId} className="sr-only">
         {text}
@@ -832,9 +1000,13 @@ export function RouteMap({
       <p role="status" aria-live="polite" className="sr-only">
         {announced}
       </p>
-      {map && placed.length > 0 && <MarkerLayer map={map} placed={placed} onSelect={onMarkerSelect} card={renderMarkerCard} />}
+      {map && placed.length > 0 && (
+        <MarkerLayer map={map} placed={placed} onSelect={onMarkerSelect} card={renderMarkerCard} />
+      )}
       {topEnd && <div className="absolute top-2 right-2 z-1000">{topEnd}</div>}
-      {picking && pickBanner && <div className="absolute top-2 left-1/2 z-1000 max-w-[60%] -translate-x-1/2">{pickBanner}</div>}
+      {picking && pickBanner && (
+        <div className="absolute top-2 left-1/2 z-1000 max-w-[60%] -translate-x-1/2">{pickBanner}</div>
+      )}
       {(stops.length > 0 || bottomStart || (markers?.length && markerKey !== false)) && (
         <div className="absolute bottom-6 left-2 z-1000 grid max-w-[60%] gap-2">
           {stops.length > 0 && <ColourKey stops={stops} label={colourScaleLabel} formatValue={formatValue} />}
@@ -847,7 +1019,15 @@ export function RouteMap({
 }
 
 /** The key to a colour scale: its name, then each step with where it starts, so colour is never the only cue. */
-function ColourKey({ stops, label, formatValue }: { stops: readonly { at: number; colour: string }[]; label?: string; formatValue: (v: number) => string }) {
+function ColourKey({
+  stops,
+  label,
+  formatValue,
+}: {
+  stops: readonly { at: number; colour: string }[];
+  label?: string;
+  formatValue: (v: number) => string;
+}) {
   return (
     <div className="rounded-control border border-border bg-background px-2 py-1.5 type-caption text-foreground">
       {label && <p className="font-medium">{label}</p>}

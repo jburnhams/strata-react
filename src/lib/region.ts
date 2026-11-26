@@ -68,8 +68,16 @@ export function resizeRect(r: Rect, handle: Handle, dx: number, dy: number, { bo
   const cx = r.x + r.w / 2;
   const cy = r.y + r.h / 2;
   // Room: how wide and tall the rectangle can get on this side of its anchor, inside the bounds.
-  const roomW = hasW ? ax - bounds.x : hasE ? bounds.x + bounds.w - ax : 2 * Math.min(cx - bounds.x, bounds.x + bounds.w - cx);
-  const roomH = hasN ? ay - bounds.y : hasS ? bounds.y + bounds.h - ay : 2 * Math.min(cy - bounds.y, bounds.y + bounds.h - cy);
+  const roomW = hasW
+    ? ax - bounds.x
+    : hasE
+      ? bounds.x + bounds.w - ax
+      : 2 * Math.min(cx - bounds.x, bounds.x + bounds.w - cx);
+  const roomH = hasN
+    ? ay - bounds.y
+    : hasS
+      ? bounds.y + bounds.h - ay
+      : 2 * Math.min(cy - bounds.y, bounds.y + bounds.h - cy);
   let w: number;
   if (corner) {
     const wantW = r.w + (hasW ? -dx : dx);
@@ -94,7 +102,10 @@ export function resizeRect(r: Rect, handle: Handle, dx: number, dy: number, { bo
 export function drawRect(start: { x: number; y: number }, b: { x: number; y: number }, limits: RectLimits): Rect {
   const { bounds, aspect } = limits;
   // Both ends are held inside the bounds: a drag that starts outside them starts at their edge.
-  const a = { x: Math.min(Math.max(start.x, bounds.x), bounds.x + bounds.w), y: Math.min(Math.max(start.y, bounds.y), bounds.y + bounds.h) };
+  const a = {
+    x: Math.min(Math.max(start.x, bounds.x), bounds.x + bounds.w),
+    y: Math.min(Math.max(start.y, bounds.y), bounds.y + bounds.h),
+  };
   const px = Math.min(Math.max(b.x, bounds.x), bounds.x + bounds.w);
   const py = Math.min(Math.max(b.y, bounds.y), bounds.y + bounds.h);
   let w = Math.abs(px - a.x);
@@ -128,7 +139,8 @@ export function lerpRect(a: Rect, b: Rect, t: number, easing: Easing = "ease-in-
 }
 
 /** True when two rectangles are the same to the unit's thousandth. */
-export const sameRect = (a: Rect, b: Rect) => ["x", "y", "w", "h"].every((k) => Math.abs(a[k as keyof Rect] - b[k as keyof Rect]) < 0.001);
+export const sameRect = (a: Rect, b: Rect) =>
+  ["x", "y", "w", "h"].every((k) => Math.abs(a[k as keyof Rect] - b[k as keyof Rect]) < 0.001);
 
 // --- turning the picture (issue #241) ----------------------------------------------------------
 // A scan is often a little crooked, and the page is a crop of it turned by an angle. The convention
@@ -176,7 +188,10 @@ export function normaliseAngle(angle: number): number {
 /** One window cut into a left and a right half at `at` (0 to 1 across it, default the middle). */
 export function splitRect(r: Rect, at = 0.5): [Rect, Rect] {
   const cut = r.w * Math.min(Math.max(at, 0), 1);
-  return [{ ...r, w: cut }, { ...r, x: r.x + cut, w: r.w - cut }];
+  return [
+    { ...r, w: cut },
+    { ...r, x: r.x + cut, w: r.w - cut },
+  ];
 }
 
 /** The one window that holds both (their union): a spread made one page again. */
@@ -196,5 +211,8 @@ export function moveGutter(left: Rect, right: Rect, dx: number, { bounds, min }:
   const lo = Math.max(mw - left.w, bounds.x - right.x);
   const hi = right.w - mw;
   const d = Math.min(Math.max(dx, lo), Math.max(lo, hi));
-  return [{ ...left, w: left.w + d }, { ...right, x: right.x + d, w: right.w - d }];
+  return [
+    { ...left, w: left.w + d },
+    { ...right, x: right.x + d, w: right.w - d },
+  ];
 }

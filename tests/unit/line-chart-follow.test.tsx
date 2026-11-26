@@ -38,9 +38,7 @@ describe("current position", () => {
   it("draws the current x as a rule with its value read off the line, and moves it without redrawing the axis", () => {
     const fx = vi.fn(formatX);
     const fy = vi.fn(formatY);
-    const { rerender } = renderWithStrata(
-      <LineChart {...props} formatX={fx} formatY={fy} current={100} />,
-    );
+    const { rerender } = renderWithStrata(<LineChart {...props} formatX={fx} formatY={fy} current={100} />);
     expect(screen.getByText("100 m: 45 m up")).toBeInTheDocument();
     const xCalls = fx.mock.calls.length;
     const yCalls = fy.mock.calls.length;
@@ -58,13 +56,7 @@ describe("current position", () => {
   });
 
   it("words the value with formatCurrent", () => {
-    renderWithStrata(
-      <LineChart
-        {...props}
-        current={200}
-        formatCurrent={({ x, y }) => `Dist: ${x} m, Ele: ${y} m`}
-      />,
-    );
+    renderWithStrata(<LineChart {...props} current={200} formatCurrent={({ x, y }) => `Dist: ${x} m, Ele: ${y} m`} />);
     expect(screen.getByText("Dist: 200 m, Ele: 87 m")).toBeInTheDocument();
   });
 });
@@ -149,9 +141,7 @@ describe("one selection for what is announced, drawn and picked", () => {
   it("clamps a stored keyboard position when the series is replaced by a shorter one", async () => {
     const user = userEvent.setup();
     const picked: number[] = [];
-    const { rerender } = renderWithStrata(
-      <LineChart {...props} readout onPick={(x) => picked.push(x)} />,
-    );
+    const { rerender } = renderWithStrata(<LineChart {...props} readout onPick={(x) => picked.push(x)} />);
     const plot = screen.getByRole("slider");
     plot.focus();
     await user.keyboard("{Home}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}");
@@ -211,9 +201,7 @@ describe("area", () => {
         ]}
       />,
     );
-    expect(container.querySelector('path[fill-opacity="0.12"]')!.getAttribute("fill")).toBe(
-      "var(--chart-1)",
-    );
+    expect(container.querySelector('path[fill-opacity="0.12"]')!.getAttribute("fill")).toBe("var(--chart-1)");
   });
 });
 

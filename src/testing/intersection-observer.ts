@@ -97,7 +97,12 @@ export function installFakeIntersectionObserver(): FakeIntersectionObserverContr
   });
 
   const deliver = (observer: (typeof observers)[number], targets: readonly Element[], isIntersecting: boolean) => {
-    act(() => observer.callback(targets.map((t) => entryFor(t, isIntersecting)), observer.self));
+    act(() =>
+      observer.callback(
+        targets.map((t) => entryFor(t, isIntersecting)),
+        observer.self,
+      ),
+    );
   };
 
   return {

@@ -99,8 +99,7 @@ function Page({ maxHeight = "fit", reserve }: { maxHeight?: string; reserve?: nu
 }
 
 // A frame is at most `fit` tall: its width is cut to fit * aspect (1600 / 1200), which jsdom writes as `calc(<px>px)`.
-const frameWidthCap = () =>
-  (screen.getByRole("group", { name: "A" }) as HTMLElement).style.maxWidth;
+const frameWidthCap = () => (screen.getByRole("group", { name: "A" }) as HTMLElement).style.maxWidth;
 const frameHeightCap = (css: string) => parseFloat(css.replace("calc(", "")) / (1600 / 1200);
 
 describe("Compare maxHeight=fit", () => {
@@ -128,18 +127,14 @@ describe("Compare maxHeight=fit", () => {
     expect(frameHeightCap(frameWidthCap())).toBeCloseTo(340);
     // Let the measurement the first render schedules (the shim's observer reports on observe) run before the page changes.
     await act(async () => {
-      await new Promise((done) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => done(null))),
-      );
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(null))));
     });
     sectionBottom = 900; // fade adds a slider row: 100 px more besides the frames
     await userEvent.click(screen.getByRole("radio", { name: "Fade" }));
     // Fade is one frame (named "A over B"), so find it by its handle.
     await vi.waitFor(() =>
       expect(
-        frameHeightCap(
-          (document.querySelector("[data-viewport-frame]") as HTMLElement).style.maxWidth,
-        ),
+        frameHeightCap((document.querySelector("[data-viewport-frame]") as HTMLElement).style.maxWidth),
       ).toBeCloseTo(240),
     );
   });

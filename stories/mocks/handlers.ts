@@ -1,6 +1,15 @@
 import { delay, http, HttpResponse } from "msw";
 import { listDisk, makeFolder, noteFor } from "../fixtures/folders";
-import { bookings, firedWork, firings, glazeSwatches, piecePhotos, readings, type Booking, type Firing } from "../fixtures/kiln";
+import {
+  bookings,
+  firedWork,
+  firings,
+  glazeSwatches,
+  piecePhotos,
+  readings,
+  type Booking,
+  type Firing,
+} from "../fixtures/kiln";
 import { serverStatus } from "../fixtures/server";
 import { firingRuns, studioJobs } from "../fixtures/workflow";
 
@@ -60,7 +69,14 @@ export const logSyncs = {
     newReadings: 860,
     failures: [{ kiln: "Kiln 3", reason: "its controller did not answer within 30 seconds" }],
   },
-  failed: { running: false, current: 1, total: 3, newReadings: 0, failures: [], error: "The log store is full, so nothing was saved." },
+  failed: {
+    running: false,
+    current: 1,
+    total: 3,
+    newReadings: 0,
+    failures: [],
+    error: "The log store is full, so nothing was saved.",
+  },
 } satisfies Record<string, LogSync>;
 
 /** One page of the firing log. `after` is the id of the last firing the client holds, not an
@@ -116,12 +132,16 @@ export function renderingSvg(variant: string): string | null {
 
 const rendering = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
   const svg = renderingSvg(String(params.variant).replace(/\.svg$/, ""));
-  return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
+  return svg
+    ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } })
+    : new HttpResponse(null, { status: 404 });
 };
 
 const photo = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
   const svg = piecePhotoSvg(String(params.id));
-  return svg ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } }) : new HttpResponse(null, { status: 404 });
+  return svg
+    ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } })
+    : new HttpResponse(null, { status: 404 });
 };
 
 // Map tiles for the map stories: an SVG per tile, the same streets on every tile so they meet at the
@@ -162,7 +182,12 @@ const clip = ({ params }: { params: Record<string, string | readonly string[] | 
   bytes.setUint16(34, 16, true);
   write(36, "data");
   bytes.setUint32(40, frames * 2, true);
-  for (let i = 0; i < frames; i++) bytes.setInt16(44 + i * 2, Math.round(Math.sin((2 * Math.PI * (loud ? 440 : 523) * i) / rate) * (loud ? 0.5 : 0.25) * 32767), true);
+  for (let i = 0; i < frames; i++)
+    bytes.setInt16(
+      44 + i * 2,
+      Math.round(Math.sin((2 * Math.PI * (loud ? 440 : 523) * i) / rate) * (loud ? 0.5 : 0.25) * 32767),
+      true,
+    );
   return new HttpResponse(bytes.buffer, { headers: { "Content-Type": "audio/wav" } });
 };
 
@@ -178,7 +203,9 @@ const growing = ({ request }: { request: Request }) => {
   const lines = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:2", "#EXT-X-MEDIA-SEQUENCE:0"];
   for (let i = 0; i < made; i++) lines.push("#EXTINF:2.000000,", `seg${i}.ts`);
   if (made === 6) lines.push("#EXT-X-ENDLIST");
-  return new HttpResponse(lines.join("\n") + "\n", { headers: { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "no-store" } });
+  return new HttpResponse(lines.join("\n") + "\n", {
+    headers: { "Content-Type": "application/vnd.apple.mpegurl", "Cache-Control": "no-store" },
+  });
 };
 
 /** The pretend disk: GET lists a folder's subfolders (`/locked` refuses, `/slow-share` is slow), POST makes one. */
@@ -186,14 +213,20 @@ const folders = [
   http.get("/api/folders", async ({ request }) => {
     const path = new URL(request.url).searchParams.get("path") || "/";
     if (path.endsWith("/slow-share")) await delay(1500);
-    if (path.endsWith("/locked")) return HttpResponse.json({ detail: `You do not have permission to open ${path}.` }, { status: 403, statusText: "Forbidden" });
+    if (path.endsWith("/locked"))
+      return HttpResponse.json(
+        { detail: `You do not have permission to open ${path}.` },
+        { status: 403, statusText: "Forbidden" },
+      );
     return HttpResponse.json({ folders: listDisk(path), footer: noteFor(path) });
   }),
   http.post("/api/folders", async ({ request }) => {
     const { parent, name } = (await request.json()) as { parent: string; name: string };
     await delay(300);
     const made = makeFolder(parent, name);
-    return made.ok ? HttpResponse.json({ path: `${parent === "/" ? "" : parent}/${name}` }, { status: 201 }) : HttpResponse.json({ detail: made.reason }, { status: made.status });
+    return made.ok
+      ? HttpResponse.json({ path: `${parent === "/" ? "" : parent}/${name}` }, { status: 201 })
+      : HttpResponse.json({ detail: made.reason }, { status: made.status });
   }),
 ];
 
@@ -214,7 +247,9 @@ export const handlers = [
   http.get(api.server, () => HttpResponse.json(serverStatus)),
   http.get("/api/firings/:id/work", ({ params }) => {
     const f = firings.find((x) => x.id === params.id);
-    return f ? HttpResponse.json(firedWork(f)) : HttpResponse.json({ message: "no such firing" }, { status: 404, statusText: "Not Found" });
+    return f
+      ? HttpResponse.json(firedWork(f))
+      : HttpResponse.json({ message: "no such firing" }, { status: 404, statusText: "Not Found" });
   }),
   http.delete(`${api.bookings}/:id`, () => new HttpResponse(null, { status: 204 })),
   http.post(api.bookings, async () => {
@@ -231,26 +266,42 @@ export const handlers = [
   http.post(api.approve(":stage"), () => HttpResponse.json(firingRuns.done)),
   http.post(api.runFiring, () => HttpResponse.json(firingRuns.running)),
   http.get(api.jobs, () => HttpResponse.json({ items: studioJobs, next: null, total: null })),
-  http.post(api.cancelJob(":id"), ({ params }) => HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "cancelled" })),
-  http.post(api.retryJob(":id"), ({ params }) => HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "queued" })),
+  http.post(api.cancelJob(":id"), ({ params }) =>
+    HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "cancelled" }),
+  ),
+  http.post(api.retryJob(":id"), ({ params }) =>
+    HttpResponse.json({ ...studioJobs.find((j) => String(j.id) === params.id), state: "queued" }),
+  ),
 ];
 
 /** The server refuses an invite for a reason only it can check, in its own words (FastAPI's `detail`). */
 export const inviteTaken = http.post(api.invites, async () => {
   await delay(400);
-  return HttpResponse.json({ detail: "ada@example.org is already a member of the studio" }, { status: 409, statusText: "Conflict" });
+  return HttpResponse.json(
+    { detail: "ada@example.org is already a member of the studio" },
+    { status: 409, statusText: "Conflict" },
+  );
 });
 
 /** The server's validation rejects the email field (FastAPI's 422 shape). */
 export const inviteInvalid = http.post(api.invites, () =>
   HttpResponse.json(
-    { detail: [{ loc: ["body", "email"], msg: "Use the address the member signs in with, ending in .org or .com", type: "value_error" }] },
+    {
+      detail: [
+        {
+          loc: ["body", "email"],
+          msg: "Use the address the member signs in with, ending in .org or .com",
+          type: "value_error",
+        },
+      ],
+    },
     { status: 422, statusText: "Unprocessable Entity" },
   ),
 );
 
 /** The log sync's status fixed at one stage. */
-export const logSyncAt = (stage: keyof typeof logSyncs) => http.get(api.logSync, () => HttpResponse.json(logSyncs[stage]));
+export const logSyncAt = (stage: keyof typeof logSyncs) =>
+  http.get(api.logSync, () => HttpResponse.json(logSyncs[stage]));
 
 export const bookingsLoading = http.get(api.bookings, async () => {
   await delay("infinite");
@@ -268,7 +319,9 @@ export const firingsLoading = http.get(api.firings, async () => {
   return HttpResponse.json({ firings: [], hasMore: false });
 });
 
-export const firingsEmpty = http.get(api.firings, () => HttpResponse.json({ firings: [], hasMore: false } satisfies FiringPage));
+export const firingsEmpty = http.get(api.firings, () =>
+  HttpResponse.json({ firings: [], hasMore: false } satisfies FiringPage),
+);
 
 export const firingsServerError = http.get(api.firings, () =>
   HttpResponse.json({ message: "log offline" }, { status: 503, statusText: "Service Unavailable" }),
@@ -289,7 +342,10 @@ export const withdrawServerError = http.delete(`${api.bookings}/:id`, () =>
 /** Booking a firing when the kiln is already taken: 409, for AsyncButton's error state. */
 export const bookingConflict = http.post(api.bookings, async () => {
   await delay(600);
-  return HttpResponse.json({ detail: "Kiln 2 is already booked for Friday's bisque" }, { status: 409, statusText: "Conflict" });
+  return HttpResponse.json(
+    { detail: "Kiln 2 is already booked for Friday's bisque" },
+    { status: 409, statusText: "Conflict" },
+  );
 });
 
 export const serverLoading = http.get(api.server, async () => {

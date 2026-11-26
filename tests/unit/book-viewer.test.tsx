@@ -2,16 +2,7 @@ import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import {
-  BookViewer,
-  Status,
-  findPage,
-  sayPosition,
-  useBookUrl,
-  viewOf,
-  viewsOf,
-  type BookPage,
-} from "../../src";
+import { BookViewer, Status, findPage, sayPosition, useBookUrl, viewOf, viewsOf, type BookPage } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #238: a scanned book read page by page or as spreads.
@@ -87,9 +78,7 @@ describe("BookViewer", () => {
     expect(screen.getByRole("group", { name: "Scan 1" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Scan 2" })).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("Page 1 of 10");
-    expect(screen.getByRole("complementary", { name: "Transcript" })).toHaveTextContent(
-      "Text of 1",
-    );
+    expect(screen.getByRole("complementary", { name: "Transcript" })).toHaveTextContent("Text of 1");
     expect(screen.getByRole("button", { name: "Previous pages" })).toBeDisabled();
   });
 

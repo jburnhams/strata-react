@@ -1,15 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  Composer,
-  Conversation,
-  RichText,
-  matchEntities,
-  plainText,
-  safeHref,
-  type ConversationTurn,
-} from "../../src";
+import { Composer, Conversation, RichText, matchEntities, plainText, safeHref, type ConversationTurn } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const t0 = "2026-11-12T09:00:00Z";
@@ -68,13 +60,7 @@ describe("RichText and entity matching", () => {
   });
 });
 
-function Thread({
-  turns,
-  onRetry = () => {},
-}: {
-  turns: ConversationTurn[];
-  onRetry?: (id: string) => void;
-}) {
+function Thread({ turns, onRetry = () => {} }: { turns: ConversationTurn[]; onRetry?: (id: string) => void }) {
   return (
     <Conversation
       label="Questions"
@@ -117,11 +103,7 @@ describe("Conversation", () => {
     expect(live).toHaveTextContent("");
     expect(screen.getByRole("article")).toHaveAttribute("aria-busy", "true");
     rerender(
-      <Thread
-        turns={[
-          { id: "2", role: "answer", time: t0, text: "Firing **f-1** ran hot.", state: "done" },
-        ]}
-      />,
+      <Thread turns={[{ id: "2", role: "answer", time: t0, text: "Firing **f-1** ran hot.", state: "done" }]} />,
     );
     expect(live).toHaveTextContent("Assistant answered: Firing f-1 ran hot.");
   });
@@ -252,10 +234,7 @@ describe("Conversation", () => {
       />,
     );
     expect(screen.getByText("Frame at 0:42")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Frame at 0:42/ })).toHaveAttribute(
-      "href",
-      "/a-full.jpg",
-    );
+    expect(screen.getByRole("link", { name: /Frame at 0:42/ })).toHaveAttribute("href", "/a-full.jpg");
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.queryByText("Read 3 clips")).toBeNull();
   });
@@ -308,13 +287,7 @@ describe("Composer", () => {
   it("is disabled with its reason while answering, and Stop replaces Send", async () => {
     const onStop = vi.fn();
     renderWithStrata(
-      <Composer
-        {...base}
-        onStop={onStop}
-        onSend={() => {}}
-        answering
-        suggestions={["Which ran hot?"]}
-      />,
+      <Composer {...base} onStop={onStop} onSend={() => {}} answering suggestions={["Which ran hot?"]} />,
     );
     const box = screen.getByRole("textbox", { name: "Ask about the kiln" });
     expect(box).toBeDisabled();
@@ -327,9 +300,7 @@ describe("Composer", () => {
 
   it("sends a suggested question as a button, and Send is the one filled button", async () => {
     const onSend = vi.fn();
-    renderWithStrata(
-      <Composer {...base} onSend={onSend} suggestions={["Which ran hot?", "What is next?"]} />,
-    );
+    renderWithStrata(<Composer {...base} onSend={onSend} suggestions={["Which ran hot?", "What is next?"]} />);
     await userEvent.click(
       within(screen.getByRole("group", { name: "Suggested questions" })).getByRole("button", {
         name: "What is next?",

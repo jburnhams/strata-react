@@ -115,7 +115,19 @@ export type MediaSpansState = {
 };
 
 /** Draws the spans' ranges and acts on them as playback reaches them. See the file comment for the rules. */
-export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing, duration, limit = Infinity, seek, volume, setVolume }: Options): MediaSpansState {
+export function useMediaSpans({
+  spans,
+  kinds = {},
+  words,
+  onSpan,
+  time,
+  playing,
+  duration,
+  limit = Infinity,
+  seek,
+  volume,
+  setVolume,
+}: Options): MediaSpansState {
   const w = { ...WORDS, ...words };
   const list = React.useMemo<Entry[]>(() => {
     const out: Entry[] = [];
@@ -129,7 +141,18 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
     return out.sort((a, b) => a.start - b.start);
   }, [spans, kinds, duration]);
 
-  const bars = React.useMemo<SeekBarSpan[]>(() => list.map((s) => ({ start: s.start, end: s.end, label: s.def.label, tone: s.def.tone, kind: s.kind, colour: s.def.colour })), [list]);
+  const bars = React.useMemo<SeekBarSpan[]>(
+    () =>
+      list.map((s) => ({
+        start: s.start,
+        end: s.end,
+        label: s.def.label,
+        tone: s.def.tone,
+        kind: s.kind,
+        colour: s.def.colour,
+      })),
+    [list],
+  );
 
   // What has been acted on, what is being played through, and the volume a mute took away.
   const acted = React.useRef(new Set<string>());
@@ -221,18 +244,43 @@ export function useMediaSpans({ spans, kinds = {}, words, onSpan, time, playing,
       }
     }
     inside.current = now;
-    if (playing && current && current.def.behaviour === "auto" && !acted.current.has(current.id) && !undone.current.has(current.id) && current.end <= limit) act(current, time);
+    if (
+      playing &&
+      current &&
+      current.def.behaviour === "auto" &&
+      !acted.current.has(current.id) &&
+      !undone.current.has(current.id) &&
+      current.end <= limit
+    )
+      act(current, time);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, list, limit, act, playing]);
 
-  const offered = playing && current && current.def.behaviour === "ask" && !acted.current.has(current.id) && current.end <= limit ? current : null;
-  const offer = React.useMemo(() => (offered ? { label: (offered.action === "mute" ? w.mute : w.skip)(offered.def.label), run: () => act(offered, time) } : null), [offered?.id, time, act, w.mute, w.skip]); // eslint-disable-line react-hooks/exhaustive-deps
+  const offered =
+    playing && current && current.def.behaviour === "ask" && !acted.current.has(current.id) && current.end <= limit
+      ? current
+      : null;
+  const offer = React.useMemo(
+    () =>
+      offered
+        ? { label: (offered.action === "mute" ? w.mute : w.skip)(offered.def.label), run: () => act(offered, time) }
+        : null,
+    [offered?.id, time, act, w.mute, w.skip],
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { bars, offer, notice: notice ? { text: notice.text, undoLabel: w.undo, undo: notice.undo } : null };
 }
 
 /** A short notice drawn over a picture (or under an audio player) with one way back: "Skipped intro, Undo", "Picked up at 2:05, Start over". The player's own notices use it, so an overlay of an app's own matches them without copying classes. */
-export function PlayerNotice({ children, action, onAction }: { children: React.ReactNode; action: string; onAction: () => void }) {
+export function PlayerNotice({
+  children,
+  action,
+  onAction,
+}: {
+  children: React.ReactNode;
+  action: string;
+  onAction: () => void;
+}) {
   return (
     <div className="flex items-center gap-2 rounded-overlay border border-border bg-background px-3 py-1 type-body-sm text-foreground shadow-overlay">
       <span>{children}</span>
@@ -247,7 +295,15 @@ export function PlayerNotice({ children, action, onAction }: { children: React.R
 export type SpanActionsNotice = { text: string; actionLabel: string; run: () => void };
 
 /** The Skip button and the "Skipped intro, Undo" notice, for the player to draw over a picture or under the bar. The notice's live region is always present, so a screen reader hears what is put in it. */
-export function SpanActions({ state, other, className }: { state: MediaSpansState; other?: SpanActionsNotice | null; className?: string }) {
+export function SpanActions({
+  state,
+  other,
+  className,
+}: {
+  state: MediaSpansState;
+  other?: SpanActionsNotice | null;
+  className?: string;
+}) {
   const { offer, notice } = state;
   const shown = notice ? { text: notice.text, actionLabel: notice.undoLabel, run: notice.undo } : (other ?? null);
   return (

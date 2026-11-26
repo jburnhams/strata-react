@@ -65,10 +65,7 @@ describe("CompositionBar and Meter never show a part that is there as 0% (#43)",
 
   it("reads a nearly empty disk as <1% used", () => {
     render(<Meter label="Disk /" value={2.4} max={512} />);
-    expect(screen.getByRole("meter", { name: "Disk /" })).toHaveAttribute(
-      "aria-valuetext",
-      "<1% used",
-    );
+    expect(screen.getByRole("meter", { name: "Disk /" })).toHaveAttribute("aria-valuetext", "<1% used");
   });
 });
 
@@ -92,9 +89,7 @@ describe("DataTable missing values (#47)", () => {
     },
   ];
   // The first column is the row header (React Aria requires one); the rest are grid cells.
-  const cells = (row: HTMLElement) => [
-    ...row.querySelectorAll<HTMLElement>("[role=rowheader], [role=gridcell]"),
-  ];
+  const cells = (row: HTMLElement) => [...row.querySelectorAll<HTMLElement>("[role=rowheader], [role=gridcell]")];
   const names = () =>
     within(screen.getByRole("grid"))
       .getAllByRole("row")
@@ -102,23 +97,17 @@ describe("DataTable missing values (#47)", () => {
       .map((r) => cells(r)[0].textContent);
 
   it("draws a placeholder for a missing value, the column's word where it has one", () => {
-    renderWithStrata(
-      <DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />,
-    );
+    renderWithStrata(<DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />);
     const glaze = screen.getByRole("row", { name: /Glaze Lab/ });
     const [, total, synced] = cells(glaze);
     expect(total).toHaveTextContent("No value");
     expect(within(total).getByText("–")).toHaveAttribute("aria-hidden", "true");
     expect(synced).toHaveTextContent("Never");
-    expect(cells(screen.getByRole("row", { name: /Night Sky/ }))[2]).toHaveTextContent(
-      "8 Nov 2026",
-    );
+    expect(cells(screen.getByRole("row", { name: /Night Sky/ }))[2]).toHaveTextContent("8 Nov 2026");
   });
 
   it("sorts by value with missing rows last in both directions", async () => {
-    renderWithStrata(
-      <DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />,
-    );
+    renderWithStrata(<DataTable caption="Channels" columns={columns} rows={channels} rowKey={(c) => c.id} />);
     await userEvent.click(screen.getByRole("columnheader", { name: "Videos" }));
     expect(names()).toEqual(["Wheel Work", "Night Sky", "Kiln Talk", "Glaze Lab"]);
     await userEvent.click(screen.getByRole("columnheader", { name: "Videos" }));
@@ -299,22 +288,14 @@ describe("LoadMore and a page-scrolled grid (#49)", () => {
       );
     }
     renderWithStrata(<Feed />);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Could not load: The server could not answer (503).",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load: The server could not answer (503).");
   });
 });
 
 describe("Thumbnail overlays and fallback (#51)", () => {
   it("keeps overlays in the box whether the image loads, fails or is missing", () => {
     const { container, rerender } = render(
-      <Thumbnail
-        src="/api/photos/p-301.svg"
-        alt="Bowl"
-        missing="Photo not found"
-        eager
-        aspect="16/9"
-      >
+      <Thumbnail src="/api/photos/p-301.svg" alt="Bowl" missing="Photo not found" eager aspect="16/9">
         <span className="absolute right-1 bottom-1">4:05</span>
       </Thumbnail>,
     );
@@ -328,9 +309,7 @@ describe("Thumbnail overlays and fallback (#51)", () => {
         <span>4:05</span>
       </Thumbnail>,
     );
-    expect(
-      within(container.firstElementChild as HTMLElement).getByText("4:05"),
-    ).toBeInTheDocument();
+    expect(within(container.firstElementChild as HTMLElement).getByText("4:05")).toBeInTheDocument();
   });
 
   it("draws an app's fallback, named by alt, and takes a round shape", () => {
@@ -407,10 +386,7 @@ describe("JobStatus and useJob (#45)", () => {
     );
     const section = screen.getByRole("region", { name: "Log sync" });
     expect(section).toHaveTextContent("Syncing");
-    expect(screen.getByRole("progressbar", { name: "Log sync" })).toHaveAttribute(
-      "aria-valuetext",
-      "1 of 3",
-    );
+    expect(screen.getByRole("progressbar", { name: "Log sync" })).toHaveAttribute("aria-valuetext", "1 of 3");
   });
 
   it("names each failure with its reason, and uses the failed word", () => {
@@ -425,67 +401,24 @@ describe("JobStatus and useJob (#45)", () => {
     );
     expect(screen.getByText("Finished with failures")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(
-      within(screen.getByRole("list", { name: "Failures" })).getByRole("listitem"),
-    ).toHaveTextContent("Kiln 3: its controller did not answer");
+    expect(within(screen.getByRole("list", { name: "Failures" })).getByRole("listitem")).toHaveTextContent(
+      "Kiln 3: its controller did not answer",
+    );
   });
 
   it("announces when the item changes or the job ends, not on every poll", () => {
     const { rerender } = render(
-      <JobStatus
-        label="Log sync"
-        running
-        words={words}
-        summary="10 so far."
-        current={1}
-        total={3}
-      />,
+      <JobStatus label="Log sync" running words={words} summary="10 so far." current={1} total={3} />,
     );
     const live = screen.getByRole("status");
     expect(live).toHaveTextContent("");
-    rerender(
-      <JobStatus
-        label="Log sync"
-        running
-        words={words}
-        summary="20 so far."
-        current={1}
-        total={3}
-      />,
-    );
+    rerender(<JobStatus label="Log sync" running words={words} summary="20 so far." current={1} total={3} />);
     expect(live).toHaveTextContent("");
-    rerender(
-      <JobStatus
-        label="Log sync"
-        running
-        words={words}
-        summary="30 so far."
-        current={2}
-        total={3}
-      />,
-    );
+    rerender(<JobStatus label="Log sync" running words={words} summary="30 so far." current={2} total={3} />);
     expect(live).toHaveTextContent("Syncing. 30 so far.");
-    rerender(
-      <JobStatus
-        label="Log sync"
-        running
-        words={words}
-        summary="40 so far."
-        current={2}
-        total={3}
-      />,
-    );
+    rerender(<JobStatus label="Log sync" running words={words} summary="40 so far." current={2} total={3} />);
     expect(live).toHaveTextContent("Syncing. 30 so far.");
-    rerender(
-      <JobStatus
-        label="Log sync"
-        running={false}
-        words={words}
-        summary="All read."
-        current={3}
-        total={3}
-      />,
-    );
+    rerender(<JobStatus label="Log sync" running={false} words={words} summary="All read." current={3} total={3} />);
     expect(live).toHaveTextContent("Finished. All read.");
   });
 
@@ -538,11 +471,7 @@ describe("JobStatus and useJob (#45)", () => {
     let readingsReads = 0;
     server.use(
       http.get(api.logSync, ({ request }) =>
-        HttpResponse.json(
-          new URL(request.url).searchParams.get("job") === "b"
-            ? logSyncs.finished
-            : logSyncs.running,
-        ),
+        HttpResponse.json(new URL(request.url).searchParams.get("job") === "b" ? logSyncs.finished : logSyncs.running),
       ),
       http.get(api.readings, () => {
         readingsReads++;
@@ -558,9 +487,7 @@ describe("JobStatus and useJob (#45)", () => {
         every: 1000,
         invalidates: [["readings"]],
       });
-      return (
-        <p>{job.status === "ready" ? `${id} ${job.running ? "running" : "stopped"}` : "loading"}</p>
-      );
+      return <p>{job.status === "ready" ? `${id} ${job.running ? "running" : "stopped"}` : "loading"}</p>;
     }
     const { rerender } = renderWithStrata(<Sync job="a" />);
     await screen.findByText("a running");
@@ -681,9 +608,7 @@ describe("LoadMore's rows in a second look (#210)", () => {
         });
       }),
     );
-    renderWithStrata(
-      <Cards loading={(skeleton) => <div data-testid="mine">{skeleton}</div>} ruled={false} />,
-    );
+    renderWithStrata(<Cards loading={(skeleton) => <div data-testid="mine">{skeleton}</div>} ruled={false} />);
     await screen.findByText("Firing f-0");
     await userEvent.click(screen.getByRole("button", { name: "Show older firings" }));
     const mine = await screen.findByTestId("mine");

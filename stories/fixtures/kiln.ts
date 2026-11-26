@@ -41,7 +41,11 @@ function actualAt(t: number) {
 
 // Half-hourly readings, plus the moments the controller changed segment, so the peak is a reading.
 export const readings: Point[] = [
-  ...new Set([...Array.from({ length: Math.floor(NOW_MIN / 30) + 1 }, (_, i) => i * 30), ...planned.map((p) => p.x), NOW_MIN]),
+  ...new Set([
+    ...Array.from({ length: Math.floor(NOW_MIN / 30) + 1 }, (_, i) => i * 30),
+    ...planned.map((p) => p.x),
+    NOW_MIN,
+  ]),
 ]
   .sort((a, b) => a - b)
   .map((x) => ({ x, y: Math.round(actualAt(x)) }));
@@ -78,14 +82,86 @@ export type Booking = {
 };
 
 export const bookings: Booking[] = [
-  { id: "b-2041", member: "Priya Natarajan", pieces: 6, kiln: 2, firing: "Glaze, cone 6", glaze: "celadon", state: "cooling", out: "Today, about 14:50" },
-  { id: "b-2042", member: "Tom Ellery", pieces: 3, kiln: 2, firing: "Glaze, cone 6", glaze: "tenmoku", state: "cooling", out: "Today, about 14:50" },
-  { id: "b-2043", member: "Aoife Byrne", pieces: 2, kiln: 2, firing: "Glaze, cone 6", glaze: "shino", state: "cooling", out: "Today, about 14:50" },
-  { id: "b-2044", member: "Sam Okafor", pieces: 3, kiln: 2, firing: "Glaze, cone 6", glaze: "cobalt", state: "cooling", out: "Today, about 14:50" },
-  { id: "b-2050", member: "Marta Kowalczyk", pieces: 11, kiln: 1, firing: "Bisque, cone 04", glaze: "bisque", state: "loading", out: "Saturday after 10:00" },
-  { id: "b-2051", member: "Dev Raman", pieces: 8, kiln: 1, firing: "Bisque, cone 04", glaze: "bisque", state: "booked", out: "Saturday after 10:00" },
-  { id: "b-2055", member: "Hannah Lowe", pieces: 4, kiln: 3, firing: "Raku", glaze: "raku", state: "booked", out: "Saturday, during the firing" },
-  { id: "b-2033", member: "Joe Pryce", pieces: 5, kiln: 1, firing: "Bisque, cone 04", glaze: "bisque", state: "ready", out: "Ready since Tuesday" },
+  {
+    id: "b-2041",
+    member: "Priya Natarajan",
+    pieces: 6,
+    kiln: 2,
+    firing: "Glaze, cone 6",
+    glaze: "celadon",
+    state: "cooling",
+    out: "Today, about 14:50",
+  },
+  {
+    id: "b-2042",
+    member: "Tom Ellery",
+    pieces: 3,
+    kiln: 2,
+    firing: "Glaze, cone 6",
+    glaze: "tenmoku",
+    state: "cooling",
+    out: "Today, about 14:50",
+  },
+  {
+    id: "b-2043",
+    member: "Aoife Byrne",
+    pieces: 2,
+    kiln: 2,
+    firing: "Glaze, cone 6",
+    glaze: "shino",
+    state: "cooling",
+    out: "Today, about 14:50",
+  },
+  {
+    id: "b-2044",
+    member: "Sam Okafor",
+    pieces: 3,
+    kiln: 2,
+    firing: "Glaze, cone 6",
+    glaze: "cobalt",
+    state: "cooling",
+    out: "Today, about 14:50",
+  },
+  {
+    id: "b-2050",
+    member: "Marta Kowalczyk",
+    pieces: 11,
+    kiln: 1,
+    firing: "Bisque, cone 04",
+    glaze: "bisque",
+    state: "loading",
+    out: "Saturday after 10:00",
+  },
+  {
+    id: "b-2051",
+    member: "Dev Raman",
+    pieces: 8,
+    kiln: 1,
+    firing: "Bisque, cone 04",
+    glaze: "bisque",
+    state: "booked",
+    out: "Saturday after 10:00",
+  },
+  {
+    id: "b-2055",
+    member: "Hannah Lowe",
+    pieces: 4,
+    kiln: 3,
+    firing: "Raku",
+    glaze: "raku",
+    state: "booked",
+    out: "Saturday, during the firing",
+  },
+  {
+    id: "b-2033",
+    member: "Joe Pryce",
+    pieces: 5,
+    kiln: 1,
+    firing: "Bisque, cone 04",
+    glaze: "bisque",
+    state: "ready",
+    out: "Ready since Tuesday",
+  },
 ];
 
 export const kiln1Shelves = { booked: 9, total: 14 };
@@ -131,9 +207,17 @@ export type Piece = { h: number; w: number };
 export const kiln2Tuesday: { shelfWidthCm: number; levels: Piece[][] } = {
   shelfWidthCm: 60,
   levels: [
-    [{ h: 22, w: 10 }, { h: 18, w: 9 }, { h: 26, w: 8 }, { h: 9, w: 13 }],
+    [
+      { h: 22, w: 10 },
+      { h: 18, w: 9 },
+      { h: 26, w: 8 },
+      { h: 9, w: 13 },
+    ],
     [],
-    [{ h: 8, w: 14 }, { h: 15, w: 10 }],
+    [
+      { h: 8, w: 14 },
+      { h: 15, w: 10 },
+    ],
   ],
 };
 
@@ -176,7 +260,16 @@ export type Outcome = "whole" | "crazed" | "cracked";
 /** One member's work in one firing: what the firing log's row opens to show. */
 export type FiredWork = { id: string; member: string; pieces: number; glaze: Glaze; outcome: Outcome };
 
-const members = ["Priya Natarajan", "Tom Ellery", "Aoife Byrne", "Sam Okafor", "Marta Kowalczyk", "Dev Raman", "Hannah Lowe", "Joe Pryce"];
+const members = [
+  "Priya Natarajan",
+  "Tom Ellery",
+  "Aoife Byrne",
+  "Sam Okafor",
+  "Marta Kowalczyk",
+  "Dev Raman",
+  "Hannah Lowe",
+  "Joe Pryce",
+];
 const glazesFor: Record<FiringType, Glaze[]> = {
   bisque: ["bisque"],
   glaze: ["celadon", "tenmoku", "shino", "cobalt", "copper-red"],
@@ -222,7 +315,13 @@ export const piecePhotos: PiecePhoto[] = [
   { id: "p-302", title: "Tenmoku tea bowl", member: "Tom Ellery", glaze: "tenmoku", photo: "/api/photos/p-302.svg" },
   { id: "p-303", title: "Shino jar", member: "Aoife Byrne", glaze: "shino", photo: "/api/photos/p-303.svg" },
   { id: "p-304", title: "Cobalt vase", member: "Sam Okafor", glaze: "cobalt", photo: "/api/photos/p-304.svg" },
-  { id: "p-305", title: "Copper red bottle", member: "Hannah Lowe", glaze: "copper-red", photo: "/api/photos/p-305-moved.svg" },
+  {
+    id: "p-305",
+    title: "Copper red bottle",
+    member: "Hannah Lowe",
+    glaze: "copper-red",
+    photo: "/api/photos/p-305-moved.svg",
+  },
   { id: "p-306", title: "Raku dish", member: "Hannah Lowe", glaze: "raku", photo: null },
 ];
 

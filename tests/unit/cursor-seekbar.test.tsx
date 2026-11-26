@@ -114,9 +114,7 @@ describe("review fixes", () => {
   it("renders on the server: a seek bar and a chart without a scope need no browser store", async () => {
     const { renderToString } = await import("react-dom/server");
     const { LineChart } = await import("../../src");
-    expect(() =>
-      renderToString(<SeekBar time={1} duration={10} onSeek={() => {}} cursor />),
-    ).not.toThrow();
+    expect(() => renderToString(<SeekBar time={1} duration={10} onSeek={() => {}} cursor />)).not.toThrow();
     expect(() =>
       renderToString(
         <CursorScope>

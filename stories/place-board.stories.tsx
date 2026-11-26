@@ -65,7 +65,9 @@ function Board({
   );
 }
 
-const meta = { title: "Data/PlaceBoard", component: Board, parameters: { layout: "padded" } } satisfies Meta<typeof Board>;
+const meta = { title: "Data/PlaceBoard", component: Board, parameters: { layout: "padded" } } satisfies Meta<
+  typeof Board
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -83,12 +85,21 @@ export const Holding: Story = {
 
 /** Checked: right places get the success border and word, wrong ones a neutral outline and "Not yet", never red. */
 export const Checked: Story = {
-  args: { initial: { n2: "first", n4: "second", n9: "third", n5: "fourth" }, states: { first: "right", second: "right", third: "wrong", fourth: "wrong" } },
+  args: {
+    initial: { n2: "first", n4: "second", n9: "third", n5: "fourth" },
+    states: { first: "right", second: "right", third: "wrong", fourth: "wrong" },
+  },
 };
 
 /** Give a number: one basket, a pile of the same picture; the app counts what is in it. */
 export const GiveN: Story = {
-  args: { label: "Put 4 apples in the basket", pieces: apples, places: basket, pileLabel: "Apples", initial: { apple0: "basket", apple3: "basket" } },
+  args: {
+    label: "Put 4 apples in the basket",
+    pieces: apples,
+    places: basket,
+    pileLabel: "Apples",
+    initial: { apple0: "basket", apple3: "basket" },
+  },
 };
 
 /** Sort: places drawn as letters, pictures sorted by their first sound; done and locked. */

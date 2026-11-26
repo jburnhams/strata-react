@@ -25,13 +25,7 @@ const columns: Column<Booking>[] = [
 const booked = (b: Booking) => b.state === "booked";
 const bookable = bookings.filter(booked);
 
-function Harness({
-  rows = bookings,
-  onWithdraw,
-}: {
-  rows?: Booking[];
-  onWithdraw?: (ids: string[]) => void;
-}) {
+function Harness({ rows = bookings, onWithdraw }: { rows?: Booking[]; onWithdraw?: (ids: string[]) => void }) {
   const [shown, setShown] = React.useState(rows);
   const selection = useSelection(shown, (b) => b.id);
   return (
@@ -76,14 +70,7 @@ describe("Checkbox", () => {
   });
 
   it("shows the mixed state as indeterminate", () => {
-    render(
-      <Checkbox
-        label="Select all shown"
-        hideLabel
-        checked="mixed"
-        onCheckedChange={() => undefined}
-      />,
-    );
+    render(<Checkbox label="Select all shown" hideLabel checked="mixed" onCheckedChange={() => undefined} />);
     const box = screen.getByRole("checkbox", { name: "Select all shown" }) as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
     expect(box).toBePartiallyChecked();
@@ -92,9 +79,7 @@ describe("Checkbox", () => {
 
 describe("DataTable selection", () => {
   it("adds no checkboxes without a selection", () => {
-    renderWithStrata(
-      <DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />,
-    );
+    renderWithStrata(<DataTable caption="Work" columns={columns} rows={bookings} rowKey={(b) => b.id} />);
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
@@ -113,8 +98,7 @@ describe("DataTable selection", () => {
     expect(screen.getByRole("checkbox", { name: "Select Dev Raman" })).not.toBeChecked();
     await userEvent.click(selectAll());
     expect(selectAll()).toBeChecked();
-    for (const b of bookable)
-      expect(screen.getByRole("checkbox", { name: `Select ${b.member}` })).toBeChecked();
+    for (const b of bookable) expect(screen.getByRole("checkbox", { name: `Select ${b.member}` })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Select Tom Ellery" })).not.toBeChecked();
     expect(screen.getByText(`${bookable.length} bookings selected`)).toBeInTheDocument();
   });
@@ -125,9 +109,7 @@ describe("DataTable selection", () => {
   });
 
   it("select-all covers the rows a virtualised table has not rendered", async () => {
-    renderWithStrata(
-      <Harness rows={manyBookings.map((b) => ({ ...b, state: "booked" as const }))} />,
-    );
+    renderWithStrata(<Harness rows={manyBookings.map((b) => ({ ...b, state: "booked" as const }))} />);
     await userEvent.click(selectAll());
     expect(screen.getByText(`${manyBookings.length} bookings selected`)).toBeInTheDocument();
   });
@@ -235,9 +217,7 @@ describe("Row actions", () => {
         <IconButton icon={Trash2} label="Remove Moonbeam" />
       </>,
     );
-    expect(screen.getByRole("button", { name: "Withdraw Dev Raman" })).toHaveTextContent(
-      "Withdraw",
-    );
+    expect(screen.getByRole("button", { name: "Withdraw Dev Raman" })).toHaveTextContent("Withdraw");
     expect(screen.getByRole("button", { name: "Withdraw Hannah Lowe" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove Moonbeam" })).toBeInTheDocument();
   });

@@ -168,9 +168,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     act(() => {
-      window.dispatchEvent(
-        new StorageEvent("storage", { key: COLOR_SCHEME_STORAGE_KEY, newValue: "dark" }),
-      );
+      window.dispatchEvent(new StorageEvent("storage", { key: COLOR_SCHEME_STORAGE_KEY, newValue: "dark" }));
     });
     expect(screen.getByText("dark dark")).toBeInTheDocument();
   });
@@ -192,9 +190,7 @@ describe("ThemeProvider", () => {
   });
 
   it("useColorScheme outside a provider says so", () => {
-    expect(() => render(<Readout />)).toThrow(
-      "useColorScheme must be used inside a ThemeProvider.",
-    );
+    expect(() => render(<Readout />)).toThrow("useColorScheme must be used inside a ThemeProvider.");
   });
 
   it("renderWithStrata renders a chosen scheme without touching storage", () => {

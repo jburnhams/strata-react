@@ -8,8 +8,7 @@ const solid = (width: number, height: number, rgba: [number, number, number, num
 });
 const set = (p: Pixels, x: number, y: number, rgba: [number, number, number, number]) =>
   p.data.set(rgba, (y * p.width + x) * 4);
-const markAt = (d: ReturnType<typeof differences>, x: number, y: number) =>
-  d.marks[(y * d.width + x) * 4 + 3];
+const markAt = (d: ReturnType<typeof differences>, x: number, y: number) => d.marks[(y * d.width + x) * 4 + 3];
 
 describe("differences", () => {
   it("finds no difference between a picture and itself", () => {

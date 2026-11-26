@@ -65,7 +65,16 @@ export type ButtonProps = Omit<React.ComponentProps<"button">, "className" | "st
  * `outline`; ask for the filled accent (`variant="default"`) once per view. `type` defaults to `button`.
  * `onClick` and `disabled` are the DOM names and keep working; `onPress` is also accepted.
  */
-export function Button({ className, variant, size, type = "button", disabled, children, "aria-busy": ariaBusy, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  size,
+  type = "button",
+  disabled,
+  children,
+  "aria-busy": ariaBusy,
+  ...props
+}: ButtonProps) {
   // React Aria's button drops `aria-busy` (it forwards only the aria props it knows), so it is set
   // on the element here; a pending row action says it is busy to a screen reader (issue #248).
   const ref = React.useRef<HTMLButtonElement>(null);
@@ -97,12 +106,23 @@ export function Button({ className, variant, size, type = "button", disabled, ch
 function warnOnLoss(props: Record<string, unknown>, children: React.ReactNode) {
   if (props.title !== undefined && !warned.has("title")) {
     warned.add("title");
-    console.warn("strata-react: Button does not pass `title` through (React Aria's button drops it, and a title has no keyboard or touch). Wrap the button in a `Tooltip`, or use IconButton's `label` and `hint`.");
+    console.warn(
+      "strata-react: Button does not pass `title` through (React Aria's button drops it, and a title has no keyboard or touch). Wrap the button in a `Tooltip`, or use IconButton's `label` and `hint`.",
+    );
   }
   const glyph = typeof children === "string" ? children.trim() : "";
-  if (glyph && Array.from(glyph).length === 1 && !/[\p{L}\p{N}]/u.test(glyph) && !props["aria-label"] && !props["aria-labelledby"] && !warned.has("glyph")) {
+  if (
+    glyph &&
+    Array.from(glyph).length === 1 &&
+    !/[\p{L}\p{N}]/u.test(glyph) &&
+    !props["aria-label"] &&
+    !props["aria-labelledby"] &&
+    !warned.has("glyph")
+  ) {
     warned.add("glyph");
-    console.warn(`strata-react: a Button whose only content is "${glyph}" has no accessible name. Give it an aria-label, or use an IconButton with a label.`);
+    console.warn(
+      `strata-react: a Button whose only content is "${glyph}" has no accessible name. Give it an aria-label, or use an IconButton with a label.`,
+    );
   }
 }
 const warned = new Set<string>();
@@ -121,7 +141,14 @@ export type IconButtonProps = Omit<ButtonProps, "size" | "children" | "aria-labe
 };
 
 /** An icon-only button. `label` is required and becomes the accessible name and the tooltip (hover and keyboard focus); `hint` adds a muted aside to it, such as a shortcut. */
-export function IconButton({ icon: Icon, label, hint, variant = "ghost", size = "default", ...props }: IconButtonProps) {
+export function IconButton({
+  icon: Icon,
+  label,
+  hint,
+  variant = "ghost",
+  size = "default",
+  ...props
+}: IconButtonProps) {
   return (
     <Tooltip label={label} hint={hint}>
       <Button size={size === "sm" ? "icon-sm" : "icon"} variant={variant} aria-label={label} {...props}>
@@ -148,11 +175,25 @@ export type RowActionProps = Omit<ButtonProps, "children" | "aria-label"> & {
 };
 
 /** A small ghost action for one table row: shows `label`, and is named "`label` `subject`" so every row's action has its own name. */
-export function RowAction({ label, subject, icon: Icon, variant = "ghost", size = "sm", className, ...props }: RowActionProps) {
+export function RowAction({
+  label,
+  subject,
+  icon: Icon,
+  variant = "ghost",
+  size = "sm",
+  className,
+  ...props
+}: RowActionProps) {
   // -my-1.5 lets the 32px button sit in the 20px line of a table row, inside the row's padding, so
   // rows with an action keep the same pitch as rows without one.
   return (
-    <Button variant={variant} size={size} aria-label={`${label} ${subject}`} className={cn("-my-1.5", className)} {...props}>
+    <Button
+      variant={variant}
+      size={size}
+      aria-label={`${label} ${subject}`}
+      className={cn("-my-1.5", className)}
+      {...props}
+    >
       {Icon && <Icon aria-hidden />}
       {label}
     </Button>

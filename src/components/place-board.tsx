@@ -157,7 +157,12 @@ export function PlaceBoard<P, S>({
   // 72px, still well over the touch minimum, so a full place does not grow taller than the screen.
   const grid = (inside: P[], name: string, side: number) =>
     inside.length > 0 && (
-      <div role="group" aria-label={name} className="grid min-w-0 gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${side}px, 100%), 1fr))` }}>
+      <div
+        role="group"
+        aria-label={name}
+        className="grid min-w-0 gap-2"
+        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${side}px, 100%), 1fr))` }}
+      >
         {inside.map((p) => piece(p, side === placedSide))}
       </div>
     );
@@ -177,7 +182,10 @@ export function PlaceBoard<P, S>({
           </AriaButton>
         )}
       </div>
-      <div className="grid min-w-0 gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${placeSide}px, 100%), 1fr))` }}>
+      <div
+        className="grid min-w-0 gap-4"
+        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${placeSide}px, 100%), 1fr))` }}
+      >
         {places.map((s) => {
           const key = placeKey(s);
           const state = placeState(s);
@@ -199,7 +207,10 @@ export function PlaceBoard<P, S>({
                 isDisabled={!takes}
                 onPress={() => move(key)}
                 // The checked word is part of the name, as on a ChoiceGrid tile ("second, not yet"): the Status inside is overridden by aria-label.
-                aria-label={(takes && held !== undefined ? `Put ${pieceLabel(held)} in ${name}` : name) + (state === "open" ? "" : `, ${marks[state].toLowerCase()}`)}
+                aria-label={
+                  (takes && held !== undefined ? `Put ${pieceLabel(held)} in ${name}` : name) +
+                  (state === "open" ? "" : `, ${marks[state].toLowerCase()}`)
+                }
                 className="flex min-h-30 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-surface outline-offset-2 transition-state press hover:bg-muted disabled:cursor-default disabled:hover:bg-transparent"
               >
                 <span aria-hidden className={renderPlace ? "type-picture" : "type-heading"}>

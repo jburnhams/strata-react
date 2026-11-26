@@ -30,8 +30,7 @@ const source = clip("source", "Source", "Original, 360×270");
 const items = [clip("model-x", "A", "secret-note"), clip("model-y", "B"), clip("model-z", "C")];
 const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
 // The fake observer reports nothing until told, so a cell is "out of sight" until `show`.
-const show = (labels: string[]) =>
-  act(() => labels.forEach((l) => io.intersect(el(l).closest("figure")!, true)));
+const show = (labels: string[]) => act(() => labels.forEach((l) => io.intersect(el(l).closest("figure")!, true)));
 const load = (labels: string[]) => {
   show(labels);
   act(() => labels.forEach((l) => media.loaded(el(l), 10)));
@@ -39,13 +38,7 @@ const load = (labels: string[]) => {
 
 function Harness(props: Partial<React.ComponentProps<typeof CompareVideoGrid>>) {
   return (
-    <CompareVideoGrid
-      label="Three upscales of this clip"
-      items={items}
-      blind
-      missing="Video not found"
-      {...props}
-    />
+    <CompareVideoGrid label="Three upscales of this clip" items={items} blind missing="Video not found" {...props} />
   );
 }
 
@@ -143,9 +136,7 @@ describe("CompareVideoGrid", () => {
   });
 
   it("puts a screen's own actions under each candidate but not the reference", () => {
-    renderWithStrata(
-      <Harness reference={source} actions={(c) => <button type="button">Pick {c.label}</button>} />,
-    );
+    renderWithStrata(<Harness reference={source} actions={(c) => <button type="button">Pick {c.label}</button>} />);
     expect(screen.getByRole("button", { name: "Pick A" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pick Source" })).toBeNull();
   });
@@ -179,9 +170,7 @@ describe("CompareVideoGrid", () => {
   });
 
   it("looks at a region in every cell", async () => {
-    renderWithStrata(
-      <Harness regions={[{ id: "face", label: "Face", box: [0.1, 0.1, 0.2, 0.2] }]} />,
-    );
+    renderWithStrata(<Harness regions={[{ id: "face", label: "Face", box: [0.1, 0.1, 0.2, 0.2] }]} />);
     await userEvent.click(screen.getByRole("radio", { name: "Face" }));
     for (const l of ["A", "B", "C"]) expect(el(l).style.imageRendering).toBe("pixelated");
   });

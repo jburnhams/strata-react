@@ -9,7 +9,13 @@ const meta = {
   title: "Overlays/Tooltip",
   component: Tooltip,
   args: { label: "Delete clip", open: true, children: <Button>Clip</Button> },
-  decorators: [(Story) => <div className="grid h-24 place-items-center pt-8"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="grid h-24 place-items-center pt-8">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof Tooltip>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -26,4 +32,6 @@ export const OnIconButton: Story = {
 };
 
 /** Opens below when there is no room above. */
-export const Below: Story = { args: { side: "bottom", label: "Delete clip", children: <IconButton icon={Trash2} label="Delete clip" /> } };
+export const Below: Story = {
+  args: { side: "bottom", label: "Delete clip", children: <IconButton icon={Trash2} label="Delete clip" /> },
+};

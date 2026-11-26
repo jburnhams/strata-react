@@ -41,9 +41,7 @@ const groups: TranscriptGroup[] = [
 ];
 
 function Host(props: Partial<TranscriptViewProps>) {
-  return (
-    <TranscriptView label="Transcript" groups={groups} time={0} onSeek={() => {}} {...props} />
-  );
+  return <TranscriptView label="Transcript" groups={groups} time={0} onSeek={() => {}} {...props} />;
 }
 const row = (id: string) => document.querySelector<HTMLElement>(`[data-phrase="${id}"]`)!;
 
@@ -68,16 +66,10 @@ describe("TranscriptView", () => {
 
   it("at the boundaries: a phrase is heard from its start, a word until the next begins, nothing in the gap", () => {
     const { rerender } = renderWithStrata(<Host time={3} />);
-    expect(within(row("p2")).getByRole("button", { name: "thank" })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    expect(within(row("p2")).getByRole("button", { name: "thank" })).toHaveAttribute("aria-current", "true");
     rerender(<Host time={1.4} />);
     expect(row("p2")).not.toHaveAttribute("aria-current");
-    expect(within(row("p1")).getByRole("button", { name: "everyone" })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    expect(within(row("p1")).getByRole("button", { name: "everyone" })).toHaveAttribute("aria-current", "true");
     rerender(<Host time={1.5} />); // p1 has ended and p2 has not begun
     expect(document.querySelector("[data-phrase][aria-current=true]")).toBeNull();
     rerender(<Host time={5.5} />);
@@ -122,11 +114,7 @@ describe("TranscriptView", () => {
     renderWithStrata(
       <Host
         renderPlay={(p) => (
-          <PlayWindowButton
-            media={media}
-            window={{ start: p.start, end: p.end }}
-            label={`Play phrase ${p.id}`}
-          />
+          <PlayWindowButton media={media} window={{ start: p.start, end: p.end }} label={`Play phrase ${p.id}`} />
         )}
       />,
     );
@@ -203,20 +191,10 @@ describe("a long transcript", () => {
       {
         id: "g",
         title: "Everything",
-        phrases: Array.from({ length: 2000 }, (_, i) =>
-          phrase(`q${i}`, i * 3, `phrase number ${i}`),
-        ),
+        phrases: Array.from({ length: 2000 }, (_, i) => phrase(`q${i}`, i * 3, `phrase number ${i}`)),
       },
     ];
-    renderWithStrata(
-      <TranscriptView
-        label="Transcript"
-        groups={many}
-        time={3000}
-        onSeek={() => {}}
-        follow={false}
-      />,
-    );
+    renderWithStrata(<TranscriptView label="Transcript" groups={many} time={3000} onSeek={() => {}} follow={false} />);
     expect(document.querySelectorAll("[data-phrase]").length).toBeLessThan(60);
     // Not following (the app turned it off): the heard phrase is far away and nothing offers to go there.
     expect(screen.queryByRole("button", { name: /Jump to now/ })).not.toBeInTheDocument();
@@ -278,9 +256,7 @@ describe("TranscriptView doubt, marks, correction and card", () => {
     await user.click(within(row("p2")).getByRole("button", { name: "Mark the phrase at 0:03" }));
     await user.click(await screen.findByRole("menuitem", { name: "Not a lyric" }));
     expect(onPhraseState).toHaveBeenLastCalledWith("p2", "not-lyric");
-    await user.click(
-      await within(row("p1")).findByRole("button", { name: "Mark the phrase at 0:00" }),
-    );
+    await user.click(await within(row("p1")).findByRole("button", { name: "Mark the phrase at 0:00" }));
     expect(screen.queryByRole("menuitem", { name: "Not sung" })).toBeNull(); // it has that one
     await user.click(await screen.findByRole("menuitem", { name: "Clear mark" }));
     expect(onPhraseState).toHaveBeenLastCalledWith("p1", null);
@@ -440,8 +416,7 @@ describe("TranscriptView without a player, with marking and corrections", () => 
         marking={{ kinds, marks: { [wordId("p1", 0)]: "use" }, onMark }}
       />,
     );
-    const word = (phraseId: string, t: string) =>
-      within(row(phraseId)).getByText(t, { selector: "[data-mark-id]" });
+    const word = (phraseId: string, t: string) => within(row(phraseId)).getByText(t, { selector: "[data-mark-id]" });
     expect(word("p1", "good")).toHaveAttribute("data-mark", "use");
     fireEvent.pointerDown(word("p1", "everyone"), { button: 0 });
     fireEvent.pointerEnter(word("p2", "thank"));
@@ -449,10 +424,7 @@ describe("TranscriptView without a player, with marking and corrections", () => 
     fireEvent.pointerUp(window);
     expect(screen.getByText("3 words selected", { selector: "[aria-live]" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Never use" }));
-    expect(onMark).toHaveBeenCalledWith(
-      [wordId("p1", 2), wordId("p2", 0), wordId("p2", 1)],
-      "never",
-    );
+    expect(onMark).toHaveBeenCalledWith([wordId("p1", 2), wordId("p2", 0), wordId("p2", 1)], "never");
   });
 
   it("a corrected word is underlined, says what it was, and shows the original on hover; a click opens it", async () => {
@@ -479,12 +451,7 @@ describe("TranscriptView without a player, with marking and corrections", () => 
     const onCorrectionPress = vi.fn();
     const onSeek = vi.fn();
     renderWithStrata(
-      <TranscriptView
-        label="Transcript"
-        groups={corrected}
-        onSeek={onSeek}
-        onCorrectionPress={onCorrectionPress}
-      />,
+      <TranscriptView label="Transcript" groups={corrected} onSeek={onSeek} onCorrectionPress={onCorrectionPress} />,
     );
     const word = screen.getByRole("button", { name: /morning/ });
     expect(word).toHaveTextContent("morning (corrected, was mourning)");

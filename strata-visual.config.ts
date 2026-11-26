@@ -29,7 +29,10 @@ export default defineVisualConfig({
               await page.getByRole("button", { name: "Play", exact: true }).click();
               const exit = await page.getByRole("button", { name: "Leave full screen" }).elementHandle();
               const waitForControls = (visible: boolean) =>
-                page.waitForFunction(({ exit, visible }) => exit.checkVisibility({ opacityProperty: true }) === visible, { exit, visible });
+                page.waitForFunction(
+                  ({ exit, visible }) => exit.checkVisibility({ opacityProperty: true }) === visible,
+                  { exit, visible },
+                );
 
               const video = page.locator("video");
               const visibleBounds = await video.boundingBox();
@@ -46,8 +49,14 @@ export default defineVisualConfig({
                 throw new Error("A timed Skip action should stay visible while the controls are hidden");
               }
               const idleBounds = await video.boundingBox();
-              if (!idleBounds || idleBounds.height <= visibleBounds.height || Math.abs(idleBounds.y + idleBounds.height - playerBounds.y - playerBounds.height) > 1) {
-                throw new Error(`Idle video should fill the player vertically: visible height ${visibleBounds.height}, idle height ${idleBounds?.height}, player height ${playerBounds.height}`);
+              if (
+                !idleBounds ||
+                idleBounds.height <= visibleBounds.height ||
+                Math.abs(idleBounds.y + idleBounds.height - playerBounds.y - playerBounds.height) > 1
+              ) {
+                throw new Error(
+                  `Idle video should fill the player vertically: visible height ${visibleBounds.height}, idle height ${idleBounds?.height}, player height ${playerBounds.height}`,
+                );
               }
 
               const warning = page.getByText("Playback details unavailable");

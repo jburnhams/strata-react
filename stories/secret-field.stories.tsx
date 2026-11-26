@@ -33,7 +33,14 @@ export const Set: Story = {
   render: () => (
     <Row>
       <Field label="Map API key" hint="Kept on the server and never shown again.">
-        <SecretField noun="API key" isSet setAt={setAt} onRemove={() => wait(0)} consequence="Map labels stop loading until a new key is set." test={async () => ({ ok: true })} />
+        <SecretField
+          noun="API key"
+          isSet
+          setAt={setAt}
+          onRemove={() => wait(0)}
+          consequence="Map labels stop loading until a new key is set."
+          test={async () => ({ ok: true })}
+        />
       </Field>
     </Row>
   ),
@@ -46,7 +53,9 @@ function Editing() {
       <Field label="Script writer key" hint="Paste the key from the provider's dashboard.">
         <SecretField noun="API key" isSet setAt={setAt} onChange={setValue} onSave={() => wait(0)} />
       </Field>
-      <p className="mt-2 type-body-sm text-muted-foreground">{value === null ? "Nothing to send: the stored key stays." : "A new key is typed; it is held here only."}</p>
+      <p className="mt-2 type-body-sm text-muted-foreground">
+        {value === null ? "Nothing to send: the stored key stays." : "A new key is typed; it is held here only."}
+      </p>
     </Row>
   );
 }
@@ -79,4 +88,7 @@ function Testing({ result }: { result: SecretTestResult }) {
 export const TestingAccepted: Story = { tags: ["no-visual"], render: () => <Testing result={{ ok: true }} /> };
 
 /** And when it does not: the provider's reason, beside the field, as text. */
-export const TestingRefused: Story = { tags: ["no-visual"], render: () => <Testing result={{ ok: false, message: "The provider says the key has expired." }} /> };
+export const TestingRefused: Story = {
+  tags: ["no-visual"],
+  render: () => <Testing result={{ ok: false, message: "The provider says the key has expired." }} />,
+};

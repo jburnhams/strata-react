@@ -75,7 +75,20 @@ type Loop = { start: number | null; end: number | null };
 const db = (x: number) => `${Math.abs(x).toFixed(1)} dB`;
 
 /** Two clips to judge by ear: one transport, a switch that keeps the playhead, a loop, and matched levels. */
-export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, align = "auto", measure = measureLoudness, keys = true, extraShortcuts = [], footer, className }: CompareAudioProps) {
+export function CompareAudio({
+  label,
+  a,
+  b,
+  blind,
+  missing,
+  levelMatch = true,
+  align = "auto",
+  measure = measureLoudness,
+  keys = true,
+  extraShortcuts = [],
+  footer,
+  className,
+}: CompareAudioProps) {
   const refA = React.useRef<HTMLAudioElement>(null);
   const refB = React.useRef<HTMLAudioElement>(null);
   const sa = useMediaElement(refA);
@@ -103,7 +116,8 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
     };
   }, [matching, keyOf, a.media.src, b.media.src, measure]);
 
-  const gains = matching && levels && levels !== "failed" && levels.key === keyOf ? matchGains(levels.a, levels.b) : { a: 0, b: 0 };
+  const gains =
+    matching && levels && levels !== "failed" && levels.key === keyOf ? matchGains(levels.a, levels.b) : { a: 0, b: 0 };
   React.useEffect(() => {
     if (refA.current) refA.current.volume = (volume / 100) * gainToVolume(gains.a);
     if (refB.current) refB.current.volume = (volume / 100) * gainToVolume(gains.b);
@@ -125,7 +139,8 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
     to.seek(carry(from.time, from, to));
     // The loop moves with the playhead's policy: under `time` it keeps its seconds, so its shares change.
     if (from.duration && to.duration) {
-      const move = (share: number | null) => (share === null ? null : Math.min(1, carry(share * from.duration!, from, to) / to.duration!));
+      const move = (share: number | null) =>
+        share === null ? null : Math.min(1, carry(share * from.duration!, from, to) / to.duration!);
       setLoop((l) => ({ start: move(l.start), end: move(l.end) }));
     }
     if (wasPlaying) void to.play();
@@ -141,7 +156,8 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
     setLoop((l) => {
       const next = { ...l, [point]: share };
       // A start after the end (or an end before the start) replaces the other point.
-      if (next.start !== null && next.end !== null && next.start >= next.end) return point === "start" ? { start: share, end: null } : { start: null, end: share };
+      if (next.start !== null && next.end !== null && next.start >= next.end)
+        return point === "start" ? { start: share, end: null } : { start: null, end: share };
       return next;
     });
   };
@@ -152,7 +168,8 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
   const enforce = React.useCallback(() => {
     const e = (showing === "a" ? refA : refB).current;
     if (!e || !looping || !Number.isFinite(e.duration)) return;
-    if (e.currentTime >= loop.end! * e.duration || e.currentTime < loop.start! * e.duration - 0.05) e.currentTime = loop.start! * e.duration;
+    if (e.currentTime >= loop.end! * e.duration || e.currentTime < loop.start! * e.duration - 0.05)
+      e.currentTime = loop.start! * e.duration;
   }, [showing, looping, loop.start, loop.end]);
   // Only while playing: a paused judge may park the playhead anywhere (to set a new start, say).
   React.useEffect(() => {
@@ -186,7 +203,8 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
     ...(loop.start !== null && at(loop.start) !== null ? [{ time: at(loop.start)!, label: "Loop start" }] : []),
     ...(loop.end !== null && at(loop.end) !== null ? [{ time: at(loop.end)!, label: "Loop end" }] : []),
   ];
-  const range = (share: number | null) => (share === null || !duration ? format.missing : format.timecode(share * duration, { precision: "seconds" }));
+  const range = (share: number | null) =>
+    share === null || !duration ? format.missing : format.timecode(share * duration, { precision: "seconds" });
 
   let levelLine: string | null = null;
   if (matching) {
@@ -217,7 +235,10 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
       </div>
       {!blind && (a.note || b.note) && (
         <p className="type-caption text-muted-foreground">
-          {[a, b].filter((c) => c.note).map((c) => `${c.label}: ${c.note}`).join(" · ")}
+          {[a, b]
+            .filter((c) => c.note)
+            .map((c) => `${c.label}: ${c.note}`)
+            .join(" · ")}
         </p>
       )}
       {failed && (
@@ -227,7 +248,15 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
       )}
       <Transport playing={active.playing} onPlayPause={active.toggle}>
         <TimeReadout time={active.time} duration={active.duration} />
-        <SeekBar time={active.time} duration={active.duration} onSeek={active.seek} marks={marks} buffered={active.buffered} label={`Position in ${(showing === "a" ? a : b).label}`} step={1} />
+        <SeekBar
+          time={active.time}
+          duration={active.duration}
+          onSeek={active.seek}
+          marks={marks}
+          buffered={active.buffered}
+          label={`Position in ${(showing === "a" ? a : b).label}`}
+          step={1}
+        />
         <VolumeControl volume={volume} onVolumeChange={setVolume} />
       </Transport>
       <div className="flex flex-wrap items-center gap-2">
@@ -241,7 +270,13 @@ export function CompareAudio({ label, a, b, blind, missing, levelMatch = true, a
           Clear the loop
         </Button>
         <span role="status" className="type-caption tabular-nums text-muted-foreground">
-          {looping ? `Looping ${range(loop.start)} to ${range(loop.end)}` : loop.start !== null ? `Loop starts at ${range(loop.start)}` : loop.end !== null ? `Loop ends at ${range(loop.end)}` : "No loop"}
+          {looping
+            ? `Looping ${range(loop.start)} to ${range(loop.end)}`
+            : loop.start !== null
+              ? `Loop starts at ${range(loop.start)}`
+              : loop.end !== null
+                ? `Loop ends at ${range(loop.end)}`
+                : "No loop"}
         </span>
       </div>
       {levelLine && (

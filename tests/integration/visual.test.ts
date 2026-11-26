@@ -71,10 +71,7 @@ beforeAll(() => {
   // ?font=system the text falls back to the machine's sans-serif instead.
   mkdirSync(join(app, "dist"));
   copyFileSync(
-    join(
-      root,
-      "node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2",
-    ),
+    join(root, "node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2"),
     join(app, "dist/public-sans.woff2"),
   );
   writeFileSync(
@@ -113,9 +110,7 @@ describe("strata-visual on an app's routes", () => {
   });
 
   it("writes a baseline per state and theme, then matches them", () => {
-    config(
-      `{ ready: [], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`,
-    );
+    config(`{ ready: [], error: [http.get("/api/greeting", () => new HttpResponse(null, { status: 503 }))] }`);
     const first = run(["--update"]);
     expect(first.out).toContain("Wrote 4 baselines.");
     expect(first.code).toBe(0);
@@ -157,9 +152,7 @@ describe("strata-visual on an app's routes", () => {
     config(`{ ready: [] }`, "[]");
     const r = run(["--filter", "home--ready--wide--light"]);
     expect(r.code).toBe(1);
-    expect(r.out).toContain(
-      "error    home--ready--wide--light.png: no handler for GET /api/greeting",
-    );
+    expect(r.out).toContain("error    home--ready--wide--light.png: no handler for GET /api/greeting");
   }, 120_000);
 
   it("fails a shot whose text is drawn in a system font, naming the face, or warns when told to", () => {
@@ -205,11 +198,7 @@ describe("strata-visual on an app's routes", () => {
     config(states, undefined, `\n  baselines: "tests/visual/lazy",\n  themes: ["light"],`);
     expect(run(["--update"]).code).toBe(0);
     expect(lastRow("home--lazy--wide--light", "tests/visual/lazy")).toEqual([0xdd, 0x22, 0x22]);
-    config(
-      states,
-      undefined,
-      `\n  baselines: "tests/visual/lazy-off",\n  themes: ["light"],\n  scrollThrough: false,`,
-    );
+    config(states, undefined, `\n  baselines: "tests/visual/lazy-off",\n  themes: ["light"],\n  scrollThrough: false,`);
     expect(run(["--update"]).code).toBe(0);
     expect(lastRow("home--lazy--wide--light", "tests/visual/lazy-off")).toEqual([0x88, 0x88, 0x88]); // still its grey box
     rmSync(join(app, "tests/visual/lazy"), { recursive: true, force: true });
@@ -241,9 +230,7 @@ describe("strata-visual on an app's routes", () => {
     const update = run(["--update"]);
     expect(update.code).toBe(0);
     expect(update.out).toContain("removed 2 obsolete");
-    expect(
-      readdirSync(join(app, "tests/visual/baselines")).filter((f) => f.includes("error")),
-    ).toEqual([]);
+    expect(readdirSync(join(app, "tests/visual/baselines")).filter((f) => f.includes("error"))).toEqual([]);
   }, 120_000);
 });
 
@@ -279,10 +266,7 @@ describe("strata-react/visual from the built package", () => {
           })
         ).status,
       ).toBe(404);
-      expect(
-        (await fetch(new URL("/elsewhere", server.url), { headers: { accept: "text/html" } }))
-          .status,
-      ).toBe(404);
+      expect((await fetch(new URL("/elsewhere", server.url), { headers: { accept: "text/html" } })).status).toBe(404);
       expect((await fetch(`${server.url}..%2f..%2fpackage.json`)).status).toBe(404);
     } finally {
       await server.close();

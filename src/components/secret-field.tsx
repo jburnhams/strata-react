@@ -69,7 +69,20 @@ const input =
   "w-full min-w-0 rounded-control border border-input bg-background pl-3 pr-1 type-body text-foreground transition-state placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 aria-invalid:border-danger";
 
 /** A credential the server keeps and never shows again: "Not set", "Set" (no characters, not even its length), a masked entry with a named Show toggle, Replace, a confirmed Remove that says what stops working, and a Test with its result beside it. A set, untouched field reports nothing. */
-export function SecretField({ noun, isSet, setAt, onChange, onSave, onRemove, consequence, test, disabled, id: idProp, name, className }: SecretFieldProps) {
+export function SecretField({
+  noun,
+  isSet,
+  setAt,
+  onChange,
+  onSave,
+  onRemove,
+  consequence,
+  test,
+  disabled,
+  id: idProp,
+  name,
+  className,
+}: SecretFieldProps) {
   const { field } = useFieldControl();
   const id = idProp ?? field?.id;
   const [editing, setEditing] = React.useState(false);
@@ -124,7 +137,11 @@ export function SecretField({ noun, isSet, setAt, onChange, onSave, onRemove, co
     try {
       outcome = await test(entering ? value : null);
     } catch (thrown) {
-      outcome = { ok: false, message: thrown instanceof Error && thrown.message ? thrown.message : `The ${noun} could not be tested. Try again.` };
+      outcome = {
+        ok: false,
+        message:
+          thrown instanceof Error && thrown.message ? thrown.message : `The ${noun} could not be tested. Try again.`,
+      };
     }
     if (mine !== asked.current) return;
     setResult(outcome);
@@ -189,7 +206,14 @@ export function SecretField({ noun, isSet, setAt, onChange, onSave, onRemove, co
         </div>
       ) : (
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <output id={id} aria-describedby={describedBy} className={cn("flex min-w-48 flex-1 items-center gap-2 whitespace-nowrap rounded-control border border-input bg-muted px-3 type-body text-foreground", controlHeight.default)}>
+          <output
+            id={id}
+            aria-describedby={describedBy}
+            className={cn(
+              "flex min-w-48 flex-1 items-center gap-2 whitespace-nowrap rounded-control border border-input bg-muted px-3 type-body text-foreground",
+              controlHeight.default,
+            )}
+          >
             <KeyRound aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             <span>Set</span>
             {setAt != null && <span className="min-w-0 truncate text-muted-foreground">{format.dateTime(setAt)}</span>}

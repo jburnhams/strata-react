@@ -47,12 +47,15 @@ export const gainToVolume = (decibels: number) => Math.min(1, Math.max(0, 10 ** 
 export async function measureLoudness(src: string): Promise<Loudness> {
   const response = await fetch(src);
   if (!response.ok) throw new Error(`Could not read ${src}: ${response.status}`);
-  const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const Context =
+    window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   const context = new Context();
   try {
     const buffer = await context.decodeAudioData(await response.arrayBuffer());
     const frames = Math.min(buffer.length, Math.floor(buffer.sampleRate * MAX_SECONDS));
-    return loudnessOf(Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c).subarray(0, frames)));
+    return loudnessOf(
+      Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c).subarray(0, frames)),
+    );
   } finally {
     void context.close();
   }

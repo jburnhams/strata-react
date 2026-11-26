@@ -9,12 +9,24 @@ import { ChoiceGrid, ChoiceGridSkeleton, type ChoiceState } from "../src";
 // need no emoji font (a system one would differ by machine).
 
 type Choice = { id: string; picture: React.ReactNode; word: string };
-const animal = (id: string, Icon: LucideIcon): Choice => ({ id, picture: <Icon aria-hidden className="size-16" strokeWidth={1.5} />, word: id });
+const animal = (id: string, Icon: LucideIcon): Choice => ({
+  id,
+  picture: <Icon aria-hidden className="size-16" strokeWidth={1.5} />,
+  word: id,
+});
 const animals: Choice[] = [animal("dog", Dog), animal("cat", Cat), animal("fish", Fish), animal("bird", Bird)];
 const numbers: Choice[] = [5, 3, 9, 2, 7, 1].map((n) => ({ id: `n${n}`, picture: String(n), word: String(n) }));
 const marks = { wrong: "Not this one", right: "Right", answer: "This one" };
 
-function Round({ items = animals, states = {}, size }: { items?: Choice[]; states?: Record<string, ChoiceState>; size?: "md" | "lg" }) {
+function Round({
+  items = animals,
+  states = {},
+  size,
+}: {
+  items?: Choice[];
+  states?: Record<string, ChoiceState>;
+  size?: "md" | "lg";
+}) {
   const [chosen, setChosen] = React.useState(states);
   return (
     <ChoiceGrid
@@ -47,7 +59,9 @@ function PickRound({ states = {} }: { states?: Record<string, ChoiceState> }) {
   );
 }
 
-const meta = { title: "Data/ChoiceGrid", component: Round, parameters: { layout: "padded" } } satisfies Meta<typeof Round>;
+const meta = { title: "Data/ChoiceGrid", component: Round, parameters: { layout: "padded" } } satisfies Meta<
+  typeof Round
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

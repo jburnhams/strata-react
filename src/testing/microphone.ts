@@ -34,7 +34,10 @@ export type FakeMicrophoneOptions = {
 export type FakeSpeechStretch = { seconds: number; amplitude: number };
 
 /** A script of `takes` stretches of speech, each `speak` seconds after `gap` seconds of quiet, at `amplitude`. */
-export function speechScript(takes: number, { speak = 1.5, gap = 1.5, amplitude = 0.3 }: { speak?: number; gap?: number; amplitude?: number } = {}): FakeSpeechStretch[] {
+export function speechScript(
+  takes: number,
+  { speak = 1.5, gap = 1.5, amplitude = 0.3 }: { speak?: number; gap?: number; amplitude?: number } = {},
+): FakeSpeechStretch[] {
   return Array.from({ length: takes }, () => [
     { seconds: gap, amplitude: 0 },
     { seconds: speak, amplitude },
@@ -54,7 +57,10 @@ export function fakeMicrophone({
   loop,
 }: FakeMicrophoneOptions = {}): Microphone {
   // The amplitude at sample `t`: the script's stretch it falls in, or the steady tone's.
-  const ends = (script ?? []).reduce<number[]>((acc, s) => [...acc, (acc.at(-1) ?? 0) + Math.round(s.seconds * sampleRate)], []);
+  const ends = (script ?? []).reduce<number[]>(
+    (acc, s) => [...acc, (acc.at(-1) ?? 0) + Math.round(s.seconds * sampleRate)],
+    [],
+  );
   const total = ends.at(-1) ?? 0;
   const at = (t: number): number => {
     if (!script) return amplitude;

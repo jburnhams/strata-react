@@ -73,7 +73,15 @@ export type VideoClockOptions = {
 export type VideoClock = ReturnType<typeof useVideoClock>;
 
 /** Plays, pauses, seeks, steps and loops any number of videos together. */
-export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPlay = false, loopWhole = false, pairKey }: VideoClockOptions) {
+export function useVideoClock({
+  fps,
+  loop: loopProp,
+  onLoopChange,
+  audio,
+  autoPlay = false,
+  loopWhole = false,
+  pairKey,
+}: VideoClockOptions) {
   const els = React.useRef(new Map<number, HTMLVideoElement>());
   const leaderRef = React.useRef<HTMLVideoElement | null>(null);
   const cleanups = React.useRef(new Map<number, () => void>());
@@ -94,7 +102,11 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
   const holdRef = React.useRef(false);
   const lead = useMediaElement(leaderRef);
 
-  const active = () => [...els.current.entries()].filter(([i]) => i === 0 || !hidden.current.has(i)).sort((a, b) => a[0] - b[0]).map(([, el]) => el);
+  const active = () =>
+    [...els.current.entries()]
+      .filter(([i]) => i === 0 || !hidden.current.has(i))
+      .sort((a, b) => a[0] - b[0])
+      .map(([, el]) => el);
 
   // A play() the browser refuses (autoplay policy) or that a pause or a hold interrupts rejects; an interruption is ours and ignored, a refusal means nothing is playing, so the transport must not say it is.
   const start = (el: HTMLVideoElement) => {
@@ -161,7 +173,14 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
       }
       els.current.set(index, el);
       refresh();
-      const read = () => setInfos((p) => ({ ...p, [index]: { duration: Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null, error: !!el.error && el.error.code !== 1 } }));
+      const read = () =>
+        setInfos((p) => ({
+          ...p,
+          [index]: {
+            duration: Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null,
+            error: !!el.error && el.error.code !== 1,
+          },
+        }));
       const ended = () => onEndedRef.current();
       const types = ["loadedmetadata", "durationchange", "error", "emptied", "loadstart"] as const;
       for (const t of types) el.addEventListener(t, read);
@@ -177,7 +196,9 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
   };
 
   // ---- the numbers a transport shows ----
-  const known = Object.values(infos).map((i) => i.duration).filter((d): d is number => d !== null);
+  const known = Object.values(infos)
+    .map((i) => i.duration)
+    .filter((d): d is number => d !== null);
   const duration = known.length ? Math.min(...known) : null;
   const count = Object.keys(infos).length;
   const loaded = count > 0 && known.length === count;
@@ -265,7 +286,8 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
               const drift = el.currentTime - L.currentTime;
               if (Math.abs(drift) > 0.3) el.currentTime = L.currentTime;
               else if (Math.abs(drift) > one) el.playbackRate = L.playbackRate * (drift > 0 ? 0.97 : 1.03);
-              else if (Math.abs(drift) < one / 2 && el.playbackRate !== L.playbackRate) el.playbackRate = L.playbackRate;
+              else if (Math.abs(drift) < one / 2 && el.playbackRate !== L.playbackRate)
+                el.playbackRate = L.playbackRate;
               if (Math.abs(drift) > 2 * one) slow.add(indexes[k]);
             });
             setBehind((prev) => (prev.size === slow.size && [...slow].every((i) => prev.has(i)) ? prev : slow));
@@ -311,11 +333,26 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
     setStarted(false);
     // Read every attached element again rather than forgetting them all: a clip that kept its source (a grid's reference) does not
     // reload, so nothing else would bring its duration or error back; one that changed reports NaN from the browser's own reload.
-    setInfos(Object.fromEntries([...els.current].map(([i, el]) => [i, { duration: Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null, error: !!el.error && el.error.code !== 1 }])));
+    setInfos(
+      Object.fromEntries(
+        [...els.current].map(([i, el]) => [
+          i,
+          {
+            duration: Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null,
+            error: !!el.error && el.error.code !== 1,
+          },
+        ]),
+      ),
+    );
   }, [pairKey]);
 
   // Autoplay: once, for each pair, when every video has its metadata.
-  const [reduced] = React.useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [reduced] = React.useState(
+    () =>
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const auto = autoPlay === "always" || (autoPlay === true && !reduced);
   const playRef = React.useRef(play);
   playRef.current = play;
@@ -347,7 +384,9 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
     { keys: ["i"], label: "Loop starts here", run: () => setPoint("start") },
     { keys: ["o"], label: "Loop ends here", run: () => setPoint("end") },
     { keys: ["c"], label: "Clear the loop", run: clearLoop, disabled: loop.start === null && loop.end === null },
-    ...(audio === null ? [] : [{ keys: ["m"], label: "Mute", run: () => ((soundChosen.current = true), setMuted((m) => !m)) }]),
+    ...(audio === null
+      ? []
+      : [{ keys: ["m"], label: "Mute", run: () => ((soundChosen.current = true), setMuted((m) => !m)) }]),
   ];
 
   return {
@@ -385,7 +424,15 @@ export function useVideoClock({ fps, loop: loopProp, onLoopChange, audio, autoPl
 }
 
 /** The transport row (play, step, time, seek bar with moments and the loop's ends, speed, volume) and the loop row, for a clock. */
-export function VideoControls({ clock, rates = SLOW_RATES, moments = [] }: { clock: VideoClock; rates?: readonly number[]; moments?: readonly { time: number; label: string }[] }) {
+export function VideoControls({
+  clock,
+  rates = SLOW_RATES,
+  moments = [],
+}: {
+  clock: VideoClock;
+  rates?: readonly number[];
+  moments?: readonly { time: number; label: string }[];
+}) {
   const { loop, fps } = clock;
   const at = (t: number | null) => (t === null ? format.missing : format.timecode(t, { precision: "frames", fps }));
   const marks = [
@@ -395,9 +442,25 @@ export function VideoControls({ clock, rates = SLOW_RATES, moments = [] }: { clo
   ];
   return (
     <>
-      <Transport playing={clock.wanted} onPlayPause={clock.toggle} onStepBack={() => clock.step(-1)} onStepForward={() => clock.step(1)}>
+      <Transport
+        playing={clock.wanted}
+        onPlayPause={clock.toggle}
+        onStepBack={() => clock.step(-1)}
+        onStepForward={() => clock.step(1)}
+      >
         <TimeReadout time={clock.time} duration={clock.duration} precision="frames" fps={fps} />
-        <SeekBar time={clock.time} duration={clock.duration} onSeek={clock.seek} marks={marks} onMarkPress={(m) => (clock.pause(), clock.seek(m.time))} buffered={clock.buffered} label="Position" step={1} precision="frames" fps={fps} />
+        <SeekBar
+          time={clock.time}
+          duration={clock.duration}
+          onSeek={clock.seek}
+          marks={marks}
+          onMarkPress={(m) => (clock.pause(), clock.seek(m.time))}
+          buffered={clock.buffered}
+          label="Position"
+          step={1}
+          precision="frames"
+          fps={fps}
+        />
         <RateChoice rate={clock.rate} onRateChange={clock.setRate} rates={rates} />
         {clock.hasAudio && <VolumeControl volume={clock.muted ? 0 : clock.volume} onVolumeChange={clock.setVolume} />}
       </Transport>
@@ -412,7 +475,15 @@ export function VideoControls({ clock, rates = SLOW_RATES, moments = [] }: { clo
           Clear the loop
         </Button>
         <span role="status" className="type-caption tabular-nums text-muted-foreground">
-          {clock.looping ? `Looping ${at(loop.start)} to ${at(loop.end)}` : clock.loopsWhole ? "Looping the whole clip" : loop.start !== null ? `Loop starts at ${at(loop.start)}` : loop.end !== null ? `Loop ends at ${at(loop.end)}` : "No loop"}
+          {clock.looping
+            ? `Looping ${at(loop.start)} to ${at(loop.end)}`
+            : clock.loopsWhole
+              ? "Looping the whole clip"
+              : loop.start !== null
+                ? `Loop starts at ${at(loop.start)}`
+                : loop.end !== null
+                  ? `Loop ends at ${at(loop.end)}`
+                  : "No loop"}
         </span>
       </div>
     </>

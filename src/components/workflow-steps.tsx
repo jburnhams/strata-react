@@ -84,12 +84,23 @@ function detailOf(stage: WorkflowStage, now: Date | undefined): string | null {
   const last = stage.last;
   if (!last || last.status === "cleared") return null;
   const when = format.ago(last.at, now);
-  if (stage.gate && last.status === "done") return last.by === "auto" ? `Approved automatically ${when}` : `Approved by ${last.by ?? "someone"} ${when}`;
+  if (stage.gate && last.status === "done")
+    return last.by === "auto" ? `Approved automatically ${when}` : `Approved by ${last.by ?? "someone"} ${when}`;
   const took = last.elapsed_s != null && last.elapsed_s >= 1 ? `, took ${format.runningTime(last.elapsed_s)}` : "";
   return `${last.status === "failed" ? "Failed" : "Ran"} ${when}${took}`;
 }
 
-function StageAction<S extends WorkflowStage>({ stage, filled, run, labels }: { stage: S; filled: boolean; run: (s: S) => Promise<unknown>; labels: { idle: string; pending: string; done: string } }) {
+function StageAction<S extends WorkflowStage>({
+  stage,
+  filled,
+  run,
+  labels,
+}: {
+  stage: S;
+  filled: boolean;
+  run: (s: S) => Promise<unknown>;
+  labels: { idle: string; pending: string; done: string };
+}) {
   const action = useAsyncAction(() => run(stage));
   return (
     <AsyncButton
@@ -105,7 +116,15 @@ function StageAction<S extends WorkflowStage>({ stage, filled, run, labels }: { 
 }
 
 /** A subject's stages through a strata-python pipeline, each with its state as a word, when it last ran, its error, and Approve on a waiting gate or Try again on a failed stage. */
-export function WorkflowSteps<S extends WorkflowStage>({ label, stages, onApprove, onRetry, words, now, className }: WorkflowStepsProps<S>) {
+export function WorkflowSteps<S extends WorkflowStage>({
+  label,
+  stages,
+  onApprove,
+  onRetry,
+  words,
+  now,
+  className,
+}: WorkflowStepsProps<S>) {
   const all = { ...DEFAULT_WORDS, ...words };
   const firstWaiting = stages.find((s) => s.gate && s.state === "waiting")?.name;
   return (
@@ -120,9 +139,21 @@ export function WorkflowSteps<S extends WorkflowStage>({ label, stages, onApprov
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="min-w-0 flex-1 type-label text-foreground">{stage.title}</span>
               {state === "waiting" && stage.gate && onApprove && (
-                <StageAction stage={stage} filled={stage.name === firstWaiting} run={onApprove} labels={{ idle: "Approve", pending: "Approving…", done: "Approved" }} />
+                <StageAction
+                  stage={stage}
+                  filled={stage.name === firstWaiting}
+                  run={onApprove}
+                  labels={{ idle: "Approve", pending: "Approving…", done: "Approved" }}
+                />
               )}
-              {state === "failed" && onRetry && <StageAction stage={stage} filled={false} run={onRetry} labels={{ idle: "Try again", pending: "Starting…", done: "Started" }} />}
+              {state === "failed" && onRetry && (
+                <StageAction
+                  stage={stage}
+                  filled={false}
+                  run={onRetry}
+                  labels={{ idle: "Try again", pending: "Starting…", done: "Started" }}
+                />
+              )}
               <Status tone={look.tone} icon={look.icon}>
                 {wordOf(stage, all)}
               </Status>
@@ -158,7 +189,10 @@ export type WorkflowSummaryData<S extends WorkflowStage = WorkflowStage> = {
 };
 
 /** Reduces a run's stages to one state and the stage it is about. `running`: its job is queued or running. */
-export function summariseWorkflow<S extends WorkflowStage>(stages: readonly S[], { running = false }: { running?: boolean } = {}): WorkflowSummaryData<S> {
+export function summariseWorkflow<S extends WorkflowStage>(
+  stages: readonly S[],
+  { running = false }: { running?: boolean } = {},
+): WorkflowSummaryData<S> {
   const total = stages.length;
   const done = stages.filter((s) => s.state === "done").length;
   const at = (state: WorkflowSummaryState, find: (s: S) => boolean): WorkflowSummaryData<S> | null => {
@@ -170,14 +204,21 @@ export function summariseWorkflow<S extends WorkflowStage>(stages: readonly S[],
     at("failed", (s) => s.state === "failed") ??
     at("waiting", (s) => s.state === "waiting") ??
     at("stale", (s) => s.state === "stale") ??
-    (done === total ? { state: "done", done, total } : done === 0 ? { state: "ready", done, total } : { state: "partial", done, total })
+    (done === total
+      ? { state: "done", done, total }
+      : done === 0
+        ? { state: "ready", done, total }
+        : { state: "partial", done, total })
   );
 }
 
 /** The summary's words: the stage words `WorkflowSteps` uses, and the run's own two. */
 export type WorkflowSummaryWords = StageWords & { running?: string; partial?: string };
 
-const SUMMARY_LOOKS: Record<WorkflowSummaryState, { tone: Tone; icon: IconComponent; word: (w: Required<WorkflowSummaryWords>) => string }> = {
+const SUMMARY_LOOKS: Record<
+  WorkflowSummaryState,
+  { tone: Tone; icon: IconComponent; word: (w: Required<WorkflowSummaryWords>) => string }
+> = {
   running: { tone: "info", icon: Clock, word: (w) => w.running },
   failed: { tone: "danger", icon: CircleAlert, word: (w) => w.failed },
   waiting: { tone: "info", icon: Eye, word: (w) => w.waiting },
@@ -210,7 +251,12 @@ export function WorkflowSummary({ stages, running, words, className }: WorkflowS
   const summary = summariseWorkflow(stages, { running });
   const look = SUMMARY_LOOKS[summary.state];
   const detail = describeWorkflowSummary(summary);
-  const all = { ...DEFAULT_WORDS, running: "Running", partial: "Part done", ...words } as Required<WorkflowSummaryWords>;
+  const all = {
+    ...DEFAULT_WORDS,
+    running: "Running",
+    partial: "Part done",
+    ...words,
+  } as Required<WorkflowSummaryWords>;
   return (
     <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1", className)}>
       <Status tone={look.tone} icon={look.icon}>

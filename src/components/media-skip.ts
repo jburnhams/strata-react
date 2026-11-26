@@ -59,11 +59,19 @@ export function skipAction(
       return { label: `Next ${noun}`, to: next ?? null, by: "mark" };
     }
     const behind = all.filter((p) => p <= time - restart);
-    return { label: `Previous ${noun}`, to: behind.length ? behind[behind.length - 1] : time > 0 ? 0 : null, by: "mark" };
+    return {
+      label: `Previous ${noun}`,
+      to: behind.length ? behind[behind.length - 1] : time > 0 ? 0 : null,
+      by: "mark",
+    };
   }
   const step = level === "small" ? (steps.small ?? 10) : (steps.large ?? 60);
   const raw = time + direction * step;
   const to = direction < 0 ? Math.max(0, raw) : duration ? Math.min(duration, raw) : raw;
   const label = `${direction < 0 ? "Back" : "Forward"} ${stepWords(step)}`;
-  return { label, to: (direction < 0 && time <= 0) || (direction > 0 && duration != null && time >= duration) ? null : to, by: "time" };
+  return {
+    label,
+    to: (direction < 0 && time <= 0) || (direction > 0 && duration != null && time >= duration) ? null : to,
+    by: "time",
+  };
 }

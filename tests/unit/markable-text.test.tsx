@@ -3,15 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Check, X } from "lucide-react";
-import {
-  Mark,
-  MarkableText,
-  MarkSummary,
-  countMarks,
-  rangeBetween,
-  stepId,
-  type MarkKind,
-} from "../../src";
+import { Mark, MarkableText, MarkSummary, countMarks, rangeBetween, stepId, type MarkKind } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 const kinds: MarkKind[] = [
@@ -42,9 +34,7 @@ function Demo({
       clearKeys={["w"]}
       onMark={(sel, k) => {
         onMark?.(sel, k);
-        setMarks((m) =>
-          Object.fromEntries([...Object.entries(m), ...sel.map((id) => [id, k ?? undefined])]),
-        );
+        setMarks((m) => Object.fromEntries([...Object.entries(m), ...sel.map((id) => [id, k ?? undefined])]));
       }}
     >
       <p>
@@ -94,9 +84,7 @@ describe("MarkableText", () => {
     expect(word("kiln")).toHaveAttribute("data-selected");
     fireEvent.pointerDown(word("all"), { button: 0, shiftKey: true });
     fireEvent.pointerUp(window);
-    expect(["kiln", "ran", "hot", "all"].every((t) => word(t).hasAttribute("data-selected"))).toBe(
-      true,
-    );
+    expect(["kiln", "ran", "hot", "all"].every((t) => word(t).hasAttribute("data-selected"))).toBe(true);
   });
 
   it("selects every id between two ends even when the rows between are not mounted", () => {
@@ -113,14 +101,7 @@ describe("MarkableText", () => {
     const user = userEvent.setup();
     const onCaret = vi.fn();
     renderWithStrata(
-      <MarkableText
-        label="Transcript"
-        ids={ids}
-        marks={{}}
-        kinds={kinds}
-        onMark={() => {}}
-        onCaretChange={onCaret}
-      >
+      <MarkableText label="Transcript" ids={ids} marks={{}} kinds={kinds} onMark={() => {}} onCaretChange={onCaret}>
         <p>
           {words.map((w, i) => (
             <Mark key={i} id={ids[i]!}>

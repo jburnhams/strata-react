@@ -84,8 +84,7 @@ describe("SortableList", () => {
     // Focus lands on the first drop position; the arrows walk the others. Stop after "Main run".
     for (
       let i = 0;
-      i < 6 &&
-      document.activeElement?.getAttribute("aria-label") !== "Insert between Main run and Outro";
+      i < 6 && document.activeElement?.getAttribute("aria-label") !== "Insert between Main run and Outro";
       i++
     ) {
       await user.keyboard("{ArrowDown}");
@@ -124,11 +123,7 @@ describe("SortableList", () => {
           selectionMode="single"
           onSelectionChange={(k) => picked.push([...k])}
           renderActions={(r) => (
-            <RowAction
-              label="Remove"
-              subject={r.name}
-              onClick={() => picked.push(["remove", r.id])}
-            />
+            <RowAction label="Remove" subject={r.name} onClick={() => picked.push(["remove", r.id])} />
           )}
         >
           {(r) => <span>{r.name}</span>}

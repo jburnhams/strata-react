@@ -152,13 +152,7 @@ describe("click to choose, pictures", () => {
 
 describe("click to choose, a pair judgment", () => {
   const pair = { label: "Pair 1", a: A, b: B };
-  const Vote = ({
-    pending = false,
-    onAnswer,
-  }: {
-    pending?: boolean;
-    onAnswer: (a: PairAnswer) => void;
-  }) => (
+  const Vote = ({ pending = false, onAnswer }: { pending?: boolean; onAnswer: (a: PairAnswer) => void }) => (
     <PairVote
       pair={{ status: "ready", data: pair }}
       skeleton={<p>Loading</p>}
@@ -201,13 +195,7 @@ describe("click to choose, videos", () => {
     media: { kind: "video", src: `/clips/${label}.mp4`, width: 1440, height: 1080, fps: 25 },
   });
   const el = (label: string) => screen.getByLabelText(`Video ${label}`) as HTMLVideoElement;
-  function Clips({
-    onPick,
-    initial = "side" as VideoMode,
-  }: {
-    onPick: (s: "a" | "b") => void;
-    initial?: VideoMode;
-  }) {
+  function Clips({ onPick, initial = "side" as VideoMode }: { onPick: (s: "a" | "b") => void; initial?: VideoMode }) {
     const [mode, setMode] = React.useState<VideoMode>(initial);
     return (
       <CompareVideo

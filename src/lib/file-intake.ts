@@ -65,7 +65,8 @@ export function matchesAccept(file: { name: string; type: string }, accept: read
 }
 
 const MB = 1024 * 1024;
-const sizeWords = (bytes: number) => (bytes >= MB ? `${(bytes / MB).toFixed(bytes >= 100 * MB ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`);
+const sizeWords = (bytes: number) =>
+  bytes >= MB ? `${(bytes / MB).toFixed(bytes >= 100 * MB ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`;
 
 /** Per-file outcomes for files picked or dropped: type and size checks with a named reason, the app's own `process` per file, retry and dismiss. */
 export function useFileIntake(options: FileIntakeOptions): FileIntake {
@@ -93,7 +94,8 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
           () => !controller.signal.aborted && patch(id, () => ({ ...base, status: "added" })),
           (error: unknown) => {
             if (controller.signal.aborted) return;
-            const reason = error instanceof Error && error.message ? error.message : `${file.name} could not be added. Try again.`;
+            const reason =
+              error instanceof Error && error.message ? error.message : `${file.name} could not be added. Try again.`;
             patch(id, () => ({ ...base, status: "failed", reason }));
           },
         )
@@ -121,7 +123,8 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
           },
           (error: unknown) => {
             if (!alive.current || !files.current.has(id)) return;
-            const reason = error instanceof Error && error.message ? error.message : `${file.name} could not be checked. Try again.`;
+            const reason =
+              error instanceof Error && error.message ? error.message : `${file.name} could not be checked. Try again.`;
             patch(id, () => ({ ...base, status: "failed", reason }));
           },
         );
@@ -183,5 +186,8 @@ export function useFileIntake(options: FileIntakeOptions): FileIntake {
   }, []);
 
   const pending = outcomes.filter((o) => o.status === "processing").length;
-  return React.useMemo(() => ({ outcomes, add, retry, dismiss, clear, pending }), [outcomes, add, retry, dismiss, clear, pending]);
+  return React.useMemo(
+    () => ({ outcomes, add, retry, dismiss, clear, pending }),
+    [outcomes, add, retry, dismiss, clear, pending],
+  );
 }

@@ -19,7 +19,10 @@ import { toast, type ToastContentProps } from "./toast";
 // Where the toast's action goes is `jobsHref`, a route in the app (React Router's navigate).
 
 /** Options for `useJobAction`. */
-export type JobActionOptions<A extends unknown[], R, S> = Pick<AsyncActionOptions<A>, "onError" | "describeError" | "validate" | "onInvalid"> & {
+export type JobActionOptions<A extends unknown[], R, S> = Pick<
+  AsyncActionOptions<A>,
+  "onError" | "describeError" | "validate" | "onInvalid"
+> & {
   /** Starts the job (the POST). What it returns is given to `queued`. */
   start: (...args: A) => Promise<R>;
   /** The job's status, from `useJob`. Its `running` drives the busy phase and the finished toast. */
@@ -46,7 +49,15 @@ export type JobAction<A extends unknown[]> = {
 };
 
 /** One call for a button that starts a server job: busy until the job ends, a queued toast linking to the jobs page, a finished toast with the result, and a failure to start shown on the button. */
-export function useJobAction<A extends unknown[], R, S>({ start, job, queued, done, jobsHref, jobsLabel = "Show jobs", ...asyncOptions }: JobActionOptions<A, R, S>): JobAction<A> {
+export function useJobAction<A extends unknown[], R, S>({
+  start,
+  job,
+  queued,
+  done,
+  jobsHref,
+  jobsLabel = "Show jobs",
+  ...asyncOptions
+}: JobActionOptions<A, R, S>): JobAction<A> {
   const navigate = useNavigate();
   const [waiting, setWaiting] = React.useState(false);
   const seen = React.useRef(false);
@@ -60,7 +71,13 @@ export function useJobAction<A extends unknown[], R, S>({ start, job, queued, do
     async (...args: A) => {
       const result = await start(...args);
       const l = latest.current;
-      toast.show({ ...l.queued(result), tone: "info", ...(l.jobsHref !== undefined ? { action: { label: l.jobsLabel, onPress: () => void l.navigate(l.jobsHref!) } } : {}) });
+      toast.show({
+        ...l.queued(result),
+        tone: "info",
+        ...(l.jobsHref !== undefined
+          ? { action: { label: l.jobsLabel, onPress: () => void l.navigate(l.jobsHref!) } }
+          : {}),
+      });
       seen.current = false;
       // The status as it was before the start (when there was one): a different one afterwards is the job's, even when it
       // was never seen running (it finished before the first poll came back).

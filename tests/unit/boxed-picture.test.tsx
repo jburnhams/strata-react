@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  BoxList,
-  BoxedPicture,
-  Thumbnail,
-  regionStyle,
-  useBoxes,
-  type PictureBox,
-} from "../../src";
+import { BoxList, BoxedPicture, Thumbnail, regionStyle, useBoxes, type PictureBox } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // strata-models' face store: a face shown on its own from its photo (`Thumbnail region`), and the
@@ -40,13 +33,7 @@ describe("regionStyle", () => {
 describe("Thumbnail region", () => {
   it("places the whole picture so the box fills the thumbnail, instead of fitting it", () => {
     const { container } = renderWithStrata(
-      <Thumbnail
-        src="/p.jpg"
-        alt="Ada"
-        missing="Photo not kept"
-        region={{ of, box: faces[0]! }}
-        eager
-      />,
+      <Thumbnail src="/p.jpg" alt="Ada" missing="Photo not kept" region={{ of, box: faces[0]! }} eager />,
     );
     const img = container.querySelector("img")!;
     expect(img.style.left).toBe("-51.5625%");
@@ -76,8 +63,7 @@ function Photo({ zoom, chosen = "f1" }: { zoom?: boolean; chosen?: string | null
   );
 }
 
-const transformOf = (frame: HTMLElement) =>
-  (frame.querySelector("[style*=transform]") as HTMLElement).style.transform;
+const transformOf = (frame: HTMLElement) => (frame.querySelector("[style*=transform]") as HTMLElement).style.transform;
 
 describe("BoxedPicture", () => {
   it("opens zoomed to the chosen face, with every face a named box", () => {
@@ -89,10 +75,7 @@ describe("BoxedPicture", () => {
       "true",
     );
     expect(transformOf(frame)).toMatch(/scale\((?!1\))/);
-    expect(within(frame).getByRole("button", { name: "Face 1: Ada, confirmed" })).toHaveAttribute(
-      "fill",
-      "none",
-    ); // an outline, not a veil over the face
+    expect(within(frame).getByRole("button", { name: "Face 1: Ada, confirmed" })).toHaveAttribute("fill", "none"); // an outline, not a veil over the face
   });
 
   it("zooms to a face chosen in the list beside it", async () => {
@@ -102,10 +85,7 @@ describe("BoxedPicture", () => {
     const before = transformOf(frame);
     await user.click(screen.getByRole("option", { name: "Face 2: not named" }));
     expect(transformOf(frame)).not.toBe(before);
-    expect(within(frame).getByRole("button", { name: "Face 2: not named" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(within(frame).getByRole("button", { name: "Face 2: not named" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("stays fitted with zoom off, and goes back to fitted when zoom is turned off", () => {

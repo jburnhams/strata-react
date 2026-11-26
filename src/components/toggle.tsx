@@ -41,7 +41,17 @@ export type ToggleProps = {
   className?: string;
 };
 
-function Face({ label, icon: Icon, iconOnly, pad }: { label: string; icon?: IconComponent; iconOnly?: boolean; pad: string }) {
+function Face({
+  label,
+  icon: Icon,
+  iconOnly,
+  pad,
+}: {
+  label: string;
+  icon?: IconComponent;
+  iconOnly?: boolean;
+  pad: string;
+}) {
   return (
     <>
       {Icon && <Icon aria-hidden />}
@@ -51,7 +61,17 @@ function Face({ label, icon: Icon, iconOnly, pad }: { label: string; icon?: Icon
 }
 
 /** A button that is pressed or not (`aria-pressed`). Chosen reads as an ink border on a tint, never as the filled primary. */
-export function Toggle({ label, icon, iconOnly = false, pressed, defaultPressed, onChange, disabled, size = "default", className }: ToggleProps) {
+export function Toggle({
+  label,
+  icon,
+  iconOnly = false,
+  pressed,
+  defaultPressed,
+  onChange,
+  disabled,
+  size = "default",
+  className,
+}: ToggleProps) {
   const button = (
     <AriaToggleButton
       isSelected={pressed}
@@ -59,7 +79,12 @@ export function Toggle({ label, icon, iconOnly = false, pressed, defaultPressed,
       onChange={onChange}
       isDisabled={disabled}
       aria-label={icon && iconOnly ? label : undefined}
-      className={cn(base, sizes[size], icon && iconOnly ? (size === "sm" ? "size-(--control-h-sm)" : "size-(--control-h)") : "px-3", className)}
+      className={cn(
+        base,
+        sizes[size],
+        icon && iconOnly ? (size === "sm" ? "size-(--control-h-sm)" : "size-(--control-h)") : "px-3",
+        className,
+      )}
     >
       <Face label={label} icon={icon} iconOnly={iconOnly && Boolean(icon)} pad="" />
     </AriaToggleButton>
@@ -94,11 +119,38 @@ export function ToggleGroup(props: ToggleGroupProps) {
 }
 
 function ParamToggleGroup({ param, options, onChange, ...props }: Extract<ToggleGroupProps, { param: string }>) {
-  const [value, setValue] = useSearchParam(param, { default: options[0]?.value ?? "", parse: (raw) => options.some((o) => o.value === raw) });
-  return <ToggleGroupView {...props} options={options} value={value} onChange={(next) => { setValue(next); onChange?.(next); }} />;
+  const [value, setValue] = useSearchParam(param, {
+    default: options[0]?.value ?? "",
+    parse: (raw) => options.some((o) => o.value === raw),
+  });
+  return (
+    <ToggleGroupView
+      {...props}
+      options={options}
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onChange?.(next);
+      }}
+    />
+  );
 }
 
-function ToggleGroupView({ label, options, value, onChange, size = "default", className }: { label: string; options: readonly ToggleOption[]; value: string; onChange: (value: string) => void; size?: Size; className?: string }) {
+function ToggleGroupView({
+  label,
+  options,
+  value,
+  onChange,
+  size = "default",
+  className,
+}: {
+  label: string;
+  options: readonly ToggleOption[];
+  value: string;
+  onChange: (value: string) => void;
+  size?: Size;
+  className?: string;
+}) {
   return (
     <ToggleButtonGroup
       aria-label={label}
@@ -129,7 +181,13 @@ function ToggleGroupView({ label, options, value, onChange, size = "default", cl
             <Face label={o.label} icon={o.icon} iconOnly={iconOnly} pad="" />
           </AriaToggleButton>
         );
-        return iconOnly ? <Tooltip key={o.value} label={o.label}>{item}</Tooltip> : React.cloneElement(item, { key: o.value });
+        return iconOnly ? (
+          <Tooltip key={o.value} label={o.label}>
+            {item}
+          </Tooltip>
+        ) : (
+          React.cloneElement(item, { key: o.value })
+        );
       })}
     </ToggleButtonGroup>
   );

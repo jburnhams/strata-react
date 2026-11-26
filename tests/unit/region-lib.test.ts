@@ -152,28 +152,14 @@ describe("lerpRect and ease", () => {
 describe("boxes (issue #237)", () => {
   const b = (id: string, x: number, y: number, w = 100, h = 20) => ({ id, x, y, w, h, label: id });
   it("reads rows top to bottom and left to right, tolerating a wobble", () => {
-    const boxes = [
-      b("c", 300, 102),
-      b("a", 20, 100),
-      b("d", 20, 140),
-      b("b", 160, 96),
-      b("e", 300, 138),
-    ];
+    const boxes = [b("c", 300, 102), b("a", 20, 100), b("d", 20, 140), b("b", 160, 96), b("e", 300, 138)];
     expect(readingOrder(boxes)).toEqual(["a", "b", "c", "d", "e"]);
   });
   it("zooms to a box on a picture drawn contained in a frame of another shape", () => {
     // A 1000×500 picture in a 400×400 frame: scale 0.4, 100px bars above and below.
-    const v = zoomToBox(
-      { x: 0, y: 0, w: 1000, h: 500 },
-      { w: 1000, h: 500 },
-      { width: 400, height: 400 },
-    );
+    const v = zoomToBox({ x: 0, y: 0, w: 1000, h: 500 }, { w: 1000, h: 500 }, { width: 400, height: 400 });
     expect(v.scale).toBeCloseTo(1, 0);
-    const near = zoomToBox(
-      { x: 400, y: 200, w: 100, h: 50 },
-      { w: 1000, h: 500 },
-      { width: 400, height: 400 },
-    );
+    const near = zoomToBox({ x: 400, y: 200, w: 100, h: 50 }, { w: 1000, h: 500 }, { width: 400, height: 400 });
     expect(near.scale).toBeGreaterThan(2);
   });
 });

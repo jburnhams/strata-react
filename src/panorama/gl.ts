@@ -54,7 +54,11 @@ export type PanoramaRenderer = {
 
 /** Makes a renderer on `canvas`, or null where WebGL2 is not available (the viewer then shows the flat picture). */
 export function createRenderer(canvas: HTMLCanvasElement): PanoramaRenderer | null {
-  const gl = canvas.getContext("webgl2", { antialias: false, preserveDrawingBuffer: false, alpha: false }) as WebGL2RenderingContext | null;
+  const gl = canvas.getContext("webgl2", {
+    antialias: false,
+    preserveDrawingBuffer: false,
+    alpha: false,
+  }) as WebGL2RenderingContext | null;
   if (!gl) return null;
   const compile = (type: number, source: string) => {
     const shader = gl.createShader(type)!;
@@ -73,7 +77,8 @@ export function createRenderer(canvas: HTMLCanvasElement): PanoramaRenderer | nu
     gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX));
     gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT));
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(`Panorama program: ${gl.getProgramInfoLog(program)}`);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+      throw new Error(`Panorama program: ${gl.getProgramInfoLog(program)}`);
   } catch {
     return null;
   }

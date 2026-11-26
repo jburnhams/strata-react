@@ -24,8 +24,7 @@ function sound(seconds: number, amplitude: number, hiss = 0): Float32Array {
   const out = new Float32Array(Math.round(seconds * RATE));
   // A fixed pattern for the hiss, not Math.random, so every run reads the same.
   for (let i = 0; i < out.length; i++)
-    out[i] =
-      amplitude * Math.sin((2 * Math.PI * 220 * i) / RATE) + hiss * (((i * 7919) % 13) / 6 - 1);
+    out[i] = amplitude * Math.sin((2 * Math.PI * 220 * i) / RATE) + hiss * (((i * 7919) % 13) / 6 - 1);
   return out;
 }
 
@@ -71,26 +70,17 @@ describe("createSegmenter", () => {
   });
 
   it("keeps a pause at a comma inside the take, and ends it after a second of quiet", () => {
-    const { seconds } = feed([
-      sound(0.5, 0),
-      sound(1, 0.3),
-      sound(0.6, 0),
-      sound(1, 0.3),
-      sound(1.1, 0),
-    ]);
+    const { seconds } = feed([sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)]);
     expect(seconds).toEqual([3.2]);
-    const split = feed(
-      [sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)],
-      { silenceSeconds: 0.5 },
-    );
+    const split = feed([sound(0.5, 0), sound(1, 0.3), sound(0.6, 0), sound(1, 0.3), sound(1.1, 0)], {
+      silenceSeconds: 0.5,
+    });
     expect(split.seconds).toEqual([1.6, 1.6]);
   });
 
   it("drops a click, a cough and speech too quiet to stand out from the room", () => {
     // 40 ms is shorter than the 60 ms onset; 0.2 s of speech is under the 0.3 s least.
-    expect(
-      feed([sound(0.5, 0), sound(0.04, 0.5), sound(1.5, 0), sound(0.2, 0.3), sound(1.5, 0)]).takes,
-    ).toEqual([]);
+    expect(feed([sound(0.5, 0), sound(0.04, 0.5), sound(1.5, 0), sound(0.2, 0.3), sound(1.5, 0)]).takes).toEqual([]);
     // A loud room: the "speech" is 6 dB over it, half the onset.
     expect(feed([sound(1, 0.05), sound(1.5, 0.1), sound(1.5, 0.05)]).takes).toEqual([]);
     // Below the floor in digital quiet: far over the room, but under -55 dBFS RMS.
@@ -98,10 +88,9 @@ describe("createSegmenter", () => {
   });
 
   it("cuts a take at the longest and waits for quiet before the next", () => {
-    const { takes, seconds } = feed(
-      [sound(0.5, 0), sound(3, 0.3), sound(1.5, 0), sound(1, 0.3), sound(1.5, 0)],
-      { maxSeconds: 2 },
-    );
+    const { takes, seconds } = feed([sound(0.5, 0), sound(3, 0.3), sound(1.5, 0), sound(1, 0.3), sound(1.5, 0)], {
+      maxSeconds: 2,
+    });
     expect(seconds).toEqual([2, 1.6]);
     expect(takes.map((t) => t.cut)).toEqual([true, false]);
   });
@@ -143,18 +132,12 @@ function Booth({ microphone, maxSeconds = 30 }: { microphone?: Microphone; maxSe
       {recorder.listening ? (
         <Button onClick={recorder.stop}>Stop listening</Button>
       ) : (
-        <Button onClick={() => void recorder.start().then((ok) => setStarted(String(ok)))}>
-          Listen
-        </Button>
+        <Button onClick={() => void recorder.start().then((ok) => setStarted(String(ok)))}>Listen</Button>
       )}
-      <Button onClick={() => void recorder.start().then((ok) => setStarted(String(ok)))}>
-        Listen again
-      </Button>
+      <Button onClick={() => void recorder.start().then((ok) => setStarted(String(ok)))}>Listen again</Button>
       <Button onClick={() => setPaused((p) => !p)}>{paused ? "Resume" : "Pause"}</Button>
       <span>started {started}</span>
-      {recorder.state.phase === "listening" && (
-        <ListeningLevel state={recorder.state} maxSeconds={maxSeconds} />
-      )}
+      {recorder.state.phase === "listening" && <ListeningLevel state={recorder.state} maxSeconds={maxSeconds} />}
       {recorder.state.phase === "failed" && <p role="alert">{recorder.state.reason}</p>}
       <ol aria-label="Takes">
         {takes.map((t, i) => (
@@ -179,9 +162,7 @@ describe("useAutoRecorder", () => {
     const [first] = screen.getAllByRole("listitem");
     expect(first).toHaveTextContent(/^1\.6 s whole \d+ Fake USB microphone$/);
     expect(Number(first.textContent!.split(" ")[3])).toBe(44 + 2 * 1.6 * 16_000);
-    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription(
-      /the room is at -60\sdBFS/,
-    );
+    expect(screen.getByRole("meter", { name: "Input level" })).toHaveAccessibleDescription(/the room is at -60\sdBFS/);
     expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
   });
 
@@ -231,8 +212,7 @@ describe("useAutoRecorder", () => {
     };
     const say = (...parts: Float32Array[]) =>
       act(() => {
-        for (const p of parts)
-          for (let i = 0; i < p.length; i += 2048) send?.(p.subarray(i, i + 2048));
+        for (const p of parts) for (let i = 0; i < p.length; i += 2048) send?.(p.subarray(i, i + 2048));
       });
     renderWithStrata(<Booth microphone={microphone} />);
     await user.click(screen.getByRole("button", { name: "Listen" }));

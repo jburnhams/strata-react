@@ -106,14 +106,35 @@ export const parentOf = (path: string): string | null => {
   return p.length <= 1 ? null : `${SEP}${p.slice(0, -1).join(SEP)}`;
 };
 /** Every folder from the top down to `path`, which the tree must have open to show it. */
-export const ancestorsOf = (path: string): string[] => parts(path).slice(0, -1).map((_, i, a) => `${SEP}${a.slice(0, i + 1).join(SEP)}`);
+export const ancestorsOf = (path: string): string[] =>
+  parts(path)
+    .slice(0, -1)
+    .map((_, i, a) => `${SEP}${a.slice(0, i + 1).join(SEP)}`);
 
 /** A server folder chooser: a lazy tree, a breadcrumb that is also editable text, Up, recents, a New folder field that shows the server's refusal, and Choose this folder as the one filled button. */
-export function FolderPicker({ label, useFolders: useListing, value, onChange, onChoose, expanded, recent, canChoose, chooseLabel = "Choose this folder", onOpen, onCreate, topLabel = "Top", emptyRow = "No folders", height = "18rem", className }: FolderPickerProps) {
+export function FolderPicker({
+  label,
+  useFolders: useListing,
+  value,
+  onChange,
+  onChoose,
+  expanded,
+  recent,
+  canChoose,
+  chooseLabel = "Choose this folder",
+  onOpen,
+  onCreate,
+  topLabel = "Top",
+  emptyRow = "No folders",
+  height = "18rem",
+  className,
+}: FolderPickerProps) {
   // The app's hook may return a listing with a footer; the tree and the rest read bare arrays.
   const useFolders = (path: string | null): Load<readonly Folder[]> => {
     const l = useListing(path);
-    return l.status === "ready" && !Array.isArray(l.data) ? { ...l, data: (l.data as FolderListing).folders } : (l as Load<readonly Folder[]>);
+    return l.status === "ready" && !Array.isArray(l.data)
+      ? { ...l, data: (l.data as FolderListing).folders }
+      : (l as Load<readonly Folder[]>);
   };
   const roots = useFolders(null);
   // The folder itself (from its parent's listing) and its own listing: the query cache holds both
@@ -121,7 +142,8 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
   const siblings = useFolders(value ? parentOf(value) : null);
   const own = useListing(value);
   const folder = value && siblings.status === "ready" ? siblings.data.find((f) => f.path === value) : undefined;
-  const footer = value && own.status === "ready" && !Array.isArray(own.data) ? (own.data as FolderListing).footer : undefined;
+  const footer =
+    value && own.status === "ready" && !Array.isArray(own.data) ? (own.data as FolderListing).footer : undefined;
   const verdict = value && canChoose ? canChoose(value, folder) : true;
   const reason = typeof verdict === "string" ? verdict : undefined;
   const reasonId = React.useId();
@@ -139,20 +161,28 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
   }, [value, expanded]);
 
   const [name, setName] = React.useState("");
-  const created = useAsyncAction(async (name: string) => {
-    if (!value) return;
-    await onCreate?.(value, name);
-    setName("");
-    go(join(value, name));
-    expanded.setOpen(value, true);
-  }, {
-    validate: (name) => (name.trim() ? undefined : { name: "Name the new folder." }),
-  });
+  const created = useAsyncAction(
+    async (name: string) => {
+      if (!value) return;
+      await onCreate?.(value, name);
+      setName("");
+      go(join(value, name));
+      expanded.setOpen(value, true);
+    },
+    {
+      validate: (name) => (name.trim() ? undefined : { name: "Name the new folder." }),
+    },
+  );
   const crumbs = value ? parts(value) : [];
   return (
     <section aria-label={label} className={cn("space-y-3", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <IconButton icon={ArrowUp} label="Up one folder" onPress={() => go(value ? parentOf(value) : null)} disabled={!value} />
+        <IconButton
+          icon={ArrowUp}
+          label="Up one folder"
+          onPress={() => go(value ? parentOf(value) : null)}
+          disabled={!value}
+        />
         {editing ? (
           <form
             className="flex min-w-0 flex-1 items-center gap-2"
@@ -172,30 +202,56 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
               className="min-w-0 flex-1 font-mono"
               size="sm"
             />
-            <Button size="sm" type="submit">Go</Button>
+            <Button size="sm" type="submit">
+              Go
+            </Button>
           </form>
         ) : (
           <>
             <nav aria-label="Folder path" className="min-w-0 flex-1">
               <ol className="flex flex-wrap items-center gap-x-1 type-body-sm">
                 <li>
-                  <Button size="sm" variant="ghost" onPress={() => go(null)} aria-current={value ? undefined : "location"}>{topLabel}</Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => go(null)}
+                    aria-current={value ? undefined : "location"}
+                  >
+                    {topLabel}
+                  </Button>
                 </li>
                 {crumbs.map((c, i) => {
                   const path = `${SEP}${crumbs.slice(0, i + 1).join(SEP)}`;
                   const last = i === crumbs.length - 1;
                   return (
                     <li key={path} className="flex min-w-0 items-center gap-1">
-                      <span aria-hidden className="text-muted-foreground">/</span>
+                      <span aria-hidden className="text-muted-foreground">
+                        /
+                      </span>
                       <Tooltip label={path} side="bottom">
-                        <Button size="sm" variant="ghost" onPress={() => go(path)} aria-current={last ? "location" : undefined} className={cn("max-w-48 truncate", last && "font-medium")}>{c}</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onPress={() => go(path)}
+                          aria-current={last ? "location" : undefined}
+                          className={cn("max-w-48 truncate", last && "font-medium")}
+                        >
+                          {c}
+                        </Button>
                       </Tooltip>
                     </li>
                   );
                 })}
               </ol>
             </nav>
-            <IconButton icon={Pencil} label="Edit path" onPress={() => { setText(value ?? ""); setEditing(true); }} />
+            <IconButton
+              icon={Pencil}
+              label="Edit path"
+              onPress={() => {
+                setText(value ?? "");
+                setEditing(true);
+              }}
+            />
           </>
         )}
       </div>
@@ -207,17 +263,27 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
           useChildren={(f: Folder) => useFolders(f.path)}
           nodeKey={(f) => f.path}
           nodeLabel={(f) => (f.badge ? `${f.name}, ${f.badge}` : f.name)}
-          beforeOpen={onOpen ? (f) => {
-            if (onOpen(f) !== "choose") return true;
-            go(f.path);
-            onChoose(f.path);
-            return false;
-          } : undefined}
+          beforeOpen={
+            onOpen
+              ? (f) => {
+                  if (onOpen(f) !== "choose") return true;
+                  go(f.path);
+                  onChoose(f.path);
+                  return false;
+                }
+              : undefined
+          }
           renderNode={(f) => (
             <span className="flex min-w-0 items-baseline gap-2">
               <span className="truncate">{f.name}</span>
-              {f.badge && <Status tone={f.tone ?? "neutral"} className="self-center">{f.badge}</Status>}
-              {f.count !== undefined && <span className="type-caption tabular-nums text-muted-foreground">{format.integer(f.count)}</span>}
+              {f.badge && (
+                <Status tone={f.tone ?? "neutral"} className="self-center">
+                  {f.badge}
+                </Status>
+              )}
+              {f.count !== undefined && (
+                <span className="type-caption tabular-nums text-muted-foreground">{format.integer(f.count)}</span>
+              )}
             </span>
           )}
           selected={value}
@@ -233,24 +299,42 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
           <span className="type-caption text-muted-foreground">Recent</span>
           {recent.map((r) => (
             <Tooltip key={r} label={r} side="bottom">
-              <Button size="sm" variant="outline" onPress={() => go(r)} className="max-w-64 truncate font-mono">{r}</Button>
+              <Button size="sm" variant="outline" onPress={() => go(r)} className="max-w-64 truncate font-mono">
+                {r}
+              </Button>
             </Tooltip>
           ))}
         </div>
       )}
 
       {onCreate && (
-        <form onSubmit={(e) => { e.preventDefault(); void created.run(name.trim()); }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void created.run(name.trim());
+          }}
+        >
           <Field
             label="New folder"
             hint={value ? `It will be made in ${value}.` : "Open a folder first."}
             error={created.fieldErrors.name ?? (created.phase === "error" ? created.error : undefined)}
-            action={<AsyncButton type="submit" phase={created.phase} error={created.error} disabled={!value} labels={{ idle: "Make folder", pending: "Making…", done: "Made" }} />}
+            action={
+              <AsyncButton
+                type="submit"
+                phase={created.phase}
+                error={created.error}
+                disabled={!value}
+                labels={{ idle: "Make folder", pending: "Making…", done: "Made" }}
+              />
+            }
           >
             <Input
               value={name}
               disabled={!value}
-              onChange={(e) => { setName(e.target.value); created.clearFieldError("name"); }}
+              onChange={(e) => {
+                setName(e.target.value);
+                created.clearFieldError("name");
+              }}
             />
           </Field>
         </form>
@@ -259,8 +343,19 @@ export function FolderPicker({ label, useFolders: useListing, value, onChange, o
       {footer && <p className="type-body-sm text-muted-foreground">{footer}</p>}
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {reason && <p id={reasonId} className="min-w-0 flex-1 type-body-sm text-muted-foreground">{reason}</p>}
-        <Button variant="default" disabled={!value || reason !== undefined} aria-describedby={reason ? reasonId : undefined} onPress={() => value && onChoose(value)}>{chooseLabel}</Button>
+        {reason && (
+          <p id={reasonId} className="min-w-0 flex-1 type-body-sm text-muted-foreground">
+            {reason}
+          </p>
+        )}
+        <Button
+          variant="default"
+          disabled={!value || reason !== undefined}
+          aria-describedby={reason ? reasonId : undefined}
+          onPress={() => value && onChoose(value)}
+        >
+          {chooseLabel}
+        </Button>
       </div>
     </section>
   );

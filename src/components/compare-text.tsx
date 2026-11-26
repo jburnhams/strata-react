@@ -63,7 +63,10 @@ function Words({ segments, changed }: { segments: TextSegment[]; changed: boolea
     <>
       {segments.map((s, i) =>
         changed && s.changed ? (
-          <mark key={i} className="rounded-control bg-warning-subtle text-foreground underline decoration-2 underline-offset-2">
+          <mark
+            key={i}
+            className="rounded-control bg-warning-subtle text-foreground underline decoration-2 underline-offset-2"
+          >
             {s.text}
           </mark>
         ) : (
@@ -75,7 +78,20 @@ function Words({ segments, changed }: { segments: TextSegment[]; changed: boolea
 }
 
 /** Two texts side by side with scrolling together, an optional reference, and a word diff on request. */
-export function CompareText({ label, a, b, blind, reference, defaultDiff = false, tooLong = "These texts are too long to compare word by word.", linkedScroll = true, keys = true, extraShortcuts = [], footer, className }: CompareTextProps) {
+export function CompareText({
+  label,
+  a,
+  b,
+  blind,
+  reference,
+  defaultDiff = false,
+  tooLong = "These texts are too long to compare word by word.",
+  linkedScroll = true,
+  keys = true,
+  extraShortcuts = [],
+  footer,
+  className,
+}: CompareTextProps) {
   const [diff, setDiff] = React.useState(defaultDiff);
   const [against, setAgainst] = React.useState<"other" | "reference">(reference ? "reference" : "other");
   const boxA = React.useRef<HTMLDivElement>(null);
@@ -88,7 +104,16 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
       const ra = diffWords(a.media.text, reference.text);
       const rb = diffWords(b.media.text, reference.text);
       // `changedB` of each is the reference's words the candidate lacks: a model that drops words must not score as a match.
-      return ra && rb ? { a: ra.a, b: rb.a, changedA: ra.changedA, changedB: rb.changedA, missingA: ra.changedB, missingB: rb.changedB } : "long";
+      return ra && rb
+        ? {
+            a: ra.a,
+            b: rb.a,
+            changedA: ra.changedA,
+            changedB: rb.changedA,
+            missingA: ra.changedB,
+            missingB: rb.changedB,
+          }
+        : "long";
     }
     const r = diffWords(a.media.text, b.media.text);
     return r ? { ...r, missingA: 0, missingB: 0 } : "long";
@@ -104,7 +129,12 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
     requestAnimationFrame(() => (syncing.current = false));
   };
 
-  const pane = (c: Candidate<TextMedia>, ref: React.RefObject<HTMLDivElement | null>, other: React.RefObject<HTMLDivElement | null>, segments: TextSegment[] | null) => (
+  const pane = (
+    c: Candidate<TextMedia>,
+    ref: React.RefObject<HTMLDivElement | null>,
+    other: React.RefObject<HTMLDivElement | null>,
+    segments: TextSegment[] | null,
+  ) => (
     <figure className="grid min-w-0 gap-1.5">
       <figcaption className="flex items-baseline gap-2">
         <span className="type-label">{c.label}</span>
@@ -126,8 +156,14 @@ export function CompareText({ label, a, b, blind, reference, defaultDiff = false
   const counts = result && result !== "long" ? result : null;
   const words = (n: number) => `${n} ${n === 1 ? "word" : "words"}`;
   const ref = against === "reference" && reference;
-  const say = (who: string, differ: number, missing: number) => (ref ? `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}, ${missing} missing.` : `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}.`);
-  const shortcuts: Shortcut[] = [...extraShortcuts, { keys: ["d"], label: diff ? "Hide the differences" : "Mark the differences", run: () => setDiff((d) => !d) }];
+  const say = (who: string, differ: number, missing: number) =>
+    ref
+      ? `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}, ${missing} missing.`
+      : `${who}: ${words(differ)} ${differ === 1 ? "differs" : "differ"}.`;
+  const shortcuts: Shortcut[] = [
+    ...extraShortcuts,
+    { keys: ["d"], label: diff ? "Hide the differences" : "Mark the differences", run: () => setDiff((d) => !d) },
+  ];
   useHotkeys(shortcuts, { enabled: keys });
   return (
     <section aria-label={label} className={cn("grid gap-3", className)}>

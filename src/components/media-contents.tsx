@@ -48,7 +48,10 @@ export type MediaContentsProps = {
 };
 
 /** The index of the item whose span holds `time`, or -1. */
-export function currentItem(items: readonly Pick<MediaContentsItem, "start" | "end">[], time: number | undefined): number {
+export function currentItem(
+  items: readonly Pick<MediaContentsItem, "start" | "end">[],
+  time: number | undefined,
+): number {
   if (time === undefined) return -1;
   return items.findIndex((it) => time >= it.start && time < it.end);
 }
@@ -93,7 +96,9 @@ const ContentsRow = React.memo(function ContentsRow({
         <span className="type-label text-foreground">{item.title}</span>
         <span className="type-body-sm tabular-nums text-muted-foreground whitespace-nowrap">{from}</span>
         {item.detail ? <span className="type-caption text-muted-foreground">{item.detail}</span> : <span />}
-        <span className="type-caption tabular-nums text-muted-foreground whitespace-nowrap">{format.runningTime(item.end - item.start)} long</span>
+        <span className="type-caption tabular-nums text-muted-foreground whitespace-nowrap">
+          {format.runningTime(item.end - item.start)} long
+        </span>
       </AriaButton>
     </li>
   );

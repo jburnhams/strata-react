@@ -1,12 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import {
-  clampView,
-  peaksBetween,
-  peaksFromAudio,
-  resamplePeaks,
-  timeAt,
-  toPeakPair,
-} from "../../src/lib/waveform";
+import { clampView, peaksBetween, peaksFromAudio, resamplePeaks, timeAt, toPeakPair } from "../../src/lib/waveform";
 
 // Issue #185: the numbers behind Waveform, with no DOM.
 

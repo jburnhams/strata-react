@@ -51,7 +51,10 @@ export function withBaseTag(html: string, href: string): string {
 }
 
 /** Serves `dir` on 127.0.0.1 under `base`, with history fallback to `index.html` when `spa` is set. */
-export async function serveStatic(dir: string, { spa = false, base = "/" }: { spa?: boolean; base?: string } = {}): Promise<StaticServer> {
+export async function serveStatic(
+  dir: string,
+  { spa = false, base = "/" }: { spa?: boolean; base?: string } = {},
+): Promise<StaticServer> {
   const root = resolve(dir);
   const prefix = `/${base.replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/");
   const server = createServer((req, res) => {
@@ -80,7 +83,10 @@ export async function serveStatic(dir: string, { spa = false, base = "/" }: { sp
       res.writeHead(200, { "Content-Type": "text/html", "Service-Worker-Allowed": "/" }).end(html);
       return;
     }
-    res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream", "Service-Worker-Allowed": "/" });
+    res.writeHead(200, {
+      "Content-Type": types[extname(file)] ?? "application/octet-stream",
+      "Service-Worker-Allowed": "/",
+    });
     createReadStream(file).pipe(res);
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));

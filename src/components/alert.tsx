@@ -39,7 +39,11 @@ const tones: Record<Exclude<Tone, "neutral">, { box: string; icon: IconComponent
 export function Alert({ tone, title, children, action, announce = false, className }: AlertProps) {
   const { box, icon: Icon } = tones[tone];
   return (
-    <div role={announce ? "alert" : "region"} aria-label={announce ? undefined : title ?? "Notice"} className={cn("flex items-start gap-3 rounded-surface px-3 py-2.5", box, className)}>
+    <div
+      role={announce ? "alert" : "region"}
+      aria-label={announce ? undefined : (title ?? "Notice")}
+      className={cn("flex items-start gap-3 rounded-surface px-3 py-2.5", box, className)}
+    >
       <Icon aria-hidden className="mt-0.5 size-4 shrink-0" />
       <div className="grid min-w-0 flex-1 gap-0.5">
         {title && <p className="type-label">{title}</p>}

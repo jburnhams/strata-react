@@ -1,5 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Alert, Button, ColorSchemeChoice, Meter, PageHeader, PaletteChoice, Status, palettes, useColorScheme, usePalette } from "../src";
+import {
+  Alert,
+  Button,
+  ColorSchemeChoice,
+  Meter,
+  PageHeader,
+  PaletteChoice,
+  Status,
+  palettes,
+  useColorScheme,
+  usePalette,
+} from "../src";
 
 // Storybook's decorator wraps every story in ThemeProvider, driven by the Theme toolbar, so these
 // stories use the same provider an app does.
@@ -63,7 +74,18 @@ export const PalettesList: StoryObj<typeof PaletteChoice> = { name: "PaletteChoi
 /** `compact`: swatches only, named "Palette", for a header; each swatch's name is its tooltip. */
 export const PalettesCompactInHeader: StoryObj<typeof PaletteChoice> = {
   name: "PaletteChoice, compact in a header",
-  render: () => <PageHeader title="Studio server" scope="kilnroom-office" actions={<><PaletteChoice compact /><ColorSchemeChoice compact /></>} />,
+  render: () => (
+    <PageHeader
+      title="Studio server"
+      scope="kilnroom-office"
+      actions={
+        <>
+          <PaletteChoice compact />
+          <ColorSchemeChoice compact />
+        </>
+      }
+    />
+  ),
 };
 
 /** Every shipped palette on the same small screen (each card scopes `data-palette`), in light and in dark through the theme toolbar. Status colours are the same in every palette, so a status never changes meaning with the brand. */
@@ -72,7 +94,12 @@ export const EveryPalette: StoryObj<typeof PaletteChoice> = {
   render: () => (
     <div className="grid gap-4 md:grid-cols-2">
       {palettes.map((p) => (
-        <section key={p.name} data-palette={p.name} aria-label={p.label} className="grid gap-3 rounded-surface border border-border bg-background p-5 text-foreground">
+        <section
+          key={p.name}
+          data-palette={p.name}
+          aria-label={p.label}
+          className="grid gap-3 rounded-surface border border-border bg-background p-5 text-foreground"
+        >
           <h3 className="type-heading">{p.label}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="default">Book a firing</Button>
@@ -82,7 +109,9 @@ export const EveryPalette: StoryObj<typeof PaletteChoice> = {
             <Status tone="danger">Fault</Status>
           </div>
           <Meter label="Kiln 2" value={62} max={100} detail="62 of 100 shelves" />
-          <p className="rounded-control bg-accent px-3 py-2 type-body-sm text-accent-foreground">The active item takes the warm accent.</p>
+          <p className="rounded-control bg-accent px-3 py-2 type-body-sm text-accent-foreground">
+            The active item takes the warm accent.
+          </p>
           <Alert tone="info">Readings are logged every five minutes.</Alert>
         </section>
       ))}
@@ -101,4 +130,8 @@ function LivePalette() {
 }
 
 /** The provider's palette follows the picker. Not a baseline: the choice is the interaction. */
-export const PaletteLive: StoryObj<typeof PaletteChoice> = { name: "PaletteChoice, live", tags: ["no-visual"], render: () => <LivePalette /> };
+export const PaletteLive: StoryObj<typeof PaletteChoice> = {
+  name: "PaletteChoice, live",
+  tags: ["no-visual"],
+  render: () => <LivePalette />,
+};

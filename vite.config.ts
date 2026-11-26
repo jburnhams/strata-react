@@ -17,7 +17,17 @@ export default defineConfig({
   lint: { ignorePatterns: [".storybook/public/**", "dist/**", "storybook-static/**", "site/**", "tests/visual/**"] },
   fmt: {
     printWidth: 120,
-    ignorePatterns: ["CHANGELOG.md", "UPGRADING.md", "*.md", "*.css", "*.json", "tests/visual/**", ".storybook/public/**", "site/**", "dist/**"],
+    ignorePatterns: [
+      "CHANGELOG.md",
+      "UPGRADING.md",
+      "*.md",
+      "*.css",
+      "*.json",
+      "tests/visual/**",
+      ".storybook/public/**",
+      "site/**",
+      "dist/**",
+    ],
   },
   plugins: [react(), dts({ include: ["src"], entryRoot: "src" })],
   build: {
@@ -40,7 +50,10 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     rollupOptions: {
-      external: (id) => external.some((dep) => id === dep || id.startsWith(`${dep}/`)) || id.startsWith("react/") || id.startsWith("node:"),
+      external: (id) =>
+        external.some((dep) => id === dep || id.startsWith(`${dep}/`)) ||
+        id.startsWith("react/") ||
+        id.startsWith("node:"),
     },
   },
 });

@@ -58,24 +58,9 @@ beforeEach(() => localStorage.clear());
 
 describe("sortRows", () => {
   it("is natural for strings, puts null last either way and is stable", () => {
-    expect(sortRows(rows, (r) => r.name).map((r) => r.name)).toEqual([
-      "IMG_1",
-      "IMG_2",
-      "IMG_3",
-      "IMG_10",
-    ]);
-    expect(sortRows(rows, (r) => r.taken).map((r) => r.name)).toEqual([
-      "IMG_2",
-      "IMG_10",
-      "IMG_3",
-      "IMG_1",
-    ]);
-    expect(sortRows(rows, (r) => r.taken, true).map((r) => r.name)).toEqual([
-      "IMG_3",
-      "IMG_10",
-      "IMG_2",
-      "IMG_1",
-    ]);
+    expect(sortRows(rows, (r) => r.name).map((r) => r.name)).toEqual(["IMG_1", "IMG_2", "IMG_3", "IMG_10"]);
+    expect(sortRows(rows, (r) => r.taken).map((r) => r.name)).toEqual(["IMG_2", "IMG_10", "IMG_3", "IMG_1"]);
+    expect(sortRows(rows, (r) => r.taken, true).map((r) => r.name)).toEqual(["IMG_3", "IMG_10", "IMG_2", "IMG_1"]);
   });
 });
 

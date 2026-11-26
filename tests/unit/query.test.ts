@@ -31,12 +31,7 @@ describe("fetchJson", () => {
   });
 
   it("throws an HttpError on a non-2xx response", async () => {
-    server.use(
-      http.get(
-        "/api/missing",
-        () => new HttpResponse(null, { status: 404, statusText: "Not Found" }),
-      ),
-    );
+    server.use(http.get("/api/missing", () => new HttpResponse(null, { status: 404, statusText: "Not Found" })));
     await expect(fetchJson("/api/missing")).rejects.toBeInstanceOf(HttpError);
   });
 });

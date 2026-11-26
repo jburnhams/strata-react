@@ -40,7 +40,10 @@ export const Phone: Story = { tags: ["visual-phone"], args: { className: "w-full
 export const NoFrames: Story = { args: { frames: [], missing: "No thumbnails yet" } };
 
 // --- Waveform normalise, the other half of the scene browser's quiet tapes.
-const quiet = Array.from({ length: 600 }, (_, i) => (Math.abs(Math.sin(i / 7)) * 0.08 + (i % 97 === 0 ? 0.02 : 0)) * (i > 380 && i < 450 ? 0.2 : 1));
+const quiet = Array.from(
+  { length: 600 },
+  (_, i) => (Math.abs(Math.sin(i / 7)) * 0.08 + (i % 97 === 0 ? 0.02 : 0)) * (i > 380 && i < 450 ? 0.2 : 1),
+);
 
 /** A camcorder's sound peaks at a tenth of full scale: to scale it is a flat line (above); `normalise` scales the drawing until the loud parts fill the height and says by how much (below). */
 export const QuietWaveform: StoryObj = {
@@ -49,7 +52,14 @@ export const QuietWaveform: StoryObj = {
     return (
       <div className="grid w-full max-w-2xl gap-4">
         <Waveform label="Waveform of the tape, to scale" duration={120} peaks={quiet} time={time} onSeek={setTime} />
-        <Waveform label="Waveform of the tape, normalised" duration={120} peaks={quiet} time={time} onSeek={setTime} normalise />
+        <Waveform
+          label="Waveform of the tape, normalised"
+          duration={120}
+          peaks={quiet}
+          time={time}
+          onSeek={setTime}
+          normalise
+        />
       </div>
     );
   },

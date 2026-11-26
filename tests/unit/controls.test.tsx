@@ -3,16 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Grid2x2, Magnet } from "lucide-react";
-import {
-  Button,
-  Checkbox,
-  Popover,
-  Switch,
-  Toggle,
-  ToggleGroup,
-  Toolbar,
-  ToolbarSeparator,
-} from "../../src";
+import { Button, Checkbox, Popover, Switch, Toggle, ToggleGroup, Toolbar, ToolbarSeparator } from "../../src";
 import { expectOneFilledButton } from "../../src/testing";
 
 describe("Toggle", () => {
@@ -135,16 +126,9 @@ describe("ToggleGroup", () => {
 describe("Checkbox detail", () => {
   it("is a description, not part of the name", () => {
     render(
-      <Checkbox
-        label="Keep originals"
-        detail="Takes more space."
-        checked={false}
-        onCheckedChange={() => undefined}
-      />,
+      <Checkbox label="Keep originals" detail="Takes more space." checked={false} onCheckedChange={() => undefined} />,
     );
-    expect(screen.getByRole("checkbox", { name: "Keep originals" })).toHaveAccessibleDescription(
-      "Takes more space.",
-    );
+    expect(screen.getByRole("checkbox", { name: "Keep originals" })).toHaveAccessibleDescription("Takes more space.");
   });
 });
 

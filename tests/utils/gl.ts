@@ -19,7 +19,14 @@ export type FakeGl = {
 export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): FakeGl {
   const proto = HTMLCanvasElement.prototype;
   const saved = Object.getOwnPropertyDescriptor(proto, "getContext");
-  const state = { draws: 0, uploads: 0, uniforms: {} as Record<string, number>, drawImages: [] as unknown[][], puts: [] as { width: number; height: number; data: Uint8ClampedArray }[], contexts: 0 };
+  const state = {
+    draws: 0,
+    uploads: 0,
+    uniforms: {} as Record<string, number>,
+    drawImages: [] as unknown[][],
+    puts: [] as { width: number; height: number; data: Uint8ClampedArray }[],
+    contexts: 0,
+  };
   let last: HTMLCanvasElement | null = null;
   const names = new Map<unknown, string>();
   const gl = new Proxy(
@@ -53,7 +60,11 @@ export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): Fak
     fillStyle: "",
     fillRect: () => {},
     drawImage: (...args: unknown[]) => void state.drawImages.push(args),
-    createImageData: (width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }),
+    createImageData: (width: number, height: number) => ({
+      width,
+      height,
+      data: new Uint8ClampedArray(width * height * 4),
+    }),
     putImageData: (image: { width: number; height: number; data: Uint8ClampedArray }) => void state.puts.push(image),
   };
   Object.defineProperty(proto, "getContext", {
@@ -67,12 +78,24 @@ export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): Fak
     },
   });
   return {
-    get draws() { return state.draws; },
-    get uploads() { return state.uploads; },
-    get uniforms() { return state.uniforms; },
-    get drawImages() { return state.drawImages; },
-    get puts() { return state.puts; },
-    get contexts() { return state.contexts; },
+    get draws() {
+      return state.draws;
+    },
+    get uploads() {
+      return state.uploads;
+    },
+    get uniforms() {
+      return state.uniforms;
+    },
+    get drawImages() {
+      return state.drawImages;
+    },
+    get puts() {
+      return state.puts;
+    },
+    get contexts() {
+      return state.contexts;
+    },
     canvas: () => last,
     uninstall() {
       if (saved) Object.defineProperty(proto, "getContext", saved);
@@ -85,7 +108,9 @@ export function installFakeGl({ webgl2 = true }: { webgl2?: boolean } = {}): Fak
 export function installFakeImages(width = 2048, height = 1024): () => void {
   const proto = HTMLImageElement.prototype;
   const src = Object.getOwnPropertyDescriptor(proto, "src")!;
-  const saved = (["naturalWidth", "naturalHeight"] as const).map((name) => [name, Object.getOwnPropertyDescriptor(proto, name)] as const);
+  const saved = (["naturalWidth", "naturalHeight"] as const).map(
+    (name) => [name, Object.getOwnPropertyDescriptor(proto, name)] as const,
+  );
   Object.defineProperty(proto, "src", {
     configurable: true,
     get(this: HTMLImageElement) {

@@ -30,13 +30,7 @@ function Clock(options: TimelineClockOptions) {
         onStepBack={() => clock.step(-1)}
         onStepForward={() => clock.step(1)}
       >
-        <SeekBar
-          time={clock.time}
-          duration={clock.duration}
-          onSeek={clock.seek}
-          precision="frames"
-          fps={40}
-        />
+        <SeekBar time={clock.time} duration={clock.duration} onSeek={clock.seek} precision="frames" fps={40} />
       </Transport>
       <output aria-label="state">
         {JSON.stringify({
@@ -130,9 +124,7 @@ describe("keys on a page with a stage (#385)", () => {
         </div>
         <button>Stage</button>
         <KeysLegend shortcuts={live} />
-        <output aria-label="state">
-          {JSON.stringify({ time: Number(clock.time.toFixed(3)), turns })}
-        </output>
+        <output aria-label="state">{JSON.stringify({ time: Number(clock.time.toFixed(3)), turns })}</output>
       </div>
     );
   }

@@ -63,7 +63,13 @@ export type SpeechLevel = { tone: "success" | "warning" | "danger"; word: string
 
 /** Judges a take by its peak (dBFS). */
 export function speechLevel(peak: number): SpeechLevel {
-  if (peak >= -1) return { tone: "danger", word: "Too loud", advice: "It may have clipped. Move back from the microphone or turn its gain down." };
-  if (peak < -30) return { tone: "warning", word: "Too quiet", advice: "Move closer to the microphone or turn its gain up." };
+  if (peak >= -1)
+    return {
+      tone: "danger",
+      word: "Too loud",
+      advice: "It may have clipped. Move back from the microphone or turn its gain down.",
+    };
+  if (peak < -30)
+    return { tone: "warning", word: "Too quiet", advice: "Move closer to the microphone or turn its gain up." };
   return { tone: "success", word: "Good level", advice: "The level suits speech." };
 }

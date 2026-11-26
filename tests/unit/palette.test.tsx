@@ -1,14 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  PALETTE_STORAGE_KEY,
-  PaletteChoice,
-  ThemeProvider,
-  palettes,
-  paletteScript,
-  usePalette,
-} from "../../src";
+import { PALETTE_STORAGE_KEY, PaletteChoice, ThemeProvider, palettes, paletteScript, usePalette } from "../../src";
 
 // A palette is chosen independently of the colour scheme (2026-11-25): the provider sets `data-palette` on
 // the root, keeps the choice in localStorage and follows other tabs, as it does for the scheme.
@@ -38,8 +31,7 @@ describe("palettes as themes", () => {
     expect(attribute()).toBe("petrol");
     const group = screen.getByRole("radiogroup", { name: "Palette" });
     expect(group).toBeInTheDocument();
-    for (const p of palettes)
-      expect(screen.getByRole("radio", { name: new RegExp(p.label) })).toBeInTheDocument();
+    for (const p of palettes) expect(screen.getByRole("radio", { name: new RegExp(p.label) })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Petrol and marigold/ })).toBeChecked();
   });
 
@@ -96,8 +88,7 @@ describe("palettes as themes", () => {
       </ThemeProvider>,
     );
     expect(screen.getByRole("radiogroup", { name: "Palette" })).toBeInTheDocument();
-    for (const p of palettes)
-      expect(screen.getByRole("radio", { name: p.label })).toBeInTheDocument();
+    for (const p of palettes) expect(screen.getByRole("radio", { name: p.label })).toBeInTheDocument();
   });
 
   it("follows another tab changing the palette", () => {
@@ -107,9 +98,7 @@ describe("palettes as themes", () => {
       </ThemeProvider>,
     );
     act(() => {
-      window.dispatchEvent(
-        new StorageEvent("storage", { key: PALETTE_STORAGE_KEY, newValue: "steel" }),
-      );
+      window.dispatchEvent(new StorageEvent("storage", { key: PALETTE_STORAGE_KEY, newValue: "steel" }));
     });
     expect(screen.getByTestId("palette")).toHaveTextContent("steel");
     expect(attribute()).toBe("steel");

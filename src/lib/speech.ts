@@ -63,11 +63,16 @@ export function canSay(saying: Saying): boolean {
 
 /** Whether this browser can say text aloud. */
 export function canSpeak(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+  return (
+    typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined"
+  );
 }
 
 /** The voice that fits a language: exact match, else the same base language, else none (the browser then uses its default for `lang`). */
-export function pickVoice(voices: readonly SpeechSynthesisVoice[], lang: string | undefined): SpeechSynthesisVoice | undefined {
+export function pickVoice(
+  voices: readonly SpeechSynthesisVoice[],
+  lang: string | undefined,
+): SpeechSynthesisVoice | undefined {
   if (!lang) return undefined;
   const wanted = lang.toLowerCase().replace("_", "-");
   const base = wanted.split("-")[0];

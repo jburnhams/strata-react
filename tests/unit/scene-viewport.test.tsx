@@ -27,8 +27,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 const frames = async () => {
-  for (let i = 0; i < 3; i++)
-    await act(async () => void (await new Promise((r) => setTimeout(r, 12))));
+  for (let i = 0; i < 3; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 12))));
 };
 
 type Seen = { frames: SceneFrame[]; camera: OrbitCamera };
@@ -116,14 +115,10 @@ describe("words", () => {
   it("names the canvas by the label and the camera, always current", async () => {
     const seen = fresh();
     renderWithStrata(<Host seen={seen} initial={{ distance: 10, yaw: 0, pitch: 0 }} />);
-    expect(
-      screen.getByRole("img", { name: "Map e1m1. Looking at 0, 0, 0 from 10 away" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Map e1m1. Looking at 0, 0, 0 from 10 away" })).toBeInTheDocument();
     await userEvent.click(view());
     await userEvent.keyboard("{ArrowRight}");
-    expect(
-      screen.getByRole("img", { name: /turned 3\.5° right|turned 4° right/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /turned 3\.5° right|turned 4° right/ })).toBeInTheDocument();
   });
 });
 

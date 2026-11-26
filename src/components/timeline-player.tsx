@@ -31,17 +31,48 @@ export type TimelinePlayerProps = {
 };
 
 /** A stage over a control bar for a timeline the app owns: transport, seek bar, time and speed, with the keys following the clock last used and the stage keeping its arrows. */
-export function TimelinePlayer({ clock, label, stage, rates, onRateChange, legend = false, className }: TimelinePlayerProps) {
+export function TimelinePlayer({
+  clock,
+  label,
+  stage,
+  rates,
+  onRateChange,
+  legend = false,
+  className,
+}: TimelinePlayerProps) {
   const bar = React.useRef<HTMLDivElement>(null);
   const fps = Math.max(1, Math.round(1 / clock.frame));
-  const shortcuts = transportShortcuts({ toggle: clock.toggle, seek: clock.seek, time: clock.time, duration: clock.duration, frame: clock.frame, stageKeys: true });
+  const shortcuts = transportShortcuts({
+    toggle: clock.toggle,
+    seek: clock.seek,
+    time: clock.time,
+    duration: clock.duration,
+    frame: clock.frame,
+    stageKeys: true,
+  });
   const { live } = useHotkeys(shortcuts, { enabled: clock.ownsKeys, within: bar });
   return (
     <div role="group" aria-label={label} {...clock.regionProps} className={cn("grid min-w-0 gap-2", className)}>
       <div className="min-w-0">{stage}</div>
       <div ref={bar} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <Transport playing={clock.playing} onPlayPause={clock.toggle} onToStart={() => clock.seek(0)} onToEnd={() => clock.seek(clock.duration)} onStepBack={() => clock.step(-1)} onStepForward={() => clock.step(1)} className="shrink-0" />
-        <SeekBar time={clock.time} duration={clock.duration} onSeek={clock.seek} label={`Seek ${label}`} precision="frames" fps={fps} step={Math.max(clock.frame, clock.duration / 50)} />
+        <Transport
+          playing={clock.playing}
+          onPlayPause={clock.toggle}
+          onToStart={() => clock.seek(0)}
+          onToEnd={() => clock.seek(clock.duration)}
+          onStepBack={() => clock.step(-1)}
+          onStepForward={() => clock.step(1)}
+          className="shrink-0"
+        />
+        <SeekBar
+          time={clock.time}
+          duration={clock.duration}
+          onSeek={clock.seek}
+          label={`Seek ${label}`}
+          precision="frames"
+          fps={fps}
+          step={Math.max(clock.frame, clock.duration / 50)}
+        />
         <TimeReadout time={clock.time} duration={clock.duration} precision="frames" fps={fps} />
         {rates && onRateChange && <RateChoice rate={clock.rate} onRateChange={onRateChange} rates={rates} />}
       </div>

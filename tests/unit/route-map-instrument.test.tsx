@@ -3,13 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CursorScope, geo, useSharedCursor, type LatLng } from "../../src";
-import {
-  RouteMap,
-  type MapMarker,
-  type MapRoute,
-  type MapView,
-  type RouteMapProps,
-} from "../../src/map";
+import { RouteMap, type MapMarker, type MapRoute, type MapView, type RouteMapProps } from "../../src/map";
 import { renderWithStrata } from "../../src/testing";
 
 // Issues #181 (markers), #182 (view and pick) and #184 (the shared cursor on the map). Real Leaflet in
@@ -59,9 +53,7 @@ const loop: MapRoute = {
   ],
 };
 const routes = [run, loop];
-const paths = (c: HTMLElement) => [
-  ...c.querySelectorAll<SVGPathElement>(".leaflet-overlay-pane path"),
-];
+const paths = (c: HTMLElement) => [...c.querySelectorAll<SVGPathElement>(".leaflet-overlay-pane path")];
 const props = (over: Partial<RouteMapProps> = {}): RouteMapProps => ({
   label: "Route map",
   routes: [run],
@@ -84,11 +76,7 @@ describe("markers", () => {
   it("are named controls, selected one pressed, the same count the text alternative gives", () => {
     const { container } = renderWithStrata(<RouteMap {...withMarkers()} />);
     const buttons = screen.getAllByRole("button", { name: /^Clip/ });
-    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
-      "Clip 1",
-      "Clip 2",
-      "Clip 3",
-    ]);
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual(["Clip 1", "Clip 2", "Clip 3"]);
     expect(screen.getByRole("button", { name: "Clip 2" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Clip 1" })).toHaveAttribute("aria-pressed", "false");
     expect(container.querySelector("p.sr-only")).toHaveTextContent("3 markers, selected: Clip 2.");
@@ -116,9 +104,7 @@ describe("markers", () => {
 
   it("show the app's card on focus, words only", async () => {
     const user = userEvent.setup();
-    renderWithStrata(
-      <RouteMap {...withMarkers({ renderMarkerCard: (m) => <span>Card for {m.label}</span> })} />,
-    );
+    renderWithStrata(<RouteMap {...withMarkers({ renderMarkerCard: (m) => <span>Card for {m.label}</span> })} />);
     await user.tab();
     // The map's own container is the first stop; the group's one stop follows it.
     screen.getByRole("button", { name: "Clip 1" }).focus();
@@ -142,13 +128,9 @@ describe("markers", () => {
     const { container } = renderWithStrata(<RouteMap {...withMarkers({ markers: pile })} />);
     const dashed = paths(container).filter((p) => p.getAttribute("stroke-dasharray") === "2 3");
     expect(dashed).toHaveLength(3); // one leader per fanned marker, none for Solo
-    const iconOf = (name: string) =>
-      screen.getByRole("button", { name }).closest<HTMLElement>(".leaflet-marker-icon")!;
+    const iconOf = (name: string) => screen.getByRole("button", { name }).closest<HTMLElement>(".leaflet-marker-icon")!;
     const at = (name: string) => {
-      const m =
-        /translate(?:3d)?\(([-\d.]+)px,\s*([-\d.]+)px/.exec(
-          iconOf(name).getAttribute("style") ?? "",
-        ) ?? [];
+      const m = /translate(?:3d)?\(([-\d.]+)px,\s*([-\d.]+)px/.exec(iconOf(name).getAttribute("style") ?? "") ?? [];
       return [
         Number(m[1] ?? iconOf(name).style.left.replace("px", "")),
         Number(m[2] ?? iconOf(name).style.top.replace("px", "")),
@@ -162,20 +144,10 @@ describe("markers", () => {
       { id: "p1", label: "Near 1", at: [51.507, -0.105] },
       { id: "p2", label: "Near 2", at: [51.5071, -0.105] },
     ];
-    const { container, rerender } = renderWithStrata(
-      <RouteMap {...withMarkers({ markers: close })} />,
-    );
-    expect(
-      paths(container).filter((p) => p.getAttribute("stroke-dasharray") === "2 3"),
-    ).toHaveLength(2);
-    rerender(
-      <RouteMap
-        {...withMarkers({ markers: close, view: { center: [51.507, -0.105], zoom: 18 } })}
-      />,
-    );
-    expect(
-      paths(container).filter((p) => p.getAttribute("stroke-dasharray") === "2 3"),
-    ).toHaveLength(0);
+    const { container, rerender } = renderWithStrata(<RouteMap {...withMarkers({ markers: close })} />);
+    expect(paths(container).filter((p) => p.getAttribute("stroke-dasharray") === "2 3")).toHaveLength(2);
+    rerender(<RouteMap {...withMarkers({ markers: close, view: { center: [51.507, -0.105], zoom: 18 } })} />);
+    expect(paths(container).filter((p) => p.getAttribute("stroke-dasharray") === "2 3")).toHaveLength(0);
   });
 
   it("draw only the markers near the view", () => {
@@ -225,10 +197,7 @@ describe("the view", () => {
     renderWithStrata(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 30 })} />);
     await wait(80);
     expect(seen).toHaveLength(0); // the first fit is the app's own
-    const zoom = () =>
-      (document.querySelector(".leaflet-container") as HTMLElement).querySelector(
-        "img.leaflet-tile",
-      )!;
+    const zoom = () => (document.querySelector(".leaflet-container") as HTMLElement).querySelector("img.leaflet-tile")!;
     void zoom;
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
@@ -298,9 +267,7 @@ describe("the view", () => {
 
   it("has a reset control in the control group that fits the routes again, and reports it as the person's move", async () => {
     const seen: MapView[] = [];
-    const { container } = renderWithStrata(
-      <RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20 })} />,
-    );
+    const { container } = renderWithStrata(<RouteMap {...props({ onViewChange: (v) => seen.push(v), settle: 20 })} />);
     const fitted = tileZoom(container);
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
@@ -314,9 +281,7 @@ describe("the view", () => {
   });
 
   it("resets to the given view when there is one, and by the keyboard", () => {
-    const { container } = renderWithStrata(
-      <RouteMap {...props({ view: { center: [51.5, -0.12], zoom: 15 } })} />,
-    );
+    const { container } = renderWithStrata(<RouteMap {...props({ view: { center: [51.5, -0.12], zoom: 15 } })} />);
     fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     fireEvent.keyDown(screen.getByRole("button", { name: "Reset view" }), { key: " " });
     expect(tileZoom(container)).toBe(15);
@@ -324,8 +289,7 @@ describe("the view", () => {
 });
 
 describe("picking a place", () => {
-  const at = (container: HTMLElement) =>
-    container.querySelector<HTMLElement>(".leaflet-container")!;
+  const at = (container: HTMLElement) => container.querySelector<HTMLElement>(".leaflet-container")!;
 
   it("does nothing on a click when not picking", () => {
     const onPick = vi.fn();
@@ -337,9 +301,7 @@ describe("picking a place", () => {
   it("picks by pointer with the nearest route, and announces it", () => {
     const onPick = vi.fn();
     const { container } = renderWithStrata(
-      <RouteMap
-        {...props({ routes, picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })}
-      />,
+      <RouteMap {...props({ routes, picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />,
     );
     // The view is centred on a vertex of both routes, so the centre of the map is on them.
     fireEvent.click(at(container), { clientX: 320, clientY: 180 });
@@ -374,9 +336,7 @@ describe("picking a place", () => {
   it("picks by keyboard: arrows move a crosshair, Enter chooses where it is", () => {
     const onPick = vi.fn();
     const { container } = renderWithStrata(
-      <RouteMap
-        {...props({ picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })}
-      />,
+      <RouteMap {...props({ picking: true, onPick, view: { center: [51.505, -0.11], zoom: 15 } })} />,
     );
     const map = at(container);
     fireEvent.keyDown(map, { key: "Enter" });

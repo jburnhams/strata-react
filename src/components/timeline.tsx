@@ -147,10 +147,23 @@ const DRAG_THRESHOLD = 3;
 
 const defaultFormat = (t: number) => tickLabel(t, 1);
 
-type Drag = { id: string; mode: "move" | "start" | "end"; originX: number; origin: TimelineItem; next: TimelineChange; reason: string | null; guide: number | null; moved: boolean };
+type Drag = {
+  id: string;
+  mode: "move" | "start" | "end";
+  originX: number;
+  origin: TimelineItem;
+  next: TimelineChange;
+  reason: string | null;
+  guide: number | null;
+  moved: boolean;
+};
 
 /** Zoom state for a timeline: `zoomIn`, `zoomOut`, and `fit` to a viewport width. Pass `zoom` and `setZoom` as the timeline's `zoom` and `onZoomChange`. */
-export function useTimelineZoom({ initial = 20, min = 0.5, max = 400 }: { initial?: number; min?: number; max?: number } = {}) {
+export function useTimelineZoom({
+  initial = 20,
+  min = 0.5,
+  max = 400,
+}: { initial?: number; min?: number; max?: number } = {}) {
   const [zoom, set] = React.useState(initial);
   const setZoom = React.useCallback((z: number) => set(clamp(z, min, max)), [min, max]);
   return {
@@ -164,7 +177,11 @@ export function useTimelineZoom({ initial = 20, min = 0.5, max = 400 }: { initia
 }
 
 /** Zoom in, zoom out and fit, as named icon buttons for a timeline's toolbar. */
-export function TimelineZoomControls({ zoom }: { zoom: Pick<ReturnType<typeof useTimelineZoom>, "zoomIn" | "zoomOut"> & { fit: () => void } }) {
+export function TimelineZoomControls({
+  zoom,
+}: {
+  zoom: Pick<ReturnType<typeof useTimelineZoom>, "zoomIn" | "zoomOut"> & { fit: () => void };
+}) {
   return (
     <div className="flex items-center gap-1">
       <IconButton icon={ZoomOut} label="Zoom out" hint="-" onClick={zoom.zoomOut} />
@@ -178,7 +195,13 @@ export function TimelineZoomControls({ zoom }: { zoom: Pick<ReturnType<typeof us
 export function noOverlap(items: readonly TimelineItem[]): (id: string, next: TimelineChange) => string | null {
   return (id, next) => {
     const me = items.find((i) => i.id === id);
-    const other = items.find((i) => i.id !== id && i.lane === next.lane && i.start < next.start + next.length - 1e-9 && next.start < i.start + i.length - 1e-9);
+    const other = items.find(
+      (i) =>
+        i.id !== id &&
+        i.lane === next.lane &&
+        i.start < next.start + next.length - 1e-9 &&
+        next.start < i.start + i.length - 1e-9,
+    );
     return other ? `${me?.label ?? "This"} would overlap ${other.label}.` : null;
   };
 }
@@ -224,7 +247,11 @@ export function Timeline({
   const dragRef = React.useRef<Drag | null>(null);
   const [focusId, setFocusId] = React.useState<string | null>(null);
   const [said, setSaid] = React.useState("");
-  const [hover, setHover] = React.useState<{ next: TimelineChange; reason: string | null; guide: number | null } | null>(null);
+  const [hover, setHover] = React.useState<{
+    next: TimelineChange;
+    reason: string | null;
+    guide: number | null;
+  } | null>(null);
   const refocus = React.useRef<string | null>(null);
   const selected = selectedIds ?? new Set<string>();
   const laneIndex = React.useMemo(() => new Map(lanes.map((l, i) => [l.id, i])), [lanes]);
@@ -254,7 +281,8 @@ export function Timeline({
     const el = scroller.current;
     if (!follow || position === undefined || !el) return;
     const px = x(position);
-    if (px < el.scrollLeft || px > el.scrollLeft + el.clientWidth - 24) el.scrollLeft = Math.max(px - el.clientWidth * 0.25, 0);
+    if (px < el.scrollLeft || px > el.scrollLeft + el.clientWidth - 24)
+      el.scrollLeft = Math.max(px - el.clientWidth * 0.25, 0);
   }, [follow, position, zoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
@@ -262,7 +290,14 @@ export function Timeline({
     if (!id) return;
     refocus.current = null;
     const el = scroller.current?.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"]`);
-    if (el && document.activeElement !== el && (!document.activeElement || document.activeElement === document.body || !scroller.current?.contains(document.activeElement))) el.focus();
+    if (
+      el &&
+      document.activeElement !== el &&
+      (!document.activeElement ||
+        document.activeElement === document.body ||
+        !scroller.current?.contains(document.activeElement))
+    )
+      el.focus();
   }, [items]);
 
   const sorted = React.useMemo(() => {
@@ -308,14 +343,17 @@ export function Timeline({
   // --- keyboard on an item -------------------------------------------------------------------
   const focusItem = (id: string) => {
     setFocusId(id);
-    requestAnimationFrame(() => scroller.current?.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"]`)?.focus());
+    requestAnimationFrame(() =>
+      scroller.current?.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"]`)?.focus(),
+    );
     // jsdom has no layout and runs rAF late; focus now too when the element is already mounted.
     scroller.current?.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"]`)?.focus();
     const item = items.find((i) => i.id === id);
     if (item && scroller.current) {
       const el = scroller.current;
       if (x(item.start) < el.scrollLeft) el.scrollLeft = x(item.start) - 16;
-      else if (x(item.start + item.length) > el.scrollLeft + el.clientWidth) el.scrollLeft = x(item.start + item.length) - el.clientWidth + 16;
+      else if (x(item.start + item.length) > el.scrollLeft + el.clientWidth)
+        el.scrollLeft = x(item.start + item.length) - el.clientWidth + 16;
     }
   };
 
@@ -332,7 +370,11 @@ export function Timeline({
       if (k === "ArrowLeft" || k === "ArrowRight") {
         handled();
         const dir = k === "ArrowLeft" ? -1 : 1;
-        commit(item, { start: clamp(tidy(item.start + dir * step * big), from, to - item.length), length: item.length, lane: item.lane });
+        commit(item, {
+          start: clamp(tidy(item.start + dir * step * big), from, to - item.length),
+          length: item.length,
+          lane: item.lane,
+        });
       } else if (k === "ArrowUp" || k === "ArrowDown") {
         handled();
         const target = lanes[(laneIndex.get(item.lane) ?? 0) + (k === "ArrowUp" ? -1 : 1)];
@@ -350,7 +392,11 @@ export function Timeline({
         const start = clamp(tidy(item.start + dir * step), from, item.start + item.length - min);
         commit(item, { start, length: tidy(item.start + item.length - start), lane: item.lane });
       } else {
-        commit(item, { start: item.start, length: clamp(tidy(item.length + dir * step), min, to - item.start), lane: item.lane });
+        commit(item, {
+          start: item.start,
+          length: clamp(tidy(item.length + dir * step), min, to - item.start),
+          lane: item.lane,
+        });
       }
       return;
     }
@@ -368,7 +414,10 @@ export function Timeline({
         handled();
         const neighbour = lanes[(laneIndex.get(item.lane) ?? 0) + (k === "ArrowUp" ? -1 : 1)];
         const candidates = neighbour ? (sorted.get(neighbour.id) ?? []) : [];
-        const nearest = candidates.reduce<TimelineItem | null>((best, c) => (!best || Math.abs(c.start - item.start) < Math.abs(best.start - item.start) ? c : best), null);
+        const nearest = candidates.reduce<TimelineItem | null>(
+          (best, c) => (!best || Math.abs(c.start - item.start) < Math.abs(best.start - item.start) ? c : best),
+          null,
+        );
         if (nearest) focusItem(nearest.id);
         break;
       }
@@ -397,10 +446,14 @@ export function Timeline({
 
   /** Snaps an item of `length` starting at `start` to whichever of its ends is nearer an edge. */
   const snapMove = (start: number, length: number, exclude?: string) => {
-    const edges = [...snapTimes, ...items.filter((i) => i.id !== exclude).flatMap((i) => [i.start, i.start + i.length])];
+    const edges = [
+      ...snapTimes,
+      ...items.filter((i) => i.id !== exclude).flatMap((i) => [i.start, i.start + i.length]),
+    ];
     const a = snap ? snapTo(start, edges, zoom) : null;
     const b = snap ? snapTo(start + length, edges, zoom) : null;
-    if (a && (!b || Math.abs(a.time - start) <= Math.abs(b.time - (start + length)))) return { start: a.time, guide: a.point as number | null };
+    if (a && (!b || Math.abs(a.time - start) <= Math.abs(b.time - (start + length))))
+      return { start: a.time, guide: a.point as number | null };
     if (b) return { start: b.time - length, guide: b.point as number | null };
     return { start, guide: null as number | null };
   };
@@ -410,7 +463,11 @@ export function Timeline({
   const dropAt = (lane: string, px: number | null) => {
     const at = px === null ? (position ?? from) : from + px / zoom;
     const snapped = snapMove(at, dropLen);
-    const next: TimelineChange = { start: clamp(tidy(snapped.start), from, Math.max(to - dropLen, from)), length: dropLen, lane };
+    const next: TimelineChange = {
+      start: clamp(tidy(snapped.start), from, Math.max(to - dropLen, from)),
+      length: dropLen,
+      lane,
+    };
     return { next, guide: snapped.guide, reason: validateDrop?.(next) ?? null };
   };
   const onLaneHover = (lane: string, px: number | null) => {
@@ -436,7 +493,16 @@ export function Timeline({
     if (e.button !== 0) return;
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    const d: Drag = { id: item.id, mode, originX: e.clientX, origin: item, next: { start: item.start, length: item.length, lane: item.lane }, reason: null, guide: null, moved: false };
+    const d: Drag = {
+      id: item.id,
+      mode,
+      originX: e.clientX,
+      origin: item,
+      next: { start: item.start, length: item.length, lane: item.lane },
+      reason: null,
+      guide: null,
+      moved: false,
+    };
     dragRef.current = d;
     setDrag(d);
   };
@@ -470,7 +536,11 @@ export function Timeline({
       guide = m.guide;
       next = { start: clamp(tidy(start), from, to - o.length), length: o.length, lane: laneAt(e.clientY, o.lane) };
     } else if (d.mode === "end") {
-      next = { start: o.start, length: clamp(tidy(snapped(o.start + o.length + dt) - o.start), min, to - o.start), lane: o.lane };
+      next = {
+        start: o.start,
+        length: clamp(tidy(snapped(o.start + o.length + dt) - o.start), min, to - o.start),
+        lane: o.lane,
+      };
     } else {
       const start = clamp(tidy(snapped(o.start + dt)), from, o.start + o.length - min);
       next = { start, length: tidy(o.start + o.length - start), lane: o.lane };
@@ -505,7 +575,12 @@ export function Timeline({
   const scrubTrack = React.useRef<HTMLDivElement>(null);
   const scrubInput = React.useRef<HTMLInputElement>(null);
   const spokenTime = React.useMemo(
-    () => ({ format: formatTime, formatRange: (a: number, b: number) => `${formatTime(a)} to ${formatTime(b)}`, resolvedOptions: () => ({ locale: "en-US" }) }) as unknown as Intl.NumberFormat,
+    () =>
+      ({
+        format: formatTime,
+        formatRange: (a: number, b: number) => `${formatTime(a)} to ${formatTime(b)}`,
+        resolvedOptions: () => ({ locale: "en-US" }),
+      }) as unknown as Intl.NumberFormat,
     [formatTime],
   );
   const scrubState = useSliderState({
@@ -517,13 +592,33 @@ export function Timeline({
     numberFormatter: spokenTime,
     isDisabled: position === undefined || !onPositionChange,
   });
-  const { trackProps: rulerProps } = useSlider({ "aria-label": "Current time", isDisabled: position === undefined || !onPositionChange }, scrubState, scrubTrack);
-  const { thumbProps, inputProps } = useSliderThumb({ index: 0, trackRef: scrubTrack, inputRef: scrubInput, "aria-label": "Current time", isDisabled: position === undefined || !onPositionChange }, scrubState);
+  const { trackProps: rulerProps } = useSlider(
+    { "aria-label": "Current time", isDisabled: position === undefined || !onPositionChange },
+    scrubState,
+    scrubTrack,
+  );
+  const { thumbProps, inputProps } = useSliderThumb(
+    {
+      index: 0,
+      trackRef: scrubTrack,
+      inputRef: scrubInput,
+      "aria-label": "Current time",
+      isDisabled: position === undefined || !onPositionChange,
+    },
+    scrubState,
+  );
   const { focusProps, isFocusVisible } = useFocusRing();
   const onSliderKey = (e: React.KeyboardEvent) => {
     if (position === undefined) return;
     const big = e.shiftKey ? 10 : 1;
-    const moves: Record<string, number> = { ArrowLeft: -step * big, ArrowDown: -step * big, ArrowRight: step * big, ArrowUp: step * big, PageDown: -step * 10, PageUp: step * 10 };
+    const moves: Record<string, number> = {
+      ArrowLeft: -step * big,
+      ArrowDown: -step * big,
+      ArrowRight: step * big,
+      ArrowUp: step * big,
+      PageDown: -step * 10,
+      PageUp: step * 10,
+    };
     if (e.key in moves) setPosition(position + moves[e.key]);
     else if (e.key === "Home") setPosition(from);
     else if (e.key === "End") setPosition(to);
@@ -555,16 +650,27 @@ export function Timeline({
     return () => el.removeEventListener("wheel", onWheel);
   }, [onZoomChange, zoom]);
 
-  const rovingId = focusId && items.some((i) => i.id === focusId) ? focusId : (sorted.get(lanes[0]?.id ?? "")?.[0]?.id ?? items[0]?.id ?? null);
+  const rovingId =
+    focusId && items.some((i) => i.id === focusId)
+      ? focusId
+      : (sorted.get(lanes[0]?.id ?? "")?.[0]?.id ?? items[0]?.id ?? null);
   // Only items near the view are drawn, and always the focused one so focus is never lost.
   const lo = view.left - view.width;
   const hi = view.left + 2 * view.width;
-  const visible = (i: TimelineItem) => i.id === focusId || i.id === rovingId || (x(i.start + i.length) >= lo && x(i.start) <= hi);
+  const visible = (i: TimelineItem) =>
+    i.id === focusId || i.id === rovingId || (x(i.start + i.length) >= lo && x(i.start) <= hi);
 
-  const itemLabel = (i: TimelineItem) => `${i.label}, ${formatTime(i.start)} to ${formatTime(i.start + i.length)}, ${laneLabel(i.lane)}`;
+  const itemLabel = (i: TimelineItem) =>
+    `${i.label}, ${formatTime(i.start)} to ${formatTime(i.start + i.length)}, ${laneLabel(i.lane)}`;
 
   return (
-    <div role="group" aria-label={label} onKeyDown={onKeyDown} className={cn("min-w-0 text-foreground", className)} style={{ "--lane-h": `calc(var(--control-h) * ${Math.max(laneRows, 1)})` } as React.CSSProperties}>
+    <div
+      role="group"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className={cn("min-w-0 text-foreground", className)}
+      style={{ "--lane-h": `calc(var(--control-h) * ${Math.max(laneRows, 1)})` } as React.CSSProperties}
+    >
       <p role="status" className="sr-only">
         {said}
       </p>
@@ -588,7 +694,17 @@ export function Timeline({
                 const px = x(t);
                 const last = px > width - 40;
                 return (
-                  <span key={t} aria-hidden className="absolute top-0 h-full border-l border-border pl-1 type-caption text-muted-foreground tabular-nums" style={{ left: px, transform: last ? "translateX(-100%)" : undefined, borderLeftWidth: last ? 0 : 1, paddingRight: last ? 4 : 0 }}>
+                  <span
+                    key={t}
+                    aria-hidden
+                    className="absolute top-0 h-full border-l border-border pl-1 type-caption text-muted-foreground tabular-nums"
+                    style={{
+                      left: px,
+                      transform: last ? "translateX(-100%)" : undefined,
+                      borderLeftWidth: last ? 0 : 1,
+                      paddingRight: last ? 4 : 0,
+                    }}
+                  >
                     {formatTime === defaultFormat ? tickLabel(t, stepSize) : formatTime(t)}
                   </span>
                 );
@@ -608,10 +724,22 @@ export function Timeline({
                 </button>
               ))}
               {position !== undefined && (
-                <div {...thumbProps} className={cn("absolute top-0 -ml-2 h-full w-4 cursor-ew-resize", isFocusVisible && "outline-2 outline-offset-2 outline-ring")} style={{ left: x(position) }}>
+                <div
+                  {...thumbProps}
+                  className={cn(
+                    "absolute top-0 -ml-2 h-full w-4 cursor-ew-resize",
+                    isFocusVisible && "outline-2 outline-offset-2 outline-ring",
+                  )}
+                  style={{ left: x(position) }}
+                >
                   <span aria-hidden className="mx-auto block size-3 rounded-pill bg-primary" />
                   <VisuallyHidden>
-                    <input ref={scrubInput} {...mergeProps(inputProps, focusProps)} aria-labelledby={undefined} onKeyDownCapture={onSliderKey} />
+                    <input
+                      ref={scrubInput}
+                      {...mergeProps(inputProps, focusProps)}
+                      aria-labelledby={undefined}
+                      onKeyDownCapture={onSliderKey}
+                    />
                   </VisuallyHidden>
                 </div>
               )}
@@ -628,7 +756,14 @@ export function Timeline({
                 onDropItems={(px, dropped) => onLaneDrop(l.id, px, dropped)}
               >
                 {hover && hover.next.lane === l.id && (
-                  <div aria-hidden className={cn("pointer-events-none absolute top-1 bottom-1 rounded-control border border-dashed", hover.reason ? "border-danger bg-danger-subtle" : "border-primary bg-muted")} style={{ left: x(hover.next.start), width: Math.max(hover.next.length * zoom, 4) }} />
+                  <div
+                    aria-hidden
+                    className={cn(
+                      "pointer-events-none absolute top-1 bottom-1 rounded-control border border-dashed",
+                      hover.reason ? "border-danger bg-danger-subtle" : "border-primary bg-muted",
+                    )}
+                    style={{ left: x(hover.next.start), width: Math.max(hover.next.length * zoom, 4) }}
+                  />
                 )}
                 {(sorted.get(l.id) ?? []).filter(visible).map((item) => {
                   const live = drag?.id === item.id && drag.moved ? drag : null;
@@ -657,21 +792,61 @@ export function Timeline({
                         isSel && "bg-muted font-medium outline-2 outline-offset-1 outline-primary",
                         live?.reason && "border-dashed border-danger bg-danger-subtle",
                       )}
-                      style={{ left: px, width: w, borderTopColor: item.kind ? (kindColours?.[item.kind] ?? kindColour(item.kind, items)) : undefined, transform: laneShift ? `translateY(calc(var(--lane-h) * ${laneShift}))` : undefined, zIndex: live ? 10 : undefined }}
+                      style={{
+                        left: px,
+                        width: w,
+                        borderTopColor: item.kind
+                          ? (kindColours?.[item.kind] ?? kindColour(item.kind, items))
+                          : undefined,
+                        transform: laneShift ? `translateY(calc(var(--lane-h) * ${laneShift}))` : undefined,
+                        zIndex: live ? 10 : undefined,
+                      }}
                     >
-                      {renderItem ? renderItem(item, { selected: isSel, width: w }) : <DefaultItem item={item} width={w} />}
+                      {renderItem ? (
+                        renderItem(item, { selected: isSel, width: w })
+                      ) : (
+                        <DefaultItem item={item} width={w} />
+                      )}
                       {/* Trim handles: pointer-only. The keyboard trims with Alt+arrows. */}
-                      <span aria-hidden className="absolute inset-y-0 left-0 cursor-ew-resize touch-none" style={{ width: EDGE_PX }} onPointerDown={(e) => begin(e, item, "start")} onPointerMove={onPointerMove} onPointerUp={onPointerUp} />
-                      <span aria-hidden className="absolute inset-y-0 right-0 cursor-ew-resize touch-none" style={{ width: EDGE_PX }} onPointerDown={(e) => begin(e, item, "end")} onPointerMove={onPointerMove} onPointerUp={onPointerUp} />
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 cursor-ew-resize touch-none"
+                        style={{ width: EDGE_PX }}
+                        onPointerDown={(e) => begin(e, item, "start")}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                      />
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 right-0 cursor-ew-resize touch-none"
+                        style={{ width: EDGE_PX }}
+                        onPointerDown={(e) => begin(e, item, "end")}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                      />
                     </div>
                   );
                 })}
               </LaneRow>
             ))}
-            {position !== undefined && <div aria-hidden className="pointer-events-none absolute top-8 bottom-0 w-0.5 bg-primary" style={{ left: x(position) - 1 }} />}
+            {position !== undefined && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute top-8 bottom-0 w-0.5 bg-primary"
+                style={{ left: x(position) - 1 }}
+              />
+            )}
             {(() => {
               const guide = drag?.moved ? drag.guide : (hover?.guide ?? null);
-              return guide !== null && <div aria-hidden className="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground" style={{ left: x(guide) }} />;
+              return (
+                guide !== null && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground"
+                    style={{ left: x(guide) }}
+                  />
+                )
+              );
             })()}
           </div>
         </div>
@@ -688,7 +863,8 @@ export function Timeline({
                 </>
               ) : (
                 <>
-                  {formatTime(info.next.start)} to {formatTime(info.next.start + info.next.length)}, {laneLabel(info.next.lane)}
+                  {formatTime(info.next.start)} to {formatTime(info.next.start + info.next.length)},{" "}
+                  {laneLabel(info.next.lane)}
                 </>
               )}
             </p>
@@ -714,7 +890,23 @@ function DefaultItem({ item, width }: { item: TimelineItem; width: number }) {
 }
 
 /** One lane: a labelled group that is a React Aria drop target when `types` is given. `px` is the pointer's distance along the lane, or null for a keyboard drag (the lane is then the focused element). */
-function LaneRow({ label, register, types, onHover, onLeave, onDropItems, children }: { label: string; register: (el: HTMLDivElement | null) => void; types?: readonly string[]; onHover: (px: number | null) => void; onLeave: () => void; onDropItems: (px: number | null, items: DropItem[]) => void; children: React.ReactNode }) {
+function LaneRow({
+  label,
+  register,
+  types,
+  onHover,
+  onLeave,
+  onDropItems,
+  children,
+}: {
+  label: string;
+  register: (el: HTMLDivElement | null) => void;
+  types?: readonly string[];
+  onHover: (px: number | null) => void;
+  onLeave: () => void;
+  onDropItems: (px: number | null, items: DropItem[]) => void;
+  children: React.ReactNode;
+}) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const keyboard = () => document.activeElement === ref.current;
   const { dropProps } = useDrop({

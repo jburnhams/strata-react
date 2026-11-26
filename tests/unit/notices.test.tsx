@@ -19,9 +19,7 @@ describe("Alert", () => {
         Readings are 40 minutes old.
       </Alert>,
     );
-    expect(screen.getByRole("region", { name: "Kiln 2 is behind" })).toHaveTextContent(
-      "Readings are 40 minutes old.",
-    );
+    expect(screen.getByRole("region", { name: "Kiln 2 is behind" })).toHaveTextContent("Readings are 40 minutes old.");
     expect(screen.queryByRole("alert")).toBeNull();
     rerender(
       <Alert tone="danger" announce>
@@ -103,10 +101,7 @@ describe("JobStatus for client work", () => {
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalled();
-    expect(screen.getByRole("progressbar", { name: "Export" })).toHaveAttribute(
-      "aria-valuenow",
-      "2",
-    );
+    expect(screen.getByRole("progressbar", { name: "Export" })).toHaveAttribute("aria-valuenow", "2");
     rerender(
       <JobStatus
         label="Export"
@@ -123,19 +118,9 @@ describe("JobStatus for client work", () => {
   });
 
   it("has no bar without a total, and cancelled is its own word, not a failure", () => {
-    const { rerender } = render(
-      <JobStatus label="Export" running words={words} summary="Rendering." />,
-    );
+    const { rerender } = render(<JobStatus label="Export" running words={words} summary="Rendering." />);
     expect(screen.queryByRole("progressbar")).toBeNull();
-    rerender(
-      <JobStatus
-        label="Export"
-        running={false}
-        cancelled
-        words={words}
-        summary="Stopped at 2 of 5."
-      />,
-    );
+    rerender(<JobStatus label="Export" running={false} cancelled words={words} summary="Stopped at 2 of 5." />);
     expect(screen.getAllByText("Cancelled").length).toBeGreaterThan(0);
     expect(screen.queryByText("Export failed")).toBeNull();
     rerender(

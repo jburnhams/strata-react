@@ -86,10 +86,7 @@ describe("Density (issue #117)", () => {
     it("a context menu is inside the root when the page is compact", async () => {
       render(
         <ThemeProvider density="compact" storageKey={null}>
-          <ContextMenu
-            label="Clip actions"
-            items={[{ id: "split", label: "Split", run: () => undefined }]}
-          >
+          <ContextMenu label="Clip actions" items={[{ id: "split", label: "Split", run: () => undefined }]}>
             <div>Clip</div>
           </ContextMenu>
         </ThemeProvider>,
@@ -143,10 +140,8 @@ describe("one set of control sizes (issue #117)", () => {
       screen.getByRole("combobox", { name: "Select" }),
       screen.getByRole("textbox", { name: "Number" }).parentElement!,
     ];
-    for (const el of small)
-      expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h-sm\)/);
-    for (const el of normal)
-      expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h\)/);
+    for (const el of small) expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h-sm\)/);
+    for (const el of normal) expect(el.className, el.outerHTML).toMatch(/\b(size|h)-\(--control-h\)/);
   });
 
   it("does not pass the native `size` attribute on, since `size` is a control size here", () => {

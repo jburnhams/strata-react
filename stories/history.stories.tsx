@@ -27,13 +27,21 @@ function Editor({ steps, limit }: { steps: number; limit?: number }) {
     <div className="grid max-w-md gap-4">
       <Toolbar label="Edit">
         <Menu label="Edit" trigger={<Button variant="ghost">Edit</Button>} items={[undo, redo]} />
-        <Button size="sm" onClick={() => set((v) => ({ at: v.at + 1 }), "move clip")}>Move clip</Button>
-        <Button size="sm" disabled={!history.canUndo} onClick={history.undo}>{undo.label as string}</Button>
-        <Button size="sm" disabled={!history.canRedo} onClick={history.redo}>{redo.label as string}</Button>
+        <Button size="sm" onClick={() => set((v) => ({ at: v.at + 1 }), "move clip")}>
+          Move clip
+        </Button>
+        <Button size="sm" disabled={!history.canUndo} onClick={history.undo}>
+          {undo.label as string}
+        </Button>
+        <Button size="sm" disabled={!history.canRedo} onClick={history.redo}>
+          {redo.label as string}
+        </Button>
       </Toolbar>
       <p className="type-body">Clip is at {value.at} s.</p>
       <p className="type-caption text-muted-foreground">
-        {history.past.length ? `${history.past.length} steps${history.atLimit ? ", the oldest dropped" : ""}: ${history.past.join(", ")}` : "No steps yet."}
+        {history.past.length
+          ? `${history.past.length} steps${history.atLimit ? ", the oldest dropped" : ""}: ${history.past.join(", ")}`
+          : "No steps yet."}
       </p>
     </div>
   );

@@ -1,5 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar, Button, SelectableGrid, format, useSelection, type SelectableGridProps, type TileAspect } from "../src";
+import {
+  BulkBar,
+  Button,
+  SelectableGrid,
+  format,
+  useSelection,
+  type SelectableGridProps,
+  type TileAspect,
+} from "../src";
 import { glazeNames, shelfPhotos, type ShelfPhoto } from "./fixtures/kiln";
 import { PiecePicture } from "./fixtures/piece-photo";
 
@@ -10,7 +18,9 @@ const photos = shelfPhotos();
 const rowLabel = (p: ShelfPhoto) => `${p.member}, ${p.piece}`;
 const uncollected = (p: ShelfPhoto) => !p.collected;
 
-function PieceGrid(props: Partial<Omit<SelectableGridProps<ShelfPhoto>, "aspect" | "naturalAspect">> & { aspect?: TileAspect }) {
+function PieceGrid(
+  props: Partial<Omit<SelectableGridProps<ShelfPhoto>, "aspect" | "naturalAspect">> & { aspect?: TileAspect },
+) {
   return (
     <SelectableGrid
       label="Pieces from kiln 2, Tuesday's glaze firing"
@@ -52,7 +62,11 @@ export const Phone: Story = { tags: ["visual-phone"], args: { tileSize: "sm" } }
 
 function ChooseThenAct() {
   // The thin-glazed pieces start chosen: `initial` picks each row the first time it appears.
-  const selection = useSelection(photos, (p) => p.id, (p) => p.thin && uncollected(p));
+  const selection = useSelection(
+    photos,
+    (p) => p.id,
+    (p) => p.thin && uncollected(p),
+  );
   return (
     <div className="grid gap-3">
       <BulkBar count={selection.count} noun="piece" onClear={selection.clear}>

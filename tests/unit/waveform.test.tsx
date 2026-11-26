@@ -9,10 +9,7 @@ import { server } from "../utils/server";
 
 // Issue #185: peaks drawn, marks and spans named, one slider, a range, zoom, a file decoded with progress.
 
-const peaks = Array.from(
-  { length: 400 },
-  (_, i) => Math.abs(Math.sin(i / 9)) * (i > 200 ? 1 : 0.4),
-);
+const peaks = Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 9)) * (i > 200 ? 1 : 0.4));
 const marks = [
   { time: 10, kind: "downbeat" as const, label: "First downbeat" },
   { time: 20, kind: "bar" as const, label: "Bar 2" },
@@ -45,16 +42,12 @@ describe("Waveform with peaks", () => {
   it("is one slider whose value text is the time, described by a summary of what is on it", () => {
     renderWithStrata(<Host start={65} />);
     expect(slider()).toHaveAttribute("aria-valuetext", "1:05");
-    expect(slider()).toHaveAccessibleDescription(
-      "1:40 long, 1 downbeat, 1 bar, 1 beat, 1 chapter, 1 span",
-    );
+    expect(slider()).toHaveAccessibleDescription("1:40 long, 1 downbeat, 1 bar, 1 beat, 1 chapter, 1 span");
   });
 
   it("lists every span and each labelled mark with its time; beats are drawn but not listed", () => {
     renderWithStrata(<Host />);
-    expect(
-      within(screen.getByRole("list", { name: "Spans" })).getByText("Voice: 0:30 to 0:45"),
-    ).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Spans" })).getByText("Voice: 0:30 to 0:45")).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Marks" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(list).toHaveTextContent("First downbeat, 0:10");
@@ -118,25 +111,11 @@ describe("Waveform with peaks", () => {
 
   it("follows the playhead when it leaves a zoomed view", () => {
     const { rerender } = renderWithStrata(
-      <Waveform
-        label="Waveform of the track"
-        duration={100}
-        peaks={peaks}
-        time={10}
-        onSeek={() => {}}
-      />,
+      <Waveform label="Waveform of the track" duration={100} peaks={peaks} time={10} onSeek={() => {}} />,
     );
     fireEvent.keyDown(slider(), { key: "+" });
     fireEvent.keyDown(slider(), { key: "+" });
-    rerender(
-      <Waveform
-        label="Waveform of the track"
-        duration={100}
-        peaks={peaks}
-        time={80}
-        onSeek={() => {}}
-      />,
-    );
+    rerender(<Waveform label="Waveform of the track" duration={100} peaks={peaks} time={80} onSeek={() => {}} />);
     expect(Number(slider().getAttribute("min"))).toBeGreaterThan(40);
   });
 
@@ -191,9 +170,7 @@ describe("Waveform decoding a file", () => {
     let calls = 0;
     server.use(
       http.get("https://media.example.test/bad.mp3", () =>
-        ++calls === 1
-          ? HttpResponse.arrayBuffer(new ArrayBuffer(4))
-          : HttpResponse.arrayBuffer(new ArrayBuffer(16)),
+        ++calls === 1 ? HttpResponse.arrayBuffer(new ArrayBuffer(4)) : HttpResponse.arrayBuffer(new ArrayBuffer(16)),
       ),
     );
     let first = true;
@@ -253,9 +230,7 @@ describe("Waveform normalise", () => {
   });
 
   it("says nothing for a recording already near full scale, or without normalise", () => {
-    const { unmount } = renderWithStrata(
-      <Host marks={[]} spans={[]} peaks={peaks.map((p) => p * 2)} normalise />,
-    );
+    const { unmount } = renderWithStrata(<Host marks={[]} spans={[]} peaks={peaks.map((p) => p * 2)} normalise />);
     expect(screen.queryByText(/louder/)).toBeNull();
     unmount();
     renderWithStrata(<Host peaks={quiet} marks={[]} spans={[]} />);

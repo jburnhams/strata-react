@@ -87,7 +87,11 @@ export function useViewPointers(options: ViewPointerOptions) {
 }
 
 /** A wheel that zooms a viewer: `onZoom` gets a factor (above 1 is out). `when` says which wheels count; the rest scroll the page. */
-export function useWheelZoom(ref: React.RefObject<HTMLElement | null>, onZoom: (factor: number, event: WheelEvent) => void, { when, enabled = true }: { when?: (event: WheelEvent) => boolean; enabled?: boolean } = {}) {
+export function useWheelZoom(
+  ref: React.RefObject<HTMLElement | null>,
+  onZoom: (factor: number, event: WheelEvent) => void,
+  { when, enabled = true }: { when?: (event: WheelEvent) => boolean; enabled?: boolean } = {},
+) {
   const live = React.useRef({ onZoom, when });
   live.current = { onZoom, when };
   React.useEffect(() => {

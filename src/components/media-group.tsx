@@ -23,7 +23,12 @@ import type { MediaElementState, MediaWindow } from "./media-player";
 // inside), and `aria-pressed` is the platform's own state for a toggle.
 
 /** What a group needs of a member: whether it is paused, a way to pause it, and a way to hear it start. An `HTMLMediaElement` is one; so is a `useTimeline` clock (strata-react issue #384). */
-export type GroupMember = { readonly paused: boolean; pause(): void; addEventListener(type: "play", listener: () => void): void; removeEventListener(type: "play", listener: () => void): void };
+export type GroupMember = {
+  readonly paused: boolean;
+  pause(): void;
+  addEventListener(type: "play", listener: () => void): void;
+  removeEventListener(type: "play", listener: () => void): void;
+};
 
 const groups = new Map<string, Set<GroupMember>>();
 
@@ -57,7 +62,8 @@ export function MediaGroup({ name, children }: { name?: string; children: React.
 }
 
 /** Whether two windows are the same stretch. */
-export const sameWindow = (a: MediaWindow | null | undefined, b: MediaWindow | null | undefined) => (a ?? null) === (b ?? null) || (!!a && !!b && a.start === b.start && a.end === b.end);
+export const sameWindow = (a: MediaWindow | null | undefined, b: MediaWindow | null | undefined) =>
+  (a ?? null) === (b ?? null) || (!!a && !!b && a.start === b.start && a.end === b.end);
 
 export type PlayWindowButtonProps = {
   /** The shared element's handle from `useMediaElement`. */
@@ -73,5 +79,14 @@ export type PlayWindowButtonProps = {
 /** A row's play button for one window of a shared element: named for what it plays, pressed while it plays, a second press pauses. */
 export function PlayWindowButton({ media, window: w, label, size = "sm", className }: PlayWindowButtonProps) {
   const playing = media.playing && sameWindow(media.window, w);
-  return <IconButton icon={playing ? Pause : Play} label={label} size={size} className={className} aria-pressed={playing} onClick={() => (playing ? media.pause() : void media.playWindow(w))} />;
+  return (
+    <IconButton
+      icon={playing ? Pause : Play}
+      label={label}
+      size={size}
+      className={className}
+      aria-pressed={playing}
+      onClick={() => (playing ? media.pause() : void media.playWindow(w))}
+    />
+  );
 }

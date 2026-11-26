@@ -27,7 +27,11 @@ function* walk(path: string): Generator<string> {
 
 /** Runs the command; the exit code. */
 export async function main(argv: string[], out: (text: string) => void = (t) => console.log(t)): Promise<number> {
-  const { values, positionals } = parseArgs({ args: argv, options: { fail: { type: "boolean" }, help: { type: "boolean" } }, allowPositionals: true });
+  const { values, positionals } = parseArgs({
+    args: argv,
+    options: { fail: { type: "boolean" }, help: { type: "boolean" } },
+    allowPositionals: true,
+  });
   if (values.help) {
     out(usage);
     return 0;

@@ -16,12 +16,21 @@ const card = (() => {
   const lon = (deg: number) => ((deg + 180) / 360) * w;
   const lat = (deg: number) => ((90 - deg) / 180) * h;
   const lines: string[] = [];
-  for (let d = -180; d <= 180; d += 30) lines.push(`<line x1="${lon(d)}" x2="${lon(d)}" y1="0" y2="${h}" stroke="${d === 0 ? "#fff" : "#ffffff88"}" stroke-width="${d === 0 ? 8 : 3}"/>`);
-  for (let d = -60; d <= 60; d += 30) lines.push(`<line x1="0" x2="${w}" y1="${lat(d)}" y2="${lat(d)}" stroke="${d === 0 ? "#fff" : "#ffffff88"}" stroke-width="${d === 0 ? 8 : 3}"/>`);
+  for (let d = -180; d <= 180; d += 30)
+    lines.push(
+      `<line x1="${lon(d)}" x2="${lon(d)}" y1="0" y2="${h}" stroke="${d === 0 ? "#fff" : "#ffffff88"}" stroke-width="${d === 0 ? 8 : 3}"/>`,
+    );
+  for (let d = -60; d <= 60; d += 30)
+    lines.push(
+      `<line x1="0" x2="${w}" y1="${lat(d)}" y2="${lat(d)}" stroke="${d === 0 ? "#fff" : "#ffffff88"}" stroke-width="${d === 0 ? 8 : 3}"/>`,
+    );
   const block = (deg: number, colour: string, ticks: number) => {
     const x = lon(deg);
     const y = lat(0);
-    const marks = Array.from({ length: ticks }, (_, i) => `<rect x="${x - 40 + i * 30}" y="${y + 70}" width="16" height="48" fill="#fff"/>`).join("");
+    const marks = Array.from(
+      { length: ticks },
+      (_, i) => `<rect x="${x - 40 + i * 30}" y="${y + 70}" width="16" height="48" fill="#fff"/>`,
+    ).join("");
     return `<rect x="${x - 60}" y="${y - 120}" width="120" height="180" rx="12" fill="${colour}"/>${marks}`;
   };
   const svg =
@@ -38,7 +47,12 @@ const card = (() => {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 })();
 
-const meta = { title: "Data/PanoramaViewer", component: PanoramaViewer, args: { label: "360 view of the test room", image: card, className: "w-full max-w-3xl" }, parameters: { layout: "padded" } } satisfies Meta<typeof PanoramaViewer>;
+const meta = {
+  title: "Data/PanoramaViewer",
+  component: PanoramaViewer,
+  args: { label: "360 view of the test room", image: card, className: "w-full max-w-3xl" },
+  parameters: { layout: "padded" },
+} satisfies Meta<typeof PanoramaViewer>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -69,7 +83,11 @@ function Marked({ view }: { view?: PanoramaView }) {
         marks.map((m) => {
           const at = project(m.yaw, m.pitch);
           return at?.inside ? (
-            <span key={m.text} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-pill border border-border bg-background px-2 py-0.5 type-caption text-foreground" style={{ left: at.x, top: at.y }}>
+            <span
+              key={m.text}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-pill border border-border bg-background px-2 py-0.5 type-caption text-foreground"
+              style={{ left: at.x, top: at.y }}
+            >
               {m.text}
             </span>
           ) : null;
@@ -87,7 +105,10 @@ export const WithFieldOfViewSlider: Story = { args: { defaultView: { yaw: 0, pit
 export const FlatPicture: Story = { args: { mode: "flat", defaultView: { yaw: 0, pitch: 0, fov: 90 } } };
 
 /** Phone width. */
-export const Phone: Story = { tags: ["visual-phone"], args: { defaultView: { yaw: 90, pitch: 0, fov: 80 }, className: "w-full", aspect: "4/3" } };
+export const Phone: Story = {
+  tags: ["visual-phone"],
+  args: { defaultView: { yaw: 90, pitch: 0, fov: 80 }, className: "w-full", aspect: "4/3" },
+};
 
 function Aimed() {
   const [aim, setAim] = React.useState(0);
@@ -117,10 +138,18 @@ function Aimed() {
         }}
         overlay={({ project }) => {
           const at = project(0, 0);
-          return at?.inside ? <span className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-background bg-danger" style={{ left: at.x, top: at.y }} /> : null;
+          return at?.inside ? (
+            <span
+              className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 border-background bg-danger"
+              style={{ left: at.x, top: at.y }}
+            />
+          ) : null;
         }}
       />
-      <p className="type-body-sm tabular-nums text-muted-foreground">{describeView(shown)}. The app sets the heading every frame (no animation in the viewer); a drag adds to it; the dot stays on the red block.</p>
+      <p className="type-body-sm tabular-nums text-muted-foreground">
+        {describeView(shown)}. The app sets the heading every frame (no animation in the viewer); a drag adds to it; the
+        dot stays on the red block.
+      </p>
     </div>
   );
 }

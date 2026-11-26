@@ -21,9 +21,7 @@ describe("keys drawn as icons", () => {
   });
 
   it("draws the mac modifiers in a command legend as icons, with their names", () => {
-    const commands: Command[] = [
-      { id: "undo", label: "Undo", keys: ["Mod+Shift+Z"], run: () => {} },
-    ];
+    const commands: Command[] = [{ id: "undo", label: "Undo", keys: ["Mod+Shift+Z"], run: () => {} }];
     const { container } = renderWithStrata(<CommandLegend commands={commands} platform="mac" />);
     expect(container.textContent).not.toMatch(/[⌘⇧]/);
     expect(container.textContent).toMatch(/Shift\s*Command\s*Z/);

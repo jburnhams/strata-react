@@ -160,19 +160,25 @@ export function Thumbnail({
   // The outcome is kept with the request it belongs to (the sources and `srcSet`, since the browser may
   // have loaded a candidate from either), so a new request starts loading again without an effect
   // to reset it, and a late event from the old image cannot mark the new one. `index` is the source being tried.
-  const sources = React.useMemo(() => (src === null ? [] : typeof src === "string" ? (src ? [src] : []) : src.filter(Boolean)), [src]);
+  const sources = React.useMemo(
+    () => (src === null ? [] : typeof src === "string" ? (src ? [src] : []) : src.filter(Boolean)),
+    [src],
+  );
   const key = sources.length ? `${sources.join("\n")} ${srcSet ?? ""}` : null;
   const [outcome, setOutcome] = React.useState<Outcome | null>(null);
   const before = key === null ? undefined : loadedBefore.get(key);
   const mine = key !== null && outcome?.key === key ? outcome : null;
   // A remembered request starts at the source that loaded, but stays "loading" until this image says it has.
   const index = mine?.index ?? before ?? 0;
-  const phase: Phase = key === null ? "missing" : mine?.done ?? "loading";
+  const phase: Phase = key === null ? "missing" : (mine?.done ?? "loading");
   const current = sources[index];
   const near = useInView({ active: !eager && sources.length > 0, rootMargin, once: true, unsupported: true });
   const requested = eager || near.inView || before !== undefined;
   // The next source, or the end of the list.
-  const fail = () => setOutcome(index + 1 < sources.length ? { key: key!, index: index + 1, done: null } : { key: key!, index, done: "missing" });
+  const fail = () =>
+    setOutcome(
+      index + 1 < sources.length ? { key: key!, index: index + 1, done: null } : { key: key!, index, done: "missing" },
+    );
   // An app that records what is gone is told once per request that ended without a picture.
   const told = React.useRef<string | null>(null);
   const tell = React.useRef(onMissing);
@@ -200,7 +206,8 @@ export function Thumbnail({
           key={`${key}#${index}`}
           ref={(el) => {
             // From the cache the image is complete as it mounts: loaded now, with no skeleton frame (the load event also follows, and agrees).
-            if (el && phase === "loading" && before !== undefined && el.complete && el.naturalWidth > 0) setOutcome({ key: key!, index, done: "loaded" });
+            if (el && phase === "loading" && before !== undefined && el.complete && el.naturalWidth > 0)
+              setOutcome({ key: key!, index, done: "loaded" });
           }}
           src={current}
           // The candidates are the first source's: a fallback would otherwise be replaced by the set that just failed.
@@ -208,7 +215,11 @@ export function Thumbnail({
           sizes={sizes}
           alt={alt}
           decoding="async"
-          onLoad={(e) => (onLoad?.(e.currentTarget, index) === false ? fail() : (remember(key!, index), setOutcome({ key: key!, index, done: "loaded" })))}
+          onLoad={(e) =>
+            onLoad?.(e.currentTarget, index) === false
+              ? fail()
+              : (remember(key!, index), setOutcome({ key: key!, index, done: "loaded" }))
+          }
           onError={fail}
           style={region ? regionStyle(region, ratioNumber(aspect)) : undefined}
           className={cn(
@@ -223,7 +234,8 @@ export function Thumbnail({
           {...(name ? { role: "img", "aria-label": name } : { "aria-hidden": true })}
           className={cn(
             "absolute inset-0 grid",
-            fallback === undefined && "content-center justify-items-center gap-0.5 p-1 text-center text-muted-foreground",
+            fallback === undefined &&
+              "content-center justify-items-center gap-0.5 p-1 text-center text-muted-foreground",
           )}
         >
           {fallback === undefined ? (
@@ -246,7 +258,11 @@ export function Thumbnail({
 /** The loading shape of a `Thumbnail`, for a `DataView` skeleton: the same box and aspect ratio, so nothing moves when the list arrives. */
 export function ThumbnailSkeleton({ aspect = 1, className }: { aspect?: AspectRatio; className?: string }) {
   return (
-    <div aria-hidden className={cn("relative overflow-hidden rounded-control bg-muted", className)} style={{ aspectRatio: ratio(aspect) }}>
+    <div
+      aria-hidden
+      className={cn("relative overflow-hidden rounded-control bg-muted", className)}
+      style={{ aspectRatio: ratio(aspect) }}
+    >
       <Skeleton className="absolute inset-0" />
     </div>
   );

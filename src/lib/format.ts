@@ -113,7 +113,8 @@ function callableDate(df: Intl.DateTimeFormat, missing: string): DateFormatter {
 }
 
 function callable(nf: Intl.NumberFormat, missing: string): NumberFormatter {
-  const format = (value: number | bigint | Intl.StringNumericLiteral | null | undefined) => (value == null ? missing : nf.format(value));
+  const format = (value: number | bigint | Intl.StringNumericLiteral | null | undefined) =>
+    value == null ? missing : nf.format(value);
   return Object.assign(format, {
     format,
     formatToParts: (value: number | bigint) => nf.formatToParts(value),
@@ -136,7 +137,8 @@ const AGO_STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
 /** Intl formatters for one locale (and optionally one time zone): integers, decimals, percent, dates, times, units with a non-breaking space, byte sizes, and counted nouns. */
 export function createFormat(locale: string, options: FormatOptions = {}) {
   const { timeZone, missing = MISSING } = options;
-  const dates = (opts: Intl.DateTimeFormatOptions) => callableDate(new Intl.DateTimeFormat(locale, { ...opts, timeZone }), missing);
+  const dates = (opts: Intl.DateTimeFormatOptions) =>
+    callableDate(new Intl.DateTimeFormat(locale, { ...opts, timeZone }), missing);
   const integer = callable(new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }), missing);
   const decimal = callable(new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), missing);
   const percent = callable(new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }), missing);
@@ -206,14 +208,19 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
      * #122). Floors, never rounds up, so a time never reads ahead of the picture. Unknown (null,
      * negative, not finite) prints the placeholder. Set it in `tabular-nums`.
      */
-    timecode: (seconds: number | null | undefined, { precision = "seconds", fps = 30 }: { precision?: "seconds" | "ms" | "frames"; fps?: number } = {}) => {
+    timecode: (
+      seconds: number | null | undefined,
+      { precision = "seconds", fps = 30 }: { precision?: "seconds" | "ms" | "frames"; fps?: number } = {},
+    ) => {
       if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return missing;
       const whole = Math.floor(seconds);
       const two = (n: number) => String(n).padStart(2, "0");
       const [h, m] = [Math.floor(whole / 3600), Math.floor((whole % 3600) / 60)];
       const base = h > 0 ? `${h}:${two(m)}:${two(whole % 60)}` : `${m}:${two(whole % 60)}`;
-      if (precision === "ms") return `${base}.${String(Math.min(Math.floor((seconds - whole) * 1000 + 1e-6), 999)).padStart(3, "0")}`;
-      if (precision === "frames") return `${h}:${two(m)}:${two(whole % 60)}:${two(Math.min(Math.floor((seconds - whole) * fps + 1e-6), Math.ceil(fps) - 1))}`;
+      if (precision === "ms")
+        return `${base}.${String(Math.min(Math.floor((seconds - whole) * 1000 + 1e-6), 999)).padStart(3, "0")}`;
+      if (precision === "frames")
+        return `${h}:${two(m)}:${two(whole % 60)}:${two(Math.min(Math.floor((seconds - whole) * fps + 1e-6), Math.ceil(fps) - 1))}`;
       return base;
     },
     /** What a missing value prints as: an en dash unless `createFormat`'s `missing` says otherwise. */
@@ -240,7 +247,8 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
      * unit ("GiB") picks that too. The second argument is a unit or `{ binary, unit }`.
      */
     bytes: (value: number, unitOrOptions?: ByteUnit | BinaryByteUnit | BytesOptions) => {
-      const { binary = false, unit } = typeof unitOrOptions === "string" ? { unit: unitOrOptions } : (unitOrOptions ?? {});
+      const { binary = false, unit } =
+        typeof unitOrOptions === "string" ? { unit: unitOrOptions } : (unitOrOptions ?? {});
       const chosen = unit ?? chooseByteUnit(value, binary);
       const scaled = value / SIZE[chosen];
       return withUnit(scaled, chosen, Math.abs(scaled) < 10 && chosen !== "B" ? decimal : integer);
@@ -294,7 +302,9 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
         const miles = metres / 1609.344;
         return miles < 0.1 ? withUnit(metres * 3.28084, "ft") : withUnit(miles, "mi", miles < 100 ? decimal : integer);
       }
-      return Math.abs(metres) < 1000 ? withUnit(metres, "m") : withUnit(metres / 1000, "km", Math.abs(metres) < 100_000 ? decimal : integer);
+      return Math.abs(metres) < 1000
+        ? withUnit(metres, "m")
+        : withUnit(metres / 1000, "km", Math.abs(metres) < 100_000 ? decimal : integer);
     },
     /** The unit `bytes` would choose for a value, to share it across a set of figures. */
     byteUnit: (value: number, { binary = false }: { binary?: boolean } = {}) => chooseByteUnit(value, binary),
@@ -303,7 +313,12 @@ export function createFormat(locale: string, options: FormatOptions = {}) {
      * joined by a non-breaking space (`NBSP`), not a plain one: in a test, match with the same
      * call or a `\s` regex, not a typed "6 pieces" string in a role's `name`.
      */
-    count: (value: number | null | undefined, one: string, many = `${one}s`, { compact: short = false }: CountOptions = {}) =>
+    count: (
+      value: number | null | undefined,
+      one: string,
+      many = `${one}s`,
+      { compact: short = false }: CountOptions = {},
+    ) =>
       value == null
         ? missing
         : `${(short ? compact : integer).format(value)}${NBSP}${plurals.select(value) === "one" ? one : many}`,

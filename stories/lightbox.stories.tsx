@@ -1,6 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { BoxOverlay, Button, Lightbox, PropertyList, SelectableGrid, useBoxes, useSelection, format, pageName, type LightboxItem } from "../src";
+import {
+  BoxOverlay,
+  Button,
+  Lightbox,
+  PropertyList,
+  SelectableGrid,
+  useBoxes,
+  useSelection,
+  format,
+  pageName,
+  type LightboxItem,
+} from "../src";
 import { bookPages, pageLines, PAGE_SIZE } from "./fixtures/book";
 import { glazeNames, shelfPhotos } from "./fixtures/kiln";
 import { PiecePicture, piecePictureUrl } from "./fixtures/piece-photo";
@@ -9,7 +20,12 @@ import { PiecePicture, piecePictureUrl } from "./fixtures/piece-photo";
 // from a SelectableGrid; the resting shot is the lightbox already open on one picture.
 
 const photos = shelfPhotos();
-const items: LightboxItem[] = photos.map((p) => ({ id: p.id, src: piecePictureUrl(p), label: `${p.member}, ${p.piece}`, natural: [1500, 1000] }));
+const items: LightboxItem[] = photos.map((p) => ({
+  id: p.id,
+  src: piecePictureUrl(p),
+  label: `${p.member}, ${p.piece}`,
+  natural: [1500, 1000],
+}));
 const byId = new Map(photos.map((p) => [p.id, p]));
 
 function Gallery({ startOpen = false, start = 0 }: { startOpen?: boolean; start?: number }) {
@@ -24,15 +40,29 @@ function Gallery({ startOpen = false, start = 0 }: { startOpen?: boolean; start?
         rows={photos}
         rowKey={(p) => p.id}
         renderImage={(p) => (
-          <button type="button" aria-label={`Open ${p.member}, ${p.piece}`} className="block size-full" onClick={() => { setIndex(photos.indexOf(p)); setOpen(true); }}>
+          <button
+            type="button"
+            aria-label={`Open ${p.member}, ${p.piece}`}
+            className="block size-full"
+            onClick={() => {
+              setIndex(photos.indexOf(p));
+              setOpen(true);
+            }}
+          >
             <PiecePicture photo={p} />
           </button>
         )}
         detail={(p) => `${p.piece} · ${glazeNames[p.glaze]}`}
-        selection={{ selected: selection.selected, onChange: selection.onChange, rowLabel: (p) => `${p.member}, ${p.piece}` }}
+        selection={{
+          selected: selection.selected,
+          onChange: selection.onChange,
+          rowLabel: (p) => `${p.member}, ${p.piece}`,
+        }}
         tileSize="sm"
       />
-      {compared.length > 0 && <p className="type-body-sm">Comparing {compared.map((id) => byId.get(id)?.piece).join(" and ")}</p>}
+      {compared.length > 0 && (
+        <p className="type-body-sm">Comparing {compared.map((id) => byId.get(id)?.piece).join(" and ")}</p>
+      )}
       <Lightbox
         title="Pieces from kiln 2"
         items={items}
@@ -64,7 +94,9 @@ function Gallery({ startOpen = false, start = 0 }: { startOpen?: boolean; start?
   );
 }
 
-const meta = { title: "Data/Lightbox", component: Gallery, parameters: { layout: "fullscreen" } } satisfies Meta<typeof Gallery>;
+const meta = { title: "Data/Lightbox", component: Gallery, parameters: { layout: "fullscreen" } } satisfies Meta<
+  typeof Gallery
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -80,22 +112,40 @@ function BookPages() {
   const [open, setOpen] = React.useState(true);
   const [index, setIndex] = React.useState(5);
   const state = useBoxes();
-  const pages: LightboxItem[] = bookPages.map((p) => ({ id: p.id, src: p.src, thumb: p.thumb, label: p.label, natural: p.natural, position: pageName(p) }));
+  const pages: LightboxItem[] = bookPages.map((p) => ({
+    id: p.id,
+    src: p.src,
+    thumb: p.thumb,
+    label: p.label,
+    natural: p.natural,
+    position: pageName(p),
+  }));
   return (
     <>
       <p className="type-body-sm text-muted-foreground">The book opens in the viewer.</p>
       <Lightbox
-      title="Pages of the Punch book"
-      items={pages}
-      index={index}
-      onIndexChange={setIndex}
-      open={open}
-      onOpenChange={setOpen}
-      missing="This page could not be loaded."
-      aspect={2 / 3}
-      strip
-      actions={(item) => <Button size="sm" variant="outline">Edit {item.position}</Button>}
-      overlay={(item) => <BoxOverlay label="Lines the reader found" of={{ w: PAGE_SIZE[0], h: PAGE_SIZE[1] }} boxes={pageLines(Number(item.id.replace("scan-", "")))} state={state} />}
+        title="Pages of the Punch book"
+        items={pages}
+        index={index}
+        onIndexChange={setIndex}
+        open={open}
+        onOpenChange={setOpen}
+        missing="This page could not be loaded."
+        aspect={2 / 3}
+        strip
+        actions={(item) => (
+          <Button size="sm" variant="outline">
+            Edit {item.position}
+          </Button>
+        )}
+        overlay={(item) => (
+          <BoxOverlay
+            label="Lines the reader found"
+            of={{ w: PAGE_SIZE[0], h: PAGE_SIZE[1] }}
+            boxes={pageLines(Number(item.id.replace("scan-", "")))}
+            state={state}
+          />
+        )}
       />
     </>
   );

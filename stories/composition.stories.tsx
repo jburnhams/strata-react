@@ -8,7 +8,13 @@ import { serverStatus } from "./fixtures/server";
 const meta = {
   title: "Status and figures/CompositionBar",
   component: CompositionBar,
-  decorators: [(Story) => <div className="max-w-lg"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-lg">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta;
 export default meta;
 type Story = StoryObj;
@@ -24,7 +30,13 @@ const memoryParts: CompositionPart[] = [
 /** Parts of a whole they do not fill: the remainder is the empty track, named "Free" in the table. */
 export const Memory: Story = {
   render: () => (
-    <CompositionBar label="Memory, 16 GB in all" parts={memoryParts} total={memory.total} restLabel="Free" formatValue={bytes} />
+    <CompositionBar
+      label="Memory, 16 GB in all"
+      parts={memoryParts}
+      total={memory.total}
+      restLabel="Free"
+      formatValue={bytes}
+    />
   ),
 };
 

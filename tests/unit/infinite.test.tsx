@@ -82,9 +82,7 @@ function recordCursors() {
 }
 
 // Rows are a grid's rows (React Aria's GridList); the footer is one more row, so count the items by `data-index`.
-const rows = () => [
-  ...screen.getByRole("grid", { name: "Firing log" }).querySelectorAll("[data-index]"),
-];
+const rows = () => [...screen.getByRole("grid", { name: "Firing log" }).querySelectorAll("[data-index]")];
 
 describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
   it("keeps the held items when a refetch fails, with a stale notice rather than a page error", async () => {
@@ -198,13 +196,7 @@ describe("useInfiniteLoad + InfiniteList (served by MSW)", () => {
 
   it("keeps the call-site className on a short list that has a footer", () => {
     renderWithStrata(
-      <VirtualList
-        label="Short"
-        items={["a", "b"]}
-        itemKey={(x) => x}
-        footer={<span>End</span>}
-        className="w-1/2"
-      >
+      <VirtualList label="Short" items={["a", "b"]} itemKey={(x) => x} footer={<span>End</span>} className="w-1/2">
         {(x) => <span>{x}</span>}
       </VirtualList>,
     );

@@ -17,7 +17,9 @@ const EARTH_RADIUS_M = 6_371_000;
 
 /** Great-circle distance between two positions, in metres. */
 export function distance([lat1, lng1]: LatLng, [lat2, lng2]: LatLng): number {
-  const a = Math.sin(((lat2 - lat1) * RAD) / 2) ** 2 + Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(((lng2 - lng1) * RAD) / 2) ** 2;
+  const a =
+    Math.sin(((lat2 - lat1) * RAD) / 2) ** 2 +
+    Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(((lng2 - lng1) * RAD) / 2) ** 2;
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
 
@@ -62,7 +64,11 @@ export function bounds(points: readonly LatLng[]): [LatLng, LatLng] | null {
 }
 
 /** The position `metres` along a route (clamped to its ends), by linear interpolation, or null for no points. */
-export function pointAlong(points: readonly LatLng[], metres: number, along: readonly number[] = cumulative(points)): LatLng | null {
+export function pointAlong(
+  points: readonly LatLng[],
+  metres: number,
+  along: readonly number[] = cumulative(points),
+): LatLng | null {
   if (!points.length) return null;
   const total = along[along.length - 1];
   const d = Math.min(Math.max(metres, 0), total);
@@ -101,7 +107,10 @@ export function arrows(points: readonly LatLng[], count = 5, window = 0.4): { po
 }
 
 /** The first and last positions, and whether they are within `loopWithin` metres of each other (a loop), or null for no route. */
-export function ends(points: readonly LatLng[], loopWithin = 50): { start: LatLng; finish: LatLng; loop: boolean } | null {
+export function ends(
+  points: readonly LatLng[],
+  loopWithin = 50,
+): { start: LatLng; finish: LatLng; loop: boolean } | null {
   if (!points.length) return null;
   const start = points[0];
   const finish = points[points.length - 1];
@@ -123,7 +132,12 @@ export function nearest(points: readonly LatLng[], position: LatLng): number {
 }
 
 /** The part of a route between two distances along it (metres, clamped, either order): the cut ends and every point between. Empty for no route. */
-export function slice(points: readonly LatLng[], from: number, to: number, along: readonly number[] = cumulative(points)): LatLng[] {
+export function slice(
+  points: readonly LatLng[],
+  from: number,
+  to: number,
+  along: readonly number[] = cumulative(points),
+): LatLng[] {
   if (!points.length) return [];
   const [a, b] = from <= to ? [from, to] : [to, from];
   const start = pointAlong(points, a, along)!;
@@ -140,7 +154,11 @@ export function slice(points: readonly LatLng[], from: number, to: number, along
  * map is a distance on a chart). Each leg is flattened around its own latitude, which is exact enough
  * for any leg a recording has; `index` is the leg's first point. Null for fewer than one point.
  */
-export function snap(points: readonly LatLng[], position: LatLng, along: readonly number[] = cumulative(points)): { position: LatLng; metres: number; offset: number; index: number } | null {
+export function snap(
+  points: readonly LatLng[],
+  position: LatLng,
+  along: readonly number[] = cumulative(points),
+): { position: LatLng; metres: number; offset: number; index: number } | null {
   if (!points.length) return null;
   if (points.length === 1) return { position: points[0], metres: 0, offset: distance(points[0], position), index: 0 };
   let best: { position: LatLng; metres: number; offset: number; index: number } | null = null;
@@ -149,10 +167,12 @@ export function snap(points: readonly LatLng[], position: LatLng, along: readonl
     const k = Math.cos((((p[0] + q[0]) / 2) * Math.PI) / 180);
     const [dx, dy] = [(q[1] - p[1]) * k, q[0] - p[0]];
     const len2 = dx * dx + dy * dy;
-    const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, (((position[1] - p[1]) * k) * dx + (position[0] - p[0]) * dy) / len2));
+    const t =
+      len2 === 0 ? 0 : Math.min(1, Math.max(0, ((position[1] - p[1]) * k * dx + (position[0] - p[0]) * dy) / len2));
     const at: LatLng = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
     const offset = distance(at, position);
-    if (!best || offset < best.offset) best = { position: at, metres: along[i - 1] + (along[i] - along[i - 1]) * t, offset, index: i - 1 };
+    if (!best || offset < best.offset)
+      best = { position: at, metres: along[i - 1] + (along[i] - along[i - 1]) * t, offset, index: i - 1 };
   }
   return best;
 }

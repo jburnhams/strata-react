@@ -44,17 +44,11 @@ describe("spans", () => {
     const { container } = renderWithStrata(<LineChart {...props} spans={spans} />);
     expect(container.querySelectorAll("svg[role=img] rect[fill]").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Stop")).toBeInTheDocument(); // the key
-    expect(screen.getByRole("list", { name: "Shaded stretches" })).toHaveTextContent(
-      "Stop: 100 m to 200 m",
-    );
-    expect(screen.getByRole("list", { name: "Shaded stretches" })).toHaveTextContent(
-      "Past the end: 400 m to 900 m",
-    );
+    expect(screen.getByRole("list", { name: "Shaded stretches" })).toHaveTextContent("Stop: 100 m to 200 m");
+    expect(screen.getByRole("list", { name: "Shaded stretches" })).toHaveTextContent("Past the end: 400 m to 900 m");
   });
   it("draws nothing for a stretch wholly outside the range", () => {
-    const { container } = renderWithStrata(
-      <LineChart {...props} spans={[{ from: 800, to: 900, label: "Far" }]} />,
-    );
+    const { container } = renderWithStrata(<LineChart {...props} spans={[{ from: 800, to: 900, label: "Far" }]} />);
     expect(container.querySelectorAll("svg[role=img] rect")).toHaveLength(0);
   });
 });
@@ -73,13 +67,8 @@ describe("marks", () => {
         .getAllByRole("button")
         .map((b) => b.getAttribute("aria-label")),
     ).toEqual(["Clip 1, 100 m", "Clip 2, 300 m", "Clip 3, 500 m"]);
-    expect(within(group).getByRole("button", { name: "Clip 2, 300 m" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("list", { name: "Marks" })).toHaveTextContent(
-      "Clip 2: 300 m, selected",
-    );
+    expect(within(group).getByRole("button", { name: "Clip 2, 300 m" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("list", { name: "Marks" })).toHaveTextContent("Clip 2: 300 m, selected");
   });
   it("are one tab stop, with arrows, Home and End between them, and press with Enter", async () => {
     const user = userEvent.setup();
@@ -104,13 +93,7 @@ describe("marks", () => {
   });
   it("shows the app's card on focus", async () => {
     const user = userEvent.setup();
-    renderWithStrata(
-      <LineChart
-        {...props}
-        marks={marks}
-        renderMarkCard={(m) => <span>Card for {m.label}</span>}
-      />,
-    );
+    renderWithStrata(<LineChart {...props} marks={marks} renderMarkCard={(m) => <span>Card for {m.label}</span>} />);
     await user.tab();
     expect(await screen.findByText("Card for Clip 1")).toBeInTheDocument();
   });
@@ -158,14 +141,7 @@ describe("log axis", () => {
     ];
     const draw = (invert: boolean) => {
       const { container, unmount } = renderWithStrata(
-        <LineChart
-          {...props}
-          series={series}
-          yScale="log"
-          yInvert={invert}
-          formatY={(y) => `${y}`}
-          xTicks={[0, 1]}
-        />,
+        <LineChart {...props} series={series} yScale="log" yInvert={invert} formatY={(y) => `${y}`} xTicks={[0, 1]} />,
       );
       const d = [...container.querySelectorAll("svg[role=img] path")]
         .map((p) => p.getAttribute("d") ?? "")
@@ -214,9 +190,7 @@ describe("LineChartGroup and the shared cursor", () => {
       yInvert: true,
     },
   ];
-  const group = (
-    <LineChartGroup label="Run" charts={charts} formatX={formatX} xTicks={[0, 250, 500]} />
-  );
+  const group = <LineChartGroup label="Run" charts={charts} formatX={formatX} xTicks={[0, 250, 500]} />;
 
   it("stacks charts on one x axis: labels on the last only, the same range", () => {
     renderWithStrata(group);
@@ -245,16 +219,12 @@ describe("LineChartGroup and the shared cursor", () => {
       const slider = screen.getAllByRole("slider")[0];
       act(() => slider.focus());
       // Focusing says where the reading is (the last one), for both charts at once.
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "500 m: Elevation 55 m up, Pace 280 s/km",
-      );
+      expect(screen.getByRole("status")).toHaveTextContent("500 m: Elevation 55 m up, Pace 280 s/km");
       fireEvent.keyDown(slider, { key: "Home" });
       fireEvent.keyDown(slider, { key: "ArrowRight" });
       expect(screen.getByRole("status")).toHaveTextContent("500 m:"); // throttled: the 100 m reading waits
       await act(() => vi.advanceTimersByTimeAsync(1100));
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "100 m: Elevation 45 m up, Pace 250 s/km",
-      );
+      expect(screen.getByRole("status")).toHaveTextContent("100 m: Elevation 45 m up, Pace 250 s/km");
     } finally {
       vi.useRealTimers();
     }
@@ -263,14 +233,7 @@ describe("LineChartGroup and the shared cursor", () => {
   it("shares current and onPick", () => {
     const onPick = vi.fn();
     renderWithStrata(
-      <LineChartGroup
-        label="Run"
-        charts={charts}
-        formatX={formatX}
-        xTicks={[0, 500]}
-        current={200}
-        onPick={onPick}
-      />,
+      <LineChartGroup label="Run" charts={charts} formatX={formatX} xTicks={[0, 500]} current={200} onPick={onPick} />,
     );
     expect(screen.getAllByText(/^200 m:/)).toHaveLength(2);
     const slider = screen.getAllByRole("slider")[1];
@@ -330,9 +293,7 @@ describe("the cursor's rules", () => {
     fireEvent.keyDown(slider, { key: "ArrowRight" });
     // One reading label (its own active one), not two.
     expect(
-      [...container.querySelectorAll("svg[role=img] text")].filter(
-        (t) => t.textContent === "100 m: 45 m up",
-      ),
+      [...container.querySelectorAll("svg[role=img] text")].filter((t) => t.textContent === "100 m: 45 m up"),
     ).toHaveLength(1);
   });
 
@@ -418,13 +379,9 @@ describe("range (issue #244)", () => {
   it("draws one area behind the line, names it in the key, and puts it in the table", () => {
     const { container } = renderWithStrata(<LineChart {...props} range={range} />);
     expect(container.querySelectorAll("path[data-chart-range]")).toHaveLength(1);
-    expect(
-      screen.getByText("Lowest to highest in each stretch", { selector: "span" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Lowest to highest in each stretch", { selector: "span" })).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Elevation" });
-    expect(
-      within(table).getByRole("columnheader", { name: "Lowest to highest in each stretch" }),
-    ).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Lowest to highest in each stretch" })).toBeInTheDocument();
     expect(within(table).getByRole("row", { name: /200 m/ })).toHaveTextContent("70 m up–100 m up");
   });
   it("widens the y-axis to the extremes, so a peak above every reading still shows", () => {
@@ -448,9 +405,7 @@ describe("range (issue #244)", () => {
     expect(document.body.textContent).toContain("200 m: 87 m up (70 m up to 100 m up)");
   });
   it("draws nothing for a reading whose extremes are missing", () => {
-    const { container } = renderWithStrata(
-      <LineChart {...props} range={{ low: [1], high: [2], label: "x" }} />,
-    );
+    const { container } = renderWithStrata(<LineChart {...props} range={{ low: [1], high: [2], label: "x" }} />);
     expect(container.querySelectorAll("path[data-chart-range]")).toHaveLength(0);
   });
 });

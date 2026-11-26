@@ -7,8 +7,18 @@ import { renderingsLoading } from "./mocks/handlers";
 // glaze's tint, the shelf's tone and a speck on the rim, which is what each view is for finding.
 // The pictures come from MSW (`/api/renderings/:variant`), so the stories run the real requests.
 
-const final = { id: "final", label: "Your final", note: "Lightroom", media: { kind: "image", src: "/api/renderings/final.svg", alt: "Celadon bowl, your final", size: [400, 300] } } as const;
-const auto = { id: "auto", label: "auto2", note: "14 s", media: { kind: "image", src: "/api/renderings/auto.svg", alt: "Celadon bowl, auto2", size: [400, 300] } } as const;
+const final = {
+  id: "final",
+  label: "Your final",
+  note: "Lightroom",
+  media: { kind: "image", src: "/api/renderings/final.svg", alt: "Celadon bowl, your final", size: [400, 300] },
+} as const;
+const auto = {
+  id: "auto",
+  label: "auto2",
+  note: "14 s",
+  media: { kind: "image", src: "/api/renderings/auto.svg", alt: "Celadon bowl, auto2", size: [400, 300] },
+} as const;
 const blindA = { ...final, label: "A" };
 const blindB = { ...auto, label: "B" };
 
@@ -21,7 +31,13 @@ function Stateful(args: React.ComponentProps<typeof Compare>) {
 function OpenOn({ chip, children }: { chip: string; children: React.ReactNode }) {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const t = setTimeout(() => [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])].find((e) => e.textContent === chip)?.click(), 50);
+    const t = setTimeout(
+      () =>
+        [...(ref.current?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])]
+          .find((e) => e.textContent === chip)
+          ?.click(),
+      50,
+    );
     return () => clearTimeout(t);
   }, [chip]);
   return <div ref={ref}>{children}</div>;
@@ -31,7 +47,15 @@ const meta = {
   title: "Data/Compare",
   component: Compare,
   render: (args) => <Stateful {...args} />,
-  args: { label: "Celadon bowl, two versions", a: final, b: auto, blind: false, missing: "Picture not found", mode: "side", onModeChange: () => undefined },
+  args: {
+    label: "Celadon bowl, two versions",
+    a: final,
+    b: auto,
+    blind: false,
+    missing: "Picture not found",
+    mode: "side",
+    onModeChange: () => undefined,
+  },
 } satisfies Meta<typeof Compare>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -62,7 +86,13 @@ export const TwoViews: Story = { args: { modes: ["side", "blink"] } };
 
 /** Regions: the same part of each side, enlarged to fill the frame with nearest-neighbour, from chips or `q` `w` `e`. Shift-drag makes another. This one opens on the rim. */
 export const Regions: Story = {
-  args: { mode: "swipe", regions: [{ id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] }, { id: "glaze", label: "Glaze", box: [60, 120, 160, 120], of: [400, 300] }] },
+  args: {
+    mode: "swipe",
+    regions: [
+      { id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] },
+      { id: "glaze", label: "Glaze", box: [60, 120, 160, 120], of: [400, 300] },
+    ],
+  },
   render: (args) => (
     <OpenOn chip="Rim">
       <Stateful {...args} />
@@ -71,7 +101,9 @@ export const Regions: Story = {
 };
 
 /** One side did not load: the product's words in its place, and the other side still works. */
-export const OneMissing: Story = { args: { b: { ...auto, media: { ...auto.media, src: "/api/renderings/gone.svg" } } } };
+export const OneMissing: Story = {
+  args: { b: { ...auto, media: { ...auto.media, src: "/api/renderings/gone.svg" } } },
+};
 
 /** While the requests are open: skeletons in the final shape, so nothing moves when they land. */
 export const Loading: Story = { beforeEach: ({ msw }) => msw.use(renderingsLoading) };
@@ -101,8 +133,12 @@ export const FitsTheWholePage: Story = {
   ),
 };
 
-
-const warm: Candidate = { id: "warm", label: "auto3", note: "11 s", media: { kind: "image", src: "/api/renderings/warm.svg", alt: "Celadon bowl, auto3", size: [400, 300] } };
+const warm: Candidate = {
+  id: "warm",
+  label: "auto3",
+  note: "11 s",
+  media: { kind: "image", src: "/api/renderings/warm.svg", alt: "Celadon bowl, auto3", size: [400, 300] },
+};
 
 /** Every candidate for one item at once, one zoom for all of them. What a tile offers beyond looking is the caller's (`actions`). */
 export const Grid: StoryObj<typeof CompareGrid> = {
@@ -121,7 +157,17 @@ export const Grid: StoryObj<typeof CompareGrid> = {
 /** Blind grid: tiles are only "A", "B" and "C". */
 export const GridBlind: StoryObj<typeof CompareGrid> = {
   render: () => (
-    <CompareGrid label="Three versions" items={[{ ...final, label: "A" }, { ...auto, label: "B" }, { ...warm, label: "C" }]} blind missing="Picture not found" className="max-w-5xl" />
+    <CompareGrid
+      label="Three versions"
+      items={[
+        { ...final, label: "A" },
+        { ...auto, label: "B" },
+        { ...warm, label: "C" },
+      ]}
+      blind
+      missing="Picture not found"
+      className="max-w-5xl"
+    />
   ),
 };
 
@@ -129,7 +175,14 @@ export const GridBlind: StoryObj<typeof CompareGrid> = {
 export const GridRegions: StoryObj<typeof CompareGrid> = {
   render: () => (
     <OpenOn chip="Rim">
-      <CompareGrid label="Three versions of this photo" items={[final, auto, warm]} blind={false} missing="Picture not found" regions={[{ id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] }]} className="max-w-5xl" />
+      <CompareGrid
+        label="Three versions of this photo"
+        items={[final, auto, warm]}
+        blind={false}
+        missing="Picture not found"
+        regions={[{ id: "rim", label: "Rim", box: [230, 60, 120, 90], of: [400, 300] }]}
+        className="max-w-5xl"
+      />
     </OpenOn>
   ),
 };

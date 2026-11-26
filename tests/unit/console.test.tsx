@@ -29,11 +29,7 @@ function Host({
       complete={(text) => COMMANDS.filter((c) => c.startsWith(text))}
       onCommand={(text) => {
         onRun?.(text);
-        setLines((l) => [
-          ...l,
-          { id: l.length, level: "echo", text },
-          { id: l.length + 1, text: `ran ${text}` },
-        ]);
+        setLines((l) => [...l, { id: l.length, level: "echo", text }, { id: l.length + 1, text: `ran ${text}` }]);
       }}
     />
   );

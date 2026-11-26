@@ -7,8 +7,7 @@ import { main } from "../../src/migrate/cli";
 
 // The stock-class finder (issue #225): what strata.css would stop compiling, found in an app's source as text.
 
-const names = (source: string, file?: string) =>
-  findStockClasses(source, file).map((f) => f.className);
+const names = (source: string, file?: string) => findStockClasses(source, file).map((f) => f.className);
 
 describe("findStockClasses", () => {
   it("finds stock colours, type sizes, radii, shadows and serif in class strings, whatever the quotes", () => {
@@ -26,9 +25,7 @@ describe("findStockClasses", () => {
   });
 
   it("reads through variants, important marks and opacity, and says which line", () => {
-    const found = findStockClasses(
-      `<a\n className="dark:hover:bg-zinc-900/50 !text-white md:text-2xl" />`,
-    );
+    const found = findStockClasses(`<a\n className="dark:hover:bg-zinc-900/50 !text-white md:text-2xl" />`);
     expect(found.map((f) => [f.line, f.className, f.kind])).toEqual([
       [2, "dark:hover:bg-zinc-900/50", "colour"],
       [2, "text-white", "colour"],

@@ -83,10 +83,7 @@ describe("Disclosure", () => {
     );
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Firing 412" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "Firing 412" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("keeps actions outside the summary's button", () => {
@@ -171,11 +168,7 @@ describe("useExpanded", () => {
     function Local() {
       const expanded = useExpanded({ initial: ["a"] });
       return (
-        <Disclosure
-          summary="Item a"
-          open={expanded.isOpen("a")}
-          onOpenChange={(o) => expanded.setOpen("a", o)}
-        >
+        <Disclosure summary="Item a" open={expanded.isOpen("a")} onOpenChange={(o) => expanded.setOpen("a", o)}>
           Body a
         </Disclosure>
       );
@@ -232,17 +225,16 @@ describe("DataTable expansion", () => {
 
   it("gives rows with nothing to show no toggle, and the toggle column a header for screen readers", () => {
     renderWithStrata(<Table />);
-    expect(
-      screen.queryByRole("button", { name: "Details of Joe Pryce's booking" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Details of Joe Pryce's booking" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Details" })).toBeInTheDocument();
   });
 
   it("opens the rows the URL names", () => {
     renderWithStrata(<Table route="open" />, { route: "/?open=b-2041" });
-    expect(
-      screen.getByRole("button", { name: "Details of Priya Natarajan's booking" }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Details of Priya Natarajan's booking" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.getByText("Out Today, about 14:50")).toBeInTheDocument();
   });
 

@@ -66,9 +66,7 @@ describe("sequence grid maths", () => {
 // jsdom has no layout: the track is 1000 px wide (50 px a second over 20 s).
 beforeEach(() => {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
-    const wide =
-      this.className?.toString().includes("relative") &&
-      this.getAttribute("style")?.includes("width");
+    const wide = this.className?.toString().includes("relative") && this.getAttribute("style")?.includes("width");
     const w = wide ? 1000 : 0;
     return {
       left: 0,
@@ -92,9 +90,7 @@ const windows: SequenceItem[] = [
   { id: "w4", label: "Descent", start: 16, end: 20 },
 ];
 
-function Strip(
-  props: Partial<SequenceTimelineProps> & { onChange?: SequenceTimelineProps["onCutChange"] },
-) {
+function Strip(props: Partial<SequenceTimelineProps> & { onChange?: SequenceTimelineProps["onCutChange"] }) {
   const [items, setItems] = React.useState(windows);
   return (
     <SequenceTimeline
@@ -104,9 +100,7 @@ function Strip(
       onCutChange={(i, time, change) => {
         props.onChange?.(i, time, change);
         setItems((cur) =>
-          cur.map((w) =>
-            w.id === change.before.id ? change.before : w.id === change.after.id ? change.after : w,
-          ),
+          cur.map((w) => (w.id === change.before.id ? change.before : w.id === change.after.id ? change.after : w)),
         );
       }}
       {...props}
@@ -120,9 +114,7 @@ describe("SequenceTimeline", () => {
   it("draws windows named with their times, and a slider per cut with its room", () => {
     renderWithStrata(<Strip room={(i) => ({ min: [3, 8, 13][i]!, max: [9, 15, 19][i]! })} />);
     expect(screen.getByRole("group", { name: "Film, windows in order" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "First climb, 0:05.0 to 0:12.0" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First climb, 0:05.0 to 0:12.0" })).toBeInTheDocument();
     expect(screen.getAllByRole("slider")).toHaveLength(3);
     expect(cut(2)).toHaveAttribute("aria-valuenow", "12");
     expect(cut(2)).toHaveAttribute("aria-valuemin", "8");
@@ -165,9 +157,7 @@ describe("SequenceTimeline", () => {
     expect(onChange).toHaveBeenLastCalledWith(1, 14, expect.anything());
     await user.keyboard("{End}");
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Cut 2 stays at 0:14.0. Window 3 is only 0:14 long.",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("Cut 2 stays at 0:14.0. Window 3 is only 0:14 long.");
     await user.keyboard("{Home}");
     expect(onChange).toHaveBeenLastCalledWith(1, 10, expect.anything());
   });
@@ -180,9 +170,7 @@ describe("SequenceTimeline", () => {
     fireEvent.pointerMove(el, { pointerId: 1, clientX: 707 }); // 14.14 s
     expect(onChange).not.toHaveBeenCalled();
     expect(el).toHaveAttribute("aria-valuenow", "14");
-    expect(
-      screen.getByRole("button", { name: /First climb, 0:05.0 to 0:14.0/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /First climb, 0:05.0 to 0:14.0/ })).toBeInTheDocument();
     fireEvent.pointerUp(el, { pointerId: 1 });
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(1, 14, expect.anything());
@@ -191,18 +179,13 @@ describe("SequenceTimeline", () => {
   it("stops a drag at the room and says why, in words, while it is held there", () => {
     const onChange = vi.fn();
     renderWithStrata(
-      <Strip
-        onChange={onChange}
-        room={() => ({ min: 8, max: 15, maxReason: "Window 3 would have no media left." })}
-      />,
+      <Strip onChange={onChange} room={() => ({ min: 8, max: 15, maxReason: "Window 3 would have no media left." })} />,
     );
     const el = cut(2);
     fireEvent.pointerDown(el, { pointerId: 1, clientX: 600, button: 0 });
     fireEvent.pointerMove(el, { pointerId: 1, clientX: 900 });
     expect(el).toHaveAttribute("aria-valuenow", "15");
-    expect(
-      screen.getByText("Cut 2 stops at 0:15.0. Window 3 would have no media left."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Cut 2 stops at 0:15.0. Window 3 would have no media left.")).toBeInTheDocument();
     fireEvent.pointerUp(el, { pointerId: 1 });
     expect(onChange).toHaveBeenCalledWith(1, 15, expect.anything());
     expect(screen.queryByText(/stops at/, { selector: "p" })).toBeNull();
@@ -225,10 +208,7 @@ describe("SequenceTimeline", () => {
     const user = userEvent.setup();
     const onSelectRange = vi.fn();
     renderWithStrata(<Strip onSelectRange={onSelectRange} selected={["w2"]} />);
-    expect(screen.getByRole("button", { name: /First climb/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: /First climb/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: /Descent/ }));
     expect(onSelectRange).toHaveBeenLastCalledWith(["w4"]);
     await user.keyboard("{Shift>}");
@@ -238,9 +218,7 @@ describe("SequenceTimeline", () => {
   });
 
   it("draws a window's content from the slot", () => {
-    renderWithStrata(
-      <Strip renderItem={(w, on) => <img alt="" data-on={on} src={`/t/${w.id}.jpg`} />} />,
-    );
+    renderWithStrata(<Strip renderItem={(w, on) => <img alt="" data-on={on} src={`/t/${w.id}.jpg`} />} />);
     expect(document.querySelectorAll("img[src^='/t/']")).toHaveLength(4);
   });
 });

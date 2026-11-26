@@ -39,7 +39,9 @@ export const Basic: Story = {
     actions: (close) => (
       <>
         <Button onPress={close}>Cancel</Button>
-        <Button variant="default" onPress={close}>Export schedule</Button>
+        <Button variant="default" onPress={close}>
+          Export schedule
+        </Button>
       </>
     ),
   },
@@ -51,7 +53,9 @@ export const LongContent: Story = {
     children: (
       <ul className="grid gap-2">
         {Array.from({ length: 40 }, (_, i) => (
-          <li key={i} className="type-body">Firing {i + 1}: bisque, cone 04, kiln {(i % 3) + 1}</li>
+          <li key={i} className="type-body">
+            Firing {i + 1}: bisque, cone 04, kiln {(i % 3) + 1}
+          </li>
         ))}
       </ul>
     ),
@@ -66,12 +70,20 @@ export const NotClosable: Story = {
 
 /** `placement="end"` makes the same surface a sheet for a long form or a detail. */
 export const Sheet: Story = {
-  args: { title: "Firing details", placement: "end", children: <p className="type-body">Moonbeam, 6 pieces, kiln 2.</p> },
+  args: {
+    title: "Firing details",
+    placement: "end",
+    children: <p className="type-body">Moonbeam, 6 pieces, kiln 2.</p>,
+  },
 };
 
 export const Live: Story = {
   tags: ["no-visual"],
-  args: { open: undefined, trigger: <Button>Export schedule</Button>, children: <p className="type-body">Opens from its trigger.</p> },
+  args: {
+    open: undefined,
+    trigger: <Button>Export schedule</Button>,
+    children: <p className="type-body">Opens from its trigger.</p>,
+  },
 };
 
 /** An AlertDialog is the one confirm: it names the object and the consequence, and the button repeats the verb. */

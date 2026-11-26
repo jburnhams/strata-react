@@ -30,7 +30,12 @@ export type InViewOptions = {
  * `[data-strata-scroll]` ancestor, else the viewport). Returns a callback ref, so it follows the
  * element as it mounts and unmounts.
  */
-export function useInView({ active = true, rootMargin = "0px", once = false, unsupported = false }: InViewOptions = {}) {
+export function useInView({
+  active = true,
+  rootMargin = "0px",
+  once = false,
+  unsupported = false,
+}: InViewOptions = {}) {
   const [inView, setInView] = React.useState(false);
   const [el, setEl] = React.useState<Element | null>(null);
   const seen = once && inView;
@@ -45,7 +50,10 @@ export function useInView({ active = true, rootMargin = "0px", once = false, uns
       return;
     }
     const root = el.parentElement?.closest<HTMLElement>("[data-strata-scroll]") ?? null;
-    const observer = new IntersectionObserver((entries) => setInView(entries[entries.length - 1].isIntersecting), { root, rootMargin });
+    const observer = new IntersectionObserver((entries) => setInView(entries[entries.length - 1].isIntersecting), {
+      root,
+      rootMargin,
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, [active, el, rootMargin, seen, unsupported]);

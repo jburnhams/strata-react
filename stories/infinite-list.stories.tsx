@@ -17,7 +17,14 @@ import {
   type More,
 } from "../src";
 import { firingTypes, firings, kilns, minuteToDate, type Firing } from "./fixtures/kiln";
-import { api, firingsEmpty, firingsLaterPageError, firingsLoading, firingsServerError, type FiringPage } from "./mocks/handlers";
+import {
+  api,
+  firingsEmpty,
+  firingsLaterPageError,
+  firingsLoading,
+  firingsServerError,
+  type FiringPage,
+} from "./mocks/handlers";
 
 // The co-op's firing log, 137 firings since March, served a page at a time by a cursor API
 // (`after` = the last firing held). The state stories fix one InfiniteLoad each; the "From the
@@ -26,7 +33,9 @@ import { api, firingsEmpty, firingsLaterPageError, firingsLoading, firingsServer
 function FiringRow({ f, action }: { f: Firing; action?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-4 py-2 type-body-sm">
-      <span className="w-28 shrink-0 text-muted-foreground tabular-nums">{format.shortDay.format(minuteToDate(f.endedMin))}</span>
+      <span className="w-28 shrink-0 text-muted-foreground tabular-nums">
+        {format.shortDay.format(minuteToDate(f.endedMin))}
+      </span>
       <span className="min-w-0 flex-1 truncate">
         {firingTypes[f.type].label} in {kilns[f.kiln].name.split(",")[0]}
       </span>
@@ -130,7 +139,10 @@ function ArchiveQueue() {
         height={360}
       >
         {(f) => (
-          <FiringRow f={f} action={<IconButton label={`Archive firing ${f.id}`} icon={Archive} onClick={() => archive(f)} />} />
+          <FiringRow
+            f={f}
+            action={<IconButton label={`Archive firing ${f.id}`} icon={Archive} onClick={() => archive(f)} />}
+          />
         )}
       </InfiniteList>
       <UndoBar undoable={undoable} inline />
@@ -217,7 +229,9 @@ export const LaterPageFailed: Story = {
     ),
   },
 };
-export const EveryFiring: Story = { args: { state: fixed({ status: "ready", data: firings.slice(-4) }, { hasMore: false }) } };
+export const EveryFiring: Story = {
+  args: { state: fixed({ status: "ready", data: firings.slice(-4) }, { hasMore: false }) },
+};
 
 export const FromApiReady: Story = { name: "From the API: ready", render: () => <FromApi /> };
 export const FromApiLoading: Story = {
@@ -240,7 +254,11 @@ export const FromApiLaterPageError: Story = {
   beforeEach: ({ msw }) => msw.use(firingsLaterPageError),
   render: () => <FromApi limit={5} />,
 };
-export const ArchiveQueueDemo: Story = { name: "Archive queue (interactive)", tags: ["no-visual"], render: () => <ArchiveQueue /> };
+export const ArchiveQueueDemo: Story = {
+  name: "Archive queue (interactive)",
+  tags: ["no-visual"],
+  render: () => <ArchiveQueue />,
+};
 
 /** Cards in a responsive grid that scrolls with the page, with Show more after the last row. */
 export const PageGrid: Story = {
@@ -253,4 +271,8 @@ export const PageGridLoadingMore: Story = {
   render: () => <FiringGrid state={fixed({ status: "ready", data: firings.slice(0, 6) }, { loadingMore: true })} />,
 };
 /** The grid from the API, loading the next page as the end nears the viewport. */
-export const PageGridFromApi: Story = { name: "Page grid from the API (interactive)", tags: ["no-visual"], render: () => <GridFromApi /> };
+export const PageGridFromApi: Story = {
+  name: "Page grid from the API (interactive)",
+  tags: ["no-visual"],
+  render: () => <GridFromApi />,
+};

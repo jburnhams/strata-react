@@ -127,7 +127,10 @@ export function useRecorder({ maxSeconds, microphone }: UseRecorderOptions): Rec
       });
     } catch (e) {
       resolveStop.current = null;
-      setState({ phase: "failed", reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).` });
+      setState({
+        phase: "failed",
+        reason: e instanceof MicrophoneError ? e.message : `The microphone could not be opened (${String(e)}).`,
+      });
       return null;
     }
     if (!mounted.current) {
@@ -153,7 +156,9 @@ export function useRecorder({ maxSeconds, microphone }: UseRecorderOptions): Rec
 }
 
 /** `InputLevel`'s "Too loud" notch: -3 dBFS on the meter's `LEVEL_FLOOR_DB`..0 scale. */
-export const inputLevelThresholds: MeterThreshold[] = [{ at: (LEVEL_FLOOR_DB + 3) / LEVEL_FLOOR_DB, tone: "danger", label: "Too loud" }];
+export const inputLevelThresholds: MeterThreshold[] = [
+  { at: (LEVEL_FLOOR_DB + 3) / LEVEL_FLOOR_DB, tone: "danger", label: "Too loud" },
+];
 
 /** `InputLevel`'s props. */
 export type InputLevelProps = {

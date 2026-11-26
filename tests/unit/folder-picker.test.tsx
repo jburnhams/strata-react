@@ -60,9 +60,7 @@ describe("FolderPicker", () => {
     const user = userEvent.setup();
     renderWithStrata(<FolderChooser start="/home/ada" />);
     await user.click(within(await row("locked")).getByRole("button"));
-    expect(
-      await screen.findByText(/do not have permission to open \/home\/ada\/locked/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/do not have permission to open \/home\/ada\/locked/)).toBeInTheDocument();
     server.use(http.get("/api/folders", () => HttpResponse.json({ folders: [] })));
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("No folders")).toBeInTheDocument();
@@ -73,10 +71,7 @@ describe("FolderPicker", () => {
     renderWithStrata(<FolderChooser start="/home/ada/Projects" />);
     expect(await row("Projects")).toHaveAttribute("aria-selected", "true");
     const path = screen.getByRole("navigation", { name: "Folder path" });
-    expect(within(path).getByRole("button", { name: "Projects" })).toHaveAttribute(
-      "aria-current",
-      "location",
-    );
+    expect(within(path).getByRole("button", { name: "Projects" })).toHaveAttribute("aria-current", "location");
     await user.click(screen.getByRole("button", { name: "Up one folder" }));
     expect(await row(/^ada/)).toHaveAttribute("aria-selected", "true");
     await user.click(within(path).getByRole("button", { name: "home" }));
@@ -189,10 +184,7 @@ describe("FolderPicker", () => {
   it("shows the server's reason when the top level fails, with Try again", async () => {
     server.use(
       http.get("/api/folders", () =>
-        HttpResponse.json(
-          { detail: "You are not allowed to browse this server." },
-          { status: 403 },
-        ),
+        HttpResponse.json({ detail: "You are not allowed to browse this server." }, { status: 403 }),
       ),
     );
     renderWithStrata(<FolderChooser />);
@@ -240,9 +232,7 @@ describe("Tree", () => {
     await user.click(within(alpha).getByRole("button"));
     await user.click(await row("Alpha one"));
     expect(onSelect).toHaveBeenLastCalledWith("a1");
-    await waitFor(() =>
-      expect(screen.getByRole("treegrid", { name: "Sections" })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole("treegrid", { name: "Sections" })).toBeInTheDocument());
   });
 });
 
@@ -276,9 +266,7 @@ describe("FolderPicker: what the app knows about a folder (issue #233)", () => {
   it("enables the button for a folder canChoose accepts, with no reason shown", async () => {
     const user = userEvent.setup();
     const onChoose = vi.fn();
-    renderWithStrata(
-      <FolderChooser start="/home/ada/Projects/film-2026/rushes" onChoose={onChoose} {...rules} />,
-    );
+    renderWithStrata(<FolderChooser start="/home/ada/Projects/film-2026/rushes" onChoose={onChoose} {...rules} />);
     const button = await screen.findByRole("button", { name: "Create project here" });
     await waitFor(() => expect(button).toBeEnabled());
     expect(screen.queryByText("Open a folder that holds camera files.")).not.toBeInTheDocument();

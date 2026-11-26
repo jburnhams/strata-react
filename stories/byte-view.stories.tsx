@@ -5,7 +5,12 @@ import { ByteView, PropertyList, type ByteRange } from "../src";
 // Issue #360: a windowed hex dump for the file nothing else understands. Fixed bytes only (no random),
 // so the baselines are stable.
 
-const meta = { title: "Data/ByteView", component: ByteView, parameters: { layout: "padded" }, args: { label: "bytes", bytes: new Uint8Array() } } satisfies Meta<typeof ByteView>;
+const meta = {
+  title: "Data/ByteView",
+  component: ByteView,
+  parameters: { layout: "padded" },
+  args: { label: "bytes", bytes: new Uint8Array() },
+} satisfies Meta<typeof ByteView>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -15,7 +20,12 @@ const pak = (() => {
   out.set(new TextEncoder().encode("PACK"), 0);
   new DataView(out.buffer).setUint32(4, 0x0000_0c04, true);
   new DataView(out.buffer).setUint32(8, 64, true);
-  const names = ["textures/e1u1/clip.wal", "maps/base1.bsp", "sound/world/klaxon2.wav", "models/items/adrenal/tris.md2"];
+  const names = [
+    "textures/e1u1/clip.wal",
+    "maps/base1.bsp",
+    "sound/world/klaxon2.wav",
+    "models/items/adrenal/tris.md2",
+  ];
   let at = 12;
   for (const n of names) {
     out.set(new TextEncoder().encode(n), at);
@@ -44,7 +54,9 @@ export const SelectionAndHighlights: Story = {
 };
 
 /** A window into a larger file: the offsets column starts at 0x4000. */
-export const WithOffset: Story = { args: { label: "pak0.pak, window", bytes: pak.slice(0, 96), offset: 0x4000, className: "max-w-3xl" } };
+export const WithOffset: Story = {
+  args: { label: "pak0.pak, window", bytes: pak.slice(0, 96), offset: 0x4000, className: "max-w-3xl" },
+};
 
 /** No bytes: the status says so instead of drawing an empty box. */
 export const Empty: Story = { args: { label: "empty.bin", bytes: new Uint8Array(), className: "max-w-3xl" } };
@@ -52,7 +64,11 @@ export const Empty: Story = { args: { label: "empty.bin", bytes: new Uint8Array(
 /** A 50 MB file scrolls: only the rows in view exist, and the scroll bar is scaled past the browser's element height limit. Interactive. */
 export const FiftyMegabytes: Story = {
   tags: ["no-visual"],
-  args: { label: "huge.bin", bytes: new Uint8Array(50 * 1024 * 1024).map((_, i) => (i * 31) & 255), className: "max-w-3xl" },
+  args: {
+    label: "huge.bin",
+    bytes: new Uint8Array(50 * 1024 * 1024).map((_, i) => (i * 31) & 255),
+    className: "max-w-3xl",
+  },
 };
 
 /** The range is reported as `{ start, end }` (end exclusive), so a decoder can sit beside it: here the first four selected bytes as a little-endian integer. Interactive. */

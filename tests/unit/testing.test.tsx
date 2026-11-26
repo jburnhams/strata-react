@@ -174,9 +174,7 @@ describe("toasts in renderWithStrata and renderRoutes", () => {
       await userEvent.click(screen.getByRole("button", { name: "Undo" }));
       expect(await screen.findAllByText("Vote undone")).toHaveLength(1);
       expect(screen.getAllByRole("region", { name: "Notifications" })).toHaveLength(1);
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("pass `toasts: false` to renderRoutes"),
-      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("pass `toasts: false` to renderRoutes"));
     } finally {
       warn.mockRestore();
     }
@@ -225,9 +223,7 @@ describe("the base option (a proxy's mount point)", () => {
 
   it("is there when a route's loader runs, and leaves no base behind under Strict Mode", async () => {
     let seen = "";
-    const routes = [
-      { path: "/", loader: () => ((seen = withBase("/api/system")), null), element: <Where /> },
-    ];
+    const routes = [{ path: "/", loader: () => ((seen = withBase("/api/system")), null), element: <Where /> }];
     const { unmount } = renderRoutes(routes, { base: "/_home/", reactStrictMode: true });
     expect(seen).toBe("/_home/api/system");
     unmount();

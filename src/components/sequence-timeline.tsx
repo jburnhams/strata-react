@@ -77,7 +77,19 @@ type Drag = { index: number; time: number; refused: string | null };
 
 /** A gapless strip of windows whose cuts are dragged or stepped, snapping to a beat grid inside the room the app gives; each cut is a slider that announces both windows' new lengths; Shift+click chooses a run. */
 export function SequenceTimeline({
-  label, items, zoom, onCutChange, room, minLength = 0.1, grid, step = 0.1, selected = [], onSelectRange, renderItem, height = "5rem", className,
+  label,
+  items,
+  zoom,
+  onCutChange,
+  room,
+  minLength = 0.1,
+  grid,
+  step = 0.1,
+  selected = [],
+  onSelectRange,
+  renderItem,
+  height = "5rem",
+  className,
 }: SequenceTimelineProps) {
   const start = items[0]?.start ?? 0;
   const end = items[items.length - 1]?.end ?? 0;
@@ -110,7 +122,10 @@ export function SequenceTimeline({
     end: drag && drag.index === i ? drag.time : it.end,
   }));
 
-  const change = (i: number, time: number): CutChange => ({ before: { ...items[i]!, end: time }, after: { ...items[i + 1]!, start: time } });
+  const change = (i: number, time: number): CutChange => ({
+    before: { ...items[i]!, end: time },
+    after: { ...items[i + 1]!, start: time },
+  });
   const words = (i: number, time: number) =>
     `Cut ${i + 1} moved to ${at(time)}. Window ${i + 1} is ${seconds(time - items[i]!.start)}, window ${i + 2} is ${seconds(items[i + 1]!.end - time)}.`;
 
@@ -150,7 +165,13 @@ export function SequenceTimeline({
   const drive = (e: React.PointerEvent) => {
     if (!drag) return;
     const { time, limit } = settleCut(timeAt(e.clientX), grid, roomFor(drag.index));
-    setDrag({ index: drag.index, time, refused: limit ? `Cut ${drag.index + 1} stops at ${at(limit.at)}.${limit.reason ? ` ${limit.reason}` : ""}` : null });
+    setDrag({
+      index: drag.index,
+      time,
+      refused: limit
+        ? `Cut ${drag.index + 1} stops at ${at(limit.at)}.${limit.reason ? ` ${limit.reason}` : ""}`
+        : null,
+    });
   };
   const release = () => {
     if (!drag) return;
@@ -166,7 +187,7 @@ export function SequenceTimeline({
   const step0 = tickStep(pxPerUnit);
   const ticks = ticksBetween(start, end, step0);
   const all = gridPoints(grid, start, end);
-  const beats = (end - start) / Math.max(all.length, 1) * pxPerUnit >= 4 ? all : [];
+  const beats = ((end - start) / Math.max(all.length, 1)) * pxPerUnit >= 4 ? all : [];
   const pct = (t: number) => `${((t - start) / span) * 100}%`;
 
   const choose = (e: React.MouseEvent, id: string) => {
@@ -188,12 +209,21 @@ export function SequenceTimeline({
         <div ref={track} className="relative" style={{ width: zoom ? `${span * zoom}px` : "100%" }}>
           <div aria-hidden className="relative h-6 border-b border-border">
             {ticks.map((t) => (
-              <span key={t} className="absolute top-0 -translate-x-1/2 type-caption tabular-nums text-muted-foreground" style={{ left: pct(t) }}>
+              <span
+                key={t}
+                className="absolute top-0 -translate-x-1/2 type-caption tabular-nums text-muted-foreground"
+                style={{ left: pct(t) }}
+              >
                 {tickLabel(t, step0)}
               </span>
             ))}
             {beats.map((p) => (
-              <span key={`b${p}`} data-beat className="absolute bottom-0 h-1.5 w-px bg-border" style={{ left: pct(p) }} />
+              <span
+                key={`b${p}`}
+                data-beat
+                className="absolute bottom-0 h-1.5 w-px bg-border"
+                style={{ left: pct(p) }}
+              />
             ))}
           </div>
           <div className="relative mt-1" style={{ height }}>
@@ -206,13 +236,20 @@ export function SequenceTimeline({
                   aria-pressed={on}
                   aria-label={`${it.label}, ${at(it.start)} to ${at(it.end)}`}
                   onClick={(e) => choose(e, it.id)}
-                  className={cn("absolute inset-y-0 min-w-0 cursor-pointer overflow-hidden rounded-control border px-1.5 text-left transition-state", on ? "border-primary bg-primary/10" : "border-border bg-muted hover:bg-muted/70")}
+                  className={cn(
+                    "absolute inset-y-0 min-w-0 cursor-pointer overflow-hidden rounded-control border px-1.5 text-left transition-state",
+                    on ? "border-primary bg-primary/10" : "border-border bg-muted hover:bg-muted/70",
+                  )}
                   style={{ left: pct(it.start), width: `calc(${((it.end - it.start) / span) * 100}% - 2px)` }}
                 >
-                  {renderItem ? renderItem(it, on) : (
+                  {renderItem ? (
+                    renderItem(it, on)
+                  ) : (
                     <>
                       <span className="block truncate type-label">{it.label}</span>
-                      <span className="block truncate type-caption tabular-nums text-muted-foreground">{seconds(it.end - it.start)}</span>
+                      <span className="block truncate type-caption tabular-nums text-muted-foreground">
+                        {seconds(it.end - it.start)}
+                      </span>
                     </>
                   )}
                 </button>
@@ -249,9 +286,13 @@ export function SequenceTimeline({
         </div>
       </div>
       {drag?.refused && (
-        <p className="mt-1 flex items-center gap-1.5 type-body-sm text-danger"><Ban className="size-4 shrink-0" aria-hidden /> {drag.refused}</p>
+        <p className="mt-1 flex items-center gap-1.5 type-body-sm text-danger">
+          <Ban className="size-4 shrink-0" aria-hidden /> {drag.refused}
+        </p>
       )}
-      <div role="status" aria-live="polite" className="sr-only">{said}</div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {said}
+      </div>
     </div>
   );
 }

@@ -83,7 +83,14 @@ export type ViewOptionsConfig<T> = {
   url?: boolean | { sort?: string; group?: string; size?: string };
 };
 
-type Stored = { sort: string | null; descending: boolean; group: string | null; size: number | null; aspect: TileAspect | null; layout: "grid" | "list" };
+type Stored = {
+  sort: string | null;
+  descending: boolean;
+  group: string | null;
+  size: number | null;
+  aspect: TileAspect | null;
+  layout: "grid" | "list";
+};
 
 /** One group of rows. */
 export type ViewGroupRows<T> = { key: string; heading: string; rows: T[] };
@@ -125,7 +132,11 @@ function compare(a: string | number | Date, b: string | number | Date): number {
 }
 
 /** Rows ordered by a key: natural string order, `null` last whichever way, ties kept in their order. Exported for a screen that orders without the toolbar. */
-export function sortRows<T>(rows: readonly T[], value: (row: T) => string | number | Date | null | undefined, descending = false): T[] {
+export function sortRows<T>(
+  rows: readonly T[],
+  value: (row: T) => string | number | Date | null | undefined,
+  descending = false,
+): T[] {
   const keyed = rows.map((row, i) => ({ row, i, v: value(row) }));
   keyed.sort((p, q) => {
     const pn = p.v === null || p.v === undefined;
@@ -155,7 +166,10 @@ function writeStore(id: string, value: Stored) {
   }
 }
 
-function parseSort(text: string | null, sorts: readonly ViewSort<never>[]): { key: string; descending: boolean } | null {
+function parseSort(
+  text: string | null,
+  sorts: readonly ViewSort<never>[],
+): { key: string; descending: boolean } | null {
   if (!text) return null;
   const m = /^(.*?)(?:-(asc|desc))?$/.exec(text);
   const key = m?.[1] ?? text;
@@ -166,7 +180,9 @@ function parseSort(text: string | null, sorts: readonly ViewSort<never>[]): { ke
 /** The view's state: sort and direction, group, tile size, aspect, layout and a text filter, kept in `localStorage` and (with `url`) the address, and applied to rows with `apply` and `grouped`. Draw it with `ViewOptions`; feed the result to `SelectableGrid`. */
 export function useViewOptions<T>(config: ViewOptionsConfig<T>): ViewOptionsState<T> {
   const { id, sorts = [], groups = [], size: sizeRange, defaultAspect = "square" } = config;
-  const urlNames = config.url ? { sort: "sort", group: "group", size: "size", ...(typeof config.url === "object" ? config.url : {}) } : null;
+  const urlNames = config.url
+    ? { sort: "sort", group: "group", size: "size", ...(typeof config.url === "object" ? config.url : {}) }
+    : null;
   // One hook or none, chosen by `url`, which is fixed for the life of the component (as `useExpanded`'s `param`).
   const urlState = urlNames ? useUrlView(urlNames) : null;
 
@@ -180,8 +196,19 @@ export function useViewOptions<T>(config: ViewOptionsConfig<T>): ViewOptionsStat
     const clampSize = (n: number) => (sizeRange ? Math.min(sizeRange.max, Math.max(sizeRange.min, n)) : n);
     return {
       sort: fromUrl?.key ?? savedSort ?? first?.key ?? null,
-      descending: fromUrl ? fromUrl.descending : savedSort ? Boolean(saved.descending) : Boolean(config.defaultSort?.descending ?? first?.defaultDescending),
-      group: urlGroup && groups.some((g) => g.key === urlGroup) ? urlGroup : urlState?.has("group") ? null : saved.group !== undefined && (saved.group === null || groups.some((g) => g.key === saved.group)) ? saved.group : (config.defaultGroup ?? null),
+      descending: fromUrl
+        ? fromUrl.descending
+        : savedSort
+          ? Boolean(saved.descending)
+          : Boolean(config.defaultSort?.descending ?? first?.defaultDescending),
+      group:
+        urlGroup && groups.some((g) => g.key === urlGroup)
+          ? urlGroup
+          : urlState?.has("group")
+            ? null
+            : saved.group !== undefined && (saved.group === null || groups.some((g) => g.key === saved.group))
+              ? saved.group
+              : (config.defaultGroup ?? null),
       size: urlSize > 0 ? clampSize(urlSize) : typeof saved.size === "number" ? clampSize(saved.size) : null,
       aspect: saved.aspect && ["square", "portrait", "landscape"].includes(saved.aspect) ? saved.aspect : null,
       layout: saved.layout === "list" ? "list" : "grid",
@@ -209,7 +236,9 @@ export function useViewOptions<T>(config: ViewOptionsConfig<T>): ViewOptionsStat
         group: g,
         size: n > 0 && sizeRange ? Math.min(sizeRange.max, Math.max(sizeRange.min, n)) : s.size,
       };
-      return next.sort === s.sort && next.descending === s.descending && next.group === s.group && next.size === s.size ? s : next;
+      return next.sort === s.sort && next.descending === s.descending && next.group === s.group && next.size === s.size
+        ? s
+        : next;
     });
   }, [urlSort, urlGroup, urlSize]);
 
@@ -275,8 +304,17 @@ export function useViewOptions<T>(config: ViewOptionsConfig<T>): ViewOptionsStat
     setQuery,
     apply,
     grouped,
-    countText: (shown, total) => (query.trim() && shown !== total ? `${format.integer(shown)} of ${format.integer(total)}` : format.integer(total)),
-    reset: () => set({ sort: sorts.find((s) => s.key === config.defaultSort?.key)?.key ?? sorts[0]?.key ?? null, descending: Boolean(config.defaultSort?.descending), group: config.defaultGroup ?? null, size: null, aspect: null, layout: "grid" }),
+    countText: (shown, total) =>
+      query.trim() && shown !== total ? `${format.integer(shown)} of ${format.integer(total)}` : format.integer(total),
+    reset: () =>
+      set({
+        sort: sorts.find((s) => s.key === config.defaultSort?.key)?.key ?? sorts[0]?.key ?? null,
+        descending: Boolean(config.defaultSort?.descending),
+        group: config.defaultGroup ?? null,
+        size: null,
+        aspect: null,
+        layout: "grid",
+      }),
   };
 }
 
@@ -326,16 +364,42 @@ export function ViewOptions<T>({ view, shown, total, label = "View options", cla
     <>
       {sorts.length > 0 && (
         <>
-          <NativeSelect size="sm" aria-label="Sort by" value={view.sort ?? ""} onChange={(e) => view.setSort(e.target.value)} className="w-auto">
-            {sorts.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          <NativeSelect
+            size="sm"
+            aria-label="Sort by"
+            value={view.sort ?? ""}
+            onChange={(e) => view.setSort(e.target.value)}
+            className="w-auto"
+          >
+            {sorts.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
           </NativeSelect>
-          <IconButton size="sm" icon={view.descending ? ArrowDown : ArrowUp} label={view.descending ? desc : asc} hint="Reverse" onPress={() => view.setDescending(!view.descending)} />
+          <IconButton
+            size="sm"
+            icon={view.descending ? ArrowDown : ArrowUp}
+            label={view.descending ? desc : asc}
+            hint="Reverse"
+            onPress={() => view.setDescending(!view.descending)}
+          />
         </>
       )}
       {groups.length > 0 && (
-        <NativeSelect size="sm" aria-label="Group by" value={view.group ?? ""} onChange={(e) => view.setGroup(e.target.value || null)} className="w-auto">
+        <NativeSelect
+          size="sm"
+          aria-label="Group by"
+          value={view.group ?? ""}
+          onChange={(e) => view.setGroup(e.target.value || null)}
+          className="w-auto"
+        >
           <option value="">No grouping</option>
-          {groups.map((g) => <option key={g.key} value={g.key}>Group by {g.label.toLowerCase()}</option>)}
+          {groups.map((g) => (
+            <option key={g.key} value={g.key}>
+              Group by {g.label.toLowerCase()}
+            </option>
+          ))}
         </NativeSelect>
       )}
       {size && (
@@ -349,22 +413,55 @@ export function ViewOptions<T>({ view, shown, total, label = "View options", cla
             e.preventDefault();
           }}
         >
-          <Slider aria-label="Tile size" min={size.min} max={size.max} step={size.step ?? 12} value={view.size} onChange={view.setSize} hideValue />
+          <Slider
+            aria-label="Tile size"
+            min={size.min}
+            max={size.max}
+            step={size.step ?? 12}
+            value={view.size}
+            onChange={view.setSize}
+            hideValue
+          />
         </div>
       )}
       {aspects && aspects.length > 1 && (
-        <ToggleGroup size="sm" label="Picture shape" options={aspects.map((a) => ({ value: a, label: ASPECTS[a] }))} value={view.aspect} onChange={(v) => view.setAspect(v as TileAspect)} />
+        <ToggleGroup
+          size="sm"
+          label="Picture shape"
+          options={aspects.map((a) => ({ value: a, label: ASPECTS[a] }))}
+          value={view.aspect}
+          onChange={(v) => view.setAspect(v as TileAspect)}
+        />
       )}
       {layouts && (
-        <ToggleGroup size="sm" label="Layout" options={[{ value: "grid", label: "Grid", icon: LayoutGrid, iconOnly: true }, { value: "list", label: "List", icon: List, iconOnly: true }]} value={view.layout} onChange={(v) => view.setLayout(v as "grid" | "list")} />
+        <ToggleGroup
+          size="sm"
+          label="Layout"
+          options={[
+            { value: "grid", label: "Grid", icon: LayoutGrid, iconOnly: true },
+            { value: "list", label: "List", icon: List, iconOnly: true },
+          ]}
+          value={view.layout}
+          onChange={(v) => view.setLayout(v as "grid" | "list")}
+        />
       )}
     </>
   );
   const filter = filterText && (
     <>
-      <Input size="sm" type="search" aria-label="Filter" placeholder="Filter" value={view.query} onChange={(e) => view.setQuery(e.target.value)} className="w-40" />
+      <Input
+        size="sm"
+        type="search"
+        aria-label="Filter"
+        placeholder="Filter"
+        value={view.query}
+        onChange={(e) => view.setQuery(e.target.value)}
+        className="w-40"
+      />
       {shown !== undefined && total !== undefined && (
-        <span role="status" className="type-caption text-muted-foreground tabular-nums">{view.countText(shown, total)}</span>
+        <span role="status" className="type-caption text-muted-foreground tabular-nums">
+          {view.countText(shown, total)}
+        </span>
       )}
     </>
   );
@@ -372,7 +469,16 @@ export function ViewOptions<T>({ view, shown, total, label = "View options", cla
   return (
     <Toolbar label={label} className={cn("gap-2", className)}>
       {narrow ? (
-        <Popover label="View" side="bottom" trigger={<Button size="sm"><SlidersHorizontal aria-hidden />View</Button>}>
+        <Popover
+          label="View"
+          side="bottom"
+          trigger={
+            <Button size="sm">
+              <SlidersHorizontal aria-hidden />
+              View
+            </Button>
+          }
+        >
           <div className="grid gap-2">{controls}</div>
         </Popover>
       ) : (

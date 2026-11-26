@@ -11,16 +11,26 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 type Item = { id: string; name: string; branch: boolean };
-const clips = ["Start line", "Hill climb", "Summit", "Descent"].map((name, i): Item => ({ id: `c${i + 1}`, name, branch: true }));
+const clips = ["Start line", "Hill climb", "Summit", "Descent"].map((name, i): Item => ({
+  id: `c${i + 1}`,
+  name,
+  branch: true,
+}));
 const stages = ["Detect faces", "Track people", "Match to runners", "Render highlights"];
 const stagesOf = (clip: string): Item[] => stages.map((name, i) => ({ id: `${clip}/${i}`, name, branch: false }));
 // A stage implies the stages after it in the same clip: they were made from its result.
 const implies = (key: string): string[] => {
   const [clip, stage] = key.split("/");
-  return stage === undefined ? [] : stages.map((_, i) => i).filter((i) => i > Number(stage)).map((i) => `${clip}/${i}`);
+  return stage === undefined
+    ? []
+    : stages
+        .map((_, i) => i)
+        .filter((i) => i > Number(stage))
+        .map((i) => `${clip}/${i}`);
 };
 const roots: Load<readonly Item[]> = { status: "ready", data: clips, refreshing: false } as never;
-const childrenOf = (n: Item): Load<readonly Item[]> => ({ status: "ready", data: stagesOf(n.id), refreshing: false }) as never;
+const childrenOf = (n: Item): Load<readonly Item[]> =>
+  ({ status: "ready", data: stagesOf(n.id), refreshing: false }) as never;
 
 function Redo({ initial = [] as string[], open = ["c1", "c2"] }: { initial?: string[]; open?: string[] }) {
   const choices = useChoices({ initial, implies });
@@ -29,14 +39,34 @@ function Redo({ initial = [] as string[], open = ["c1", "c2"] }: { initial?: str
   const total = choices.counts.total;
   return (
     <div className="grid max-w-xl gap-3">
-      <Tree label="Results to process again" roots={roots} useChildren={childrenOf} nodeKey={(n) => n.id} nodeLabel={(n) => n.name} isBranch={(n) => n.branch} expanded={expanded} emptyRow="No results" choices={choices} height="18rem" />
-      <p className="type-body-sm tabular-nums text-muted-foreground">{choices.summary(["result", "results"], "will be forgotten")}</p>
+      <Tree
+        label="Results to process again"
+        roots={roots}
+        useChildren={childrenOf}
+        nodeKey={(n) => n.id}
+        nodeLabel={(n) => n.name}
+        isBranch={(n) => n.branch}
+        expanded={expanded}
+        emptyRow="No results"
+        choices={choices}
+        height="18rem"
+      />
+      <p className="type-body-sm tabular-nums text-muted-foreground">
+        {choices.summary(["result", "results"], "will be forgotten")}
+      </p>
       <div>
         <Button variant="destructive" disabled={total === 0} onPress={() => setConfirming(true)}>
           {`Forget ${total} ${total === 1 ? "result" : "results"}`}
         </Button>
       </div>
-      <AlertDialog open={confirming} onOpenChange={setConfirming} title={`Forget ${total} ${total === 1 ? "result" : "results"}?`} description={choices.summary(["result", "results"], "will be forgotten")} confirm={`Forget ${total} ${total === 1 ? "result" : "results"}`} onConfirm={() => choices.clear()} />
+      <AlertDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Forget ${total} ${total === 1 ? "result" : "results"}?`}
+        description={choices.summary(["result", "results"], "will be forgotten")}
+        confirm={`Forget ${total} ${total === 1 ? "result" : "results"}`}
+        onConfirm={() => choices.clear()}
+      />
     </div>
   );
 }
@@ -48,7 +78,9 @@ export const Nothing: Story = { render: () => <Redo /> };
 export const FromAStage: Story = { render: () => <Redo initial={["c1/1", "c2/1"]} /> };
 
 /** All four clips for one stage, as the app pre-chooses them; the summary names what was chosen and what came with it. */
-export const EveryClip: Story = { render: () => <Redo open={["c1", "c2", "c3", "c4"]} initial={clips.map((c) => `${c.id}/2`)} /> };
+export const EveryClip: Story = {
+  render: () => <Redo open={["c1", "c2", "c3", "c4"]} initial={clips.map((c) => `${c.id}/2`)} />,
+};
 
 /** Skipped by the visual suite: tick a stage and watch what it brings; try to clear one of those; open the confirm. */
 export const Interactive: Story = { tags: ["no-visual"], render: () => <Redo /> };

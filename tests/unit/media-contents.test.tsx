@@ -44,9 +44,7 @@ describe("MediaContents", () => {
     const user = userEvent.setup();
     const onSeek = vi.fn();
     const onSelect = vi.fn();
-    renderWithStrata(
-      <MediaContents label="Chapters" items={items} onSeek={onSeek} onSelect={onSelect} />,
-    );
+    renderWithStrata(<MediaContents label="Chapters" items={items} onSeek={onSeek} onSelect={onSelect} />);
     await user.click(screen.getByRole("button", { name: /^Play Christmas dinner/ }));
     expect(onSeek).toHaveBeenCalledWith(2412);
     expect(onSelect).toHaveBeenCalledWith("b");

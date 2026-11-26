@@ -37,10 +37,24 @@ export type CompareGridProps = {
   className?: string;
 };
 
-const COLUMNS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-2 lg:grid-cols-3", 4: "sm:grid-cols-2 lg:grid-cols-4" } as const;
+const COLUMNS = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+} as const;
 
 /** Many pictures in a grid, zoomed and panned together, and full screen. */
-export function CompareGrid({ label, items, blind, missing, actions, columns = 3, regions, keys = true, className }: CompareGridProps) {
+export function CompareGrid({
+  label,
+  items,
+  blind,
+  missing,
+  actions,
+  columns = 3,
+  regions,
+  keys = true,
+  className,
+}: CompareGridProps) {
   const { viewport, setViewport } = useViewport();
   const [full, setFull] = React.useState(false);
   const key = items.map((i) => i.media.src).join("|");
@@ -66,8 +80,22 @@ export function CompareGrid({ label, items, blind, missing, actions, columns = 3
           {items.map((c, i) => (
             <figure key={c.id} className="grid content-start gap-1.5">
               <Caption c={c} blind={blind} />
-              <ViewportFrame viewport={viewport} setViewport={rg.setViewport} onBox={rg.add} outline={rg.peek} aspect={aspect} label={blind ? `Picture ${c.label}` : c.label} ref={i === 0 ? first : undefined}>
-                <Picture c={c} blind={blind} missing={missing} pixelated={rg.active !== null} onNatural={i === 0 ? (w, h) => setLearned({ key, size: [w, h] }) : undefined} />
+              <ViewportFrame
+                viewport={viewport}
+                setViewport={rg.setViewport}
+                onBox={rg.add}
+                outline={rg.peek}
+                aspect={aspect}
+                label={blind ? `Picture ${c.label}` : c.label}
+                ref={i === 0 ? first : undefined}
+              >
+                <Picture
+                  c={c}
+                  blind={blind}
+                  missing={missing}
+                  pixelated={rg.active !== null}
+                  onNatural={i === 0 ? (w, h) => setLearned({ key, size: [w, h] }) : undefined}
+                />
               </ViewportFrame>
               {actions && <div className="flex flex-wrap gap-2">{actions(c)}</div>}
             </figure>

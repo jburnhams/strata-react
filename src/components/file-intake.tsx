@@ -150,7 +150,9 @@ export function FileDropZone({
 
 const carriesFiles = (e: DragEvent, refuse: readonly string[]) => {
   const types = Array.from(e.dataTransfer?.types ?? []);
-  return types.includes("Files") && !refusesDrag({ has: (type) => types.includes(type) }, [STRATA_DRAG_TYPE, ...refuse]);
+  return (
+    types.includes("Files") && !refusesDrag({ has: (type) => types.includes(type) }, [STRATA_DRAG_TYPE, ...refuse])
+  );
 };
 
 /** While files are dragged anywhere over the window, a dim overlay names what is taken ("Drop to add PAK files"); a drop calls `onFiles`. The app's own drags never trigger it. Keep a `FileButton` beside it for the keyboard and phones. */
@@ -220,7 +222,11 @@ export function FileDropOverlay({
   }, [disabled]);
   if (!over || disabled) return null;
   return (
-    <div aria-hidden data-file-drop-overlay className="pointer-events-none fixed inset-0 layer-overlay grid place-items-center scrim p-6">
+    <div
+      aria-hidden
+      data-file-drop-overlay
+      className="pointer-events-none fixed inset-0 layer-overlay grid place-items-center scrim p-6"
+    >
       <div className="flex items-center gap-3 rounded-overlay border-2 border-dashed border-primary bg-background px-6 py-5 shadow-overlay">
         <Upload aria-hidden className="size-5 text-primary" />
         <p className="type-heading">Drop to add {acceptLabel}</p>
@@ -229,7 +235,10 @@ export function FileDropOverlay({
   );
 }
 
-const rowStatus: Record<FileOutcome["status"], { tone: "neutral" | "info" | "success" | "warning" | "danger"; word: string; icon: IconComponent }> = {
+const rowStatus: Record<
+  FileOutcome["status"],
+  { tone: "neutral" | "info" | "success" | "warning" | "danger"; word: string; icon: IconComponent }
+> = {
   processing: { tone: "info", word: "Adding…", icon: Loader },
   added: { tone: "success", word: "Added", icon: CircleCheck },
   rejected: { tone: "warning", word: "Not added", icon: CircleAlert },
@@ -272,8 +281,12 @@ export function FileOutcomes({ intake, className }: { intake: FileIntake; classN
                   <Status tone={s.tone} icon={s.icon}>
                     {s.word}
                   </Status>
-                  {o.status === "failed" && <RowAction label="Try again" subject={o.name} onClick={() => retry(o.id)} />}
-                  {o.status !== "processing" && <IconButton icon={X} label={`Dismiss ${o.name}`} onClick={() => dismiss(o.id)} />}
+                  {o.status === "failed" && (
+                    <RowAction label="Try again" subject={o.name} onClick={() => retry(o.id)} />
+                  )}
+                  {o.status !== "processing" && (
+                    <IconButton icon={X} label={`Dismiss ${o.name}`} onClick={() => dismiss(o.id)} />
+                  )}
                 </div>
                 {reason && <p className="type-body-sm text-muted-foreground">{reason}</p>}
               </li>
@@ -319,7 +332,13 @@ export function MissingFile({
           <Status tone="warning" icon={FileQuestion}>
             File missing
           </Status>
-          <FileButton accept={accept} variant="ghost" size="sm" aria-label={`Relink ${name}`} onFiles={([file]) => onRelink(file)}>
+          <FileButton
+            accept={accept}
+            variant="ghost"
+            size="sm"
+            aria-label={`Relink ${name}`}
+            onFiles={([file]) => onRelink(file)}
+          >
             Relink
           </FileButton>
         </div>

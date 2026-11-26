@@ -45,17 +45,11 @@ describe("region arithmetic", () => {
     const whole = frameBoxToShares({ x0: 100, y0: 75, x1: 300, y1: 225 }, FIT, frame);
     expect(whole).toEqual([0.25, 0.25, 0.5, 0.5]);
     // At 2× about the centre, the same rectangle is half as much of the picture.
-    const zoomed = frameBoxToShares(
-      { x0: 100, y0: 75, x1: 300, y1: 225 },
-      { scale: 2, x: 0, y: 0 },
-      frame,
-    );
+    const zoomed = frameBoxToShares({ x0: 100, y0: 75, x1: 300, y1: 225 }, { scale: 2, x: 0, y: 0 }, frame);
     expect(zoomed[0]).toBeCloseTo(0.375);
     expect(zoomed[2]).toBeCloseTo(0.25);
     // Dragged the other way, and past the edge, it is the same box inside the picture.
-    expect(frameBoxToShares({ x0: 500, y0: 300, x1: 300, y1: 150 }, FIT, frame)).toEqual([
-      0.75, 0.5, 0.25, 0.5,
-    ]);
+    expect(frameBoxToShares({ x0: 500, y0: 300, x1: 300, y1: 150 }, FIT, frame)).toEqual([0.75, 0.5, 0.25, 0.5]);
   });
 });
 
@@ -259,23 +253,13 @@ describe("CompareGrid regions", () => {
       label: l,
       media: { kind: "image", src: `/img/${l}`, alt: l, size: [704, 576] },
     }));
-    render(
-      <CompareGrid
-        label="Three versions"
-        items={items}
-        blind={false}
-        missing="Gone"
-        regions={[face]}
-      />,
-    );
+    render(<CompareGrid label="Three versions" items={items} blind={false} missing="Gone" regions={[face]} />);
     await userEvent.click(screen.getByRole("radio", { name: "Face" }));
     for (const l of ["A", "B", "C"])
       expect(
-        (within(screen.getByRole("group", { name: l })).getByRole("img") as HTMLImageElement).style
-          .imageRendering,
+        (within(screen.getByRole("group", { name: l })).getByRole("img") as HTMLImageElement).style.imageRendering,
       ).toBe("pixelated");
-    const t = (l: string) =>
-      (screen.getByRole("group", { name: l }).firstElementChild as HTMLElement).style.transform;
+    const t = (l: string) => (screen.getByRole("group", { name: l }).firstElementChild as HTMLElement).style.transform;
     expect(t("B")).toBe(t("A"));
     expect(t("C")).toContain("scale(4)");
   });
@@ -311,12 +295,8 @@ describe("CompareVideo regions", () => {
     await userEvent.keyboard(" ");
     await userEvent.keyboard("q");
     expect(screen.getByRole("radio", { name: "Face" })).toBeChecked();
-    expect((screen.getByLabelText("Video A") as HTMLVideoElement).style.imageRendering).toBe(
-      "pixelated",
-    );
-    expect((screen.getByLabelText("Video B") as HTMLVideoElement).style.imageRendering).toBe(
-      "pixelated",
-    );
+    expect((screen.getByLabelText("Video A") as HTMLVideoElement).style.imageRendering).toBe("pixelated");
+    expect((screen.getByLabelText("Video B") as HTMLVideoElement).style.imageRendering).toBe("pixelated");
     expect((screen.getByLabelText("Video A") as HTMLVideoElement).paused).toBe(false);
     expect((screen.getByLabelText("Video B") as HTMLVideoElement).paused).toBe(false);
   });

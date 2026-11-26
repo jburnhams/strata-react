@@ -19,9 +19,7 @@ describe("justifyRows", () => {
     expect(row0.at(-1)!.x + row0.at(-1)!.width).toBeCloseTo(600, 5);
     expect(heights[0]).toBeLessThan(100); // scaled down to fit
     expect(heights[1]).toBe(100); // the short last row is not stretched
-    expect(
-      placed.find((p) => p.key === "k0")!.width / placed.find((p) => p.key === "k1")!.width,
-    ).toBeCloseTo(2, 5);
+    expect(placed.find((p) => p.key === "k0")!.width / placed.find((p) => p.key === "k1")!.width).toBeCloseTo(2, 5);
   });
 
   it("allows for each tile's own padding", () => {
@@ -49,11 +47,7 @@ const photos: P[] = Array.from({ length: 12 }, (_, i) => ({
   h: 200,
 }));
 
-function Grid(props: {
-  size?: number;
-  onSize?: (n: number) => void;
-  selectionMode?: "multiple" | "none";
-}) {
+function Grid(props: { size?: number; onSize?: (n: number) => void; selectionMode?: "multiple" | "none" }) {
   const selection = useSelection(photos, (p) => p.id);
   const [size, setSize] = React.useState(props.size ?? 120);
   return (
@@ -118,20 +112,14 @@ describe("marquee and pinch", () => {
       renderWithStrata(<Grid />);
       const grid = screen.getByRole("grid", { name: "Photos" });
       fireEvent.pointerDown(grid, { button: 0, pointerType: "mouse", clientX: 55, clientY: 100 });
-      fireEvent(
-        window,
-        new MouseEvent("pointermove", { clientX: 130, clientY: 25, bubbles: true }),
-      );
+      fireEvent(window, new MouseEvent("pointermove", { clientX: 130, clientY: 25, bubbles: true }));
       // The rectangle from (55,100) to (130,25) touches p1 (60-110) and p2 (120-170) but not p0 (0-50) or p3 (180-230).
       expect(screen.getByTestId("count")).toHaveTextContent("2");
       fireEvent(window, new MouseEvent("pointerup", { bubbles: true }));
 
       const first = screen.getAllByRole("row")[0]!;
       fireEvent.pointerDown(first, { button: 0, pointerType: "mouse", clientX: 10, clientY: 10 });
-      fireEvent(
-        window,
-        new MouseEvent("pointermove", { clientX: 500, clientY: 500, bubbles: true }),
-      );
+      fireEvent(window, new MouseEvent("pointermove", { clientX: 500, clientY: 500, bubbles: true }));
       // The press itself chose that tile (3), and no rectangle was drawn from it (that would be all 12).
       expect(screen.getByTestId("count")).toHaveTextContent("3");
       fireEvent(window, new MouseEvent("pointerup", { bubbles: true }));
@@ -188,14 +176,10 @@ describe("tile slots, fit, ratio and loading (#246)", () => {
   it("takes a ratio, a fit, a second corner and names why a tile cannot be chosen", () => {
     renderWithStrata(<Slots aspect={16 / 9} fit="contain" mark={(p: P) => `n${p.id.slice(1)}`} />);
     const rows = screen.getAllByRole("row");
-    expect((rows[0]!.querySelector("span[style]") as HTMLElement).style.aspectRatio).toBe(
-      "1.77778 / 1",
-    );
+    expect((rows[0]!.querySelector("span[style]") as HTMLElement).style.aspectRatio).toBe("1.77778 / 1");
     expect(rows[0]!.querySelector("img")!.parentElement!.className).toContain("object-contain");
     expect(screen.getByText("n2")).toBeInTheDocument();
-    expect(
-      screen.getByRole("row", { name: "Photo 1, Already in this project" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "Photo 1, Already in this project" })).toBeInTheDocument();
   });
 
   it("has a loading shape for DataView, in rows at their own shapes when given them", () => {

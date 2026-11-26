@@ -41,7 +41,12 @@ type SelectionState = { keys: readonly string[]; seen: ReadonlySet<string>; raw:
 // Bring the state up to the rows now shown: drop keys whose row has gone, and choose the rows seen
 // for the first time that `initial` names. A row seen before keeps the person's choice, even if it
 // left and came back (it returns unchosen, as it was forgotten when it left).
-function reconcile<T>(prev: SelectionState, rows: readonly T[], keys: readonly string[], initial: (row: T, key: string) => boolean): SelectionState {
+function reconcile<T>(
+  prev: SelectionState,
+  rows: readonly T[],
+  keys: readonly string[],
+  initial: (row: T, key: string) => boolean,
+): SelectionState {
   const present = new Set(keys);
   const raw = new Set([...prev.raw].filter((k) => present.has(k)));
   const seen = new Set(prev.seen);
@@ -62,7 +67,12 @@ const sameKeys = (a: readonly string[], b: readonly string[]) => a.length === b.
  * the row) chooses each row the first time it appears, so a selection seeded from data that loads
  * later, or a next page, still starts right.
  */
-export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, initial: InitialSelection<T> = [], { implies, format: fmt = defaultFormat }: { implies?: Implies; format?: Format } = {}) {
+export function useSelection<T>(
+  rows: readonly T[],
+  rowKey: (row: T) => string,
+  initial: InitialSelection<T> = [],
+  { implies, format: fmt = defaultFormat }: { implies?: Implies; format?: Format } = {},
+) {
   const impliesRef = React.useRef(implies);
   impliesRef.current = implies;
   // `initial` is read when a row first appears, so a new function each render is fine.
@@ -114,7 +124,10 @@ export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, 
     [],
   );
   const clear = React.useCallback(() => setState((s) => ({ ...s, raw: new Set(), note: "" })), []);
-  const implied = React.useMemo(() => new Set([...resolved.locked].filter((k) => selected.has(k))), [resolved, selected]);
+  const implied = React.useMemo(
+    () => new Set([...resolved.locked].filter((k) => selected.has(k))),
+    [resolved, selected],
+  );
   const counts: ChoiceCounts = {
     chosen: [...current.raw].filter((k) => selected.has(k)).length,
     dependents: [...resolved.dependents].filter((k) => selected.has(k)).length,
@@ -142,7 +155,12 @@ export function useSelection<T>(rows: readonly T[], rowKey: (row: T) => string, 
 export type ChoiceCounts = { chosen: number; dependents: number; total: number };
 
 /** The line that names a choice's whole and where it came from: "12 results will be forgotten: 8 chosen, 4 that depend on them". With nothing brought in it is just "8 results will be forgotten". */
-function summarise(counts: ChoiceCounts, noun: string | [one: string, many: string], then: string, fmt: Format): string {
+function summarise(
+  counts: ChoiceCounts,
+  noun: string | [one: string, many: string],
+  then: string,
+  fmt: Format,
+): string {
   const [one, many] = typeof noun === "string" ? [noun, `${noun}s`] : noun;
   if (counts.total === 0) return `No ${many} chosen`;
   const head = `${fmt.count(counts.total, one, many)} ${then}`;
@@ -217,8 +235,15 @@ export function useSelectRows<T>(rows: readonly T[], rowKey: (row: T) => string,
  * summary and a note), with nothing to prune to. Spread into `Tree`'s `choices`. `initial` is what
  * the app chose for the person; it is read once.
  */
-export function useChoices({ initial = [], implies, format: fmt = defaultFormat }: { initial?: Iterable<string>; implies?: Implies; format?: Format } = {}) {
-  const [state, setState] = React.useState<{ raw: ReadonlySet<string>; note: string }>(() => ({ raw: new Set(initial), note: "" }));
+export function useChoices({
+  initial = [],
+  implies,
+  format: fmt = defaultFormat,
+}: { initial?: Iterable<string>; implies?: Implies; format?: Format } = {}) {
+  const [state, setState] = React.useState<{ raw: ReadonlySet<string>; note: string }>(() => ({
+    raw: new Set(initial),
+    note: "",
+  }));
   const impliesRef = React.useRef(implies);
   impliesRef.current = implies;
   const resolved = React.useMemo(() => resolve(state.raw, impliesRef.current), [state.raw, implies]);
@@ -236,12 +261,20 @@ export function useChoices({ initial = [], implies, format: fmt = defaultFormat 
   const add = React.useCallback(
     (keys: Iterable<string>) =>
       setState((s) => {
-        const change = applyChange(s.raw, new Set([...resolve(s.raw, impliesRef.current).all, ...keys]), impliesRef.current);
+        const change = applyChange(
+          s.raw,
+          new Set([...resolve(s.raw, impliesRef.current).all, ...keys]),
+          impliesRef.current,
+        );
         return { raw: change.explicit, note: noteFor(change) };
       }),
     [],
   );
-  const counts: ChoiceCounts = { chosen: state.raw.size, dependents: resolved.dependents.size, total: resolved.all.size };
+  const counts: ChoiceCounts = {
+    chosen: state.raw.size,
+    dependents: resolved.dependents.size,
+    total: resolved.all.size,
+  };
   return {
     /** Everything chosen: what the person chose and what that implies. */
     selected: resolved.all as ReadonlySet<string>,
@@ -292,7 +325,11 @@ export function BulkBar({
         {count > 0 ? label : `No ${many} selected`}
       </p>
       {count > 0 && (
-        <div role="group" aria-label={`Actions for the selected ${many}`} className="flex flex-1 flex-wrap items-center gap-2">
+        <div
+          role="group"
+          aria-label={`Actions for the selected ${many}`}
+          className="flex flex-1 flex-wrap items-center gap-2"
+        >
           {children}
           <Button size="sm" variant="ghost" className="ml-auto" onClick={onClear}>
             <X aria-hidden />

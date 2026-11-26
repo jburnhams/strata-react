@@ -190,9 +190,7 @@ describe("PlaceBoard", () => {
         marks={marks}
       />,
     );
-    expect(
-      within(screen.getByRole("group", { name: "Apples" })).getAllByRole("button"),
-    ).toHaveLength(2);
+    expect(within(screen.getByRole("group", { name: "Apples" })).getAllByRole("button")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "the basket" })).toHaveTextContent("🧺");
   });
 });

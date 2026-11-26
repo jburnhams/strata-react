@@ -5,7 +5,12 @@ import { Console, type ConsoleLine } from "../src";
 // Issue #369: a console moved from the Quake 2 explorer. The first three stories rest (baselines); the
 // last is the working one, with history and Tab.
 
-const meta = { title: "Operate/Console", component: Console, parameters: { layout: "padded" }, args: { label: "Console", lines: [], onCommand: () => {} } } satisfies Meta<typeof Console>;
+const meta = {
+  title: "Operate/Console",
+  component: Console,
+  parameters: { layout: "padded" },
+  args: { label: "Console", lines: [], onCommand: () => {} },
+} satisfies Meta<typeof Console>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -19,7 +24,9 @@ const session: ConsoleLine[] = [
 ];
 
 /** Output, a warning, an error and the echo of two commands. Warnings and errors start with a word; an echo starts with a prompt mark and is read as “Command:”. */
-export const Session: Story = { args: { label: "Game console", lines: session, className: "max-w-3xl", lineHeight: 24 } };
+export const Session: Story = {
+  args: { label: "Game console", lines: session, className: "max-w-3xl", lineHeight: 24 },
+};
 
 /** Nothing written yet. */
 export const Empty: Story = { args: { label: "Game console", lines: [], className: "max-w-3xl" } };
@@ -28,7 +35,13 @@ export const Empty: Story = { args: { label: "Game console", lines: [], classNam
 export const LongLine: Story = {
   args: {
     label: "Server console",
-    lines: [{ id: 1, level: "info", text: "cvars: " + Array.from({ length: 40 }, (_, i) => `sv_option_${i}=${i * 3}`).join(" ") }],
+    lines: [
+      {
+        id: 1,
+        level: "info",
+        text: "cvars: " + Array.from({ length: 40 }, (_, i) => `sv_option_${i}=${i * 3}`).join(" "),
+      },
+    ],
     className: "max-w-xl",
   },
 };
@@ -50,7 +63,9 @@ export const Working: Story = {
           setLines((l) => [
             ...l,
             { id: l.length, level: "echo", text },
-            COMMANDS.includes(text.split(" ")[0]!) ? { id: l.length + 1, text: `ok: ${text}` } : { id: l.length + 1, level: "error", text: `Unknown command “${text}”` },
+            COMMANDS.includes(text.split(" ")[0]!)
+              ? { id: l.length + 1, text: `ok: ${text}` }
+              : { id: l.length + 1, level: "error", text: `Unknown command “${text}”` },
           ])
         }
       />

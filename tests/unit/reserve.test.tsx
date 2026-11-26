@@ -39,9 +39,7 @@ describe("createReserve (#319)", () => {
   });
 
   it("drops kept items made differently from the fresh one, and tops up from the server in one request", async () => {
-    const fetch = vi.fn(async (_key: string, n: number) =>
-      Array.from({ length: n }, (_, i) => round(`new${i}`, 2)),
-    );
+    const fetch = vi.fn(async (_key: string, n: number) => Array.from({ length: n }, (_, i) => round(`new${i}`, 2)));
     const reserve = make(fetch);
     reserve.seed("a", [round("old1", 1), round("old2", 2), round("old3", 1)]);
     await reserve.refresh("a", round("fresh", 2));
@@ -155,10 +153,7 @@ describe("createReserve (#319)", () => {
     act(() => void reserve.take("a"));
     expect(screen.getByText("1 kept for offline")).toBeInTheDocument();
     act(() => {
-      window.localStorage.setItem(
-        "strata:reserve:t:a",
-        JSON.stringify([round("1"), round("2"), round("3")]),
-      );
+      window.localStorage.setItem("strata:reserve:t:a", JSON.stringify([round("1"), round("2"), round("3")]));
       window.dispatchEvent(new StorageEvent("storage", { key: "strata:reserve:t:a" }));
     });
     expect(screen.getByText("3 kept for offline")).toBeInTheDocument();

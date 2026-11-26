@@ -41,7 +41,9 @@ export function useKeyOwner(enabled: boolean, playing = false): KeyOwner {
     members.add(id);
     if (members.size === 2 && !warned && isDev()) {
       warned = true;
-      console.warn("strata-react: several players are on this page, so Space, K, J, L and M go to the one last played or focused. Pass shortcuts={false} to one you bind your own keys for.");
+      console.warn(
+        "strata-react: several players are on this page, so Space, K, J, L and M go to the one last played or focused. Pass shortcuts={false} to one you bind your own keys for.",
+      );
     }
     emit();
     return () => {

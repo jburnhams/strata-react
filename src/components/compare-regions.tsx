@@ -1,5 +1,12 @@
 import * as React from "react";
-import { boxViewport, frameBoxToShares, regionShares, type Region, type ShareBox, type Viewport } from "../lib/viewport";
+import {
+  boxViewport,
+  frameBoxToShares,
+  regionShares,
+  type Region,
+  type ShareBox,
+  type Viewport,
+} from "../lib/viewport";
 import type { Shortcut } from "./hotkeys";
 import { ToggleGroup } from "./toggle";
 
@@ -49,7 +56,19 @@ export type RegionState = {
 };
 
 /** Regions for one item: `reset` is a key that changes with the item, which drops the regions drawn by hand. */
-export function useRegions({ regions = [], viewport, setViewport, frame, reset }: { regions?: readonly Region[]; viewport: Viewport; setViewport: (v: Viewport) => void; frame: React.RefObject<HTMLElement | null>; reset: string }): RegionState {
+export function useRegions({
+  regions = [],
+  viewport,
+  setViewport,
+  frame,
+  reset,
+}: {
+  regions?: readonly Region[];
+  viewport: Viewport;
+  setViewport: (v: Viewport) => void;
+  frame: React.RefObject<HTMLElement | null>;
+  reset: string;
+}): RegionState {
   const [drawn, setDrawn] = React.useState<{ key: string; list: Region[] }>({ key: reset, list: [] });
   const hand = drawn.key === reset ? drawn.list : [];
   const all = React.useMemo(() => [...regions, ...hand], [regions, hand]);
@@ -114,7 +133,9 @@ export function useRegions({ regions = [], viewport, setViewport, frame, reset }
     add,
     peek: peekRegion ? regionShares(peekRegion) : null,
     setPeek,
-    shortcuts: all.slice(0, REGION_KEYS.length).map((r, i): Shortcut => ({ keys: [REGION_KEYS[i]], label: `Region: ${r.label}`, run: () => choose(r.id) })),
+    shortcuts: all
+      .slice(0, REGION_KEYS.length)
+      .map((r, i): Shortcut => ({ keys: [REGION_KEYS[i]], label: `Region: ${r.label}`, run: () => choose(r.id) })),
   };
 }
 
@@ -126,7 +147,12 @@ export function RegionChips({ state }: { state: RegionState }) {
     return state.regions.find((r) => r.label === text)?.id ?? null;
   };
   return (
-    <div onPointerOver={(e) => state.setPeek(byLabel(e.target))} onFocus={(e) => state.setPeek(byLabel(e.target))} onPointerLeave={() => state.setPeek(null)} onBlur={() => state.setPeek(null)}>
+    <div
+      onPointerOver={(e) => state.setPeek(byLabel(e.target))}
+      onFocus={(e) => state.setPeek(byLabel(e.target))}
+      onPointerLeave={() => state.setPeek(null)}
+      onBlur={() => state.setPeek(null)}
+    >
       <ToggleGroup
         label="Region"
         options={[{ value: "", label: "Whole frame" }, ...state.regions.map((r) => ({ value: r.id, label: r.label }))]}

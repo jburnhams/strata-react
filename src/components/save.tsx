@@ -60,7 +60,13 @@ export type AutoSave = {
 };
 
 /** Saves `value` after changes settle, never two at once, and says where it stands. The document's first `value` counts as saved. */
-export function useAutoSave<V>({ value, save, delayMs = 1500, equals = Object.is, describeError = describeActionError }: AutoSaveOptions<V>): AutoSave {
+export function useAutoSave<V>({
+  value,
+  save,
+  delayMs = 1500,
+  equals = Object.is,
+  describeError = describeActionError,
+}: AutoSaveOptions<V>): AutoSave {
   const [state, setState] = React.useState<SaveState>({ status: "saved", at: null });
   const latest = React.useRef({ value, save, equals, describeError, delayMs });
   latest.current = { value, save, equals, describeError, delayMs };
@@ -150,14 +156,30 @@ export function useLeaveGuard(active: boolean) {
 }
 
 const labelOf = (s: SaveState) =>
-  s.status === "saved" ? (s.at ? `Saved ${format.clock(s.at)}` : "Saved") : s.status === "saving" ? "Saving…" : s.status === "dirty" ? "Unsaved changes" : "Not saved";
+  s.status === "saved"
+    ? s.at
+      ? `Saved ${format.clock(s.at)}`
+      : "Saved"
+    : s.status === "saving"
+      ? "Saving…"
+      : s.status === "dirty"
+        ? "Unsaved changes"
+        : "Not saved";
 
 /**
  * The sign of whether the work is safe: "Saved 10:42", "Saving…", "Unsaved changes", or "Not saved"
  * with the reason and "Try again". Fixed width, so it never moves what is beside it. Announces a
  * failure, and the recovery from one, politely; a routine save is silent.
  */
-export function SaveStatus({ state, onRetry, className }: { state: SaveState; onRetry: () => void; className?: string }) {
+export function SaveStatus({
+  state,
+  onRetry,
+  className,
+}: {
+  state: SaveState;
+  onRetry: () => void;
+  className?: string;
+}) {
   const lastFailure = React.useRef(false);
   const failed = state.status === "failed";
   let announcement = "";
@@ -183,7 +205,9 @@ export function SaveStatus({ state, onRetry, className }: { state: SaveState; on
         className,
       )}
     >
-      {Icon && <Icon aria-hidden className={cn("size-4 shrink-0", state.status === "saving" && "motion-safe:animate-spin")} />}
+      {Icon && (
+        <Icon aria-hidden className={cn("size-4 shrink-0", state.status === "saving" && "motion-safe:animate-spin")} />
+      )}
       {failed ? (
         <span className="min-w-0 truncate">{shown}</span>
       ) : (
@@ -191,7 +215,11 @@ export function SaveStatus({ state, onRetry, className }: { state: SaveState; on
           {all.map((l) => {
             const active = l === current || (l === "Saved 00:00" && state.status === "saved");
             return (
-              <span key={l} aria-hidden={!active} className={active ? "[grid-area:1/1] text-end tabular-nums" : "invisible [grid-area:1/1] text-end"}>
+              <span
+                key={l}
+                aria-hidden={!active}
+                className={active ? "[grid-area:1/1] text-end tabular-nums" : "invisible [grid-area:1/1] text-end"}
+              >
                 {active ? current : l}
               </span>
             );

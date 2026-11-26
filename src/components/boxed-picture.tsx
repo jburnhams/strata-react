@@ -50,7 +50,21 @@ export type BoxedPictureProps = {
 };
 
 /** A picture with its boxes drawn on it, opened zoomed to the chosen one (a face in its photo): `ViewportFrame` + `BoxOverlay` + `zoomToBox`, with the picture's missing state. Pair it with a `BoxList` through one `useBoxes`. */
-export function BoxedPicture({ label, src, alt, missing, of, boxes, state, boxesLabel, zoom = true, margin = 0.75, maxHeight = "70svh", onChoose, className }: BoxedPictureProps) {
+export function BoxedPicture({
+  label,
+  src,
+  alt,
+  missing,
+  of,
+  boxes,
+  state,
+  boxesLabel,
+  zoom = true,
+  margin = 0.75,
+  maxHeight = "70svh",
+  onChoose,
+  className,
+}: BoxedPictureProps) {
   const view = useViewport();
   const frame = React.useRef<HTMLDivElement>(null);
   const { setViewport } = view;
@@ -63,7 +77,9 @@ export function BoxedPicture({ label, src, alt, missing, of, boxes, state, boxes
     if (!el) return;
     const read = () => {
       const r = el.getBoundingClientRect();
-      setSize((was) => (was && was.width === r.width && was.height === r.height ? was : { width: r.width, height: r.height }));
+      setSize((was) =>
+        was && was.width === r.width && was.height === r.height ? was : { width: r.width, height: r.height },
+      );
     };
     read();
     if (typeof ResizeObserver === "undefined") return;
@@ -79,7 +95,15 @@ export function BoxedPicture({ label, src, alt, missing, of, boxes, state, boxes
   }, [zoom, box?.id, box?.x, box?.y, box?.w, box?.h, of.w, of.h, margin, size, setViewport]);
   return (
     <ViewportFrame ref={frame} label={label} aspect={of.w / of.h} maxHeight={maxHeight} className={className} {...view}>
-      <Thumbnail src={src} alt={alt} missing={missing} aspect={of.w / of.h} fit="contain" eager className="size-full rounded-none" />
+      <Thumbnail
+        src={src}
+        alt={alt}
+        missing={missing}
+        aspect={of.w / of.h}
+        fit="contain"
+        eager
+        className="size-full rounded-none"
+      />
       <BoxOverlay label={boxesLabel} of={of} boxes={boxes} state={state} onChoose={onChoose} fillLit={false} />
     </ViewportFrame>
   );

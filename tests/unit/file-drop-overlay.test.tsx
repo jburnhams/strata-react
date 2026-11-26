@@ -1,13 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { act, fireEvent, screen } from "@testing-library/react";
-import {
-  FileDropOverlay,
-  Pane,
-  Split,
-  Workspace,
-  useWorkspaceState,
-  STRATA_DRAG_TYPE,
-} from "../../src";
+import { FileDropOverlay, Pane, Split, Workspace, useWorkspaceState, STRATA_DRAG_TYPE } from "../../src";
 import { renderWithStrata } from "../../src/testing";
 
 // Issue #368: a window-wide drop of files with an overlay that names what it takes.
@@ -20,8 +13,7 @@ const dragOf = (types: string[], files: File[] = []) => ({
     dropEffect: "none",
   },
 });
-const over = (types: string[] = ["Files"]) =>
-  act(() => void fireEvent.dragEnter(document.body, dragOf(types)));
+const over = (types: string[] = ["Files"]) => act(() => void fireEvent.dragEnter(document.body, dragOf(types)));
 
 describe("FileDropOverlay", () => {
   it("shows what it takes while files are dragged over the window, and goes when they leave", () => {
@@ -61,24 +53,12 @@ describe("FileDropOverlay", () => {
 
   it("ignores the app's own drags (DragSource's type and refuseTypes) and text", () => {
     const onFiles = vi.fn();
-    renderWithStrata(
-      <FileDropOverlay
-        onFiles={onFiles}
-        acceptLabel="files"
-        refuseTypes={["application/x-clip"]}
-      />,
-    );
+    renderWithStrata(<FileDropOverlay onFiles={onFiles} acceptLabel="files" refuseTypes={["application/x-clip"]} />);
     over(["Files", STRATA_DRAG_TYPE]);
     over(["Files", "application/x-clip"]);
     over(["text/plain"]);
     expect(screen.queryByText(/Drop to add/)).toBeNull();
-    act(
-      () =>
-        void fireEvent.drop(
-          document.body,
-          dragOf(["Files", STRATA_DRAG_TYPE], [new File(["x"], "a")]),
-        ),
-    );
+    act(() => void fireEvent.drop(document.body, dragOf(["Files", STRATA_DRAG_TYPE], [new File(["x"], "a")])));
     expect(onFiles).not.toHaveBeenCalled();
   });
 

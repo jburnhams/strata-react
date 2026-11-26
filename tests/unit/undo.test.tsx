@@ -1,14 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  HttpError,
-  UndoBar,
-  fetchJson,
-  useUndoable,
-  type PendingRemoval,
-  type Undoable,
-} from "../../src";
+import { HttpError, UndoBar, fetchJson, useUndoable, type PendingRemoval, type Undoable } from "../../src";
 import { server } from "../utils/server";
 import { api, withdrawServerError } from "../../stories/mocks/handlers";
 
@@ -106,11 +99,7 @@ describe("useUndoable: the window", () => {
     const commit = vi.fn();
     function Short() {
       const u = useUndoable({ windowMs: 3000 });
-      return (
-        <button onClick={() => u.schedule({ id: "a", message: "m", failure: "f", commit })}>
-          Withdraw
-        </button>
-      );
+      return <button onClick={() => u.schedule({ id: "a", message: "m", failure: "f", commit })}>Withdraw</button>;
     }
     render(<Short />);
     act(() => screen.getByText("Withdraw").click());
@@ -182,12 +171,7 @@ describe("useUndoable: flush", () => {
   it("rejects when the commit fails, so the dependent action does not run", async () => {
     server.use(withdrawServerError);
     const handle: { current?: Undoable } = {};
-    render(
-      <Harness
-        removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }) }}
-        api={handle}
-      />,
-    );
+    render(<Harness removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }) }} api={handle} />);
     act(() => screen.getByText("Withdraw").click());
     let result!: Promise<void>;
     act(() => {
@@ -198,12 +182,7 @@ describe("useUndoable: flush", () => {
 
   it("a 204 from the server is success", async () => {
     const handle: { current?: Undoable } = {};
-    render(
-      <Harness
-        removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }) }}
-        api={handle}
-      />,
-    );
+    render(<Harness removal={{ commit: () => fetchJson(`${api.bookings}/a`, { method: "DELETE" }) }} api={handle} />);
     act(() => screen.getByText("Withdraw").click());
     await act(() => handle.current!.flush());
     expect(row()).toBeNull();
@@ -276,9 +255,7 @@ describe("useUndoable: a failed commit", () => {
 
   it("after unmount, onError is the only path and still hears the failure", async () => {
     const onError = vi.fn();
-    const { unmount } = render(
-      <Harness removal={{ commit: () => Promise.reject(new Error("gone")), onError }} />,
-    );
+    const { unmount } = render(<Harness removal={{ commit: () => Promise.reject(new Error("gone")), onError }} />);
     act(() => screen.getByText("Withdraw").click());
     unmount();
     await waitFor(() => expect(onError).toHaveBeenCalledOnce());
@@ -318,8 +295,6 @@ describe("useUndoable: a failed commit", () => {
     render(<Own />);
     await user.click(screen.getByText("Withdraw"));
     await user.click(screen.getByText("Rebuild"));
-    expect(
-      await screen.findByText("Back. The co-op's server is down for the night."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Back. The co-op's server is down for the night.")).toBeInTheDocument();
   });
 });

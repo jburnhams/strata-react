@@ -29,13 +29,7 @@ function Round({
   const [tapped, setTapped] = React.useState<string[]>([]);
   const missed = tries !== undefined && !tapped.includes(answer) && tapped.length >= tries;
   const state = (a: Animal): ChoiceState =>
-    tapped.includes(a.id)
-      ? a.id === answer
-        ? "right"
-        : "wrong"
-      : missed && a.id === answer
-        ? "answer"
-        : "open";
+    tapped.includes(a.id) ? (a.id === answer ? "right" : "wrong") : missed && a.id === answer ? "answer" : "open";
   return (
     <ChoiceGrid
       label="Find the cow"
@@ -84,8 +78,7 @@ describe("ChoiceGrid", () => {
     renderWithStrata(<Round onChoose={onChoose} />);
     await user.click(tile("cow"));
     expect(tile("cow, right")).toHaveTextContent("Right");
-    for (const row of within(grid()).getAllByRole("row"))
-      expect(row).toHaveAttribute("aria-disabled", "true");
+    for (const row of within(grid()).getAllByRole("row")) expect(row).toHaveAttribute("aria-disabled", "true");
     await user.click(tile("duck"));
     expect(onChoose).toHaveBeenCalledTimes(1);
   });
