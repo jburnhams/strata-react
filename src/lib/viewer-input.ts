@@ -41,45 +41,49 @@ export function useViewPointers(options: ViewPointerOptions) {
     const [a, b] = [...pointers.current.values()];
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : null;
   };
-  return React.useMemo(
-    () => ({
-      onPointerDown(e: React.PointerEvent<HTMLElement>) {
-        if (live.current.ignore?.(e)) return;
-        pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        e.currentTarget.setPointerCapture?.(e.pointerId);
-        e.currentTarget.focus({ preventScroll: true });
-        live.current.onDown?.(e);
-        gesture.current = { moved: false, pinch: spread(), start: { x: e.clientX, y: e.clientY } };
-      },
-      onPointerMove(e: React.PointerEvent<HTMLElement>) {
-        const last = pointers.current.get(e.pointerId);
-        const g = gesture.current;
-        if (!last || !g) return;
-        const now = { x: e.clientX, y: e.clientY };
-        pointers.current.set(e.pointerId, now);
-        if (pointers.current.size === 2) {
-          const d = spread();
-          if (g.pinch && d) live.current.onPinch?.(g.pinch / d, e);
-          g.pinch = d;
-          g.moved = true;
-          return;
-        }
-        const threshold = live.current.threshold ?? 4;
-        if (!g.moved && Math.hypot(now.x - g.start.x, now.y - g.start.y) > threshold) g.moved = true;
-        if (!g.moved) return;
-        live.current.onDrag(now.x - last.x, now.y - last.y, e);
-      },
-      onPointerUp(e: React.PointerEvent<HTMLElement>) {
-        const g = gesture.current;
-        pointers.current.delete(e.pointerId);
-        if (pointers.current.size === 0) {
-          gesture.current = null;
-          if (g && !g.moved && e.type === "pointerup") live.current.onTap?.(e);
-        } else if (g) g.pinch = null;
-      },
-    }),
-    [],
-  );
+  return React.useMemo(() => {
+    const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+      if (live.current.ignore?.(e)) return;
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      e.currentTarget.focus({ preventScroll: true });
+      live.current.onDown?.(e);
+      gesture.current = { moved: false, pinch: spread(), start: { x: e.clientX, y: e.clientY } };
+    };
+    const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
+      const last = pointers.current.get(e.pointerId);
+      const g = gesture.current;
+      if (!last || !g) return;
+      const now = { x: e.clientX, y: e.clientY };
+      pointers.current.set(e.pointerId, now);
+      if (pointers.current.size === 2) {
+        const d = spread();
+        if (g.pinch && d) live.current.onPinch?.(g.pinch / d, e);
+        g.pinch = d;
+        g.moved = true;
+        return;
+      }
+      const threshold = live.current.threshold ?? 4;
+      if (!g.moved && Math.hypot(now.x - g.start.x, now.y - g.start.y) > threshold) g.moved = true;
+      if (!g.moved) return;
+      live.current.onDrag(now.x - last.x, now.y - last.y, e);
+    };
+    const end = (e: React.PointerEvent<HTMLElement>, tap: boolean) => {
+      const g = gesture.current;
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size === 0) {
+        gesture.current = null;
+        if (tap && g && !g.moved) live.current.onTap?.(e);
+      } else if (g) g.pinch = null;
+    };
+    return {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp: (e: React.PointerEvent<HTMLElement>) => end(e, true),
+      // A cancelled pointer (the browser took a touch or pen gesture) leaves the gesture without a tap.
+      onPointerCancel: (e: React.PointerEvent<HTMLElement>) => end(e, false),
+    };
+  }, []);
 }
 
 /** A wheel that zooms a viewer: `onZoom` gets a factor (above 1 is out). `when` says which wheels count; the rest scroll the page. */

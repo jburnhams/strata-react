@@ -311,7 +311,7 @@ export function SceneViewport({ label, camera, onCameraChange, home, render, mod
         onPointerDown={pointers.onPointerDown}
         onPointerMove={pointers.onPointerMove}
         onPointerUp={pointers.onPointerUp}
-        onPointerCancel={pointers.onPointerUp}
+        onPointerCancel={pointers.onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}

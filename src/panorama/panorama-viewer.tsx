@@ -347,7 +347,7 @@ export function PanoramaViewer({ label, image, video, view: controlled, defaultV
         onPointerDown={pointers.onPointerDown}
         onPointerMove={pointers.onPointerMove}
         onPointerUp={pointers.onPointerUp}
-        onPointerCancel={pointers.onPointerUp}
+        onPointerCancel={pointers.onPointerCancel}
         className="relative w-full cursor-grab touch-none overflow-hidden rounded-surface bg-surface-sunken select-none active:cursor-grabbing"
         style={{ aspectRatio: aspect }}
       >

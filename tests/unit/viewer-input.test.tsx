@@ -52,6 +52,18 @@ describe("useViewPointers", () => {
     expect(log).toEqual([]);
   });
 
+  it("forgets a cancelled pointer without a tap, so the next press is a drag and not a pinch", () => {
+    const log: string[] = [];
+    render(<Box log={log} />);
+    const box = screen.getByLabelText("box");
+    down(box, 1, 0, 0);
+    fireEvent.pointerCancel(box, { pointerId: 1 });
+    down(box, 2, 0, 0);
+    move(box, 2, 20, 0);
+    up(box, 2);
+    expect(log).toEqual(["drag 20,0"]);
+  });
+
   it("reads two pointers as a pinch (earlier distance over the new one) and never taps after it", () => {
     const log: string[] = [];
     render(<Box log={log} />);
