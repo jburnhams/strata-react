@@ -52,4 +52,10 @@ describe("skipAction", () => {
     expect(skipAction(chaptersOnly, "large", 1, 5).label).toBe("Next chapter");
     expect(skipAction([], "large", -1, 500, { steps: { large: 90 } })).toMatchObject({ label: "Back 90 s", to: 410 });
   });
+
+  it("does not skip to a mark past the end of the file that loaded", () => {
+    const long = [{ time: 0, label: "Morning" }, { time: 600, label: "Dinner" }];
+    expect(skipAction(long, "large", 1, 100, { duration: 120 }).to).toBeNull();
+    expect(skipAction(long, "large", -1, 100, { duration: 120 }).to).toBe(0);
+  });
 });

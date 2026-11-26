@@ -39,7 +39,7 @@ function stepWords(seconds: number): string {
 /**
  * Where a skip at `level` in `direction` from `time` goes: by the level's marks when the file has any
  * (the file's start counts as one), else by its time step. `restart` is how far into a part
- * "previous" still means its start. The target is kept within 0 to `duration` when that is known.
+ * "previous" still means its start. The target is kept within 0 to `duration` when that is known, and marks past it are not skipped to.
  */
 export function skipAction(
   marks: readonly MediaMark[],
@@ -48,7 +48,9 @@ export function skipAction(
   time: number,
   { steps = {}, duration = null, restart = 2 }: { steps?: SkipSteps; duration?: number | null; restart?: number } = {},
 ): SkipAction {
-  const points = marksFor(marks, level);
+  // A mark past the end of the file that loaded (a chapter list longer than a proxy cut short) cannot be reached: a seek there
+  // lands on the end, and the button would stay enabled there. The seek bar leaves the same marks out.
+  const points = marksFor(marks, level).filter((p) => p >= 0 && (duration == null || p <= duration));
   const noun = LEVEL_KIND[level];
   if (points.length) {
     const all = points[0] > 0 ? [0, ...points] : points;

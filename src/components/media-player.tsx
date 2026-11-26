@@ -907,7 +907,10 @@ export function MediaPlayer({
   const stepFrame = (direction: -1 | 1) => {
     if (!fps) return;
     media.pause();
-    const at = Math.floor(time * fps + 0.001);
+    // From the element's own position: the rendered `time` can be a quarter second behind a playing video.
+    const el = ref.current;
+    const now = el && Number.isFinite(el.currentTime) ? (cut ? el.currentTime - cut.start : (offsets ? offsets[index] : 0) + el.currentTime) : time;
+    const at = Math.floor(now * fps + 0.001);
     seek(Math.max(0, (at + direction + 0.5) / fps));
   };
   const frames = Boolean(fps) && kind === "video";

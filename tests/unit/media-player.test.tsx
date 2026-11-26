@@ -701,6 +701,18 @@ describe("skip and frame buttons (#387)", () => {
     await user.keyboard(".");
     expect(el.currentTime).toBeCloseTo(51.5 / 25);
   });
+
+  it("steps from where the video is, not from the last time drawn", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MediaPlayer label="Tape" kind="video" src="/tape.mp4" fps={25} controls="strata" />);
+    const el = video(container);
+    act(() => media.loaded(el, 60));
+    act(() => media.tick(el, 2));
+    // Playing on with no event yet: the element is at 2.24 s while the player last drew 2 s.
+    Object.defineProperty(el, "currentTime", { configurable: true, get: () => 2.24, set: (v: number) => Object.defineProperty(el, "currentTime", { configurable: true, value: v, writable: true }) });
+    await user.click(playback().getByRole("button", { name: "Forward one frame" }));
+    expect(el.currentTime).toBeCloseTo(57.5 / 25);
+  });
 });
 
 describe("a player that floats when scrolled past (#387)", () => {
