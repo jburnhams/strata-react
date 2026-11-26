@@ -69,6 +69,7 @@ export function LinkCard({ title, description, marks, as: Heading = "h3", classN
 
   return (
     <div
+      data-part="link-card"
       className={cn(
         "relative grid content-start gap-1.5 rounded-surface border border-border bg-background p-4 transition-state",
         "hover:border-muted-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring",

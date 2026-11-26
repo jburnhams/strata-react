@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import * as React from "react";
-import { MediaStage, RateChoice, SeekBar, StageGuides, TimeReadout, Transport, VolumeControl } from "../src";
+import { MediaStage, RateChoice, SeekBar, StageGuides, TimeReadout, TimelinePlayer, Transport, VolumeControl, useTimeline } from "../src";
 
 // Issue #78: the controls around anything that plays. The app owns the player; these are drawn
 // from its state, so the same set serves a video, a recording and a replay of a kiln firing. The
@@ -64,4 +64,33 @@ export const StageAspectRatios: Story = {
       <Stage aspect="1/1" />
     </div>
   ),
+};
+
+/** A recorded run that is not a media file (issue #384, #386): a `useTimeline` clock under `TimelinePlayer`, so it plays, seeks, steps and changes speed like a video. The stage draws from `clock.time`; here a dot along a path. */
+export const TimelineClockPlayer: Story = {
+  tags: ["no-visual"],
+  render: () => {
+    const [rate, setRate] = React.useState(1);
+    const clock = useTimeline({ duration: 2.5, rate, frame: 0.025, startAt: "end" });
+    const x = 10 + (clock.time / 2.5) * 280;
+    return (
+      <div className="w-full max-w-xl">
+        <TimelinePlayer
+          clock={clock}
+          label="Movement replay"
+          rates={[0.25, 0.5, 1]}
+          onRateChange={setRate}
+          legend
+          stage={
+            <MediaStage aspect="16/9" label="Run from the side">
+              <svg viewBox="0 0 300 100" className="size-full">
+                <path d="M10 70 L290 70" className="stroke-border" strokeWidth={2} />
+                <circle cx={x} cy={70 - Math.sin((clock.time / 2.5) * Math.PI) * 40} r={6} className="fill-primary" />
+              </svg>
+            </MediaStage>
+          }
+        />
+      </div>
+    );
+  },
 };

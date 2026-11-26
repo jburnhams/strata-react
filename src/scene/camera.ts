@@ -39,6 +39,8 @@ export type SceneFrame = {
   height: number;
   /** Counts up each time a GL context is made (the first, and each one restored after a loss): when it changes, recreate buffers, textures and programs. */
   context: number;
+  /** The scene's time in seconds when the viewport was given a `time` (a `useTimeline` clock's; issue #386), else 0: draw the scene as it is at this moment. */
+  time: number;
 };
 
 /** The limits a camera is held to. */
@@ -108,12 +110,12 @@ export function multiply(a: Float32Array, b: Float32Array): Float32Array {
 }
 
 /** The frame for a camera in a drawing buffer of `width` by `height`. */
-export function frameFor(camera: OrbitCamera, width: number, height: number, { fov = 60, near = 0.1, far = 10_000, context = 0 }: { fov?: number; near?: number; far?: number; context?: number } = {}): SceneFrame {
+export function frameFor(camera: OrbitCamera, width: number, height: number, { fov = 60, near = 0.1, far = 10_000, context = 0, time = 0 }: { fov?: number; near?: number; far?: number; context?: number; time?: number } = {}): SceneFrame {
   const { forward, right, up } = basis(camera);
   const eye: Vec3 = [camera.target[0] - forward[0] * camera.distance, camera.target[1] - forward[1] * camera.distance, camera.target[2] - forward[2] * camera.distance];
   const view = lookAlong(eye, forward, right, up);
   const projection = perspective(fov, width / Math.max(1, height), near, far);
-  return { camera, eye, forward, right, up, view, projection, viewProjection: multiply(projection, view), width, height, context };
+  return { camera, eye, forward, right, up, view, projection, viewProjection: multiply(projection, view), width, height, context, time };
 }
 
 /** Turns the camera as dragging does: orbit moves the eye round the target; look (fly) turns the head. Pixels in, degrees out at `degreesPerPixel`. */

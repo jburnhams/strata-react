@@ -352,19 +352,22 @@ export function RateChoice({ rate, onRateChange, rates = [0.5, 1, 1.25, 1.5, 2],
 /**
  * The shortcuts a player takes, as one list for `useHotkeys` and `KeysLegend`: Space and K play
  * or pause, J and L go back or forward `jump` seconds, the arrows by `frame` seconds, Home and End
- * to the ends, M mutes. Pass the player's actions; the labels are the legend's words.
+ * to the ends, M mutes. Pass the player's actions; the labels are the legend's words. `stageKeys` is for a transport beside a stage that uses the arrows (see `TimelinePlayer`).
  */
-export function transportShortcuts({ toggle, seek, time, duration, frame = 1 / 30, jump = 1, toggleMute }: { toggle: () => void; seek: (time: number) => void; time: number; duration: number; frame?: number; jump?: number; toggleMute?: () => void }): Shortcut[] {
+export function transportShortcuts({ toggle, seek, time, duration, frame = 1 / 30, jump = 1, toggleMute, stageKeys }: { toggle: () => void; seek: (time: number) => void; time: number; duration: number; frame?: number; jump?: number; toggleMute?: () => void; stageKeys?: boolean }): Shortcut[] {
   const to = (t: number) => () => seek(clamp(t, 0, duration));
+  // A stage beside the transport takes the arrows (a 3D view turns with them), so with `stageKeys` the arrows count only with focus
+  // inside `useHotkeys`' `within` region and every other key stays page-wide (issue #385).
+  const anywhere = stageKeys || undefined;
   return [
-    { keys: [" ", "k"], label: "Play or pause", run: toggle },
-    { keys: ["j"], label: `Back ${jump} s`, run: to(time - jump), repeat: true },
-    { keys: ["l"], label: `Forward ${jump} s`, run: to(time + jump), repeat: true },
+    { keys: [" ", "k"], label: "Play or pause", run: toggle, anywhere },
+    { keys: ["j"], label: `Back ${jump} s`, run: to(time - jump), repeat: true, anywhere },
+    { keys: ["l"], label: `Forward ${jump} s`, run: to(time + jump), repeat: true, anywhere },
     { keys: ["ArrowLeft"], label: "Back one frame", run: to(time - frame), repeat: true },
     { keys: ["ArrowRight"], label: "Forward one frame", run: to(time + frame), repeat: true },
-    { keys: ["Home"], label: "Go to start", run: to(0) },
-    { keys: ["End"], label: "Go to end", run: to(duration) },
-    ...(toggleMute ? [{ keys: ["m"], label: "Mute", run: toggleMute }] : []),
+    { keys: ["Home"], label: "Go to start", run: to(0), anywhere },
+    { keys: ["End"], label: "Go to end", run: to(duration), anywhere },
+    ...(toggleMute ? [{ keys: ["m"], label: "Mute", run: toggleMute, anywhere }] : []),
   ];
 }
 

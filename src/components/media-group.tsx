@@ -22,10 +22,13 @@ import type { MediaElementState, MediaWindow } from "./media-player";
 // Checked: React Aria has no media part; the button is Strata's `IconButton` (React Aria's `Button`
 // inside), and `aria-pressed` is the platform's own state for a toggle.
 
-const groups = new Map<string, Set<HTMLMediaElement>>();
+/** What a group needs of a member: whether it is paused, a way to pause it, and a way to hear it start. An `HTMLMediaElement` is one; so is a `useTimeline` clock (strata-react issue #384). */
+export type GroupMember = { readonly paused: boolean; pause(): void; addEventListener(type: "play", listener: () => void): void; removeEventListener(type: "play", listener: () => void): void };
 
-/** Adds an element to a named group until the returned function is called; whenever one plays, the others pause. */
-export function joinMediaGroup(name: string, el: HTMLMediaElement): () => void {
+const groups = new Map<string, Set<GroupMember>>();
+
+/** Adds an element, or a `useTimeline` clock, to a named group until the returned function is called; whenever one plays, the others pause. */
+export function joinMediaGroup(name: string, el: GroupMember): () => void {
   let members = groups.get(name);
   if (!members) groups.set(name, (members = new Set()));
   members.add(el);

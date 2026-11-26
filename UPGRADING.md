@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-26 (clock, key scope and theming hooks, #383–#386)
+- `useHotkeys` now returns `{ live }` (it returned nothing) and takes `within` (a ref: keys count only while focus is inside it; a `Shortcut` with `anywhere` stays page-wide). Nothing changes for a call that passes neither.
+- `SceneFrame` has a new member, `time` (0 unless `SceneViewport time` is given): a `SceneFrame` you build by hand in a test needs it. `MediaPlayer`'s several-players warning now reads "several players are on this page" (the store is shared with `useTimeline`).
+- Structural parts carry `data-part` (`pane`, `pane-header`, `pane-title`, `workspace-bar`, `inspector`, `inspector-header`, `inspector-section`, `link-card`); `type-heading` reads `--type-heading-font`, `type-figure` reads `--figure-ink`, and the body and those panels read `--surface-image`. All inert unless a theme sets them.
+
 ## 2026-11-26 (player skips and frame steps, #387)
 - **`MediaPlayer` draws skip buttons either side of Play** (`Back 10 s`, `Forward 10 s`, `Back 1 min`, `Forward 1 min`, or `Previous scene`, `Next chapter`… when `marks` has them), and a sequence's `Previous chapter` now comes before Play. A test that listed the `Playback` toolbar's buttons, or found the only "Play" by position, needs the new names; `skip={false}` removes them. Visual baselines with a player move.
 - `SeekBar` marks are buttons with a `Tooltip`, not a `title`: a test that read a mark's `title` reads its accessible name (unchanged, "Dinner, 10:00") or hovers for the tooltip.

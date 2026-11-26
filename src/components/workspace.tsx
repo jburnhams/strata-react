@@ -222,7 +222,7 @@ export type WorkspaceBarProps = {
 /** The bar across the top of a `Workspace`: the tool's name as the heading, a polite status line, the few actions, then an end slot for the scheme and palette choice. Wraps on a phone. */
 export function WorkspaceBar({ title, status, actions, end, className }: WorkspaceBarProps) {
   return (
-    <header className={cn("flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1", className)}>
+    <header data-part="workspace-bar" className={cn("flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1", className)}>
       <h1 className="type-label min-w-0 shrink-0">{title}</h1>
       <p role="status" className="type-body-sm min-w-0 flex-1 truncate text-muted-foreground tabular-nums">
         {status}
@@ -294,6 +294,7 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
       id={`pane-${id}`}
       aria-labelledby={headingId}
       data-pane={id}
+      data-part="pane"
       data-collapsed={folded || undefined}
       data-grow={grow || undefined}
       data-min={grow ? least : undefined}
@@ -301,8 +302,8 @@ export function Pane({ id, name, grow, size = 280, min, max, collapsible, defaul
       style={style}
       className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden bg-background", rail && cn("w-(--control-h) items-center", edge === "end" ? "border-l border-border" : "border-r border-border"), className)}
     >
-      <header className={cn("flex shrink-0 items-center gap-1 pl-3 pr-1", rail ? "h-auto flex-col py-1 pl-1" : "h-(--control-h) border-b border-border")}>
-        <h2 id={headingId} className={cn("type-label min-w-0 flex-1 truncate", rail && "sr-only")}>
+      <header data-part="pane-header" className={cn("flex shrink-0 items-center gap-1 pl-3 pr-1", rail ? "h-auto flex-col py-1 pl-1" : "h-(--control-h) border-b border-border")}>
+        <h2 id={headingId} data-part="pane-title" className={cn("type-label min-w-0 flex-1 truncate", rail && "sr-only")}>
           {name}
         </h2>
         {!folded && actions}

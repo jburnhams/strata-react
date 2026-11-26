@@ -33,6 +33,8 @@ export type Shortcut = {
   run: () => void;
   /** Fire again while the key is held. On for moving through a list, off (the default) for answers. */
   repeat?: boolean;
+  /** With `useHotkeys`' `within`: keep this key page-wide (Space to play, say) while the others only count with focus inside the region. */
+  anywhere?: boolean;
   /** Ignore the key for now, and show it muted in the legend (nothing is active, say). */
   disabled?: boolean;
 };
@@ -59,14 +61,41 @@ function toShortcuts(input: Shortcut[] | Record<string, () => void>): Shortcut[]
   return Array.isArray(input) ? input : Object.entries(input).map(([key, run]) => ({ keys: [key], label: key, run }));
 }
 
+export type HotkeysOptions = {
+  enabled?: boolean;
+  /**
+   * Only count keys while focus is inside this region (strata-react issue #385): a player's own region, so a stage beside it keeps
+   * its arrow keys. A shortcut with `anywhere` stays page-wide. A key whose target is outside the region goes to whoever else wants it.
+   */
+  within?: React.RefObject<Element | null>;
+};
+
 /**
  * Binds single-key shortcuts on the window (also for a key pressed on a control inside a grid row, whose React Aria hooks stop propagation), ignoring keys typed into fields, chords with Ctrl, Meta
- * or Alt, IME composition and (unless `repeat`) held keys. Pass the same list to `KeysLegend`.
+ * or Alt, IME composition and (unless `repeat`) held keys. Pass the same list to `KeysLegend`: better, pass it `live`, which is what answers a key
+ * right now (nothing while `enabled` is off; with `within`, only the `anywhere` keys until focus is inside the region).
  */
-export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, { enabled = true }: { enabled?: boolean } = {}) {
+export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, { enabled = true, within }: HotkeysOptions = {}): { live: Shortcut[] } {
   // The listener is bound once; it reads the latest list, so handlers can close over fresh state.
   const latest = React.useRef<Shortcut[]>([]);
-  latest.current = toShortcuts(shortcuts);
+  const list = toShortcuts(shortcuts);
+  latest.current = list;
+  // Focus inside the region, as state, so the legend can follow it.
+  const [inside, setInside] = React.useState(false);
+  React.useEffect(() => {
+    const region = within?.current;
+    if (!region || !enabled) return setInside(false);
+    const sync = () => setInside(region.contains(document.activeElement));
+    sync();
+    const leave = () => queueMicrotask(sync);
+    region.addEventListener("focusin", sync);
+    region.addEventListener("focusout", leave);
+    return () => {
+      region.removeEventListener("focusin", sync);
+      region.removeEventListener("focusout", leave);
+      setInside(false);
+    };
+  }, [enabled, within]);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -77,7 +106,10 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
       seen.add(e);
       if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
-      const hit = latest.current.find((s) => !s.disabled && s.keys.includes(e.key));
+      // A `within` that was given but has no element (a region not rendered now) keeps only the `anywhere` keys.
+      const region = within?.current;
+      const here = !within || (!!region && e.target instanceof Node && region.contains(e.target));
+      const hit = latest.current.find((s) => !s.disabled && (here || s.anywhere) && s.keys.includes(e.key));
       if (!hit || (e.repeat && !hit.repeat)) return;
       e.preventDefault();
       hit.run();
@@ -91,7 +123,9 @@ export function useHotkeys(shortcuts: Shortcut[] | Record<string, () => void>, {
       window.removeEventListener("keydown", early, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [enabled]);
+  }, [enabled, within]);
+  const live = enabled ? list.filter((s) => !s.disabled && (!within || inside || s.anywhere)) : [];
+  return { live };
 }
 
 /** How a `KeyboardEvent.key` is drawn in a legend and an editor: arrows as arrows, the rest by name. */

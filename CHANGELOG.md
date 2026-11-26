@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26 (theming hooks, useTimeline, key scope, 3D time, #383–#386)
+**Fixed #383, #384, #385 and the first step of #386, in one PR** (branch `claude/project-thread-wn07qt`). Four issues from the quake2ts explorer. PR 378 (#377) had already merged. No dependency added. The shared view model and input layer for `PanoramaViewer` and `SceneViewport` that #386 also asks for (look, orbit and fly modes, a follow aim) is **not** done here: it rewrites both viewers' input and wants its own PR; what is done is the part that makes a 3D replay play like a video.
+
+- `src/components/use-timeline.ts` **new** (#384): `useTimeline({ duration, rate, frame, loop, startAt, group, keys })` returns the names `useMediaElement` does plus `step`, `ownsKeys` and `regionProps`. The rAF clock, "play at the end restarts", "a seek pauses" and `startAt: "end"` (following a duration that arrives late until first used) are written once. It joins `MediaGroup`.
+- `src/components/media-group.tsx`: `joinMediaGroup` takes a `GroupMember` (paused, pause, a `play` listener): a media element is one, a clock is another.
+- `src/components/key-owner.ts` **new** (#385): the "last played, focused or pressed owns the keys" store moved out of `MediaPlayer` as `useKeyOwner`, which a clock and a player share. `media-player.tsx` uses it; behaviour is unchanged except the dev warning says "players".
+- `src/components/hotkeys.tsx` (#385): `useHotkeys` takes `within` and returns `{ live }`; `Shortcut.anywhere` keeps a key page-wide. `media.tsx`: `transportShortcuts({ stageKeys })` makes every key but the arrows page-wide, so a stage that turns with the arrows keeps them.
+- `src/components/timeline-player.tsx` **new** (#386): `TimelinePlayer` is a stage over `Transport`, `SeekBar`, `TimeReadout` and `RateChoice`, driven by a clock, with the legend of live keys.
+- `src/scene/`: `SceneViewport time` redraws when the clock changes and sets `frame.time`.
+- `src/styles/strata.bare.css`, `workspace.tsx`, `inspector.tsx`, `link-card.tsx` (#383): `data-part` on structural parts, `--type-heading-font`, `--figure-ink` and `--surface-image`, all inert by default. `--figure-ink` and `--surface-image` are in the base layer, so a `text-*` class or an app's own background wins.
+- Review fixes (Codex, both real): `useKeyOwner` returns `owns: false` when its keys are off (a `keys: false` clock alone on the page reported owning them), and a `within` ref with no element keeps only `anywhere` keys instead of making every key page-wide.
+- Tests: `use-timeline.test.tsx`, `timeline-player.test.tsx` **new**; `scene-viewport`, `workspace-bar` and `tests/integration/install.test.ts` extended. `stories/media.stories.tsx`: `TimelineClockPlayer` (`no-visual`: it plays). `README.md`, `UPGRADING.md` updated.
+
 ## 2026-11-26 (player skips, frame steps and floating, #387)
 **Fixed #387: `MediaPlayer` skips by scene and chapter (or by time), steps frames, names its seek bar marks in tooltips, and floats when scrolled past** (branch `claude/project-thread-t8kdgj`). Jonathan, looking at strata-reels' tape page (one three-hour file of chapters and scenes): the seek bar should show scene and chapter marks with tooltips that jump when pressed, the player should have frame-step and skip buttons that skip scenes and chapters where a file has them and small and larger times where it does not, and the player should float on scroll so the video is always in sight. No dependency added.
 
