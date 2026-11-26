@@ -45,7 +45,7 @@ const rules: { kind: StockKind; test: RegExp; instead: string }[] = [
 
 /** Stock classes in `source`, one entry per use. In a `.css` file only `@apply` lines are read. */
 export function findStockClasses(source: string, file = ""): StockClass[] {
-  const css = /\.css$/.test(file);
+  const css = file.endsWith(".css");
   const found: StockClass[] = [];
   // In a stylesheet an `@apply` runs to its `;` (or the closing brace), however many lines it is written over.
   let applying = false;

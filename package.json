@@ -20,17 +20,17 @@
       "default": "./dist/index.js"
     },
     "./testing": {
-      "types": "./dist/testing/index.d.ts",
+      "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",
       "default": "./dist/testing.js"
     },
     "./visual": {
-      "types": "./dist/visual/index.d.ts",
+      "types": "./dist/visual.d.ts",
       "import": "./dist/visual.js",
       "default": "./dist/visual.js"
     },
     "./map": {
-      "types": "./dist/map/index.d.ts",
+      "types": "./dist/map.d.ts",
       "import": "./dist/map.js",
       "default": "./dist/map.js"
     },
@@ -52,22 +52,22 @@
     },
     "./package.json": "./package.json",
     "./hls": {
-      "types": "./dist/hls/index.d.ts",
+      "types": "./dist/hls.d.ts",
       "import": "./dist/hls.js",
       "default": "./dist/hls.js"
     },
     "./panorama": {
-      "types": "./dist/panorama/index.d.ts",
+      "types": "./dist/panorama.d.ts",
       "import": "./dist/panorama.js",
       "default": "./dist/panorama.js"
     },
     "./scene": {
-      "types": "./dist/scene/index.d.ts",
+      "types": "./dist/scene.d.ts",
       "import": "./dist/scene.js",
       "default": "./dist/scene.js"
     },
     "./api-types": {
-      "types": "./dist/api-types/index.d.ts",
+      "types": "./dist/api-types.d.ts",
       "import": "./dist/api-types.js",
       "default": "./dist/api-types.js"
     }
@@ -80,9 +80,9 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "npm run clean && vp build && node scripts/copy-css.mjs",
+    "build": "npm run clean && vp pack && node scripts/copy-css.mjs",
     "typecheck": "node node_modules/typescript7/bin/tsc --noEmit",
-    "test": "npm run typecheck && npm run test:unit",
+    "test": "npm run typecheck && npm run check && npm run test:unit",
     "test:unit": "vp test run --project unit",
     "test:integration": "npm run build && vp test run --project integration",
     "test:all": "npm run test && npm run test:integration",
@@ -95,7 +95,9 @@
     "prepublishOnly": "npm run test:all",
     "docs:api": "typedoc",
     "site": "npm run build-storybook && typedoc && node scripts/build-site.mjs",
-    "build-example": "vp build --config examples/kiln-app/vite.config.ts --logLevel warn"
+    "build-example": "vp build --config examples/kiln-app/vite.config.ts --logLevel warn",
+    "check": "vp check --deny-warnings",
+    "fmt": "vp fmt"
   },
   "keywords": [
     "react",
@@ -196,7 +198,6 @@
     "typescript": "npm:@typescript/typescript6@~6.0.2",
     "typescript7": "npm:typescript@~7.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
-    "vite-plugin-dts": "^5.1.2",
     "vitest": "5.1.1",
     "vite-plus": "1.8.0"
   },

@@ -5,7 +5,7 @@
 // by MSW handlers in Node, so the screenshot depends on nothing outside the suite.
 import type { Browser, BrowserContext, Page, Request as PlaywrightRequest, Route as PlaywrightRoute } from "playwright";
 import type { RequestHandler } from "msw";
-import type { Shot, VisualConfig } from "./types";
+import type { Shot } from "./types";
 
 // Where ThemeProvider and colorSchemeScript() keep the preference (COLOR_SCHEME_STORAGE_KEY in components/theme.tsx; copied, not imported, so the runner loads no React).
 const COLOR_SCHEME_STORAGE_KEY = "strata-color-scheme";
@@ -293,6 +293,8 @@ async function settle(page: Page) {
                   window.clearTimeout(stop);
                   done();
                 });
+                // Seeking to the same time is what forces a frame to be painted; it is not a typo.
+                // oxlint-disable-next-line eslint/no-self-assign
                 v.currentTime = v.currentTime;
               }),
           ),

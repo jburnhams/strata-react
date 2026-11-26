@@ -79,7 +79,7 @@ describe("Tree with choices", () => {
     const c1 = screen.getAllByRole("row").filter((r) => /detect/.test(r.textContent ?? ""))[0];
     await user.click(within(c1).getByRole("checkbox"));
     const rows = screen.getAllByRole("row");
-    const tracks = rows.filter((r) => /^track/.test(r.textContent ?? ""));
+    const tracks = rows.filter((r) => (r.textContent ?? "").startsWith("track"));
     expect(tracks[0]).toHaveTextContent("Included because of detect");
     expect(within(tracks[0]).getByRole("checkbox")).toBeChecked();
     expect(screen.getByText("2 more chosen because they depend on it")).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe("Tree with choices", () => {
   it("shows a parent as mixed when only some of what is under it is chosen, and ticks all of it when pressed", async () => {
     const user = userEvent.setup();
     renderWithStrata(<Host initial={["c1/render"]} />);
-    const c1 = screen.getAllByRole("row").find((r) => /^c1/.test(r.textContent ?? ""))!;
+    const c1 = screen.getAllByRole("row").find((r) => (r.textContent ?? "").startsWith("c1"))!;
     expect(within(c1).getByRole("checkbox")).toBePartiallyChecked();
     await user.click(within(c1).getByRole("checkbox"));
     expect(within(c1).getByRole("checkbox")).toBeChecked();

@@ -193,7 +193,7 @@ export function Lightbox({
   const go = (to: number) => onIndexChange(Math.min(Math.max(to, 0), last));
   // On the window, not the content: React Aria puts focus on the dialog itself when it opens, which
   // is outside the content, and the page behind is inert so nothing else can be the target.
-  const keys = React.useRef((_: KeyboardEvent) => {});
+  const keys = React.useRef((() => {}) as (e: KeyboardEvent) => void);
   keys.current = (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     const el = e.target as HTMLElement;

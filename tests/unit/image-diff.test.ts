@@ -57,7 +57,7 @@ describe("resample", () => {
     expect(resample(p, 2, 1)).toBe(p);
     const big = resample(p, 4, 2);
     expect([...big.data.slice(0, 4)]).toEqual([0, 0, 0, 255]);
-    expect(big.data[(0 * 4 + 3) * 4]).toBe(255);
+    expect(big.data[12]).toBe(255);
     expect(big.data[(1 * 4 + 1) * 4]).toBe(0);
   });
 });

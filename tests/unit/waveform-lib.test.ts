@@ -67,7 +67,7 @@ describe("peaksFromAudio", () => {
   });
   it("stops when cancelled", async () => {
     const ctl = new AbortController();
-    const run = peaksFromAudio(audio([new Array(1000).fill(0.1)]), 1000, {
+    const run = peaksFromAudio(audio([Array.from({ length: 1000 }, () => 0.1)]), 1000, {
       signal: ctl.signal,
       chunk: 10,
     });

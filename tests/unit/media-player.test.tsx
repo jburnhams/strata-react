@@ -846,7 +846,9 @@ describe("skip and frame buttons (#387)", () => {
     Object.defineProperty(el, "currentTime", {
       configurable: true,
       get: () => 2.24,
-      set: (v: number) => Object.defineProperty(el, "currentTime", { configurable: true, value: v, writable: true }),
+      set: (v: number) => {
+        Object.defineProperty(el, "currentTime", { configurable: true, value: v, writable: true });
+      },
     });
     await user.click(playback().getByRole("button", { name: "Forward one frame" }));
     expect(el.currentTime).toBeCloseTo(57.5 / 25);
