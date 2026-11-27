@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-27 (no beckon under reduced motion)
+
+- `ChoiceGrid`/`PlaceBoard` `beckon`: under `prefers-reduced-motion: reduce` no tile gets `data-beckon` or its border. A test that waits for `[data-beckon]` with `matchMedia` stubbed to reduce must not.
+- Visual baselines of a screen with `beckon` that caught a lit tile now show none.
+
 ## 2026-11-27 (ChoiceGrid and PlaceBoard tiles cap their pictures)
 
 - `ChoiceGrid` tiles and `PlaceBoard` pieces are size containers, and a picture is drawn at `type-picture` but never more than 75% of its tile. Visual baselines of these may move by a few pixels, and a held `PlaceBoard` piece no longer grows past its square; look at the diffs and update.

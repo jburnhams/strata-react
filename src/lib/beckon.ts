@@ -4,7 +4,8 @@ import * as React from "react";
 // (ChoiceGrid's tiles and PlaceBoard's pile, `beckon`; Flashtap's owner, 2026-11-27). A random order, never the same
 // one twice running, so it reads as "any of these" rather than pointing at one; the first pulse waits one beat, so
 // a spoken prompt is heard first. The pulse itself is the `beckon` utility (strata.bare.css), which starts and ends at
-// rest and is collapsed by reduced motion.
+// rest. Under reduced motion nothing beckons at all, not even the lit border: a highlight that hops from tile to tile
+// is motion too, and it is what made screenshots (taken with reduced motion) depend on when the shot fell.
 
 /** The thing to pulse next: any of `open` but `last`, at random (or the only one). */
 export function nextBeckon(open: readonly string[], last: string | null): string | null {
@@ -14,17 +15,34 @@ export function nextBeckon(open: readonly string[], last: string | null): string
 
 const SEP = "\u0000";
 
+const REDUCE = "(prefers-reduced-motion: reduce)";
+const reduceQuery = () => (typeof matchMedia === "function" ? matchMedia(REDUCE) : null);
+function subscribeReduce(change: () => void): () => void {
+  const q = reduceQuery();
+  q?.addEventListener("change", change);
+  return () => q?.removeEventListener("change", change);
+}
+/** Whether the person asked for reduced motion; false where there is no `matchMedia` (a server, plain jsdom). */
+function useReducedMotion(): boolean {
+  return React.useSyncExternalStore(
+    subscribeReduce,
+    () => reduceQuery()?.matches ?? false,
+    () => false,
+  );
+}
+
 /** What pulses now: its key and the class that runs the pulse. */
 export type Beckoning = { key: string; className: string };
 
-/** Which of `open` pulses now, moving every `ms` while `on`; null when off or none is open. The class alternates
+/** Which of `open` pulses now, moving every `ms` while `on`; null when off, when none is open or under reduced motion. The class alternates
  * between two names of the same pulse each beat: a CSS animation runs again only when its name changes, so the last
  * open tile, lit beat after beat, still pulses each time (Codex on #400). */
 export function useBeckon(on: boolean, open: readonly string[], ms: number): Beckoning | null {
   const [lit, setLit] = React.useState<{ key: string; beat: number } | null>(null);
   const openKey = open.join(SEP); // by value, so a new array each render does not restart the beat
+  const still = useReducedMotion();
   React.useEffect(() => {
-    if (!on || openKey === "") return;
+    if (!on || still || openKey === "") return;
     const keys = openKey.split(SEP);
     let last: string | null = null;
     let beat = 0;
@@ -37,7 +55,7 @@ export function useBeckon(on: boolean, open: readonly string[], ms: number): Bec
       clearInterval(t);
       setLit(null);
     };
-  }, [on, openKey, ms]);
+  }, [on, still, openKey, ms]);
   return lit !== null && open.includes(lit.key)
     ? { key: lit.key, className: lit.beat % 2 ? "beckon" : "beckon-again" }
     : null;

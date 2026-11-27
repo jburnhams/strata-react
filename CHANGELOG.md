@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-27 (no beckon under reduced motion)
+**`useBeckon` stays off under reduced motion** (branch `claude/project-thread-fwkjyk`). Flashtap's screenshot check failed at random on its phone shots after adopting `beckon`: the animation is frozen in a shot, but the lit tile's primary border is not, and a shot that took longer than one beat (1.6 s) caught a random tile lit. A highlight hopping from tile to tile is motion too, so a person who asked for reduced motion now gets none of it, and strata-visual (which runs with reduced motion) sees no lit tile.
+
+- `src/lib/beckon.ts`: `useBeckon` reads `prefers-reduced-motion` (`useSyncExternalStore`, false with no `matchMedia`) and lights nothing while it is set. `tests/unit/choice-grid.test.tsx`: no tile is lit under reduced motion.
+
 ## 2026-11-27 (ChoiceGrid stretch, beckon on ChoiceGrid and PlaceBoard)
 **`ChoiceGrid` `stretch` and `beckon`, `PlaceBoard` `beckon`** (branch `claude/project-thread-fwkjyk`). Flashtap's owner: the play screen should "grow with viewport to fill ... centre content. Pulse randomly alternately the answer buttons to make clearer which to press", and "add and improve components to strata react as required". A ChoiceGrid's `auto-fill` columns kept four tiles at their minimum on the left of a wide screen, and nothing showed a child what to press. No dependency added.
 
