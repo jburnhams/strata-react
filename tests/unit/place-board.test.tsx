@@ -27,11 +27,15 @@ function Order({
   initial = {},
   states = {},
   locked,
+  beckon,
+  stretch,
 }: {
+  stretch?: boolean;
   onMove?: (piece: string, place: string | null) => void;
   initial?: Record<string, string>;
   states?: Record<string, PlaceState>;
   locked?: boolean;
+  beckon?: boolean;
 }) {
   const [placement, setPlacement] = React.useState<Record<string, string | undefined>>(initial);
   return (
@@ -53,6 +57,9 @@ function Order({
       placeState={(s) => states[s.id] ?? "open"}
       marks={marks}
       locked={locked}
+      beckon={beckon}
+      beckonMs={100}
+      stretch={stretch}
     />
   );
 }
@@ -192,5 +199,39 @@ describe("PlaceBoard", () => {
     );
     expect(within(screen.getByRole("group", { name: "Apples" })).getAllByRole("button")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "the basket" })).toHaveTextContent("🧺");
+  });
+
+  it("beckons the pieces in the pile one at a time, never while one is held, a placed one or a locked board", async () => {
+    const user = userEvent.setup();
+    const lit = () => board().querySelectorAll("[data-beckon]");
+    const { unmount } = renderWithStrata(<Order beckon initial={{ n2: "first" }} />);
+    await vi.waitFor(() => expect(lit()).toHaveLength(1));
+    expect(within(pile()).getAllByRole("button")).toContain(lit()[0]); // the pile, not the placed 1
+    expect(lit()[0]).toHaveClass("beckon");
+    await user.click(within(pile()).getAllByRole("button")[0] as HTMLElement);
+    expect(lit()).toHaveLength(0);
+    await new Promise((r) => setTimeout(r, 250));
+    expect(lit()).toHaveLength(0);
+    unmount();
+    renderWithStrata(<Order beckon locked />);
+    await new Promise((r) => setTimeout(r, 250));
+    expect(lit()).toHaveLength(0);
+  });
+
+  it("stretches the pile and the places to share their rows only when asked, never the pieces in a place", () => {
+    const cols = (el: Element | null | undefined) => (el as HTMLElement | null)?.style.gridTemplateColumns ?? "";
+    const { unmount } = renderWithStrata(<Order initial={{ n2: "first" }} />);
+    expect(cols(pile())).toContain("auto-fill");
+    unmount();
+    renderWithStrata(<Order stretch initial={{ n2: "first" }} />);
+    expect(cols(pile())).toContain("auto-fit");
+    expect(cols(board().querySelector("[data-place]")?.parentElement)).toContain("auto-fit");
+    expect(cols(board().querySelector('[aria-label="In first"]'))).toContain("auto-fill");
+  });
+
+  it("caps each picture at its tile, so a large picture step cannot push it out", () => {
+    renderWithStrata(<Order initial={{ n2: "first" }} />);
+    for (const span of board().querySelectorAll("[aria-pressed] > span[aria-hidden]"))
+      expect((span as HTMLElement).style.fontSize).toContain("75cqi");
   });
 });

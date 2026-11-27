@@ -199,6 +199,16 @@
   @starting-style { opacity: 0; translate: 0 -0.75rem; }
 }
 
+/* A beckon: one slow swell and back, to show what to press (ChoiceGrid `beckon`). It starts and ends at rest, so a
+   screenshot with animations frozen is the same as one without; reduced motion collapses it. */
+@utility beckon {
+  animation: strata-beckon 900ms var(--ease-effects) 1;
+}
+@keyframes strata-beckon {
+  0%, 100% { scale: 1; }
+  45% { scale: 1.06; }
+}
+
 /* Stacking, once, for every floating thing, so an app never writes a z-index. A bar (the undo
    bar, toasts) sits above panes and sticky headers; overlays (dialogs, popovers, menus) above
    bars; a tooltip above everything, since it can name a control inside an overlay. */

@@ -21,10 +21,14 @@ function Round({
   answer = "cow",
   tries,
   onChoose = () => {},
+  beckon,
+  stretch,
 }: {
   answer?: string;
   tries?: number;
   onChoose?: (a: Animal) => void;
+  beckon?: boolean;
+  stretch?: boolean;
 }) {
   const [tapped, setTapped] = React.useState<string[]>([]);
   const missed = tries !== undefined && !tapped.includes(answer) && tapped.length >= tries;
@@ -43,6 +47,9 @@ function Round({
         onChoose(a);
         setTapped((t) => [...t, a.id]);
       }}
+      beckon={beckon}
+      beckonMs={100}
+      stretch={stretch}
     />
   );
 }
@@ -154,5 +161,63 @@ describe("ChoiceGrid", () => {
     // A second tap cannot land while the app's request runs.
     expect(within(g).getByRole("row", { name: "cow" }).getAttribute("aria-disabled")).toBe("true");
     expect(onChoose).toHaveBeenCalledTimes(1);
+  });
+
+  it("stretches its tiles to share the row only when asked", () => {
+    const { unmount } = renderWithStrata(<Round />);
+    expect(grid().style.gridTemplateColumns).toContain("auto-fill");
+    unmount();
+    renderWithStrata(<Round stretch />);
+    expect(grid().style.gridTemplateColumns).toContain("auto-fit");
+    renderWithStrata(<ChoiceGridSkeleton stretch />);
+    expect(document.querySelector("[aria-hidden] > span")?.parentElement?.style.gridTemplateColumns).toContain(
+      "auto-fit",
+    );
+  });
+
+  it("beckons with one open tile at a time, never the same twice running, and never a tried one", async () => {
+    const lit = () =>
+      within(grid())
+        .queryAllByRole("row")
+        .filter((r) => r.hasAttribute("data-beckon"));
+    const user = userEvent.setup();
+    renderWithStrata(<Round beckon />);
+    expect(lit()).toHaveLength(0); // the first pulse waits a beat
+    await user.click(tile("duck"));
+    const seen: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      await vi.waitFor(() => {
+        expect(lit()).toHaveLength(1);
+        expect(lit()[0]?.getAttribute("aria-label")).not.toBe(seen.at(-1));
+      });
+      seen.push(lit()[0]?.getAttribute("aria-label") ?? "");
+      expect(lit()[0]).toHaveClass("beckon");
+    }
+    expect(seen).not.toContain("duck, not this one");
+    expect(new Set(seen).size).toBeGreaterThan(1);
+    await user.click(tile("cow"));
+    expect(lit()).toHaveLength(0); // closed: no more pulses
+    await new Promise((r) => setTimeout(r, 250));
+    expect(lit()).toHaveLength(0);
+  });
+
+  it("beckons the last open tile again and again, and not at all unless asked", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderWithStrata(<Round beckon />);
+    for (const name of ["pig", "duck", "lion"]) await user.click(tile(name));
+    for (let i = 0; i < 3; i++) {
+      await vi.waitFor(() => expect(grid().querySelector("[data-beckon]")).toBe(tile("cow")));
+      await new Promise((r) => setTimeout(r, 110));
+    }
+    unmount();
+    renderWithStrata(<Round />);
+    await new Promise((r) => setTimeout(r, 250));
+    expect(grid().querySelector("[data-beckon]")).toBeNull();
+  });
+
+  it("caps each picture at its tile, so a large picture step cannot push it out", () => {
+    renderWithStrata(<Round />);
+    expect((tile("cow").querySelector("span[aria-hidden]") as HTMLElement).style.fontSize).toContain("75cqi");
+    expect(tile("cow")).toHaveClass("@container");
   });
 });

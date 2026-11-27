@@ -1,5 +1,6 @@
 import * as React from "react";
 import { GridList, GridListItem } from "react-aria-components";
+import { pictureInTile, useBeckon } from "../lib/beckon";
 import { cn } from "../lib/utils";
 import { Status } from "./status";
 
@@ -34,6 +35,17 @@ import { Status } from "./status";
 // over the 44px touch minimum, growing to fill the row. The picture uses `type-picture`, the one
 // step above 28px outside Persuade, because an emoji or a numeral a child must recognise across a
 // table is a picture, not text to read. Feedback in sound (saying "No, that's a pig") is the app's.
+//
+// Two asks from Flashtap's owner (2026-11-27, "grow with viewport to fill ... pulse randomly alternately the answer
+// buttons to make clearer which to press"): `stretch` shares the row out between the tiles there are (CSS grid
+// `auto-fit`, which drops the empty tracks `auto-fill` keeps), so four tiles fill a wide screen instead of sitting at
+// their minimum on its left; `beckon` makes the open tiles pulse one at a time, in a random order, so a child who
+// does not know what to do sees that the pictures are what to press. A pulse is a slight swell and the primary
+// border, never colour alone moving; it stops once the grid closes, never lands on a tile already tried, and is
+// collapsed by the base layer's reduced-motion rule. Its first pulse waits one beat, so the prompt is heard first.
+// Character by frequency: a round is a rare, deliberate act for its player, and the pulse is the app's to turn on.
+// The tile is a size container and its picture is capped at 75% of it (`pictureInTile`), so an app that grows the
+// picture step with the screen (as Flashtap does once tiles stretch) never pushes a picture out of a small tile.
 
 /** Where a tile stands in the round: not yet tried, tried and wrong, tried and right, or shown as the answer after the tries ran out. */
 export type ChoiceState = "open" | "wrong" | "right" | "answer" | "picked";
@@ -67,11 +79,17 @@ export type ChoiceGridProps<T> = {
   onChoose: (item: T) => void;
   /** Default `md`. */
   size?: ChoiceSize;
+  /** Share the row out between the tiles there are, so a few tiles fill a wide screen; default off (tiles keep to their minimum and the rest of the row is empty). */
+  stretch?: boolean;
+  /** Pulse the open tiles one at a time in a random order, every `beckonMs`, until the grid closes. */
+  beckon?: boolean;
+  /** Time between pulses while `beckon`; default 1600. */
+  beckonMs?: number;
   className?: string;
 };
 
-const columns = (size: ChoiceSize) => ({
-  gridTemplateColumns: `repeat(auto-fill, minmax(min(${minSide[size]}px, 100%), 1fr))`,
+const columns = (size: ChoiceSize, stretch = false) => ({
+  gridTemplateColumns: `repeat(${stretch ? "auto-fit" : "auto-fill"}, minmax(min(${minSide[size]}px, 100%), 1fr))`,
 });
 
 /** A grid of large picture tiles for answering one question with a tap: each tile open, wrong, right, shown as the answer or (no answer key) picked, with its word; answered tiles cannot be pressed again, and the grid closes once the answer shows. */
@@ -85,11 +103,15 @@ export function ChoiceGrid<T>({
   marks,
   onChoose,
   size = "md",
+  stretch = false,
+  beckon = false,
+  beckonMs = 1600,
   className,
 }: ChoiceGridProps<T>) {
   const byKey = new Map(items.map((item) => [itemKey(item), item]));
   const over = items.some((item) => closed(state(item)));
   const disabledKeys = items.filter((item) => over || state(item) !== "open").map(itemKey);
+  const lit = useBeckon(beckon && !over, items.filter((item) => state(item) === "open").map(itemKey), beckonMs);
 
   return (
     <GridList
@@ -102,7 +124,7 @@ export function ChoiceGrid<T>({
         if (item !== undefined) onChoose(item);
       }}
       className={cn("grid min-w-0 gap-4 outline-none", className)}
-      style={columns(size)}
+      style={columns(size, stretch)}
     >
       {items.map((item) => {
         const key = itemKey(item);
@@ -115,15 +137,21 @@ export function ChoiceGrid<T>({
             textValue={itemLabel(item)}
             aria-label={mark ? `${itemLabel(item)}, ${mark.toLowerCase()}` : itemLabel(item)}
             data-choice={s}
+            data-beckon={key === lit || undefined}
             className={cn(
-              "flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-2 text-card-foreground select-none outline-offset-2 transition-state press",
+              "@container flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-2 text-card-foreground select-none outline-offset-2 transition-state press",
               "hover:border-primary disabled:cursor-default disabled:hover:border-border",
+              key === lit && "beckon border-primary",
               (s === "right" || s === "answer") &&
                 "border-4 border-success bg-success-subtle disabled:hover:border-success",
               s === "picked" && "border-4 border-primary bg-surface-sunken disabled:hover:border-primary",
             )}
           >
-            <span aria-hidden className={cn("type-picture transition-state", s === "wrong" && "opacity-40")}>
+            <span
+              aria-hidden
+              className={cn("type-picture transition-state", s === "wrong" && "opacity-40")}
+              style={pictureInTile}
+            >
               {renderPicture(item)}
             </span>
             {mark && (
@@ -142,14 +170,17 @@ export function ChoiceGrid<T>({
 export function ChoiceGridSkeleton({
   count = 4,
   size = "md",
+  stretch = false,
   className,
 }: {
   count?: number;
   size?: ChoiceSize;
+  /** As the grid it stands in for. */
+  stretch?: boolean;
   className?: string;
 }) {
   return (
-    <div aria-hidden className={cn("grid min-w-0 gap-4", className)} style={columns(size)}>
+    <div aria-hidden className={cn("grid min-w-0 gap-4", className)} style={columns(size, stretch)}>
       {Array.from({ length: count }, (_, i) => (
         <span key={i} className="block aspect-square rounded-overlay bg-muted" />
       ))}

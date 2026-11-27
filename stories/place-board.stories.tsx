@@ -34,7 +34,9 @@ function Board({
   initial = {},
   states = {},
   locked,
+  beckon,
 }: {
+  beckon?: boolean;
   label?: string;
   pieces?: Piece[];
   places?: Place[];
@@ -61,6 +63,7 @@ function Board({
       placeState={(s) => states[s.id] ?? "open"}
       marks={marks}
       locked={locked}
+      beckon={beckon}
     />
   );
 }
@@ -116,4 +119,7 @@ export const Sort: Story = {
 };
 
 /** On a phone: places stack, pieces three to a row. */
+/** Beckoning: the pieces in the pile swell one at a time in a random order until one is picked up. */
+export const Beckoning: Story = { tags: ["no-visual"], args: { beckon: true } };
+
 export const Phone: Story = { tags: ["visual-phone"], args: { initial: { n2: "first" } } };
