@@ -252,6 +252,25 @@ export {
 } from "./components/media-group";
 export { useTimeline, type TimelineClock, type TimelineClockOptions } from "./components/use-timeline";
 export { TimelinePlayer, type TimelinePlayerProps } from "./components/timeline-player";
+/** Plays an edit list (stretches of files) as one timeline with no gap at the cuts; `useEditList` is its engine for a layout of the app's own. */
+export {
+  EditListPlayer,
+  useEditList,
+  type EditListPlayerProps,
+  type EditListState,
+  type EditListSlot,
+  type EditListOptions,
+} from "./components/edit-list-player";
+/** The arithmetic of an edit list: where each clip starts, which clip plays at a time, and which clip needs a second element ready. */
+export {
+  editTimes,
+  locateInEdit,
+  editTimeOf,
+  continues,
+  nextBreak,
+  type EditClip,
+  type EditTimes,
+} from "./lib/edit-list";
 export {
   Transport,
   TimeReadout,
