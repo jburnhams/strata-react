@@ -219,6 +219,21 @@ describe("ChoiceGrid", () => {
     expect(grid().querySelector("[data-beckon]")).toBeNull();
   });
 
+  it("does not beckon at all under reduced motion, so no tile is lit, border or pulse", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q.includes("reduce"),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      renderWithStrata(<Round beckon />);
+      await new Promise((r) => setTimeout(r, 250));
+      expect(grid().querySelector("[data-beckon]")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("caps each picture at its tile, so a large picture step cannot push it out", () => {
     renderWithStrata(<Round />);
     expect((tile("cow").querySelector("span[aria-hidden]") as HTMLElement).style.fontSize).toContain("75cqi");
