@@ -207,7 +207,7 @@ describe("PlaceBoard", () => {
     const { unmount } = renderWithStrata(<Order beckon initial={{ n2: "first" }} />);
     await vi.waitFor(() => expect(lit()).toHaveLength(1));
     expect(within(pile()).getAllByRole("button")).toContain(lit()[0]); // the pile, not the placed 1
-    expect(lit()[0]).toHaveClass("beckon");
+    expect(lit()[0]?.className).toMatch(/\bbeckon(-again)?\b/);
     await user.click(within(pile()).getAllByRole("button")[0] as HTMLElement);
     expect(lit()).toHaveLength(0);
     await new Promise((r) => setTimeout(r, 250));

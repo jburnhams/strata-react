@@ -204,6 +204,14 @@
 @utility beckon {
   animation: strata-beckon 900ms var(--ease-effects) 1;
 }
+/* The same pulse under a second name: alternating the two restarts it on a tile lit beat after beat. */
+@utility beckon-again {
+  animation: strata-beckon-again 900ms var(--ease-effects) 1;
+}
+@keyframes strata-beckon-again {
+  0%, 100% { scale: 1; }
+  45% { scale: 1.06; }
+}
 @keyframes strata-beckon {
   0%, 100% { scale: 1; }
   45% { scale: 1.06; }

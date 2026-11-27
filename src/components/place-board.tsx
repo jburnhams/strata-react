@@ -154,12 +154,12 @@ export function PlaceBoard<P, S>({
         isDisabled={locked}
         aria-label={isHeld ? `${pieceLabel(p)}, ${marks.held.toLowerCase()}` : pieceLabel(p)}
         data-held={isHeld || undefined}
-        data-beckon={key === lit || undefined}
+        data-beckon={key === lit?.key || undefined}
         className={cn(
           "@container flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-1 text-card-foreground select-none outline-offset-2 transition-state press",
           "hover:border-primary disabled:cursor-default disabled:hover:border-border",
           "selected:border-4 selected:border-primary selected:bg-muted",
-          key === lit && "beckon border-primary",
+          key === lit?.key && cn(lit.className, "border-primary"),
         )}
       >
         <span

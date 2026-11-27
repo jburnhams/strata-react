@@ -137,11 +137,11 @@ export function ChoiceGrid<T>({
             textValue={itemLabel(item)}
             aria-label={mark ? `${itemLabel(item)}, ${mark.toLowerCase()}` : itemLabel(item)}
             data-choice={s}
-            data-beckon={key === lit || undefined}
+            data-beckon={key === lit?.key || undefined}
             className={cn(
               "@container flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-2 text-card-foreground select-none outline-offset-2 transition-state press",
               "hover:border-primary disabled:cursor-default disabled:hover:border-border",
-              key === lit && "beckon border-primary",
+              key === lit?.key && cn(lit.className, "border-primary"),
               (s === "right" || s === "answer") &&
                 "border-4 border-success bg-success-subtle disabled:hover:border-success",
               s === "picked" && "border-4 border-primary bg-surface-sunken disabled:hover:border-primary",

@@ -191,7 +191,7 @@ describe("ChoiceGrid", () => {
         expect(lit()[0]?.getAttribute("aria-label")).not.toBe(seen.at(-1));
       });
       seen.push(lit()[0]?.getAttribute("aria-label") ?? "");
-      expect(lit()[0]).toHaveClass("beckon");
+      expect(lit()[0]?.className).toMatch(/\bbeckon(-again)?\b/);
     }
     expect(seen).not.toContain("duck, not this one");
     expect(new Set(seen).size).toBeGreaterThan(1);
@@ -205,10 +205,14 @@ describe("ChoiceGrid", () => {
     const user = userEvent.setup();
     const { unmount } = renderWithStrata(<Round beckon />);
     for (const name of ["pig", "duck", "lion"]) await user.click(tile(name));
-    for (let i = 0; i < 3; i++) {
+    // Lit beat after beat, it alternates the pulse's two names, so the animation runs again each time.
+    const names = new Set<string>();
+    for (let i = 0; i < 4; i++) {
       await vi.waitFor(() => expect(grid().querySelector("[data-beckon]")).toBe(tile("cow")));
+      names.add(tile("cow").classList.contains("beckon-again") ? "beckon-again" : "beckon");
       await new Promise((r) => setTimeout(r, 110));
     }
+    expect(names).toEqual(new Set(["beckon", "beckon-again"]));
     unmount();
     renderWithStrata(<Round />);
     await new Promise((r) => setTimeout(r, 250));

@@ -14,24 +14,33 @@ export function nextBeckon(open: readonly string[], last: string | null): string
 
 const SEP = "\u0000";
 
-/** Which of `open` pulses now, moving every `ms` while `on`; null when off or none is open. */
-export function useBeckon(on: boolean, open: readonly string[], ms: number): string | null {
-  const [lit, setLit] = React.useState<string | null>(null);
+/** What pulses now: its key and the class that runs the pulse. */
+export type Beckoning = { key: string; className: string };
+
+/** Which of `open` pulses now, moving every `ms` while `on`; null when off or none is open. The class alternates
+ * between two names of the same pulse each beat: a CSS animation runs again only when its name changes, so the last
+ * open tile, lit beat after beat, still pulses each time (Codex on #400). */
+export function useBeckon(on: boolean, open: readonly string[], ms: number): Beckoning | null {
+  const [lit, setLit] = React.useState<{ key: string; beat: number } | null>(null);
   const openKey = open.join(SEP); // by value, so a new array each render does not restart the beat
   React.useEffect(() => {
     if (!on || openKey === "") return;
     const keys = openKey.split(SEP);
     let last: string | null = null;
+    let beat = 0;
     const t = setInterval(() => {
       last = nextBeckon(keys, last);
-      setLit(last);
+      beat += 1;
+      setLit(last === null ? null : { key: last, beat });
     }, ms);
     return () => {
       clearInterval(t);
       setLit(null);
     };
   }, [on, openKey, ms]);
-  return lit !== null && open.includes(lit) ? lit : null;
+  return lit !== null && open.includes(lit.key)
+    ? { key: lit.key, className: lit.beat % 2 ? "beckon" : "beckon-again" }
+    : null;
 }
 
 /** A tile's picture: the `type-picture` step, but never more than 75% of the tile it sits in (the tile is a size
