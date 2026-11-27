@@ -270,6 +270,7 @@ export function useEditList(clips: readonly EditClip[], options: EditListOptions
     const i = s.index;
     if (!v || i < 0 || s.busy) return;
     const c = s.clips[i];
+    if (!c) return;
     const early = s.frames ? 0 : Math.max(s.lead, s.refresh);
     if (s.playing && s.pending[s.front] === null && (v.currentTime >= c.end - early || v.ended)) {
       cut(i);
@@ -392,9 +393,22 @@ export function useEditList(clips: readonly EditClip[], options: EditListOptions
     s.holds = [null, null];
     s.pending = [null, null];
     if (s.clips.length === 0) {
+      // Stopped first, so the pause events below find nothing to play.
       s.index = -1;
-      setIndex(-1);
       s.playing = false;
+      // Nothing to show: stop both and let go of their files, or the old edit plays on unheard behind the empty state.
+      refs.forEach((r, slot) => {
+        const v = r.current;
+        if (!v) return;
+        v.pause();
+        if (v.getAttribute("src")) {
+          s.quiet[slot] = true;
+          v.removeAttribute("src");
+          v.load();
+          s.quiet[slot] = false;
+        }
+      });
+      setIndex(-1);
       setPlaying(false);
       setTime(0);
       return;
@@ -432,7 +446,10 @@ export function useEditList(clips: readonly EditClip[], options: EditListOptions
     const v = el(slot);
     if (!v || s.unlocked[slot] || !v.getAttribute("src")) return;
     s.unlocked[slot] = true;
-    const at = v.currentTime;
+    // Where it should be: its in-point while its file is still loading (the metadata handler seeks there then), else
+    // where it is held. The play nudges it on, so it is put back unless it has been given another clip meanwhile.
+    const at = s.pending[slot] ?? v.currentTime;
+    const held = s.holds[slot];
     v.muted = true;
     s.quiet[slot] = true;
     const p = v.play();
@@ -441,6 +458,7 @@ export function useEditList(clips: readonly EditClip[], options: EditListOptions
       if (live.current.front === slot) return;
       v.pause();
       muteFor(v, s.volume);
+      if (s.holds[slot] !== held || s.pending[slot] !== null) return;
       if (Math.abs(v.currentTime - at) > EDIT_EPS) v.currentTime = at;
     };
     if (p && typeof p.then === "function") p.then(done, done);

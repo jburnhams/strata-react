@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { EditListPlayer, continues, editTimeOf, editTimes, locateInEdit, nextBreak, type EditClip } from "../../src";
+import * as React from "react";
+import {
+  EditListPlayer,
+  type EditListState,
+  continues,
+  editTimeOf,
+  editTimes,
+  locateInEdit,
+  nextBreak,
+  type EditClip,
+} from "../../src";
 import { renderWithStrata } from "../../src/testing";
 import { installFakeMedia, type FakeMedia } from "../utils/media";
 
@@ -171,5 +181,32 @@ describe("EditListPlayer", () => {
     rerender(<EditListPlayer clips={[clips[2], clips[3]]} label="Preview" empty="No clips" />);
     expect(screen.getByText(/Clip 1 of 2/)).toBeInTheDocument();
     expect(front().currentTime).toBe(41);
+  });
+
+  it("keeps the one behind on its in-point when Play comes before its file has loaded", async () => {
+    const player = React.createRef<EditListState>();
+    renderWithStrata(<EditListPlayer clips={clips} label="Preview" empty="No clips" playerRef={player} />);
+    act(() => media.loaded(front(), 600));
+    // Play unlocks the one behind while it still waits for its file; the file arrives before play() settles.
+    act(() => {
+      void player.current?.play();
+      media.loaded(behind(), 600);
+    });
+    await act(async () => {});
+    expect(behind().currentTime).toBe(40);
+    expect(behind().paused).toBe(true);
+  });
+
+  it("stops and lets go of the files when the edit becomes empty", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithStrata(<EditListPlayer clips={clips} label="Preview" empty="No clips" />);
+    loadAll();
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    rerender(<EditListPlayer clips={[]} label="Preview" empty="No clips" />);
+    for (const v of videos()) {
+      expect(v.paused).toBe(true);
+      expect(v.getAttribute("src")).toBeNull();
+    }
+    expect(screen.getByRole("button", { name: "Play" })).toBeDisabled();
   });
 });
