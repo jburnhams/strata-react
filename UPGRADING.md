@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-27 (ChoiceGrid and PlaceBoard tiles cap their pictures)
+
+- `ChoiceGrid` tiles and `PlaceBoard` pieces are size containers, and a picture is drawn at `type-picture` but never more than 75% of its tile. Visual baselines of these may move by a few pixels, and a held `PlaceBoard` piece no longer grows past its square; look at the diffs and update.
+
 ## 2026-11-26 (built with Vite+)
 
 - The package is now built by `vp pack` (tsdown). The type declarations are one bundled file per entry (`dist/testing.d.ts`, `dist/visual.d.ts`, ...) instead of a `dist/<entry>/index.d.ts` tree. Imports through the package's `exports` are unchanged; only an app that reached into `dist/` by path (do not) needs to change.

@@ -22,10 +22,14 @@ function Round({
   items = animals,
   states = {},
   size,
+  stretch,
+  beckon,
 }: {
   items?: Choice[];
   states?: Record<string, ChoiceState>;
   size?: "md" | "lg";
+  stretch?: boolean;
+  beckon?: boolean;
 }) {
   const [chosen, setChosen] = React.useState(states);
   return (
@@ -39,6 +43,8 @@ function Round({
       marks={marks}
       onChoose={(c) => setChosen((s) => ({ ...s, [c.id]: c.id === "cat" || c.id === "n3" ? "right" : "wrong" }))}
       size={size}
+      stretch={stretch}
+      beckon={beckon}
     />
   );
 }
@@ -85,6 +91,12 @@ export const Picked: Story = {
 
 /** Numerals for a counting question, at the larger tile size. */
 export const Numbers: Story = { args: { items: numbers, size: "lg", states: { n5: "wrong" } } };
+
+/** Stretched to fill a wide screen: four tiles share the row instead of keeping to their minimum on its left. */
+export const Stretched: Story = { tags: ["visual-wide"], args: { stretch: true, size: "lg" } };
+
+/** Beckoning: the open tiles swell one at a time in a random order, never a tried one, until the round is answered. */
+export const Beckoning: Story = { tags: ["no-visual"], args: { beckon: true, states: { dog: "wrong" } } };
 
 /** While the round loads. */
 export const Loading: Story = { render: () => <ChoiceGridSkeleton count={4} /> };

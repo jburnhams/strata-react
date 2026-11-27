@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Button as AriaButton, ToggleButton } from "react-aria-components";
+import { pictureInTile, useBeckon } from "../lib/beckon";
 import { cn } from "../lib/utils";
 import { Status } from "./status";
 
@@ -20,7 +21,9 @@ import { Status } from "./status";
 // drag (a long press first on iPad Safari) with a small finger across the screen. That is the one
 // behaviour it lacks, so the holding state is ours; the controls are React Aria's: each piece is a
 // `ToggleButton` (`aria-pressed` while held), each place a `Button`. Drag can be added on top later
-// with `useDrag`/`useDrop` without changing the props.
+// with `useDrag`/`useDrop` without changing the props. `beckon` pulses the pile's pieces one at a
+// time while none is held, and `stretch` shares the rows out, as on ChoiceGrid (`src/lib/beckon.ts`). A piece's picture
+// is capped at 75% of the piece, so an app that grows the picture step on a wide screen cannot push it out.
 //
 // Places are disabled while nothing is held, so the Tab order is the pieces until one is picked
 // up, then the places that can take it; a place's name then says what will happen ("Put apple in
@@ -66,6 +69,12 @@ export type PlaceBoardProps<P, S> = {
   marks: { held: string; right: string; wrong: string };
   /** The round is over: no piece can be picked up. */
   locked?: boolean;
+  /** Share each row out between the pieces and places there are (as ChoiceGrid's `stretch`), so a few fill a wide screen. */
+  stretch?: boolean;
+  /** Pulse the pieces in the pile one at a time in a random order, every `beckonMs`, while none is held and the board is not locked. */
+  beckon?: boolean;
+  /** Time between pulses while `beckon`; default 1600. */
+  beckonMs?: number;
   className?: string;
 };
 
@@ -92,8 +101,12 @@ export function PlaceBoard<P, S>({
   placeState = () => "open",
   marks,
   locked = false,
+  stretch = false,
+  beckon = false,
+  beckonMs = 1600,
   className,
 }: PlaceBoardProps<P, S>) {
+  const fill = stretch ? "auto-fit" : "auto-fill";
   const [heldKey, setHeld] = React.useState<string | null>(null);
   // The piece to focus once it has moved: its button is a new element in its new area.
   const [follow, setFollow] = React.useState<string | null>(null);
@@ -105,6 +118,12 @@ export function PlaceBoard<P, S>({
   };
   const held = locked ? undefined : pieces.find((p) => pieceKey(p) === heldKey);
   const heldAt = held === undefined ? null : where(held);
+  // Only the pile beckons, and only while nothing is in hand: once a piece is picked up, the places are what to press.
+  const lit = useBeckon(
+    beckon && !locked && held === undefined,
+    pieces.filter((p) => where(p) === null).map(pieceKey),
+    beckonMs,
+  );
 
   React.useEffect(() => {
     if (follow === null) return;
@@ -135,13 +154,19 @@ export function PlaceBoard<P, S>({
         isDisabled={locked}
         aria-label={isHeld ? `${pieceLabel(p)}, ${marks.held.toLowerCase()}` : pieceLabel(p)}
         data-held={isHeld || undefined}
+        data-beckon={key === lit?.key || undefined}
         className={cn(
-          "flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-1 text-card-foreground select-none outline-offset-2 transition-state press",
+          "@container flex aspect-square min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-overlay border-2 border-border bg-card p-1 text-card-foreground select-none outline-offset-2 transition-state press",
           "hover:border-primary disabled:cursor-default disabled:hover:border-border",
           "selected:border-4 selected:border-primary selected:bg-muted",
+          key === lit?.key && cn(lit.className, "border-primary"),
         )}
       >
-        <span aria-hidden className="type-picture" style={placed ? placedPicture : undefined}>
+        <span
+          aria-hidden
+          className="type-picture"
+          style={placed ? { ...placedPicture, ...pictureInTile } : pictureInTile}
+        >
           {renderPiece(p)}
         </span>
         {isHeld && (
@@ -161,7 +186,10 @@ export function PlaceBoard<P, S>({
         role="group"
         aria-label={name}
         className="grid min-w-0 gap-2"
-        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${side}px, 100%), 1fr))` }}
+        // Placed pieces keep to their size: a place holds several, and a stretched one would fill it with one.
+        style={{
+          gridTemplateColumns: `repeat(${side === placedSide ? "auto-fill" : fill}, minmax(min(${side}px, 100%), 1fr))`,
+        }}
       >
         {inside.map((p) => piece(p, side === placedSide))}
       </div>
@@ -184,7 +212,7 @@ export function PlaceBoard<P, S>({
       </div>
       <div
         className="grid min-w-0 gap-4"
-        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${placeSide}px, 100%), 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${fill}, minmax(min(${placeSide}px, 100%), 1fr))` }}
       >
         {places.map((s) => {
           const key = placeKey(s);
