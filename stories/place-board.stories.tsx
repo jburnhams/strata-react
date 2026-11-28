@@ -3,7 +3,8 @@ import * as React from "react";
 import { Apple, Bird, Cat, Dog, Fish, ShoppingBasket, type LucideIcon } from "lucide-react";
 import { PlaceBoard, type PlaceState } from "../src";
 
-// Pictures put into places with two taps (Flashtap's give-N, order, match and sort rounds). The app
+// Pictures put into places with two taps, one tap where there is one place, or a drag (Flashtap's give-N, order,
+// match and sort rounds). The app
 // owns where each piece is and checks it; these stories keep the placement in state and fix the
 // checked states. Icons and numerals rather than emoji, so the screenshots need no emoji font.
 
@@ -35,7 +36,9 @@ function Board({
   states = {},
   locked,
   beckon,
+  check = true,
 }: {
+  check?: boolean;
   beckon?: boolean;
   label?: string;
   pieces?: Piece[];
@@ -64,6 +67,11 @@ function Board({
       marks={marks}
       locked={locked}
       beckon={beckon}
+      // An order's slot holds one: a number put on another sends that one back to the pile.
+      limit={places === order ? () => 1 : undefined}
+      check={
+        check ? { label: "Check", onCheck: () => {}, disabled: !Object.values(placement).some(Boolean) } : undefined
+      }
     />
   );
 }
@@ -74,10 +82,10 @@ const meta = { title: "Data/PlaceBoard", component: Board, parameters: { layout:
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A new round: the pieces in the pile, the places waiting (named by their words). Tap a number, then a place. */
+/** A new round: the pieces in the pile, the places waiting (named by their words), the big Check under them. Tap a number, then a place, or drag it there. */
 export const Order: Story = {};
 
-/** Partway: two numbers placed, one picked up (thick border and its word), and the places that take it outlined. */
+/** Partway: two numbers placed, each leaving a gap in the pile; one picked up (blue ring, tint and its word), and the places that take it ringed in the same blue. */
 export const Holding: Story = {
   args: { initial: { n2: "first", n4: "second" } },
   play: async ({ canvasElement }) => {
@@ -94,7 +102,7 @@ export const Checked: Story = {
   },
 };
 
-/** Give a number: one basket, a pile of the same picture; the app counts what is in it. */
+/** Give a number: one basket, a pile of the same picture; a tap puts an apple in, a tap on one in the basket takes it out (a big X on hover), and each apple taken leaves its gap. The app counts what is in it. */
 export const GiveN: Story = {
   args: {
     label: "Put 4 apples in the basket",
@@ -118,8 +126,17 @@ export const Sort: Story = {
   },
 };
 
-/** On a phone: places stack, pieces three to a row. */
+/** Holding a placed piece: its gap in the pile is ringed too, and a tap there puts it back. */
+export const HoldingPlaced: Story = {
+  args: { initial: { n2: "first", n4: "second" } },
+  play: async ({ canvasElement }) => {
+    const two = [...canvasElement.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "2");
+    two?.click();
+  },
+};
+
 /** Beckoning: the pieces in the pile swell one at a time in a random order until one is picked up. */
 export const Beckoning: Story = { tags: ["no-visual"], args: { beckon: true } };
 
+/** On a phone: places stack, pieces three to a row. */
 export const Phone: Story = { tags: ["visual-phone"], args: { initial: { n2: "first" } } };

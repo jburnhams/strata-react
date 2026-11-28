@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RefreshCw, Trash2 } from "lucide-react";
+import { Check, RefreshCw, Trash2 } from "lucide-react";
 import { Button, IconButton } from "../src";
 
 const meta = {
@@ -9,7 +9,7 @@ const meta = {
   args: { children: "Save changes" },
   argTypes: {
     variant: { control: "select", options: ["default", "outline", "secondary", "ghost", "destructive", "link"] },
-    size: { control: "inline-radio", options: ["default", "sm", "icon"] },
+    size: { control: "inline-radio", options: ["default", "sm", "lg", "icon"] },
   },
 } satisfies Meta<typeof Button>;
 export default meta;
@@ -46,6 +46,17 @@ export const SizesAndDisabled: Story = {
         Withdraw
       </Button>
     </div>
+  ),
+};
+
+/** `size="lg"`: the one big action a young learner presses to finish a step, in title type, the same in every density. */
+export const Large: Story = {
+  render: () => (
+    <Button variant="default" size="lg">
+      <Check aria-hidden strokeWidth={3} />
+      Check
+      <Check aria-hidden strokeWidth={3} />
+    </Button>
   ),
 };
 

@@ -11,6 +11,12 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-28 (PlaceBoard: gaps, one tap, drag)
+
+- `PlaceBoard`'s pile keeps every piece's slot: a placed piece leaves an `aria-hidden` gap there (`[data-gap]`), and the "Put … back" button is now that gap, in the pile, while the placed piece is held. A test that found it outside the pile group or counted the pile's children sees the change.
+- With exactly one place, pieces are no longer toggle buttons: a tap puts a piece in or takes it out at once, and they are named "Put apple in the basket" / "Take apple out of the basket" (no `aria-pressed`, no "Picked up"). Tests that picked a piece up and then pressed the basket press the piece once.
+- A held piece and the places that take it are drawn with the info role (a ring), not primary; a right place has a success ring. Pieces take `touch-action: none` while the board is not locked. Every `PlaceBoard` baseline moves.
+
 ## 2026-11-28 (Compare: above and below, ink match)
 
 - `CompareMode` has two more members, `"stack"` and `"match"`: a `Record<CompareMode, …>` in an app needs entries for them (or use `Partial`). The default `modes` is unchanged; pass them in `modes` to offer them.
