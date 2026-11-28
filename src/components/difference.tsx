@@ -1,11 +1,22 @@
 import * as React from "react";
-import { differences, readPixels, type Difference, type Pixels } from "../lib/image-diff";
+import {
+  INK_COLOURS,
+  differences,
+  inkMatch,
+  readPixels,
+  type Difference,
+  type InkColours,
+  type InkMatch,
+  type Pixels,
+} from "../lib/image-diff";
 
 // The pixel half of `Compare`'s difference view: loads both pictures' pixels once per pair, and
 // recomputes which differ when the tolerance moves. The tolerance is deferred (`useDeferredValue`),
 // so dragging its slider stays smooth while a 2048-pixel comparison runs behind it; the marks lag
 // by a frame or two and the readout beside the slider says what it is showing. Pixels are not
-// asked for until the view is open (`enabled`), since most comparisons never use it.
+// asked for until the view is open (`enabled`), since most comparisons never use it. The ink match
+// (`useInkMatch`, Compare's "match" view) reads the same pair the same way and draws through the same
+// `DifferenceMarks`; its colours are the theme's roles, read when the pair arrives.
 
 /** How pictures become pixels. The default draws them on a canvas; supply another where that does not fit (an authenticated request, a picture the browser will not let a page read). */
 export type ReadPixels = (src: string) => Promise<Pixels>;
@@ -16,14 +27,8 @@ export type DifferenceState =
   | { status: "failed" }
   | { status: "ready"; difference: Difference };
 
-/** The pixels that differ between two pictures at a tolerance (0 to 1), read only while `enabled`. */
-export function useDifference(
-  a: string,
-  b: string,
-  tolerance: number,
-  enabled: boolean,
-  read: ReadPixels = readPixels,
-): DifferenceState {
+/** Both pictures' pixels, read once per pair and only while `enabled`. */
+function usePixelPair(a: string, b: string, enabled: boolean, read: ReadPixels) {
   const [loaded, setLoaded] = React.useState<{ key: string; a: Pixels; b: Pixels } | "failed" | null>(null);
   const key = `${a}|${b}`;
   const reader = React.useRef(read);
@@ -40,17 +45,79 @@ export function useDifference(
       cancelled = true;
     };
   }, [a, b, key, enabled]);
+  if (loaded === "failed") return "failed" as const;
+  return loaded && loaded.key === key ? loaded : null;
+}
+
+/** The pixels that differ between two pictures at a tolerance (0 to 1), read only while `enabled`. */
+export function useDifference(
+  a: string,
+  b: string,
+  tolerance: number,
+  enabled: boolean,
+  read: ReadPixels = readPixels,
+): DifferenceState {
+  const pair = usePixelPair(a, b, enabled, read);
   const deferred = React.useDeferredValue(tolerance);
   const difference = React.useMemo(
-    () => (loaded && loaded !== "failed" && loaded.key === key ? differences(loaded.a, loaded.b, deferred) : null),
-    [loaded, key, deferred],
+    () => (pair && pair !== "failed" ? differences(pair.a, pair.b, deferred) : null),
+    [pair, deferred],
   );
-  if (loaded === "failed") return { status: "failed" };
+  if (pair === "failed") return { status: "failed" };
   return difference ? { status: "ready", difference } : { status: "loading" };
 }
 
+/** The state of an ink match: reading the pictures, unable to, or the result. */
+export type InkMatchState = { status: "loading" } | { status: "failed" } | { status: "ready"; match: InkMatch };
+
+/** The theme's colour for a role (`--color-danger`) as [r, g, b], read by painting it on a 1×1 canvas, so an oklch or a palette's colour comes out right. `fallback` where the page has no canvas (jsdom). */
+export function roleColour(role: string, fallback: readonly number[]): readonly number[] {
+  if (typeof document === "undefined") return fallback;
+  try {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(role).trim();
+    const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+    if (!value || !ctx) return fallback;
+    ctx.fillStyle = value;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return [r, g, b];
+  } catch {
+    // jsdom without a canvas package throws from getContext: the fixed colours do
+    return fallback;
+  }
+}
+
+/** Matched ink in the foreground's colour, A's own in the danger role's and B's in the info role's, read from the theme each time the view opens (light, dark or a palette). */
+export function themeInkColours(): InkColours {
+  return {
+    both: roleColour("--color-foreground", INK_COLOURS.both),
+    onlyA: roleColour("--color-danger", INK_COLOURS.onlyA),
+    onlyB: roleColour("--color-info", INK_COLOURS.onlyB),
+  };
+}
+
+/** Where two pictures' ink agrees, within `near` pixels, read only while `enabled`. */
+export function useInkMatch(
+  a: string,
+  b: string,
+  near: number,
+  enabled: boolean,
+  read: ReadPixels = readPixels,
+): InkMatchState {
+  const pair = usePixelPair(a, b, enabled, read);
+  const deferred = React.useDeferredValue(near);
+  // read when the pair arrives, so a scheme or palette changed between pages is picked up on the next one
+  const colours = React.useMemo(() => (pair && pair !== "failed" ? themeInkColours() : INK_COLOURS), [pair]);
+  const match = React.useMemo(
+    () => (pair && pair !== "failed" ? inkMatch(pair.a, pair.b, { near: deferred, colours }) : null),
+    [pair, deferred, colours],
+  );
+  if (pair === "failed") return { status: "failed" };
+  return match ? { status: "ready", match } : { status: "loading" };
+}
+
 /** The marks of a difference drawn over the picture: a canvas that fits its frame the way the picture does (`object-contain`). */
-export function DifferenceMarks({ difference }: { difference: Difference }) {
+export function DifferenceMarks({ difference }: { difference: Pick<Difference, "marks" | "width" | "height"> }) {
   const ref = React.useRef<HTMLCanvasElement>(null);
   React.useEffect(() => {
     const canvas = ref.current;
