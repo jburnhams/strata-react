@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-28 (Glimpse: a 3-2-1, a timer, looks again)
+**`Glimpse` and `useCountdown`: something shown for a moment after a 3-2-1, with the time left drawn** (branch `claude/project-thread-i0c2vh`). Flashtap's owner, on its "How many did you see?" rounds: count down 3 2 1 before the pictures show, a timer until they disappear, show them again after every wrong answer, a one-tap "free retry" that disappears once used, and how long they show and how many retries set by difficulty; reusable pieces go in strata-react. Flashtap drew the pictures and hid them with its own timeout, and kept its own `useCountdown` for Next; both now live here. No dependency added.
+
+- `src/components/glimpse.tsx` **new**: `Glimpse` (`ms`, `count` 3, `again`, `peeks`, `peekLabel`, `ready`, `gone`, `onLook`), types `GlimpseLook`, `GlimpseWhy`. Content, count and button share one grid cell, so the box keeps its size in every phase; a `role="status"` line says "Get ready to look." and the `gone` sentence.
+- `src/lib/countdown.ts` **new**: `useCountdown`, from Flashtap's PlayScreen, now resetting its count in render when it starts, so a second run's first frame shows 3, not the last run's 1.
+- `src/styles/strata.bare.css`: `drain` utility and `strata-drain` keyframes (scale 1 to 0 on x over `--drain-ms`, linear, ending empty).
+- `src/index.ts`: the exports. `stories/glimpse.stories.tsx` **new** (Playing and Gone, not shot: one moves, the other draws nothing; Showing and LookAgain, with new baselines). `tests/unit/glimpse.test.tsx` **new** (6 tests). `README.md`: "Seeing for a moment" row.
+
 ## 2026-11-28 (Compare views for pages: above and below, ink match)
 **`Compare` gains two views and an option each on swipe and fade, a feature for strata-scan** (branch `claude/project-thread-4o23es`). Jonathan, for strata-scan: show a scanned page and the same page set again in type at once, side by side, above and below, as double spreads, and laid over each other with blend, difference, swipe and match options; create or update strata-react components to support it. `Compare` already had side by side, swipe, fade, blink and difference; what a page needs besides is a layout for wide pictures and a way to see whether the ink lines up, as a difference of pixels is everywhere on a scan against a clean page (paper tone, grain, type weight). No dependency added.
 
