@@ -3,6 +3,7 @@ import * as React from "react";
 import {
   Check,
   ChevronDown,
+  ChevronsUp,
   Pause,
   Play,
   SkipBack,
@@ -20,6 +21,7 @@ import { cn } from "../lib/utils";
 import { IconButton } from "./button";
 import type { Shortcut } from "./hotkeys";
 import { useSharedCursor, type CursorMapping } from "./cursor";
+import { Toggle } from "./toggle";
 import { Toolbar } from "./toolbar";
 import { Tooltip } from "./tooltip";
 import type { MediaMark } from "./media-skip";
@@ -488,15 +490,22 @@ export type VolumeControlProps = {
   onVolumeChange: (volume: number) => void;
   /** Allow over 100 (a boost), up to this. Default 100. */
   max?: number;
+  /** Allow over 100, up to this, behind a Louder toggle: the slider stops at 100 until it is pressed, so a slip of the thumb or the wheel never doubles the sound. Turning it off brings the volume back to 100. Takes the place of `max`. */
+  boost?: number;
   disabled?: boolean;
   className?: string;
 };
 
-/** A mute button and a volume slider with its value in percent. Muting sets the volume to 0 and remembers the level; unmuting puts it back. Moving the slider from 0 unmutes. */
-export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, className }: VolumeControlProps) {
+/** A mute button and a volume slider with its value in percent. Muting sets the volume to 0 and remembers the level; unmuting puts it back. Moving the slider from 0 unmutes. With `boost`, a Louder toggle lets it past 100. */
+export function VolumeControl({ volume, onVolumeChange, max = 100, boost, disabled, className }: VolumeControlProps) {
   const last = React.useRef(volume > 0 ? volume : 100);
   if (volume > 0) last.current = volume;
   const muted = volume === 0;
+  const [louderAsked, setLouderAsked] = React.useState(false);
+  const canBoost = boost !== undefined && boost > 100;
+  // Past 100 already (a level kept from before, or muted at one) counts as pressed, so the slider never shows a value past its end.
+  const louder = canBoost && (louderAsked || volume > 100 || last.current > 100);
+  const top = canBoost ? (louder ? boost : 100) : max;
   return (
     // `min-w-0` all the way down and a slider that shrinks, so a player a phone wide (320 px with a side rail) does not
     // run its "100%" past its edge (issue #213): the button and the readout keep their size, the track gives way.
@@ -510,14 +519,30 @@ export function VolumeControl({ volume, onVolumeChange, max = 100, disabled, cla
       />
       <Slider
         aria-label="Volume"
-        value={volume}
+        value={Math.min(volume, top)}
         onChange={onVolumeChange}
         min={0}
-        max={max}
+        max={top}
         unit="%"
         disabled={disabled}
         className="w-40 min-w-24 shrink"
       />
+      {canBoost && (
+        <Toggle
+          label={`Louder, up to ${boost}%`}
+          icon={ChevronsUp}
+          iconOnly
+          pressed={louder}
+          disabled={disabled}
+          onChange={(on) => {
+            setLouderAsked(on);
+            if (!on && (volume > 100 || last.current > 100)) {
+              last.current = 100;
+              onVolumeChange(muted ? 0 : 100);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

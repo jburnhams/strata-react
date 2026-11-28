@@ -11,6 +11,10 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-28 (player gain and Louder)
+
+- `MediaElementState` has a new member, `maxVolume` (100, or `boost` where Web Audio can play past it): a `MediaElementState` you build by hand in a test or story must supply it. Nothing else changes for a player given neither `gain` nor `boost`: no audio context is made.
+
 ## 2026-11-27 (no beckon under reduced motion)
 
 - `ChoiceGrid`/`PlaceBoard` `beckon`: under `prefers-reduced-motion: reduce` no tile gets `data-beckon` or its border. A test that waits for `[data-beckon]` with `matchMedia` stubbed to reduce must not.

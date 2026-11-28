@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-28 (player gain and Louder)
+**`MediaPlayer` `gain` and `boost`, `VolumeControl` `boost`: loudness normalisation and a volume past 100%** (branch `claude/project-thread-t03bkl`). From Tubes: its owner wants every video at the same loudness (the server measures each copy and gives a factor), 100% on the player as that level, up to 200% behind an explicit step, and clipping kept away, asking how much of that a browser can do. An element's `volume` stops at 1, so anything louder goes through Web Audio. No dependency added.
+
+- Checked in this container's Playwright Chromium (2026-11-28), with an analyser on the graph's output: the element's `volume` and `muted` still apply before a `MediaElementAudioSourceNode` (0.25 volume gave a quarter of the level, muted gave silence), so the slider keeps working under the gain; a factor of 2, 0.5 and 8 came out as asked; a `DynamicsCompressorNode` at threshold -1 dB, no knee, ratio 20 adds the spec's make-up gain, `(1 / curve(1))^0.6` (0.25 in, 0.26695 out, measured in an OfflineAudioContext), which a gain after it cancels, and held a tone 9.5 dB over full scale at -0.2 dBFS.
+- `src/components/media-sound.ts` **new**: `shapeSound(el, gain, boost)` makes one graph per element (a WeakMap: an element can be given to a context once), only once a level other than 1 is asked for, and routes the element only when its context is `running` (a suspended context is silent: until then it plays as before, at the plain level). An app's gain glides (time constant 0.5 s), the person's boost follows at once. `makeupGain`, `canShapeSound`.
+- `src/components/media-player.tsx`: `useMediaElement` options `gain` and `boost`, state `maxVolume`; `setVolume` past 100 sets the element to 1 and the rest in the graph; `MediaPlayer` `gain`, `boost`; the wheel stops at 100 unless the volume is already past it.
+- `src/components/media.tsx`: `VolumeControl boost`: a Louder toggle (`Toggle`, chevrons-up) beside the slider opens 100 to `boost`; turning it off brings the volume back to 100; a level already past 100 shows it pressed.
+- `tests/utils/web-audio.ts` **new** (a stand-in `AudioContext` that starts suspended and keeps each node's settings); `tests/unit/media-sound.test.tsx` **new** (9 tests). `stories/media-player.stories.tsx`: `Louder`. `README.md` Media player row; `UPGRADING.md`.
+
 ## 2026-11-27 (no beckon under reduced motion)
 **`useBeckon` stays off under reduced motion** (branch `claude/project-thread-fwkjyk`). Flashtap's screenshot check failed at random on its phone shots after adopting `beckon`: the animation is frozen in a shot, but the lit tile's primary border is not, and a shot that took longer than one beat (1.6 s) caught a random tile lit. A highlight hopping from tile to tile is motion too, so a person who asked for reduced motion now gets none of it, and strata-visual (which runs with reduced motion) sees no lit tile.
 
