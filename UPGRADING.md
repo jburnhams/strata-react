@@ -15,7 +15,7 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 
 - `PlaceBoard`'s pile keeps every piece's slot: a placed piece leaves an `aria-hidden` gap there (`[data-gap]`), and the "Put … back" button is now that gap, in the pile, while the placed piece is held. A test that found it outside the pile group or counted the pile's children sees the change.
 - With exactly one place, pieces are no longer toggle buttons: a tap puts a piece in or takes it out at once, and they are named "Put apple in the basket" / "Take apple out of the basket" (no `aria-pressed`, no "Picked up"). Tests that picked a piece up and then pressed the basket press the piece once.
-- A held piece and the places that take it are drawn with the info role (a ring), not primary; a right place has a success ring. Pieces take `touch-action: none` while the board is not locked. Every `PlaceBoard` baseline moves.
+- Each place reserves `aria-hidden` slots (`[data-room]`) for as many pieces as it can hold (its `limit`, else every piece), and a lone place takes the whole row, so places are taller from the start. A held piece and the places that take it are drawn with the info role (a ring), not primary; a right place has a success ring. Pieces take `touch-action: none` while the board is not locked. Every `PlaceBoard` baseline moves.
 
 ## 2026-11-28 (Compare: above and below, ink match)
 

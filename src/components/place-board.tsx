@@ -43,8 +43,8 @@ import { Status } from "./status";
 //
 // Nothing moves round while the learner works: the pile keeps a slot for every piece in its order, and a piece that
 // is out of it leaves an empty dashed gap of its size, so the pile's rows, sizes and order are the same from the first
-// tap to the check; each place keeps room for a row of placed pieces from the start, so a place that holds one (order,
-// match) does not grow when it is filled. `beckon` pulses the pile's pieces one at a time while none is held, and
+// tap to the check; each place keeps room for as many pieces as it can hold (its `limit`, else every piece) from the
+// start, so a place does not grow when it is filled. `beckon` pulses the pile's pieces one at a time while none is held, and
 // `stretch` shares the rows out, as on ChoiceGrid (`src/lib/beckon.ts`). A piece's picture is capped at 75% of the
 // piece, so an app that grows the picture step on a wide screen cannot push it out.
 //
@@ -181,6 +181,8 @@ export function PlaceBoard<P, S>({
     const there = pieces.filter((p) => pieceKey(p) !== key && where(p) === to);
     return there.length >= max ? there[0] : undefined;
   };
+  // How many pieces a place keeps room for: its limit, never more than there are pieces.
+  const room = (s: S) => Math.min(pieces.length, limit === undefined ? Infinity : limit(s));
   const send = (key: string, to: string | null) => {
     setHeld(null);
     const out = to === null ? undefined : bumped(key, to);
@@ -385,7 +387,8 @@ export function PlaceBoard<P, S>({
       >
         {pieces.map(slot)}
       </div>
-      <div className="grid min-w-0 gap-4" style={columns(placeSide, fill)}>
+      {/* A lone place (a basket) takes the whole row, so its room for every piece is a row or two, not a tall column. */}
+      <div className="grid min-w-0 gap-4" style={only !== undefined ? undefined : columns(placeSide, fill)}>
         {places.map((s) => {
           const key = placeKey(s);
           const state = placeState(s);
@@ -426,15 +429,20 @@ export function PlaceBoard<P, S>({
                   </Status>
                 )}
               </AriaButton>
-              {/* Room for a row of placed pieces from the start, so a place that holds one does not grow when filled.
-                  Placed pieces keep to their size: a place holds several, and a stretched one would fill it with one. */}
+              {/* Room for as many as the place can hold, from the start (its `limit`, else every piece): empty slots of a
+                  placed piece's size fill what is not yet used, so a place never grows as it fills (the owner, 2026-11-28:
+                  the basket "should always be big enough to store the max number"). Placed pieces keep to their size: a
+                  place holds several, and a stretched one would fill it with one. */}
               <div
                 role={inside.length > 0 ? "group" : undefined}
                 aria-label={inside.length > 0 ? `In ${name}` : undefined}
-                className="grid min-h-18 min-w-0 gap-2"
+                className="grid min-w-0 gap-2"
                 style={columns(placedSide, "auto-fill")}
               >
                 {inside.map((p) => piece(p, true))}
+                {Array.from({ length: Math.max(0, room(s) - inside.length) }, (_, i) => (
+                  <div key={`room${i}`} aria-hidden data-room className="aspect-square min-w-0" />
+                ))}
               </div>
             </div>
           );

@@ -318,11 +318,15 @@ describe("PlaceBoard", () => {
     expect(pile().children[1]).not.toHaveAttribute("data-gap");
   });
 
-  it("keeps room for a row of placed pieces in every place, filled or not", () => {
-    renderWithStrata(<Order initial={{ n2: "first" }} />);
-    for (const p of board().querySelectorAll("[data-place]"))
-      expect(p.lastElementChild?.className).toMatch(/\bmin-h-18\b/);
+  it("keeps room in every place for as many as it can hold, filled or not: its limit, else every piece", () => {
+    const rooms = () =>
+      [...board().querySelectorAll("[data-place]")].map((p) => p.querySelectorAll("[data-room]").length);
+    const { unmount } = renderWithStrata(<Order initial={{ n2: "first" }} />);
+    expect(rooms()).toEqual([2, 3, 3]); // three pieces each, one used in first
     expect(within(board()).getAllByRole("group", { name: /^In / })).toHaveLength(1);
+    unmount();
+    renderWithStrata(<Order limit={1} initial={{ n2: "first" }} />);
+    expect(rooms()).toEqual([0, 1, 1]);
   });
 
   it("with one place, a tap puts a piece in and a tap on a placed one takes it out, each named for what it does", async () => {
