@@ -85,7 +85,7 @@ import type { Region } from "../lib/viewport";
 // slider, as in `Compare`.
 
 /** The views a pair of videos has: pictures' views without the difference, which needs pixels. */
-export type VideoMode = Exclude<CompareMode, "difference">;
+export type VideoMode = Exclude<CompareMode, "difference" | "stack" | "match">;
 
 const MODES: readonly VideoMode[] = ["side", "swipe", "fade", "blink"];
 const MODE_LABEL: Record<VideoMode, string> = { side: "Side by side", swipe: "Swipe", fade: "Fade", blink: "Blink" };

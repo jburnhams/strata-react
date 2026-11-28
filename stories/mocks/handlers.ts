@@ -130,6 +130,44 @@ export function renderingSvg(variant: string): string | null {
     .replace("</svg>", '<circle cx="236" cy="86" r="3" fill="#2a2a2a"/></svg>');
 }
 
+/** A printed page as scanned and as set again, for the page views of `Compare` (above and below, ink match): lines of
+ *  type drawn as bars so no font is involved. The set page has its fourth line a few pixels low and its last line lost,
+ *  and the scan has paper with a tone, so the ink match has one of each kind of difference to show. */
+export function pageSvg(variant: string): string | null {
+  if (variant !== "scan" && variant !== "set") return null;
+  const scan = variant === "scan";
+  const words = [
+    [60, 70, 40, 90, 55, 30],
+    [80, 45, 60, 35, 70, 50],
+    [50, 90, 40, 65, 45, 60],
+    [70, 40, 85, 50, 30, 75],
+    [45, 60, 70, 40, 80, 55],
+    [90, 35, 50, 60, 45, 70],
+    [55, 75, 40, 80, 60],
+  ];
+  const bars = words
+    .flatMap((line, row) => {
+      if (!scan && row === words.length - 1) return [];
+      const y = 80 + row * 34 + (!scan && row === 3 ? 5 : 0);
+      let x = 50;
+      return line.map((w) => {
+        const r = `<rect x="${x}" y="${y}" width="${w}" height="12" fill="#1f1d1a"/>`;
+        x += w + 10;
+        return r;
+      });
+    })
+    .join("");
+  const paper = scan ? "#efe6d4" : "#ffffff";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="400" viewBox="0 0 500 400"><rect width="500" height="400" fill="${paper}"/><rect x="200" y="28" width="100" height="14" fill="#1f1d1a"/>${bars}</svg>`;
+}
+
+const scannedPage = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
+  const svg = pageSvg(String(params.variant).replace(/\.svg$/, ""));
+  return svg
+    ? new HttpResponse(svg, { headers: { "Content-Type": "image/svg+xml" } })
+    : new HttpResponse(null, { status: 404 });
+};
+
 const rendering = ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
   const svg = renderingSvg(String(params.variant).replace(/\.svg$/, ""));
   return svg
@@ -238,6 +276,7 @@ export const handlers = [
   http.get(api.pieces, () => HttpResponse.json(piecePhotos)),
   http.get(`${api.photos}/:id`, photo),
   http.get("/api/renderings/:variant", rendering),
+  http.get("/api/scanned-pages/:variant", scannedPage),
   http.get(api.bookings, ({ request }) => {
     const size = new URL(request.url).searchParams.get("size");
     return HttpResponse.json(size === "large" ? manyBookings : bookings);

@@ -75,6 +75,28 @@ export const Blink: Story = { args: { mode: "blink" } };
 /** Difference, brightness: B laid over A with a difference blend, so only what changed is bright; amplify makes faint changes show. The speck on the rim and the shift in the glaze stand out. */
 export const Difference: Story = { args: { mode: "difference" } };
 
+const scanned = {
+  id: "scan",
+  label: "Scan",
+  media: { kind: "image", src: "/api/scanned-pages/scan.svg", alt: "Page 12 as scanned", size: [500, 400] },
+} as const;
+const set = {
+  id: "set",
+  label: "Finished",
+  media: { kind: "image", src: "/api/scanned-pages/set.svg", alt: "Page 12 as finished", size: [500, 400] },
+} as const;
+const pageModes: CompareMode[] = ["side", "stack", "swipe", "fade", "blink", "difference", "match"];
+
+/** Above and below: a wide picture (a page, a spread) one over the other at full width. Offered only when `modes` lists `stack`. */
+export const AboveAndBelow: Story = {
+  args: { label: "Page 12, scan and finished", a: scanned, b: set, mode: "stack", modes: pageModes },
+};
+
+/** Ink match: a scanned page against the same page set again. Matched ink in the foreground's colour, the scan's own (the lost last line) in red, the finished page's own in blue; the fourth line, set a few pixels low, shows both. The share that agrees is said under the slider. Offered only when `modes` lists `match`. */
+export const InkMatch: Story = {
+  args: { label: "Page 12, scan and finished", a: scanned, b: set, mode: "match", modes: pageModes },
+};
+
 /** Difference, changed pixels: pixelmatch marks each pixel that differs by more than the tolerance and says how much of the picture that is. */
 export const DifferenceChangedPixels: Story = { args: { mode: "difference", defaultDifference: "pixels" } };
 

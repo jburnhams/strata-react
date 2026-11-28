@@ -596,14 +596,24 @@ export { CompareText, type CompareTextProps } from "./components/compare-text";
 export { diffWords, type TextDifference, type TextSegment } from "./lib/text-diff";
 export { loudnessOf, matchGains, gainToVolume, measureLoudness, type Loudness } from "./lib/loudness";
 export { CompareGrid, type CompareGridProps } from "./components/compare-grid";
-export { useDifference, type DifferenceState, type ReadPixels } from "./components/difference";
+export {
+  useDifference,
+  useInkMatch,
+  type DifferenceState,
+  type InkMatchState,
+  type ReadPixels,
+} from "./components/difference";
 export {
   differences,
+  inkMatch,
   readPixels,
   resample,
   MAX_SIDE,
   DEFAULT_TOLERANCE,
+  INK_COLOURS,
   type Difference,
+  type InkColours,
+  type InkMatch,
   type Pixels,
 } from "./lib/image-diff";
 export {

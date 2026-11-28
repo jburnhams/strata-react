@@ -11,6 +11,11 @@ time. While the version is 0.x, any release may break.
 
 Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Changelog").
 
+## 2026-11-28 (Compare: above and below, ink match)
+
+- `CompareMode` has two more members, `"stack"` and `"match"`: a `Record<CompareMode, …>` in an app needs entries for them (or use `Partial`). The default `modes` is unchanged; pass them in `modes` to offer them.
+- `Compare` in swipe now shows a "Swipe direction" toggle, and in fade a "Blend" toggle, under the toolbar: a test that counted radio groups or radios there sees them, and visual baselines of a `Compare` in swipe or fade move.
+
 ## 2026-11-27 (no beckon under reduced motion)
 
 - `ChoiceGrid`/`PlaceBoard` `beckon`: under `prefers-reduced-motion: reduce` no tile gets `data-beckon` or its border. A test that waits for `[data-beckon]` with `matchMedia` stubbed to reduce must not.
