@@ -221,6 +221,17 @@
   45% { scale: 1.06; }
 }
 
+/* Time left, drawn as a bar that empties once over `--drain-ms` (Glimpse): linear, as time is. It ends empty, so a
+   screenshot with animations finished shows an empty track; reduced motion collapses it to empty at once. */
+@utility drain {
+  transform-origin: left;
+  animation: strata-drain var(--drain-ms, 1s) linear 1 forwards;
+}
+@keyframes strata-drain {
+  from { scale: 1 1; }
+  to { scale: 0 1; }
+}
+
 /* Stacking, once, for every floating thing, so an app never writes a z-index. A bar (the undo
    bar, toasts) sits above panes and sticky headers; overlays (dialogs, popovers, menus) above
    bars; a tooltip above everything, since it can name a control inside an overlay. */

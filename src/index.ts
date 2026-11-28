@@ -24,6 +24,7 @@ export {
   type NumberFormatter,
 } from "./lib/format";
 export { useInView, type InViewOptions } from "./lib/in-view";
+export { useCountdown } from "./lib/countdown";
 export { followAim } from "./lib/follow";
 export { useSettledStatus, useViewPointers, useWheelZoom, type ViewPointerOptions } from "./lib/viewer-input";
 export type { IconComponent } from "./lib/icon";
@@ -371,6 +372,7 @@ export {
   type ChoiceSize,
 } from "./components/choice-grid";
 export { PlaceBoard, type PlaceBoardProps, type PlaceState } from "./components/place-board";
+export { Glimpse, type GlimpseProps, type GlimpseLook, type GlimpseWhy } from "./components/glimpse";
 export { TileGrid, TileGridSkeleton, SelectableGridSkeleton, type TileGridProps } from "./components/tile-grid";
 export { VirtualList } from "./components/virtual-list";
 export { InfiniteList, LoadMore, type InfiniteListProps, type LoadMoreProps } from "./components/infinite-list";
