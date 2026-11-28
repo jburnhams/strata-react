@@ -38,6 +38,7 @@ import {
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 import { createWatchedRanges, type MediaProgress } from "./media-progress";
+import { canShapeSound, releaseSound, shapeSound } from "./media-sound";
 import { Link as AriaLink } from "react-aria-components";
 import { useTarget } from "./link";
 import { Thumbnail } from "./thumbnail";
@@ -110,9 +111,11 @@ export type MediaElementState = {
   duration: number | null;
   /** Seconds buffered from the start of the range holding `time`. */
   buffered: number;
-  /** 0 to 100; 0 while muted. */
+  /** 0 to 100 (to `maxVolume` with a boost); 0 while muted. */
   volume: number;
   muted: boolean;
+  /** The most `setVolume` takes: 100, or the `boost` option's level where the browser can play past the element's own (Web Audio). */
+  maxVolume: number;
   rate: number;
   ended: boolean;
   /** Waiting for data (the first load, or a seek into what is not buffered yet). */
@@ -123,7 +126,7 @@ export type MediaElementState = {
   toggle: () => void;
   /** Seeks; before the metadata has loaded, remembers the time and applies it when it has. */
   seek: (time: number) => void;
-  /** 0 to 100. 0 mutes; more unmutes at that level. */
+  /** 0 to `maxVolume`. 0 mutes; more unmutes at that level; past 100 is the `boost`. */
   setVolume: (volume: number) => void;
   setRate: (rate: number) => void;
   /** Loads again, and plays if it was playing. For the error state's "Try again". */
@@ -160,6 +163,10 @@ export type MediaElementOptions = {
   progressEvery?: number;
   /** Names what is being played, so the count starts again when it changes. Default the element's `src` attribute; give it for a stream attached by an engine. */
   progressKey?: string;
+  /** A factor on the sound, played through Web Audio: an app's loudness normalisation (2 is twice as loud, 0.5 half), so 100% on the volume is the level the app chose. A change glides there over a second or two. Peaks past full scale are held by a limiter. `null` or 1 leaves the sound alone. Only for a same-origin source (or one served with CORS): a browser gives Web Audio silence from another site's file. See `media-sound.ts`. */
+  gain?: number | null;
+  /** Let the volume go past 100%, to this many percent (200 is twice as loud), through Web Audio with the same limiter. Where the browser has no Web Audio the volume stops at 100. */
+  boost?: number;
 };
 
 type Snapshot = Omit<
@@ -177,6 +184,11 @@ type Snapshot = Omit<
   | "markWatched"
 >;
 
+/** The most the volume goes to: a boost where Web Audio can play it, else 100. */
+function maxVolumeOf(boost: number | undefined, el: HTMLMediaElement) {
+  return boost && boost > 100 && canShapeSound(el) ? boost : 100;
+}
+
 /** How far one notch of the wheel over a focused video moves the volume, in percent. */
 const WHEEL_VOLUME_STEP = 5;
 
@@ -189,6 +201,7 @@ const idle: Snapshot = {
   buffered: 0,
   volume: 100,
   muted: false,
+  maxVolume: 100,
   rate: 1,
   ended: false,
   loading: false,
@@ -272,6 +285,8 @@ export function useMediaElement(
   const windowEnded = React.useRef(false);
   const streamProblem = React.useRef<string | null>(null);
   const edgePause = React.useRef(false);
+  // The person's level past 100%, as a factor (1 at or under 100): the element's `volume` stops at 1, so the rest is Web Audio's.
+  const extra = React.useRef(1);
   const contextGroup = useMediaGroupName();
   const group = options.group ?? contextGroup;
 
@@ -299,8 +314,9 @@ export function useMediaElement(
       time: Number.isFinite(el.currentTime) ? el.currentTime : 0,
       duration: known,
       buffered: bufferedAhead(el),
-      volume: el.muted ? 0 : Math.round(el.volume * 100),
+      volume: el.muted ? 0 : Math.round(el.volume * extra.current * 100),
       muted: el.muted,
+      maxVolume: maxVolumeOf(opts.current.boost, el),
       rate: el.playbackRate,
       ended: endedNow,
       loading: !error && el.networkState === 2 && el.readyState < 3 && !el.paused,
@@ -341,9 +357,23 @@ export function useMediaElement(
     opts.current.onWindowEnd?.();
   }, []);
 
+  // The app's level, again whenever it changes; and on `play`, the gesture that lets the audio context start.
+  const gain = options.gain ?? 1;
+  React.useEffect(() => {
+    const el = ref.current;
+    if (el) shapeSound(el, gain, extra.current);
+  }, [ref, gain]);
+  React.useEffect(() => {
+    const el = ref.current;
+    return () => {
+      if (el) releaseSound(el);
+    };
+  }, [ref]);
+
   useElementListeners(ref, (el) => {
     el.preservesPitch = true;
     const on = (e: Event) => {
+      if (e.type === "play") shapeSound(el, opts.current.gain ?? 1, extra.current);
       if (e.type === "play" || e.type === "playing") blocked.current = null;
       if (e.type === "play") {
         windowEnded.current = false;
@@ -561,9 +591,13 @@ export function useMediaElement(
       setVolume: (volume) => {
         const el = ref.current;
         if (!el) return;
-        const v = Math.min(Math.max(volume, 0), 100);
+        const v = Math.min(Math.max(volume, 0), maxVolumeOf(opts.current.boost, el));
         el.muted = v === 0;
-        if (v > 0) el.volume = v / 100;
+        if (v > 0) el.volume = Math.min(v, 100) / 100;
+        // Past 100 only the boost changes, and the element fires no `volumechange` for that.
+        extra.current = v > 100 ? v / 100 : 1;
+        shapeSound(el, opts.current.gain ?? 1, extra.current);
+        read();
       },
       setRate: (rate) => {
         const el = ref.current;
@@ -792,6 +826,12 @@ export type MediaPlayerProps = {
   status?: React.ReactNode;
   /** A transient warning from `usePlayerWarnings`, shown independently of the controls. */
   warning?: PlayerWarningEvent;
+  /** A factor on the sound, so 100% on the volume is the level the app chose: its loudness normalisation (a quiet file made as loud as the others, a loud one brought down). Played through Web Audio with a limiter that holds peaks under full scale; a change glides there. `null` or 1 leaves the sound alone. Same-origin sources only (or CORS): a browser gives Web Audio silence from another site's file. */
+  gain?: number | null;
+  /** How the element asks for its file (`crossOrigin`): set it for a file on another site served with CORS, so `gain` and `boost` can reach its sound. Without it such a file plays at its own level. */
+  crossOrigin?: "anonymous" | "use-credentials";
+  /** Let the volume go past 100%, to this many percent (200 is twice as loud), behind a Louder toggle beside the slider; the wheel goes on past 100 only once the volume is there. Through Web Audio with the same limiter; where the browser has none, no toggle. */
+  boost?: number;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
   aspect?: number | `${number}/${number}`;
   /** A video has a Full screen button (and the `f` key) beside the speed and volume. Default true; `false` for a picture that must stay in its place. Only where the browser has the Fullscreen API (the window-filling fallback would mount the video again and lose its place). Not drawn with the browser's own controls (`controls="native"`, or `"auto"` on a touch device), which have their own. */
@@ -863,6 +903,9 @@ export function MediaPlayer({
   overlay,
   status,
   warning,
+  gain,
+  boost,
+  crossOrigin,
   aspect,
   fullscreen = true,
   skip = {},
@@ -895,6 +938,8 @@ export function MediaPlayer({
     onProgress: onProgress ? progress : undefined,
     progressEvery,
     progressKey: current?.src,
+    gain,
+    boost,
   });
   // After the hook's own effects, so a report made because the file changed still names the file it is about.
   React.useEffect(() => void (sourceIndex.current = index), [index]);
@@ -1188,7 +1233,9 @@ export function MediaPlayer({
       if (!el.contains(document.activeElement) || e.ctrlKey || !e.deltaY) return;
       e.preventDefault();
       const m = latest.current;
-      m.setVolume(Math.min(100, Math.max(0, m.volume + (e.deltaY < 0 ? WHEEL_VOLUME_STEP : -WHEEL_VOLUME_STEP))));
+      // The wheel stops at 100 unless the person has already gone past it (the Louder toggle): never louder by a slip.
+      const top = m.volume > 100 ? m.maxVolume : 100;
+      m.setVolume(Math.min(top, Math.max(0, m.volume + (e.deltaY < 0 ? WHEEL_VOLUME_STEP : -WHEEL_VOLUME_STEP))));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -1275,6 +1322,7 @@ export function MediaPlayer({
     controls: native,
     autoPlay,
     preload: "metadata" as const,
+    crossOrigin,
     "aria-label": `${label}, ${kind}`,
   };
   const hasSpans = (spans?.length ?? 0) > 0;
@@ -1508,7 +1556,11 @@ export function MediaPlayer({
                   )}
                   <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
                     <RateChoice rate={media.rate} onRateChange={media.setRate} rates={rates} />
-                    <VolumeControl volume={media.volume} onVolumeChange={media.setVolume} />
+                    <VolumeControl
+                      volume={media.volume}
+                      onVolumeChange={media.setVolume}
+                      boost={media.maxVolume > 100 ? media.maxVolume : undefined}
+                    />
                     {canFull && (
                       <IconButton
                         icon={full ? Minimize : Maximize}

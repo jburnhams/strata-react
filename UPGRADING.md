@@ -16,6 +16,10 @@ Every PR that changes what an app sees adds a line here (see `CLAUDE.md`, "Chang
 - `CompareMode` has two more members, `"stack"` and `"match"`: a `Record<CompareMode, …>` in an app needs entries for them (or use `Partial`). The default `modes` is unchanged; pass them in `modes` to offer them.
 - `Compare` in swipe now shows a "Swipe direction" toggle, and in fade a "Blend" toggle, under the toolbar: a test that counted radio groups or radios there sees them, and visual baselines of a `Compare` in swipe or fade move.
 
+## 2026-11-28 (player gain and Louder)
+
+- `MediaElementState` has a new member, `maxVolume` (100, or `boost` where Web Audio can play past it): a `MediaElementState` you build by hand in a test or story must supply it. Nothing else changes for a player given neither `gain` nor `boost`: no audio context is made.
+
 ## 2026-11-27 (no beckon under reduced motion)
 
 - `ChoiceGrid`/`PlaceBoard` `beckon`: under `prefers-reduced-motion: reduce` no tile gets `data-beckon` or its border. A test that waits for `[data-beckon]` with `matchMedia` stubbed to reduce must not.

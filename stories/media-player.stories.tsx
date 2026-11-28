@@ -42,6 +42,9 @@ function One(props: Partial<React.ComponentProps<typeof MediaPlayer>>) {
 /** One file with Strata's controls: seek bar and time, play, speed, volume. The element is hidden; the browser's own bar is `controls="native"`. */
 export const OneFile: Story = { args: { label: "x" }, render: () => <One /> };
 
+/** The app's loudness normalisation (`gain`: here 1.5 times) and Louder beside the volume (`boost`): the slider stops at 100% until Louder is pressed, then goes on to 200%, with a limiter holding peaks under full scale. */
+export const Louder: Story = { args: { label: "x" }, render: () => <One gain={1.5} boost={200} /> };
+
 /** Spoken-word speeds (0.75 to 3), for an audiobook or a lecture. `rates` is a prop; `SPEECH_RATES` is the usual set. */
 export const SpeechSpeeds: Story = { args: { label: "x" }, render: () => <One rates={SPEECH_RATES} /> };
 
