@@ -19,7 +19,7 @@ import {
 import { Toolbar, ToolbarSeparator } from "./toolbar";
 import { ToggleGroup } from "./toggle";
 import { Slider } from "./value-controls";
-import { DifferenceMarks, useDifference, type ReadPixels } from "./difference";
+import { DifferenceMarks, useDifference, useInkMatch, type ReadPixels } from "./difference";
 import { format } from "../lib/format";
 import { ViewportFrame, useViewport } from "./viewport";
 import { RegionChips, useRegions } from "./compare-regions";
@@ -36,6 +36,17 @@ import type { Region } from "../lib/viewport";
 // swipe (where exactly do they differ, along this edge), fade (the same, softly) and blink (flip
 // between them in place, the most sensitive way to see a small change). Zoom and pan are one state
 // for both sides, so the same detail is in view in both. Full screen keeps everything.
+//
+// Three more, opt-in through `modes` so the screens that use the first five do not change
+// (strata-scan, 2026-11-28: a scanned page against the same page set again in type):
+// - above and below ("stack"): the pair one over the other, for wide pictures (a two-page spread)
+//   that side by side would draw at half their size;
+// - ink match ("match"): each picture's ink, matched ink in the foreground's colour, ink only in A in
+//   the danger role's and only in B in the info role's (a print proof's registration overlay), with
+//   the share that agrees. A pixel difference is useless there: paper, grain and type weight differ
+//   everywhere while the words sit in the same place;
+// - and swipe and fade gain an option each: swipe across or down (down follows a page's lines), and
+//   fade's "Multiply" lays B over A so both inks show at once, which shows a doubled or shifted line.
 //
 // Blind by type: `blind` is required with no default, because showing a judge which variant is which
 // is a validity bug, not a style choice. When it is true the picture's name is its `label` (the
@@ -103,7 +114,7 @@ export type Candidate<M = ImageMedia> = {
 };
 
 /** How two pictures are laid out. */
-export type CompareMode = "side" | "swipe" | "fade" | "blink" | "difference";
+export type CompareMode = "side" | "stack" | "swipe" | "fade" | "blink" | "difference" | "match";
 
 const MODE_LABEL: Record<CompareMode, string> = {
   side: "Side by side",
@@ -111,6 +122,8 @@ const MODE_LABEL: Record<CompareMode, string> = {
   fade: "Fade",
   blink: "Blink",
   difference: "Difference",
+  stack: "Above and below",
+  match: "Ink match",
 };
 const ALL_MODES: readonly CompareMode[] = ["side", "swipe", "fade", "blink", "difference"];
 
@@ -132,7 +145,7 @@ export type CompareProps = {
   defaultDifference?: "brightness" | "pixels";
   /** How pictures become pixels for the difference view. Default draws them on a canvas. */
   readPixels?: ReadPixels;
-  /** Which views are offered. Default all five. Must include `mode`. */
+  /** Which views are offered. Default the first five (side, swipe, fade, blink, difference); `stack` and `match` are offered only when listed. Must include `mode`. */
   modes?: readonly CompareMode[];
   /** How tall a frame may be, so the pair and the answer fit on one screen: a CSS length (`"60svh"`), `"viewport"` (the window's height less a fixed 14rem for the toolbar, captions, a vote bar and the key legend: a guess), or `"fit"` (measured: the window from the top of this component, less what it draws besides its frames and what follows it in the page, shared between the rows of frames, never under 120 px; re-measured as the page changes; see `reserve`). The frame narrows to keep the picture's shape. In full screen the frame fills what the controls leave, whatever this is. Default: as tall as the width makes it. */
   maxHeight?: string;
@@ -154,6 +167,19 @@ export type CompareProps = {
   footer?: React.ReactNode;
   className?: string;
 };
+
+/** The ink match in words: how much agrees, and how much of each side's ink the other lacks. */
+function inkWords(
+  m: { inkA: number; matchedA: number; inkB: number; matchedB: number; agreement: number },
+  a: string,
+  b: string,
+): string {
+  if (!m.inkA && !m.inkB) return "Neither has any ink.";
+  if (!m.inkA) return `${a} has no ink; ${b} has.`;
+  if (!m.inkB) return `${b} has no ink; ${a} has.`;
+  const only = (n: number, of: number) => (n === of ? "none" : format.share((of - n) / of));
+  return `${format.share(m.agreement)} of the ink agrees. Ink only in ${a}: ${only(m.matchedA, m.inkA)} of its ink; only in ${b}: ${only(m.matchedB, m.inkB)}.`;
+}
 
 /** Two pictures to judge, side by side or laid over each other, zoomed and panned together, and full screen. */
 export function Compare({
@@ -191,6 +217,10 @@ export function Compare({
   const [style, setStyle] = React.useState<"brightness" | "pixels">(defaultDifference);
   const [amplify, setAmplify] = React.useState(4);
   const [tolerance, setTolerance] = React.useState(10); // percent; pixelmatch's threshold is this over 100
+  const [axis, setAxis] = React.useState<"x" | "y">("x");
+  const [multiply, setMultiply] = React.useState(false);
+  const [near, setNear] = React.useState(1); // pixels either way within which the other's ink is the same ink
+  const ink = useInkMatch(a.media.src, b.media.src, near, mode === "match", readPixels);
   const diff = useDifference(
     a.media.src,
     b.media.src,
@@ -233,9 +263,9 @@ export function Compare({
   };
 
   let body: React.ReactNode;
-  if (mode === "side") {
+  if (mode === "side" || mode === "stack") {
     body = (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={cn("grid gap-3", mode === "side" && "sm:grid-cols-2")}>
         {[a, b].map((c, i) => (
           <figure key={i} className="grid gap-1.5">
             <Caption c={c} blind={blind} />
@@ -282,6 +312,30 @@ export function Compare({
         </ViewportFrame>
       </figure>
     );
+  } else if (mode === "match") {
+    body = (
+      <figure className="grid gap-1.5">
+        <div className="flex justify-between gap-4">
+          <Caption c={a} blind={blind} />
+          <span className="type-caption text-muted-foreground">against</span>
+          <Caption c={b} blind={blind} />
+        </div>
+        <ViewportFrame {...frameProps} ref={frameRef} label={`Ink of ${a.label} matched against ${b.label}`}>
+          {/* A's picture is drawn hidden: it gives the frame its size and loads the pair as the other views do */}
+          <div className="absolute inset-0 opacity-0">{pane(a, imgRef, learn)}</div>
+          <div className="absolute inset-0 bg-background" />
+          {ink.status === "ready" && <DifferenceMarks difference={ink.match} />}
+          {ink.status === "loading" && (
+            <Skeleton aria-hidden className="absolute inset-0 size-full rounded-none opacity-40" />
+          )}
+          {ink.status === "failed" && (
+            <p role="alert" className="absolute inset-x-0 bottom-0 bg-background/90 p-2 type-body-sm text-danger">
+              {cannotCompare}
+            </p>
+          )}
+        </ViewportFrame>
+      </figure>
+    );
   } else {
     // One frame, both pictures in it. Swipe clips the top one at the divider; fade lays it over at an opacity; blink shows one.
     const top = mode === "blink" ? (showing === "a" ? a : b) : a;
@@ -295,28 +349,46 @@ export function Compare({
         <ViewportFrame
           {...frameProps}
           ref={frameRef}
-          cover={mode === "swipe" ? { content: pane(a, imgRef, learn), shown: divider } : undefined}
-          pick={mode === "swipe" ? picker?.split(divider) : mode === "blink" ? picker?.one(showing) : undefined}
+          cover={mode === "swipe" ? { content: pane(a, imgRef, learn), shown: divider, axis } : undefined}
+          pick={
+            mode === "swipe" && axis === "x"
+              ? picker?.split(divider)
+              : mode === "blink"
+                ? picker?.one(showing)
+                : undefined
+          }
           label={mode === "blink" ? `Picture ${top.label}` : `${a.label} over ${b.label}`}
           overlay={
             mode === "swipe" && (
               <AriaSlider
                 aria-label={`Divider between ${a.label} and ${b.label}`}
-                value={divider}
-                onChange={(v) => setDivider(v as number)}
+                value={axis === "y" ? 100 - divider : divider}
+                onChange={(v) => setDivider(axis === "y" ? 100 - (v as number) : (v as number))}
                 minValue={0}
                 maxValue={100}
                 step={1}
+                orientation={axis === "y" ? "vertical" : "horizontal"}
                 className="absolute inset-0"
               >
                 <SliderTrack className="pointer-events-none h-full w-full">
                   <SliderThumb
-                    className="pointer-events-auto grid h-full w-8 cursor-ew-resize place-items-center focus-visible:outline-2 focus-visible:outline-ring"
-                    style={{ top: "50%" }}
+                    className={cn(
+                      "pointer-events-auto grid place-items-center focus-visible:outline-2 focus-visible:outline-ring",
+                      axis === "y" ? "h-8 w-full cursor-ns-resize" : "h-full w-8 cursor-ew-resize",
+                    )}
+                    // React Aria places the thumb along the track and centres it on that point; this puts it
+                    // half way across. A vertical slider counts up from the bottom, so its value is turned over
+                    // (above) to keep `divider` the share shown from the top.
+                    style={axis === "y" ? { left: "50%" } : { top: "50%" }}
                   >
                     <span
                       aria-hidden
-                      className="col-start-1 row-start-1 h-full w-1 border-x border-background bg-foreground"
+                      className={cn(
+                        "col-start-1 row-start-1 bg-foreground",
+                        axis === "y"
+                          ? "h-1 w-full border-y border-background"
+                          : "h-full w-1 border-x border-background",
+                      )}
                     />
                     <span
                       aria-hidden
@@ -330,7 +402,10 @@ export function Compare({
         >
           {pane(bottom)}
           {mode !== "swipe" && (
-            <div className="absolute inset-0" style={mode === "fade" ? { opacity: 1 - blend / 100 } : undefined}>
+            <div
+              className={cn("absolute inset-0", mode === "fade" && multiply && "mix-blend-multiply")}
+              style={mode === "fade" ? { opacity: 1 - blend / 100 } : undefined}
+            >
               {pane(top, imgRef, learn)}
             </div>
           )}
@@ -362,6 +437,35 @@ export function Compare({
         <RegionChips state={rg} />
         {picker && (mode === "fade" || mode === "difference") && (
           <p className="type-caption text-muted-foreground">{picker.unavailable(MODE_LABEL[mode])}</p>
+        )}
+        {mode === "swipe" && (
+          <ToggleGroup
+            label="Swipe direction"
+            options={[
+              { value: "x", label: "Left and right" },
+              { value: "y", label: "Top and bottom" },
+            ]}
+            value={axis}
+            onChange={(v) => setAxis(v as "x" | "y")}
+            size="sm"
+            className="justify-self-start"
+          />
+        )}
+        {picker && mode === "swipe" && axis === "y" && (
+          <p className="type-caption text-muted-foreground">{picker.unavailable("Top and bottom")}</p>
+        )}
+        {mode === "fade" && (
+          <ToggleGroup
+            label="Blend"
+            options={[
+              { value: "normal", label: "Normal" },
+              { value: "multiply", label: "Multiply" },
+            ]}
+            value={multiply ? "multiply" : "normal"}
+            onChange={(v) => setMultiply(v === "multiply")}
+            size="sm"
+            className="justify-self-start"
+          />
         )}
         {mode === "fade" && (
           <div className="flex items-center gap-3">
@@ -433,6 +537,45 @@ export function Compare({
                 </p>
               </>
             )}
+          </div>
+        )}
+        {mode === "match" && (
+          <div className="grid gap-2">
+            <div className="flex items-center gap-3">
+              <span className="type-caption text-muted-foreground">Near</span>
+              <Slider
+                aria-label="Pixels within which ink is the same ink"
+                value={near}
+                onChange={setNear}
+                min={0}
+                max={6}
+                hideValue
+                className="flex-1"
+              />
+              <span className="w-10 type-caption tabular-nums text-muted-foreground">{near}&nbsp;px</span>
+            </div>
+            <p className="flex flex-wrap gap-x-4 type-caption text-muted-foreground">
+              {/* a swatch, not a glyph: a "■" falls back to a system face, which differs by machine */}
+              {(
+                [
+                  ["bg-foreground", "In both"],
+                  ["bg-danger", `Only ${a.label}`],
+                  ["bg-info", `Only ${b.label}`],
+                ] as const
+              ).map(([swatch, words]) => (
+                <span key={words} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden className={cn("inline-block size-2.5 rounded-control", swatch)} />
+                  {words}
+                </span>
+              ))}
+            </p>
+            <p role="status" className="type-body-sm text-muted-foreground">
+              {ink.status === "ready"
+                ? inkWords(ink.match, a.label, b.label)
+                : ink.status === "loading"
+                  ? "Matching ink…"
+                  : ""}
+            </p>
           </div>
         )}
         {mode === "blink" && (

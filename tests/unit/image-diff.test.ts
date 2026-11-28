@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { differences, resample, type Pixels } from "../../src/lib/image-diff";
+import { INK_COLOURS, differences, dilate, inkMatch, resample, type Pixels } from "../../src/lib/image-diff";
 
 const solid = (width: number, height: number, rgba: [number, number, number, number]): Pixels => ({
   width,
@@ -59,5 +59,71 @@ describe("resample", () => {
     expect([...big.data.slice(0, 4)]).toEqual([0, 0, 0, 255]);
     expect(big.data[12]).toBe(255);
     expect(big.data[(1 * 4 + 1) * 4]).toBe(0);
+  });
+});
+
+describe("inkMatch", () => {
+  const paper = (w = 10, h = 10) => solid(w, h, [240, 235, 225, 255]);
+  const ink: [number, number, number, number] = [20, 20, 20, 255];
+  const colourAt = (m: ReturnType<typeof inkMatch>, x: number, y: number) => [
+    ...m.marks.slice((y * m.width + x) * 4, (y * m.width + x) * 4 + 4),
+  ];
+
+  it("agrees fully on a picture and itself, and on two blank pages", () => {
+    const a = paper();
+    set(a, 2, 2, ink);
+    expect(inkMatch(a, a).agreement).toBe(1);
+    expect(inkMatch(paper(), paper()).agreement).toBe(1);
+    expect(inkMatch(paper(), paper()).inkA).toBe(0);
+  });
+
+  it("colours matched ink, ink only in A and ink only in B apart", () => {
+    const a = paper();
+    const b = paper();
+    set(a, 1, 1, ink);
+    set(b, 1, 1, ink); // both
+    set(a, 8, 1, ink); // only A
+    set(b, 1, 8, ink); // only B
+    const m = inkMatch(a, b, { near: 0 });
+    expect(colourAt(m, 1, 1)).toEqual([...INK_COLOURS.both, 255]);
+    expect(colourAt(m, 8, 1)).toEqual([...INK_COLOURS.onlyA, 255]);
+    expect(colourAt(m, 1, 8)).toEqual([...INK_COLOURS.onlyB, 255]);
+    expect(colourAt(m, 5, 5)[3]).toBe(0);
+    expect(m.inkA).toBe(2);
+    expect(m.matchedA).toBe(1);
+    expect(m.agreement).toBeCloseTo(0.5);
+  });
+
+  it("counts ink a pixel or two off as the same ink when `near` allows it", () => {
+    const a = paper();
+    const b = paper();
+    set(a, 4, 4, ink);
+    set(b, 5, 5, ink);
+    expect(inkMatch(a, b, { near: 0 }).agreement).toBe(0);
+    expect(inkMatch(a, b, { near: 1 }).agreement).toBe(1);
+  });
+
+  it("brings B to A's size first", () => {
+    const a = paper(10, 10);
+    const b = paper(20, 20);
+    expect(inkMatch(a, b).width).toBe(10);
+  });
+
+  it("has no agreement when only one side has ink", () => {
+    const a = paper();
+    set(a, 3, 3, ink);
+    expect(inkMatch(a, paper()).agreement).toBe(0);
+  });
+});
+
+describe("dilate", () => {
+  it("grows a pixel into a square of side 2r+1, clipped at the edges", () => {
+    const m = new Uint8Array(25);
+    m[0] = 1;
+    const d = dilate(m, 5, 5, 1);
+    expect([...d].reduce((s, v) => s + v, 0)).toBe(4);
+    const c = new Uint8Array(25);
+    c[12] = 1;
+    expect([...dilate(c, 5, 5, 2)].every((v) => v === 1)).toBe(true);
   });
 });
