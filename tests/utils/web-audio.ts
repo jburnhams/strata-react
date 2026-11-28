@@ -15,14 +15,24 @@ export type FakeWebAudio = {
   uninstall(): void;
 };
 
+// As in a browser, a target set by `setTargetAtTime` is not the param's `.value` until audio time passes (never, while
+// the context is suspended): `target` is what it is heading for, which is what a test reads.
 class FakeParam {
   value: number;
+  target: number | null = null;
   constructor(value: number) {
     this.value = value;
   }
   setTargetAtTime(target: number) {
-    this.value = target;
+    this.target = target;
     return this;
+  }
+  cancelScheduledValues() {
+    this.target = null;
+    return this;
+  }
+  get heading() {
+    return this.target ?? this.value;
   }
 }
 
@@ -77,6 +87,13 @@ class FakeAudioContext extends EventTarget {
     this.sources.push(s);
     return s;
   }
+  suspend() {
+    if (this.state === "running") {
+      this.state = "suspended";
+      this.dispatchEvent(new Event("statechange"));
+    }
+    return Promise.resolve();
+  }
   resume() {
     if (!held && this.state !== "running") {
       this.state = "running";
@@ -90,7 +107,7 @@ function product(node: FakeNode, to: FakeNode): number | null {
   if (node === to) return 1;
   for (const next of node.out) {
     const rest = product(next, to);
-    if (rest !== null) return rest * (next instanceof FakeGain ? next.gain.value : 1);
+    if (rest !== null) return rest * (next instanceof FakeGain ? next.gain.heading : 1);
   }
   return null;
 }

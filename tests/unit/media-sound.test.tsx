@@ -75,6 +75,57 @@ describe("MediaPlayer gain", () => {
   });
 });
 
+describe("MediaPlayer gain, from review (#407)", () => {
+  it("heads for the newest gain even when an earlier one was asked for before the context started", async () => {
+    audio.holdStart();
+    const { container, rerender } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" gain={2} />);
+    await act(async () => {});
+    rerender(<MediaPlayer label="Tour" kind="video" src="/a.mp4" gain={1} />);
+    await act(async () => audio.allowStart());
+    expect(level(videoOf(container))).toBe(1);
+  });
+
+  it("never routes another site's file, which a graph would silence, unless it is loaded with crossOrigin", async () => {
+    const away = render(
+      <MediaPlayer
+        label="Tour"
+        kind="video"
+        src="https://elsewhere.example/a.mp4"
+        controls="strata"
+        gain={2}
+        boost={200}
+      />,
+    );
+    await act(async () => {});
+    expect(audio.routed(videoOf(away.container))).toBe(false);
+    expect(screen.queryByRole("button", { name: /Louder/ })).toBeNull();
+    away.unmount();
+    const { container } = render(
+      <MediaPlayer
+        label="Tour"
+        kind="video"
+        src="https://elsewhere.example/a.mp4"
+        controls="strata"
+        gain={2}
+        boost={200}
+        crossOrigin="anonymous"
+      />,
+    );
+    await act(async () => {});
+    expect(videoOf(container)).toHaveAttribute("crossorigin", "anonymous");
+    expect(level(videoOf(container))).toBe(2);
+  });
+
+  it("suspends the audio context when the player goes, and starts it again if the same element comes back", async () => {
+    const { unmount } = render(<MediaPlayer label="Tour" kind="video" src="/a.mp4" gain={1.5} />);
+    await act(async () => {});
+    expect(audio.contexts[0].state).toBe("running");
+    unmount();
+    await act(async () => {});
+    expect(audio.contexts[0].state).toBe("suspended");
+  });
+});
+
 describe("MediaPlayer boost", () => {
   it("stops at 100% until Louder is pressed, then goes on to the boost on top of the gain", async () => {
     const user = userEvent.setup();

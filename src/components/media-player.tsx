@@ -38,7 +38,7 @@ import {
 import { format } from "../lib/format";
 import { VisuallyHidden } from "react-aria";
 import { createWatchedRanges, type MediaProgress } from "./media-progress";
-import { canShapeSound, shapeSound } from "./media-sound";
+import { canShapeSound, releaseSound, shapeSound } from "./media-sound";
 import { Link as AriaLink } from "react-aria-components";
 import { useTarget } from "./link";
 import { Thumbnail } from "./thumbnail";
@@ -185,8 +185,8 @@ type Snapshot = Omit<
 >;
 
 /** The most the volume goes to: a boost where Web Audio can play it, else 100. */
-function maxVolumeOf(boost: number | undefined) {
-  return boost && boost > 100 && canShapeSound() ? boost : 100;
+function maxVolumeOf(boost: number | undefined, el: HTMLMediaElement) {
+  return boost && boost > 100 && canShapeSound(el) ? boost : 100;
 }
 
 /** How far one notch of the wheel over a focused video moves the volume, in percent. */
@@ -316,7 +316,7 @@ export function useMediaElement(
       buffered: bufferedAhead(el),
       volume: el.muted ? 0 : Math.round(el.volume * extra.current * 100),
       muted: el.muted,
-      maxVolume: maxVolumeOf(opts.current.boost),
+      maxVolume: maxVolumeOf(opts.current.boost, el),
       rate: el.playbackRate,
       ended: endedNow,
       loading: !error && el.networkState === 2 && el.readyState < 3 && !el.paused,
@@ -363,6 +363,12 @@ export function useMediaElement(
     const el = ref.current;
     if (el) shapeSound(el, gain, extra.current);
   }, [ref, gain]);
+  React.useEffect(() => {
+    const el = ref.current;
+    return () => {
+      if (el) releaseSound(el);
+    };
+  }, [ref]);
 
   useElementListeners(ref, (el) => {
     el.preservesPitch = true;
@@ -585,7 +591,7 @@ export function useMediaElement(
       setVolume: (volume) => {
         const el = ref.current;
         if (!el) return;
-        const v = Math.min(Math.max(volume, 0), maxVolumeOf(opts.current.boost));
+        const v = Math.min(Math.max(volume, 0), maxVolumeOf(opts.current.boost, el));
         el.muted = v === 0;
         if (v > 0) el.volume = Math.min(v, 100) / 100;
         // Past 100 only the boost changes, and the element fires no `volumechange` for that.
@@ -822,6 +828,8 @@ export type MediaPlayerProps = {
   warning?: PlayerWarningEvent;
   /** A factor on the sound, so 100% on the volume is the level the app chose: its loudness normalisation (a quiet file made as loud as the others, a loud one brought down). Played through Web Audio with a limiter that holds peaks under full scale; a change glides there. `null` or 1 leaves the sound alone. Same-origin sources only (or CORS): a browser gives Web Audio silence from another site's file. */
   gain?: number | null;
+  /** How the element asks for its file (`crossOrigin`): set it for a file on another site served with CORS, so `gain` and `boost` can reach its sound. Without it such a file plays at its own level. */
+  crossOrigin?: "anonymous" | "use-credentials";
   /** Let the volume go past 100%, to this many percent (200 is twice as loud), behind a Louder toggle beside the slider; the wheel goes on past 100 only once the volume is there. Through Web Audio with the same limiter; where the browser has none, no toggle. */
   boost?: number;
   /** The picture's shape before its metadata loads (and after, when given): a width over a height, or "16/9". Default "16/9" until the video says its own. */
@@ -897,6 +905,7 @@ export function MediaPlayer({
   warning,
   gain,
   boost,
+  crossOrigin,
   aspect,
   fullscreen = true,
   skip = {},
@@ -1313,6 +1322,7 @@ export function MediaPlayer({
     controls: native,
     autoPlay,
     preload: "metadata" as const,
+    crossOrigin,
     "aria-label": `${label}, ${kind}`,
   };
   const hasSpans = (spans?.length ?? 0) > 0;

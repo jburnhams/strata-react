@@ -22,8 +22,9 @@
 // A level set by the app glides there (a time constant of half a second), since it changes while playing as a
 // measurement improves; the person's own boost follows the slider at once.
 //
-// The source must be same-origin or served with CORS (and the element's `crossOrigin` set): a browser gives a
-// graph silence from a cross-origin file, so `gain` is for an app's own files.
+// A browser gives a graph silence from a cross-origin file, so only a same-origin source (or `blob:`/`data:`, or one
+// loaded with `crossOrigin`, `MediaPlayer crossOrigin`) is ever routed; another site's plays as it is, with no gain or
+// boost (`canShapeSound(el)`), and is never silenced. A player that unmounts suspends its context (`releaseSound`).
 
 /** The limiter's threshold, dB under full scale. */
 export const LIMIT_DB = -1;
@@ -44,19 +45,36 @@ type Graph = {
   boost: GainNode;
   routed: boolean;
   waiting: boolean;
+  // What was last asked for: a suspended context's time stands still, so a param's `.value` is not yet its target.
+  levelTarget: number;
+  boostTarget: number;
 };
 
 const graphs = new WeakMap<HTMLMediaElement, Graph>();
 
-/** Whether this browser can play a level past the element's own (it has Web Audio). */
-export function canShapeSound() {
-  return typeof window !== "undefined" && typeof window.AudioContext === "function";
+/**
+ * Whether this browser can play a level past the element's own (it has Web Audio), and, given an element, whether its
+ * source may go through it: same-origin (or a `blob:` or `data:` URL, as a stream engine's Media Source is), or loaded
+ * with `crossOrigin` set (then the server must answer with CORS). Any other file comes out of a graph as silence, so it
+ * is never routed: it plays at its own level, with no gain and no boost.
+ */
+export function canShapeSound(el?: HTMLMediaElement | null) {
+  if (typeof window === "undefined" || typeof window.AudioContext !== "function") return false;
+  if (!el) return true;
+  const src = el.currentSrc || el.getAttribute("src") || "";
+  if (!src || el.crossOrigin !== null) return true;
+  try {
+    const url = new URL(src, window.location.href);
+    return url.protocol === "blob:" || url.protocol === "data:" || url.origin === window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 function graphFor(el: HTMLMediaElement): Graph | null {
   const had = graphs.get(el);
   if (had) return had;
-  if (!canShapeSound()) return null;
+  if (!canShapeSound(el)) return null;
   const context = new AudioContext();
   const level = context.createGain();
   const boost = context.createGain();
@@ -69,18 +87,20 @@ function graphFor(el: HTMLMediaElement): Graph | null {
   const unlift = context.createGain();
   unlift.gain.value = 1 / makeupGain();
   level.connect(boost).connect(limiter).connect(unlift).connect(context.destination);
-  const graph: Graph = { context, level, boost, routed: false, waiting: false };
+  const graph: Graph = { context, level, boost, routed: false, waiting: false, levelTarget: 1, boostTarget: 1 };
   graphs.set(el, graph);
   return graph;
 }
 
 // Takes the element into the graph once the context runs, never before (a suspended context is silent).
 function route(el: HTMLMediaElement, graph: Graph) {
-  if (graph.routed) return;
   if (graph.context.state !== "running") {
+    // Also a routed element whose player was unmounted (`releaseSound`) and is back: its sound needs the context running.
     void graph.context.resume().catch(() => {});
     return;
   }
+  if (graph.routed) return;
+  if (!canShapeSound(el)) return; // its source changed to another site's since the graph was made
   try {
     graph.context.createMediaElementSource(el).connect(graph.level);
     graph.routed = true;
@@ -101,9 +121,16 @@ export function shapeSound(el: HTMLMediaElement, gain: number, boost: number, gl
   if (!graph) return;
   const now = graph.context.currentTime;
   const wanted = Math.max(0, gain);
-  if (Math.abs(graph.level.gain.value - wanted) > 1e-4)
+  if (wanted !== graph.levelTarget) {
+    graph.levelTarget = wanted;
+    graph.level.gain.cancelScheduledValues(now);
     graph.level.gain.setTargetAtTime(wanted, now, graph.routed && glide ? GLIDE : FOLLOW);
-  if (Math.abs(graph.boost.gain.value - boost) > 1e-4) graph.boost.gain.setTargetAtTime(boost, now, FOLLOW);
+  }
+  if (boost !== graph.boostTarget) {
+    graph.boostTarget = boost;
+    graph.boost.gain.cancelScheduledValues(now);
+    graph.boost.gain.setTargetAtTime(boost, now, FOLLOW);
+  }
   if (!graph.routed && !graph.waiting && graph.context.state !== "running") {
     graph.waiting = true;
     graph.context.addEventListener("statechange", function started() {
@@ -114,4 +141,14 @@ export function shapeSound(el: HTMLMediaElement, gain: number, boost: number, gl
     });
   }
   route(el, graph);
+}
+
+/**
+ * Lets go of an element's audio while its player is gone: suspends its context, which frees the audio thread. Not
+ * closed, since an element can be given to a context only once: the same element mounted again (React's double mount in
+ * development) resumes it on the next `shapeSound`.
+ */
+export function releaseSound(el: HTMLMediaElement) {
+  const graph = graphs.get(el);
+  if (graph && graph.context.state === "running") void graph.context.suspend().catch(() => {});
 }
