@@ -458,4 +458,17 @@ describe("PlaceBoard", () => {
     await user.click(place("Put 9 in first"));
     expect(onMove.mock.calls).toEqual([["n9", "first"]]);
   });
+
+  it("lets go of a drag when the board locks, so taps work again once it unlocks (Codex on #409)", async () => {
+    const user = userEvent.setup();
+    const onMove = vi.fn();
+    const { rerender } = renderWithStrata(<Order onMove={onMove} />);
+    dragTo(piece("5"), 50, 350);
+    rerender(<Order onMove={onMove} locked />);
+    expect(document.querySelector("[data-dragging]")).toBeNull();
+    drop(50, 350);
+    rerender(<Order onMove={onMove} />);
+    await user.click(piece("2"));
+    expect(piece("2, picked up")).toHaveAttribute("aria-pressed", "true");
+  });
 });

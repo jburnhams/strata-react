@@ -247,7 +247,12 @@ export function PlaceBoard<P, S>({
     window.addEventListener("pointermove", moved);
     window.addEventListener("pointerup", ended);
     window.addEventListener("pointercancel", ended);
-    stopDrag.current = stop;
+    // Called from outside the drag (the board locks or goes away): no pointerup will clear what the drag set.
+    stopDrag.current = () => {
+      stop();
+      dragged.current = false;
+      if (size !== null) setHeld(null);
+    };
   };
 
   const zone = (key: string) => (el: HTMLElement | null) => {
