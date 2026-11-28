@@ -18,6 +18,7 @@ import { Button } from "./button";
 // - Everything stays in one cell of a grid, each part kept (invisible, and inert where it can be pressed) when not
 //   in use: the content, the count and, once offered, the look-again button. So the box never changes size and the
 //   tiles under it never jump, even when the content is smaller than the button (Codex on #411).
+// - The button is `size="lg"`: like PlaceBoard's Check, it is pressed by a young learner.
 // - Looks again are counted here, not by the app, so the button cannot be offered twice for one look; the app
 //   lowers `peeks` (to 0 once the round is over) and the button goes.
 // - A screen reader hears "Get ready" (`ready`) as the count starts and the `gone` sentence when it hides; the
@@ -126,6 +127,7 @@ export function Glimpse({
               inert={!canPeek || undefined}
             >
               <Button
+                size="lg"
                 onPress={() => {
                   setUsed((u) => u + 1);
                   start("peek");

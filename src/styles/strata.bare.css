@@ -103,6 +103,10 @@
     --control-px: 1rem;
     --control-px-sm: 0.75rem;
     --control-icon: 1rem;
+    /* Button size="lg": one big action for small fingers (a round's Check), the same in every density. */
+    --control-h-lg: 5rem;
+    --control-px-lg: 2.5rem;
+    --control-icon-lg: 2rem;
 
     --motion-effects: 200ms;
     --motion-spatial: 350ms;
