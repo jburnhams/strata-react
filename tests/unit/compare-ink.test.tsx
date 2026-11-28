@@ -102,3 +102,20 @@ describe("Compare, views for pages", () => {
     expect(frame.querySelector(".mix-blend-multiply")).not.toBeNull();
   });
 });
+
+describe("useInkMatch", () => {
+  it("reads the theme's colours again when the scheme changes", async () => {
+    const { useInkMatch } = await import("../../src");
+    const { renderHook, waitFor, act } = await import("@testing-library/react");
+    const root = document.documentElement;
+    const { result } = renderHook(() => useInkMatch("/p/scan", "/p/finished", 1, true, read));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const first = result.current.status === "ready" ? result.current.match : null;
+    await act(async () => {
+      root.classList.add("dark");
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status === "ready" && result.current.match).not.toBe(first));
+    root.classList.remove("dark");
+  });
+});

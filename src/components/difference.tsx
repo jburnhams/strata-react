@@ -96,6 +96,18 @@ export function themeInkColours(): InkColours {
   };
 }
 
+/** A count that goes up whenever the page's scheme or palette changes (`ThemeProvider` sets the `class` and `data-palette` of the root element), so colours read from the theme can be read again. */
+function useThemeChanges(enabled: boolean): number {
+  const [n, setN] = React.useState(0);
+  React.useEffect(() => {
+    if (!enabled || typeof MutationObserver === "undefined") return;
+    const watch = new MutationObserver(() => setN((x) => x + 1));
+    watch.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-palette", "style"] });
+    return () => watch.disconnect();
+  }, [enabled]);
+  return n;
+}
+
 /** Where two pictures' ink agrees, within `near` pixels, read only while `enabled`. */
 export function useInkMatch(
   a: string,
@@ -106,8 +118,14 @@ export function useInkMatch(
 ): InkMatchState {
   const pair = usePixelPair(a, b, enabled, read);
   const deferred = React.useDeferredValue(near);
-  // read when the pair arrives, so a scheme or palette changed between pages is picked up on the next one
-  const colours = React.useMemo(() => (pair && pair !== "failed" ? themeInkColours() : INK_COLOURS), [pair]);
+  // read when the pair arrives and again whenever the scheme or palette changes, so the marks always
+  // agree with the legend and the background, which follow the theme through CSS (Codex on #406)
+  const theme = useThemeChanges(enabled);
+  const colours = React.useMemo(
+    () => (pair && pair !== "failed" ? themeInkColours() : INK_COLOURS),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `theme` is the reason to read the colours again
+    [pair, theme],
+  );
   const match = React.useMemo(
     () => (pair && pair !== "failed" ? inkMatch(pair.a, pair.b, { near: deferred, colours }) : null),
     [pair, deferred, colours],
