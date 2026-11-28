@@ -15,8 +15,9 @@ import { Button } from "./button";
 //   app is usually saying the question then.
 // - The time left is drawn as a bar as wide as the content that empties (`drain`, linear, as time is), so a
 //   learner sees it is going before it goes. Under reduced motion the bar is empty at once; the content still hides on time.
-// - Everything stays in one cell of a grid: the content (kept, invisible, when not showing), the count and the
-//   look-again button. So the box never changes size and the tiles under it never jump.
+// - Everything stays in one cell of a grid, each part kept (invisible, and inert where it can be pressed) when not
+//   in use: the content, the count and, once offered, the look-again button. So the box never changes size and the
+//   tiles under it never jump, even when the content is smaller than the button (Codex on #411).
 // - Looks again are counted here, not by the app, so the button cannot be offered twice for one look; the app
 //   lowers `peeks` (to 0 once the round is over) and the button goes.
 // - A screen reader hears "Get ready" (`ready`) as the count starts and the `gone` sentence when it hides; the
@@ -81,7 +82,11 @@ export function Glimpse({
     setSeenAgain(again);
     start("again");
   }
-  const left = useCountdown(phase === "counting", count, () => setPhase("showing"));
+  // Keyed by the look, so a new look that starts while one is still counting (`again` changes) counts from the top.
+  const left = useCountdown(phase === "counting", count, () => setPhase("showing"), look.n);
+  // Once looks again have been offered, the button's room stays, so the box does not shrink when the app takes them away.
+  const [offered, setOffered] = React.useState(peeks > 0);
+  if (peeks > 0 && !offered) setOffered(true);
   const latest = React.useRef(onLook);
   React.useEffect(() => {
     latest.current = onLook;
@@ -100,26 +105,36 @@ export function Glimpse({
       <div className="grid gap-3">
         <div className="grid place-items-center">
           <div className={cn("col-start-1 row-start-1", phase !== "showing" && "invisible")}>{children}</div>
-          {left !== null && (
+          {/* The count and the button always hold their room (invisible, inert, hidden from the accessibility tree when
+              not in use), so content smaller than either never makes the box grow or shrink between phases. */}
+          {count > 0 && (
             <span
               aria-hidden
-              data-countdown
-              className="col-start-1 row-start-1 type-picture tabular-nums text-muted-foreground"
+              data-countdown={left !== null || undefined}
+              className={cn(
+                "col-start-1 row-start-1 type-picture tabular-nums text-muted-foreground",
+                left === null && "invisible",
+              )}
             >
-              {left}
+              {left ?? count}
             </span>
           )}
-          {canPeek && (
-            <Button
-              className="col-start-1 row-start-1"
-              onPress={() => {
-                setUsed((u) => u + 1);
-                start("peek");
-              }}
+          {offered && (
+            <div
+              className={cn("col-start-1 row-start-1", !canPeek && "invisible")}
+              aria-hidden={!canPeek || undefined}
+              inert={!canPeek || undefined}
             >
-              <Eye aria-hidden />
-              {peekLabel}
-            </Button>
+              <Button
+                onPress={() => {
+                  setUsed((u) => u + 1);
+                  start("peek");
+                }}
+              >
+                <Eye aria-hidden />
+                {peekLabel}
+              </Button>
+            </div>
           )}
         </div>
         <div

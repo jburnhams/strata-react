@@ -11,14 +11,14 @@ import * as React from "react";
 /**
  * Counts down `seconds` whole seconds while `running`, then calls `onDone` once: the seconds left (never below 1), or
  * null when not counting (not running, or 0 seconds: the caller waits for a tap instead). Running false and true again
- * starts again from `seconds`.
+ * starts again from `seconds`, and so does a new `run` while it counts (a new look begun before the last one showed).
  */
-export function useCountdown(running: boolean, seconds: number, onDone: () => void): number | null {
+export function useCountdown(running: boolean, seconds: number, onDone: () => void, run?: unknown): number | null {
   const counting = running && seconds > 0;
   const [left, setLeft] = React.useState(seconds);
-  const [was, setWas] = React.useState(false);
-  if (counting !== was) {
-    setWas(counting);
+  const [was, setWas] = React.useState<{ counting: boolean; run: unknown }>({ counting: false, run });
+  if (counting !== was.counting || (counting && run !== was.run)) {
+    setWas({ counting, run });
     if (counting) setLeft(seconds);
   }
   const latest = React.useRef(onDone);
@@ -37,6 +37,6 @@ export function useCountdown(running: boolean, seconds: number, onDone: () => vo
       }
     }, 1000);
     return () => clearInterval(t);
-  }, [counting, seconds]);
+  }, [counting, seconds, run]);
   return counting ? Math.max(left, 1) : null;
 }

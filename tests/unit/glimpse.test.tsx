@@ -97,6 +97,30 @@ describe("Glimpse", () => {
     ]);
   });
 
+  it("counts from the top when `again` changes while it is still counting", async () => {
+    const { rerender } = renderWithStrata(<Round />);
+    await tick(2000);
+    expect(counted()).toBe("1");
+    rerender(<Round again={1} />);
+    expect(counted()).toBe("3");
+    await tick(1000);
+    expect(phase()).toBe("counting"); // the old count would have ended here
+    await tick(2000);
+    expect(phase()).toBe("showing");
+  });
+
+  it("keeps the count's and the button's room in every phase, out of reach when not in use", async () => {
+    const { rerender } = renderWithStrata(<Round peeks={1} count={0} />);
+    const button = () => screen.getByText("Look again").closest("button")?.parentElement;
+    expect(button()).toHaveClass("invisible");
+    expect(button()).toHaveAttribute("inert");
+    await tick(1500);
+    expect(button()).not.toHaveClass("invisible");
+    rerender(<Round peeks={0} count={0} />); // taken away: still holds its room, out of reach
+    expect(button()).toHaveClass("invisible");
+    expect(screen.queryByRole("button", { name: "Look again" })).toBeNull();
+  });
+
   it("offers `peeks` looks again once gone, and the button goes once they are used", async () => {
     const looks: GlimpseLook[] = [];
     const { rerender } = renderWithStrata(<Round peeks={1} onLook={(l) => looks.push(l)} />);

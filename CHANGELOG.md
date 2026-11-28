@@ -5,6 +5,7 @@
 
 - `src/components/glimpse.tsx` **new**: `Glimpse` (`ms`, `count` 3, `again`, `peeks`, `peekLabel`, `ready`, `gone`, `onLook`), types `GlimpseLook`, `GlimpseWhy`. Content, count and button share one grid cell, so the box keeps its size in every phase; a `role="status"` line says "Get ready to look." and the `gone` sentence.
 - `src/lib/countdown.ts` **new**: `useCountdown`, from Flashtap's PlayScreen, now resetting its count in render when it starts, so a second run's first frame shows 3, not the last run's 1.
+- Review of #411 (Codex): the count and, once offered, the button now hold their room in every phase (invisible, and the button `inert` and `aria-hidden` when not in use), so content smaller than either never moves what is under it; a new look begun while one is still counting counts from 3 again (`useCountdown`'s optional `run`, the look's number). Two more tests (8).
 - `src/styles/strata.bare.css`: `drain` utility and `strata-drain` keyframes (scale 1 to 0 on x over `--drain-ms`, linear, ending empty).
 - `src/index.ts`: the exports. `stories/glimpse.stories.tsx` **new** (Playing and Gone, not shot: one moves, the other draws nothing; Showing and LookAgain, with new baselines). `tests/unit/glimpse.test.tsx` **new** (6 tests). `README.md`: "Seeing for a moment" row.
 
