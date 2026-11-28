@@ -555,9 +555,19 @@ export function Compare({
               <span className="w-10 type-caption tabular-nums text-muted-foreground">{near}&nbsp;px</span>
             </div>
             <p className="flex flex-wrap gap-x-4 type-caption text-muted-foreground">
-              <span className="text-foreground">■ In both</span>
-              <span className="text-danger">■ Only {a.label}</span>
-              <span className="text-info">■ Only {b.label}</span>
+              {/* a swatch, not a glyph: a "■" falls back to a system face, which differs by machine */}
+              {(
+                [
+                  ["bg-foreground", "In both"],
+                  ["bg-danger", `Only ${a.label}`],
+                  ["bg-info", `Only ${b.label}`],
+                ] as const
+              ).map(([swatch, words]) => (
+                <span key={words} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden className={cn("inline-block size-2.5 rounded-control", swatch)} />
+                  {words}
+                </span>
+              ))}
             </p>
             <p role="status" className="type-body-sm text-muted-foreground">
               {ink.status === "ready"

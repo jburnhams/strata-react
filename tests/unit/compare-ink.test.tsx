@@ -74,8 +74,8 @@ describe("Compare, views for pages", () => {
     screen.getByRole("slider", { name: "Pixels within which ink is the same ink" }).focus();
     await user.keyboard("{ArrowLeft}");
     expect(await screen.findByText(/^0% of the ink agrees|^<1% of the ink agrees/)).toBeInTheDocument();
-    expect(screen.getByText("■ Only Scan")).toHaveClass("text-danger");
-    expect(screen.getByText("■ Only Finished")).toHaveClass("text-info");
+    expect(screen.getByText("Only Scan").querySelector(".bg-danger")).not.toBeNull();
+    expect(screen.getByText("Only Finished").querySelector(".bg-info")).not.toBeNull();
   });
 
   it("swipes down as well as across, with the divider's value the share shown from the top", async () => {

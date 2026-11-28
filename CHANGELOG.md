@@ -9,7 +9,7 @@
 - `src/components/viewport.tsx`: `ViewportFrame`'s `cover` takes `axis: "y"` (cut from the top).
 - `src/components/compare-video.tsx`: `VideoMode` leaves out the two new views.
 - `src/index.ts`: `inkMatch`, `INK_COLOURS`, `useInkMatch` and the types.
-- `stories/compare.stories.tsx`: `AboveAndBelow`, `InkMatch`, on a page drawn as bars of type (`stories/mocks/handlers.ts`: **new** `/api/scanned-pages/:variant`, `pageSvg`); new baselines for them, and the swipe and fade shots move (their new toggle).
+- `stories/compare.stories.tsx`: `AboveAndBelow`, `InkMatch`, on a page drawn as bars of type (`stories/mocks/handlers.ts`: **new** `/api/scanned-pages/:variant`, `pageSvg`); new baselines for them (`data-compare--above-and-below`, `--ink-match`), and `data-compare--swipe`, `--fade`, `--regions`, `--fits-the-screen` and `--fits-the-whole-page` grow by the new toggle row (50 px; the last three open in swipe). Only the Data/Compare shots were run here (`--filter data-compare`, the same Chromium 158 as the baselines); a full run did not finish in the 30 minutes this machine allows a command.
 - Tests: **new** `tests/unit/compare-ink.test.tsx` (the views offered, above and below, the ink match's words and slider, swipe down, multiply); `tests/unit/image-diff.test.ts` (`inkMatch`, `dilate`).
 - `README.md`, `UPGRADING.md`.
 
