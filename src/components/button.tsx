@@ -14,6 +14,7 @@ import { isDev } from "../lib/dev";
 //    put the accent on every button; 12 of 23 real product screens had no filled primary at all.
 // 2. Heights come from --control-h, shared with Input and NativeSelect, so density changes move
 //    every control together.
+//    `lg` is the exception, sized for a child's finger and not moved by density.
 // 3. React Aria is the primitives layer (CLAUDE.md, "The stack"): behaviour and accessibility come
 //    from it, the look from our tokens. `asChild`/`Slot` is gone; a button that navigates is a link.
 // 4. `press`: the button gives 2% under a click or a finger, over 100ms. Buttons are used tens of
@@ -41,6 +42,10 @@ export const buttonVariants = cva(
         sm: "h-(--control-h-sm) px-(--control-px-sm)",
         icon: "size-(--control-h)",
         "icon-sm": "size-(--control-h-sm)",
+        // The one action a young learner presses to finish a step ("Check"): a target several times the 44px
+        // minimum, in title type with icons to match (Flashtap's owner, 2026-11-28: "a much bigger check button").
+        // Not a ControlSize: it never sits in a toolbar row, and density does not shrink it.
+        lg: "h-(--control-h-lg) px-(--control-px-lg) type-title [&_svg]:size-(--control-icon-lg)",
       },
     },
     defaultVariants: { variant: "outline", size: "default" },
